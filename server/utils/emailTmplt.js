@@ -92,3 +92,19 @@ export const changePasswordEmail = (email) => {
     `,
   };
 };
+
+export const treatmentToolsEmail = (email, tools_name) => {
+  return {
+    to: email,
+    subject: 'Treatment Tools',
+    html: `
+      <h1>Treatment Tools</h1>
+      <p>Hello,</p>
+      <p>Here are the treatment tools you requested:</p>
+      <p><strong>${tools_name}</strong></p>
+      <p>If you have any questions or need further assistance, please contact our support team.</p>
+      <p>Thank you,</p>
+      <p>The MindBridge Team</p>
+    `,
+  };
+};

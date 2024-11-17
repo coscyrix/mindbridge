@@ -9,6 +9,7 @@ import {
   thrpyReqRouter,
   sessionRouter,
   invoiceRouter,
+  formRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -23,6 +24,7 @@ async function main() {
         thrpyReqRouter,
         sessionRouter,
         invoiceRouter,
+        formRouter,
       ],
     });
     await server.listen();

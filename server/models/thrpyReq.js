@@ -5,6 +5,7 @@ import knex from 'knex';
 import logger from '../config/winston.js';
 import Session from './session.js';
 import Service from './service.js';
+import Form from './form.js';
 import dotenv from 'dotenv';
 import { capitalizeFirstLetter } from '../utils/common.js';
 import { splitIsoDatetime } from '../utils/common.js';
@@ -16,6 +17,7 @@ export default class ThrpyReq {
   constructor() {
     this.session = new Session();
     this.service = new Service();
+    this.form = new Form();
   }
   //////////////////////////////////////////
 
@@ -338,6 +340,13 @@ export default class ThrpyReq {
         return { message: 'Unsupported formula type', error: -1 };
       }
 
+      const loadForms = await this.loadSessionForms(postThrpyReq[0]);
+
+      if (!loadForms) {
+        logger.error('Error loading session forms');
+        return { message: 'Error loading session forms', error: -1 };
+      }
+
       // Return a success message
       return {
         message: 'Therapy request, sessions, and reports created successfully',
@@ -473,6 +482,177 @@ export default class ThrpyReq {
       logger.error(error);
 
       return { message: 'Error getting therapy request', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async loadSessionForms(req_id) {
+    try {
+      const query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_thrpy_req')
+        .where('req_id', req_id);
+
+      const [rec] = await query;
+
+      if (!rec) {
+        logger.error('Error getting session forms');
+        return { message: 'Error getting session forms', error: -1 };
+      }
+
+      const recForm = await this.form.getFormForSessionById({
+        service_id: rec.service_id,
+      });
+
+      if (!recForm || recForm.length === 0) {
+        logger.error('Error getting session forms');
+        return { message: 'Error getting session forms', error: -1 };
+      }
+
+      const tmpSession = [];
+
+      recForm.forEach((form) => {
+        // Static forms placeholder logic
+        if (form.frequency_typ === 'static') {
+          for (let i = 1; i <= rec.session_obj.length; i++) {
+            if (form.session_position.includes(i)) {
+              const tmpFormSession = {
+                session_id: rec.session_obj[i - 1].session_id,
+                form_array: [form.form_id],
+              };
+
+              tmpSession.push(tmpFormSession);
+            }
+          }
+        }
+
+        // Dynamic forms placeholder logic
+        if (form.frequency_typ === 'dynamic') {
+          // Sequence logic
+          if (form.sequence_obj.length === 2) {
+            const sequence = form.sequence_obj[0];
+            if (Number.isInteger(sequence) && sequence > 0) {
+              for (
+                let i = sequence - 1;
+                i < rec.session_obj.length;
+                i += sequence
+              ) {
+                if (rec.session_obj[i] && rec.session_obj[i].session_id) {
+                  const tmpFormSession = {
+                    session_id: rec.session_obj[i].session_id,
+                    form_array: [form.form_id],
+                  };
+                  tmpSession.push(tmpFormSession);
+                }
+              }
+            }
+          }
+
+          // Position logic
+          if (form.sequence_obj.length === 1) {
+            const position = form.sequence_obj[0];
+            if (typeof position === 'string') {
+              //All logic
+              if (position === '...') {
+                for (let i = 0; i < rec.session_obj.length; i++) {
+                  const tmpFormSession = {
+                    session_id: rec.session_obj[i].session_id,
+                    form_array: [form.form_id],
+                  };
+                  tmpSession.push(tmpFormSession);
+                }
+              }
+
+              //First logic
+              if (position === '1') {
+                const tmpFormSession = {
+                  session_id: rec.session_obj[0].session_id,
+                  form_array: [form.form_id],
+                };
+                tmpSession.push(tmpFormSession);
+              }
+
+              //Last logic
+              if (position === '-1') {
+                const tmpFormSession = {
+                  session_id:
+                    rec.session_obj[rec.session_obj.length - 1].session_id,
+                  form_array: [form.form_id],
+                };
+                tmpSession.push(tmpFormSession);
+              }
+
+              //Second to last logic
+              if (position === '-2') {
+                const tmpFormSession = {
+                  session_id:
+                    rec.session_obj[rec.session_obj.length - 2].session_id,
+                  form_array: [form.form_id],
+                };
+                tmpSession.push(tmpFormSession);
+              }
+            }
+          }
+        }
+      });
+
+      const updteFormSession = await this.updateSessionForms(tmpSession);
+
+      if (!updteFormSession) {
+        logger.error('Error updating session forms');
+        return { message: 'Error updating session forms', error: -1 };
+      }
+
+      return { message: 'Session forms loaded successfully' };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error getting session forms', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async updateSessionForms(data) {
+    try {
+      for (const post of data) {
+        // Fetch current forms_array
+        const [getSession] = await this.session.getSessionById({
+          session_id: Number(post.session_id),
+        });
+
+        if (!getSession) {
+          logger.error('Error getting session');
+          return { message: 'Error getting session', error: -1 };
+        }
+
+        // Parse existing forms_array
+        const currentForms = Array.isArray(getSession.forms_array)
+          ? getSession.forms_array
+          : JSON.parse(getSession.forms_array || '[]');
+
+        // Add new forms and remove duplicates
+        const updatedForms = Array.from(
+          new Set([...currentForms, ...post.form_array]),
+        );
+
+        const tmpSession = {
+          forms_array: JSON.stringify(updatedForms),
+        };
+
+        await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('session')
+          .update(tmpSession)
+          .where('session_id', Number(post.session_id));
+      }
+
+      return { message: 'Sessions updated successfully' };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error updating session forms', error: -1 };
     }
   }
 }
