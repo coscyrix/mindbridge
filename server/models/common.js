@@ -63,6 +63,22 @@ export default class Common {
 
   //////////////////////////////////////////
 
+  async getUserProfileByUserProfileId(id) {
+    try {
+      const rec = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select()
+        .where('user_profile_id', id)
+        .from('v_user_profile');
+
+      return rec;
+    } catch (error) {
+      return error;
+    }
+  }
+
+  //////////////////////////////////////////
+
   async postClientEnrollment(data) {
     try {
       const postClient = await db
@@ -138,6 +154,75 @@ export default class Common {
       return rec;
     } catch (error) {
       return { message: 'Error getting service', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getServiceNotReportAdditionById(svcArray) {
+    try {
+      let query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('service')
+        .where('status_yn', 1)
+        .whereIn('service_id', svcArray)
+        .andWhere('is_report', 0)
+        .andWhere('is_additional', 0);
+
+      const rec = await query;
+
+      if (!rec || rec.length === 0) {
+        return { message: 'Service not found', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      return { message: 'Error getting service', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+  async getServiceByNotReportAdditionBySvcId(svcArray) {
+    try {
+      let query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('service')
+        .where('status_yn', 1)
+        .andWhere('is_report', 0)
+        .andWhere('is_additional', 0)
+        .whereNotIn('service_id', svcArray);
+      const rec = await query;
+
+      if (!rec || rec.length === 0) {
+        return { message: 'Service not found', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      console.error('Error getting service:', error);
+      return { message: 'Error getting service', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getThrpyReqById(id) {
+    try {
+      let query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_thrpy_req')
+        .where('status_yn', 1)
+        .andWhere('req_id', id);
+
+      const rec = await query;
+
+      if (!rec || rec.length === 0) {
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      return { message: 'Error getting therapy request', error: -1 };
     }
   }
 }

@@ -4,3 +4,4 @@ export { serviceRouter } from './service.js';
 export { thrpyReqRouter } from './thrpyReq.js';
 export { sessionRouter } from './session.js';
 export { invoiceRouter } from './invoice.js';
+export { formRouter } from './form.js';

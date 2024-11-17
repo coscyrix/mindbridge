@@ -4,13 +4,18 @@ import DBconn from '../config/db.config.js';
 import knex from 'knex';
 import logger from '../config/winston.js';
 import Common from './common.js';
+import Form from './form.js';
+import SendEmail from '../middlewares/sendEmail.js';
 import { splitIsoDatetime } from '../utils/common.js';
+import { treatmentToolsEmail } from '../utils/emailTmplt.js';
 
 const db = knex(DBconn.dbConn.development);
 
 export default class Session {
   constructor() {
     this.common = new Common();
+    this.form = new Form();
+    this.sendEmail = new SendEmail();
   }
   //////////////////////////////////////////
 
@@ -137,17 +142,28 @@ export default class Session {
         }
       }
 
-      const tmpSession = {
-        // thrpy_req_id: data.thrpy_req_id,
-        service_id: data.service_id,
-        session_format: data.session_format,
-        intake_date: data.intake_date,
-        scheduled_time: data.scheduled_time,
-        session_description: data.session_description,
-        is_additional: data.is_additional,
-        is_report: data.is_report,
-        session_status: data.session_status,
-      };
+      let tmpSession;
+      if (data.session_status) {
+        tmpSession = {
+          session_status: data.session_status,
+        };
+
+        this.SendTreatmentToolsEmail({
+          session_id: data.session_id,
+        });
+      } else {
+        tmpSession = {
+          // thrpy_req_id: data.thrpy_req_id,
+          service_id: data.service_id,
+          session_format: data.session_format,
+          intake_date: data.intake_date,
+          scheduled_time: data.scheduled_time,
+          session_description: data.session_description,
+          is_additional: data.is_additional,
+          is_report: data.is_report,
+          session_status: data.session_status,
+        };
+      }
 
       const putSession = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -165,6 +181,57 @@ export default class Session {
       logger.error(error);
 
       return { message: 'Error updating session', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async SendTreatmentToolsEmail(data) {
+    try {
+      const recSession = await this.getSessionById({
+        session_id: data.session_id,
+      });
+      if (!recSession || !Array.isArray(recSession)) {
+        logger.error('Session not found');
+        return { message: 'Session not found', error: -1 };
+      }
+
+      const recThrpy = await this.common.getThrpyReqById(
+        recSession[0].thrpy_req_id,
+      );
+
+      if (!recThrpy || !Array.isArray(recThrpy)) {
+        logger.error('Therapy request not found');
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
+      const recUser = await this.common.getUserProfileByUserProfileId(
+        recThrpy[0].client_id,
+      );
+
+      if (!recUser || !Array.isArray(recUser)) {
+        logger.error('User profile not found');
+        return { message: 'User profile not found', error: -1 };
+      }
+
+      recSession.forEach(async (session) => {
+        for (const arry of session.forms_array) {
+          const [form] = await this.form.getFormByFormId({ form_id: arry });
+          const form_name = form.form_cde;
+          const toolsEmail = treatmentToolsEmail(recUser[0].email, form_name);
+
+          const email = this.sendEmail.sendMail(toolsEmail);
+
+          if (email.error) {
+            logger.error('Error sending email');
+            return { message: 'Error sending email', error: -1 };
+          }
+        }
+      });
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Something went wrong' };
     }
   }
 
