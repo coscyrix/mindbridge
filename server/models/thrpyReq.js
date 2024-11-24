@@ -403,6 +403,40 @@ export default class ThrpyReq {
 
   async delThrpyReqById(data) {
     try {
+      const checkThrpyReq = await this.getThrpyReqById({
+        thrpy_id: data.thrpy_id,
+      });
+
+      if (checkThrpyReq.error) {
+        logger.error('Error getting therapy request');
+        return { message: 'Error getting therapy request', error: -1 };
+      }
+
+      if (!checkThrpyReq || checkThrpyReq.length === 0) {
+        logger.warn('Therapy request not found');
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
+      const thrpySessions = await this.session.getSessionByThrpyReqId({
+        thrpy_req_id: data.thrpy_id,
+      });
+
+      if (thrpySessions.error) {
+        logger.error('Error getting therapy sessions');
+        return { message: 'Error getting therapy sessions', error: -1 };
+      }
+
+      if (thrpySessions && thrpySessions.length > 0) {
+        logger.warn(
+          'Cannot delete therapy request with sessions that were updated',
+        );
+        return {
+          message:
+            'Cannot delete therapy request with sessions that were updated',
+          error: -1,
+        };
+      }
+
       const delThrpyReq = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('thrpy_req')
@@ -412,8 +446,23 @@ export default class ThrpyReq {
         logger.error('Error deleting therapy request');
         return { message: 'Error deleting therapy request', error: -1 };
       }
+
+      if (thrpySessions) {
+        const updatedSessions = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('session')
+          .where('thrpy_req_id', data.thrpy_id)
+          .update('status_yn', 2);
+
+        if (!updatedSessions) {
+          logger.error('Error deleting therapy sessions');
+          return { message: 'Error deleting therapy sessions', error: -1 };
+        }
+      }
+
       return { message: 'Therapy request deleted successfully' };
     } catch (error) {
+      console.error(error);
       logger.error(error);
 
       return { message: 'Error deleting therapy request', error: -1 };

@@ -158,9 +158,9 @@ export default class Session {
           session_format: data.session_format,
           intake_date: data.intake_date,
           scheduled_time: data.scheduled_time,
-          session_description: data.session_description,
-          is_additional: data.is_additional,
-          is_report: data.is_report,
+          // session_description: data.session_description,
+          // is_additional: data.is_additional,
+          // is_report: data.is_report,
           session_status: data.session_status,
         };
       }
@@ -292,6 +292,54 @@ export default class Session {
     } catch (error) {
       logger.error(error);
       return { message: 'Error getting session', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getSessionByThrpyReqId(data) {
+    try {
+      const rec = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_session')
+        .where('thrpy_req_id', data.thrpy_req_id)
+        .whereNot('session_status', 1);
+      if (!rec) {
+        logger.error('Error getting session');
+        return { message: 'Error getting session', error: -1 };
+      }
+      return rec;
+    } catch (error) {
+      logger.error(error);
+      return { message: 'Error getting session', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async dailyUpdateSessionStatus() {
+    try {
+      const currentDate = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace('T', ' ');
+      const rec = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('session')
+        .where('created_at', '<=', currentDate)
+        .andWhere('session_status', 1)
+        .update({ session_status: 3 });
+
+      if (typeof rec !== 'number') {
+        logger.error('Error updating session.');
+        return { message: 'Error updating session', error: -1 };
+      }
+
+      return { message: 'Session updated successfully' };
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error updating session', error: -1 };
     }
   }
 }
