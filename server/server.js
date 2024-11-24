@@ -1,6 +1,8 @@
 // server.js
 
 import ServerConfig from './config/server.config.js';
+import cron from 'node-cron';
+import Session from './models/session.js';
 
 import {
   userRouter,
@@ -27,6 +29,13 @@ async function main() {
         formRouter,
       ],
     });
+
+    // Schedule the cron job to run daily at midnight
+    const session = new Session();
+    cron.schedule('0 0 * * *', async () => {
+      await session.dailyUpdateSessionStatus();
+    });
+
     await server.listen();
   } catch (error) {
     console.error(`Failed to start the server: ${error.message}`);
