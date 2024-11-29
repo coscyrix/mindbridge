@@ -20,6 +20,12 @@ export default class UserController {
     }
     const user = new UserService();
     const rec = await user.signUp(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -35,6 +41,11 @@ export default class UserController {
 
     const user = new UserService();
     const rec = await user.signIn(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
     res.status(200).json(rec);
   }
 
@@ -50,6 +61,11 @@ export default class UserController {
 
     const user = new UserService();
     const rec = await user.passwordReset(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
     res.status(200).json(rec);
   }
 
@@ -65,6 +81,11 @@ export default class UserController {
 
     const user = new UserService();
     const rec = await user.sendOTPforVerification(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
     res.status(200).json(rec);
   }
 
@@ -80,6 +101,12 @@ export default class UserController {
 
     const user = new UserService();
     const rec = await user.verifyAccount(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -95,6 +122,12 @@ export default class UserController {
 
     const user = new UserService();
     const rec = await user.changePassword(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 }

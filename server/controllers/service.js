@@ -20,6 +20,12 @@ export default class ServiceController {
     }
     const service = new ServiceService();
     const rec = await service.postService(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -39,6 +45,12 @@ export default class ServiceController {
 
     const service = new ServiceService();
     const rec = await service.putServiceById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -62,6 +74,12 @@ export default class ServiceController {
 
     const service = new ServiceService();
     const rec = await service.delServiceById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -82,6 +100,12 @@ export default class ServiceController {
 
     const service = new ServiceService();
     const rec = await service.getServiceById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 }

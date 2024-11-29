@@ -18,7 +18,7 @@ export default class ThrpyReqService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const thrpyReq = new ThrpyReq();
@@ -42,7 +42,7 @@ export default class ThrpyReqService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const thrpyReq = new ThrpyReq();
@@ -60,7 +60,7 @@ export default class ThrpyReqService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const thrpyReq = new ThrpyReq();
@@ -77,7 +77,7 @@ export default class ThrpyReqService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const thrpyReq = new ThrpyReq();
@@ -97,7 +97,7 @@ export default class ThrpyReqService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const thrpyReq = new ThrpyReq();

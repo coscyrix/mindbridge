@@ -15,7 +15,7 @@ export default class InvoiceService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const invoice = new Invoice();
@@ -33,7 +33,7 @@ export default class InvoiceService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const invoice = new Invoice();
@@ -51,7 +51,7 @@ export default class InvoiceService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const invoice = new Invoice();

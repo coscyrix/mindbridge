@@ -22,7 +22,7 @@ export default class UserProfileService {
     const { error } = userProfileSchema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const userProfile = new UserProfile();
@@ -43,7 +43,7 @@ export default class UserProfileService {
     const { error } = userProfileSchema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const userProfile = new UserProfile();
@@ -66,7 +66,7 @@ export default class UserProfileService {
     const { error } = userProfileSchema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const userProfile = new UserProfile();
@@ -84,7 +84,7 @@ export default class UserProfileService {
     const { error } = userProfileSchema.validate({ user_profile_id });
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const userProfile = new UserProfile();
@@ -104,7 +104,7 @@ export default class UserProfileService {
     const { error } = userProfileSchema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const userProfile = new UserProfile();
