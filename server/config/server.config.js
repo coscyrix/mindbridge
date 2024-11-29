@@ -1,6 +1,7 @@
 //config/server.config.js
 
 import Express from 'express';
+import fs from 'fs';
 import winston from 'winston';
 import bodyParser from 'body-parser';
 import DbConfig from './db.config.js';
