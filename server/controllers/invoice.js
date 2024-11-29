@@ -13,6 +13,11 @@ export default class InvoiceController {
 
     const invoice = new InvoiceService();
     const response = await invoice.postInvoice(data);
+
+    if (response.error) {
+      return res.status(400).send(response);
+    }
+
     return res.status(200).send(response);
   }
 
@@ -23,6 +28,11 @@ export default class InvoiceController {
 
     const invoice = new InvoiceService();
     const response = await invoice.getInvoiceById(data);
+
+    if (response.error) {
+      return res.status(400).send(response);
+    }
+
     return res.status(200).send(response);
   }
 
@@ -33,6 +43,11 @@ export default class InvoiceController {
 
     const invoice = new InvoiceService();
     const response = await invoice.putInvoiceById(data);
+
+    if (response.error) {
+      return res.status(400).send(response);
+    }
+
     return res.status(200).send(response);
   }
 }

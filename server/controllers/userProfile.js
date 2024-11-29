@@ -12,6 +12,12 @@ export default class UserProfileController {
 
     const userProfile = new UserProfileService();
     const rec = await userProfile.postUserProfile(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -22,6 +28,12 @@ export default class UserProfileController {
 
     const userProfile = new UserProfileService();
     const rec = await userProfile.userPostClientProfile(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -37,6 +49,12 @@ export default class UserProfileController {
 
     const userProfile = new UserProfileService();
     const rec = await userProfile.putUserProfile(data, user_profile_id);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -51,6 +69,12 @@ export default class UserProfileController {
 
     const userProfile = new UserProfileService();
     const rec = await userProfile.delUserProfile(user_profile_id);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -75,6 +99,12 @@ export default class UserProfileController {
 
     const userProfile = new UserProfileService();
     const rec = await userProfile.getUserProfileById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 }

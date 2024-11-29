@@ -18,7 +18,7 @@ export default class SessionService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const session = new Session();
@@ -44,7 +44,7 @@ export default class SessionService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const session = new Session();
@@ -61,7 +61,7 @@ export default class SessionService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const session = new Session();
@@ -80,7 +80,7 @@ export default class SessionService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const session = new Session();

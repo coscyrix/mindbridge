@@ -24,7 +24,7 @@ export default class ServiceService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const service = new Service();
@@ -47,7 +47,7 @@ export default class ServiceService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const service = new Service();
@@ -65,7 +65,7 @@ export default class ServiceService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const service = new Service();
@@ -83,7 +83,7 @@ export default class ServiceService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const service = new Service();

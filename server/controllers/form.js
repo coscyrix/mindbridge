@@ -14,6 +14,12 @@ export default class FormController {
 
     const form = new FormService();
     const rec = await form.postForm(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -30,6 +36,11 @@ export default class FormController {
 
     const form = new FormService();
     const rec = await form.putFormById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
     res.status(200).json(rec);
   }
 
@@ -44,6 +55,12 @@ export default class FormController {
 
     const form = new FormService();
     const rec = await form.getFormById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 }

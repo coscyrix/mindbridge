@@ -18,6 +18,12 @@ export default class SessionController {
     }
     const session = new SessionService();
     const rec = await session.postSession(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -34,6 +40,12 @@ export default class SessionController {
 
     const session = new SessionService();
     const rec = await session.putSessionById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -53,6 +65,12 @@ export default class SessionController {
 
     const session = new SessionService();
     const rec = await session.delSessionById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -72,6 +90,12 @@ export default class SessionController {
 
     const session = new SessionService();
     const rec = await session.getSessionById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 }

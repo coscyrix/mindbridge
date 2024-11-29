@@ -5,6 +5,7 @@ import winston from 'winston';
 import bodyParser from 'body-parser';
 import DbConfig from './db.config.js';
 import http from 'http';
+import https from 'https';
 import path from 'path';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
@@ -100,12 +101,21 @@ export default class ServerConfig {
 
   async listen() {
     try {
+      const options = {
+        key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
+        cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
+      };
+
       const { default: knex } = await import('knex');
       const db = knex(DbConfig.dbConn.development);
       this.app.locals.knex = db;
 
-      // Create an HTTP server
-      const httpServer = http.createServer(this.app);
+      // Create an HTTP/HTTPS server
+      const httpServer =
+        process.env.NODE_ENV === 'development'
+          ? http.createServer(this.app)
+          : https.createServer(options, this.app);
+
       httpServer.listen(this.port, () => {
         this.console.info(`🚀..Server running on port: ${this.port}`);
       });

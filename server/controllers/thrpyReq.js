@@ -19,6 +19,12 @@ export default class ThrpyReqController {
     }
     const thrpyReq = new ThrpyReqService();
     const rec = await thrpyReq.postThrpyReq(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -35,6 +41,12 @@ export default class ThrpyReqController {
 
     const thrpyReq = new ThrpyReqService();
     const rec = await thrpyReq.putThrpyReqById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -52,6 +64,12 @@ export default class ThrpyReqController {
 
     const thrpyReq = new ThrpyReqService();
     const rec = await thrpyReq.putThrpyDischarge(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -71,6 +89,12 @@ export default class ThrpyReqController {
 
     const thrpyReq = new ThrpyReqService();
     const rec = await thrpyReq.delThrpyReqById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 
@@ -91,6 +115,12 @@ export default class ThrpyReqController {
 
     const thrpyReq = new ThrpyReqService();
     const rec = await thrpyReq.getThrpyReqById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
     res.status(200).json(rec);
   }
 }

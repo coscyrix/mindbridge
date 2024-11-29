@@ -54,7 +54,7 @@ export default class FormService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const form = new Form();
@@ -71,7 +71,7 @@ export default class FormService {
     const { error } = schema.validate(data);
 
     if (error) {
-      return { message: error.details[0].message };
+      return { message: error.details[0].message, error: -1 };
     }
 
     const form = new Form();
