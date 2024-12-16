@@ -12,6 +12,8 @@ import {
   sessionRouter,
   invoiceRouter,
   formRouter,
+  referencesRouter,
+  userTargetOutcomeRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -27,6 +29,8 @@ async function main() {
         sessionRouter,
         invoiceRouter,
         formRouter,
+        referencesRouter,
+        userTargetOutcomeRouter,
       ],
     });
 

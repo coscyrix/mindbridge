@@ -214,19 +214,43 @@ export default class Service {
       }
 
       const tmpSvc = {
-        service_name: capitalizeFirstLetter(data.service_name),
-        service_code: data.service_code.toUpperCase(),
-        is_report: data.is_report || 0,
-        is_additional: data.is_additional || 0,
-        total_invoice: data.total_invoice || 0,
-        nbr_of_sessions: data.nbr_of_sessions || 0,
-        svc_formula_typ: data.svc_formula_typ || 's',
-        svc_formula: data.svc_formula || [7],
-        svc_report_formula: {
-          position: data.position,
-          service_id: data.service_id,
-        },
-        gst: data.gst || 0,
+        ...(data.service_name !== undefined && {
+          service_name: capitalizeFirstLetter(data.service_name),
+        }),
+        ...(data.service_code !== undefined && {
+          service_code: data.service_code.toUpperCase(),
+        }),
+        ...(data.is_report !== undefined && {
+          is_report: data.is_report,
+        }),
+        ...(data.is_additional !== undefined && {
+          is_additional: data.is_additional,
+        }),
+        ...(data.total_invoice !== undefined && {
+          total_invoice: data.total_invoice,
+        }),
+        ...(data.nbr_of_sessions !== undefined && {
+          nbr_of_sessions: data.nbr_of_sessions,
+        }),
+        ...(data.svc_formula_typ !== undefined && {
+          svc_formula_typ: data.svc_formula_typ,
+        }),
+        ...(data.svc_formula !== undefined && {
+          svc_formula: JSON.stringify(data.svc_formula),
+        }),
+        ...(data.position !== undefined &&
+          data.service_id !== undefined && {
+            svc_report_formula: JSON.stringify({
+              position: data.position,
+              service_id: data.service_id,
+            }),
+          }),
+        ...(data.gst !== undefined && {
+          gst: data.gst,
+        }),
+        ...(data.discount_pcnt !== undefined && {
+          discount_pcnt: data.discount_pcnt,
+        }),
       };
 
       const putSvc = await db
@@ -234,6 +258,7 @@ export default class Service {
         .from('service')
         .where('service_id', data.service_id)
         .update(tmpSvc);
+
       if (!putSvc) {
         logger.error('Error updating service');
         return { message: 'Error updating service', error: -1 };
@@ -241,6 +266,7 @@ export default class Service {
 
       return { message: 'Service updated successfully' };
     } catch (error) {
+      console.error(error);
       logger.error(error);
 
       return { message: 'Error updating service', error: -1 };
