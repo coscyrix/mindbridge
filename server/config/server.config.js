@@ -114,7 +114,7 @@ export default class ServerConfig {
       // Create an HTTP/HTTPS server
       const httpServer =
         process.env.NODE_ENV === 'development'
-          ? http.createServer(this.app)
+          ? http.createServer(options, this.app)
           : https.createServer(options, this.app);
 
       httpServer.listen(this.port, () => {
