@@ -41,6 +41,7 @@ export default class ServiceService {
       total_invoice: joi.number().precision(4).optional(),
       // nbr_of_sessions: joi.number().integer().optional(),
       gst: joi.number().precision(4).optional(),
+      discount_pcnt: joi.number().precision(4).optional(),
       //   role_id: joi.number().required(),
     });
 

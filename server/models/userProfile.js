@@ -8,6 +8,7 @@ import Common from './common.js';
 import AuthCommon from './auth/authCommon.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import { clientWelcomeEmail, emailUpdateEmail } from '../utils/emailTmplt.js';
+import UserTargetOutcome from './userTargetOutcome.js';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -18,6 +19,7 @@ export default class UserProfile {
     this.common = new Common();
     this.authCommon = new AuthCommon();
     this.sendEmail = new SendEmail();
+    this.userTargetOutcome = new UserTargetOutcome();
   }
 
   //////////////////////////////////////////
@@ -89,6 +91,18 @@ export default class UserProfile {
       if (isNaN(postUsrProfile)) {
         logger.error('Error creating user profile');
         return { message: 'Error creating user profile', error: -1 };
+      }
+
+      const postUserTargetOutcome =
+        await this.userTargetOutcome.postUserTargetOutcome({
+          user_profile_id: postUsrProfile[0],
+          target_outcome_id: data.target_outcome_id,
+          counselor_id: data.user_profile_id,
+        });
+
+      if (postUserTargetOutcome.error) {
+        logger.error('Error creating user target outcome');
+        return { message: 'Error creating user target outcome', error: -1 };
       }
 
       const postClientEnrollment = await this.common.postClientEnrollment({
