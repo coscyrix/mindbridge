@@ -206,6 +206,10 @@ export default class UserProfile {
         query.where('email', data.email);
       }
 
+      if (data.role_id) {
+        query.where('role_id', data.role_id);
+      }
+
       const rec = await query;
 
       if (!rec.length) {

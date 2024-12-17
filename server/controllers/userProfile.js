@@ -81,17 +81,9 @@ export default class UserProfileController {
   //////////////////////////////////////////
 
   async getUserProfileById(req, res) {
-    const user_profile_id = req.query.user_profile_id;
-    const email = req.query.email;
-    const user_id = req.query.user_id;
+    const data = req.query;
 
-    const data = {
-      user_profile_id: user_profile_id,
-      email: email,
-      user_id: user_id,
-    };
-
-    if (!user_profile_id && !email && !user_id) {
+    if (!data.user_profile_id && !data.email && !data.role_id) {
       res
         .status(400)
         .json({ message: 'At least one query parameter is required' });
