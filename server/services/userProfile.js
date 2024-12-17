@@ -99,6 +99,7 @@ export default class UserProfileService {
       user_profile_id: joi.number().optional(),
       user_id: joi.number().optional(),
       email: joi.string().email().optional(),
+      role_id: joi.number().optional(),
     });
 
     // Validate the entire data object against the schema
