@@ -113,9 +113,6 @@ export default class ServerConfig {
 
       // Create an HTTP/HTTPS server
       const httpServer =
-     //   process.env.NODE_ENV === 'local_dev'
-     //     ? http.createServer(this.app)
-     //    : https.createServer(options, this.app);
       process.env.NODE_ENV === 'development'
         ? http.createServer(options, this.app)
         : https.createServer(options, this.app);
