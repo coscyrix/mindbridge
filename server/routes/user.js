@@ -12,7 +12,7 @@ router.post('/sign-up', AsyncWrapper(userController.signUp));
 
 router.post('/sign-in', AsyncWrapper(userController.signIn));
 
-router.post('/reset-password', AsyncWrapper(userController.passwordReset));
+router.post('/forgot-password', AsyncWrapper(userController.passwordReset));
 
 router.post('/send-otp', AsyncWrapper(userController.sendOTPforVerification));
 
