@@ -12,6 +12,7 @@ import {
   changePasswordEmail,
 } from '../../utils/emailTmplt.js';
 import UserProfile from '../userProfile.js';
+import e from 'express';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -31,7 +32,7 @@ export default class User {
       const checkEmail = await this.common.getUserByEmail(data.email);
       if (checkEmail.length > 0) {
         logger.warn('Email already exists');
-        return { message: 'Email already exists' };
+        return { message: 'Email already exists', error: -1 };
       }
 
       const tmpUsr = {
@@ -69,7 +70,7 @@ export default class User {
       return rec;
     } catch (error) {
       logger.error(error);
-      return { message: 'Something went wrong' };
+      return { message: 'Something went wrong', error: -1 };
     }
   }
 
@@ -80,7 +81,7 @@ export default class User {
       const checkEmail = await this.common.getUserByEmail(data.email);
       if (checkEmail.length === 0) {
         logger.warn('Email does not exist');
-        return { message: 'Email does not exist' };
+        return { message: 'Email does not exist', error: -1 };
       }
 
       if (checkEmail[0].status_yn === 2) {
@@ -96,6 +97,7 @@ export default class User {
         }
         return {
           message: 'Account is inactive. Please contact the adminstrator.',
+          error: -1,
         };
       }
 
@@ -106,7 +108,7 @@ export default class User {
 
       if (!checkPassword) {
         logger.warn('Password is incorrect');
-        return { message: 'Password is incorrect' };
+        return { message: 'Password is incorrect', error: -1 };
       }
 
       if (checkPassword) {
@@ -131,7 +133,7 @@ export default class User {
       return rec;
     } catch (error) {
       logger.error(error);
-      return { message: 'Something went wrong' };
+      return { message: 'Something went wrong', error: -1 };
     }
   }
 
@@ -142,7 +144,7 @@ export default class User {
       const checkEmail = await this.common.getUserByEmail(data.email);
       if (checkEmail.length === 0) {
         logger.error('Email does not exist');
-        return { message: 'Email does not exist' };
+        return { message: 'Email does not exist', error: -1 };
       }
 
       const newPassword = await this.authCommon.generatePassword();
@@ -174,7 +176,7 @@ export default class User {
       return rec;
     } catch (error) {
       logger.error(error);
-      return { message: 'Something went wrong' };
+      return { message: 'Something went wrong', error: -1 };
     }
   }
 
@@ -185,7 +187,7 @@ export default class User {
       const checkEmail = await this.common.getUserByEmail(data.email);
       if (checkEmail.length === 0) {
         logger.error('Email does not exist');
-        return { message: 'Email does not exist' };
+        return { message: 'Email does not exist', error: -1 };
       }
 
       const otp = await this.authCommon.generateOTP({ email: data.email });
@@ -197,7 +199,7 @@ export default class User {
       return { message: 'OTP generated successfully. Please check your email' };
     } catch (error) {
       logger.error(error);
-      return { message: 'Something went wrong' };
+      return { message: 'Something went wrong', error: -1 };
     }
   }
 
@@ -208,12 +210,12 @@ export default class User {
       const checkEmail = await this.common.getUserByEmail(data.email);
       if (checkEmail.length === 0) {
         logger.error('Email does not exist');
-        return { message: 'Email does not exist' };
+        return { message: 'Email does not exist', error: -1 };
       }
 
       if (checkEmail[0].is_verified === 1) {
         logger.error('Account already verified');
-        return { message: 'Account already verified' };
+        return { message: 'Account already verified', error: -1 };
       }
 
       const verifyOTP = await this.authCommon.verifyAccount(data);
@@ -237,7 +239,7 @@ export default class User {
       return rec;
     } catch (error) {
       logger.error(error);
-      return { message: 'Something went wrong' };
+      return { message: 'Something went wrong', error: -1 };
     }
   }
 
@@ -248,7 +250,7 @@ export default class User {
       const checkEmail = await this.common.getUserByEmail(data.email);
       if (checkEmail.length === 0) {
         logger.error('Email does not exist');
-        return { message: 'Email does not exist' };
+        return { message: 'Email does not exist', error: -1 };
       }
 
       const checkPassword = await this.authCommon.comparePassword(
@@ -258,7 +260,7 @@ export default class User {
 
       if (!checkPassword) {
         logger.error('Old password is incorrect');
-        return { message: 'Old password is incorrect' };
+        return { message: 'Old password is incorrect', error: -1 };
       }
 
       const hashPassword = await this.authCommon.hashPassword(
@@ -289,7 +291,7 @@ export default class User {
       return rec;
     } catch (error) {
       logger.error(error);
-      return { message: 'Something went wrong' };
+      return { message: 'Something went wrong', error: -1 };
     }
   }
 }

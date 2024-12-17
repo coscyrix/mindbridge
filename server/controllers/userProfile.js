@@ -83,11 +83,11 @@ export default class UserProfileController {
   async getUserProfileById(req, res) {
     const data = req.query;
 
-    if (!data.user_profile_id && !data.email && !data.role_id) {
-      res
-        .status(400)
-        .json({ message: 'At least one query parameter is required' });
-    }
+    // if (!data.user_profile_id && !data.email && !data.role_id) {
+    //   res
+    //     .status(400)
+    //     .json({ message: 'At least one query parameter is required' });
+    // }
 
     const userProfile = new UserProfileService();
     const rec = await userProfile.getUserProfileById(data);
