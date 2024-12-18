@@ -164,11 +164,11 @@ export default class UserProfile {
   async putUserProfile(data, user_profile_id) {
     try {
       const tmpUsrProfile = {
-        user_first_name: data.user_first_name.toLowerCase(),
-        user_last_name: data.user_last_name.toLowerCase(),
-        user_phone_nbr: data.user_phone_nbr,
-        user_typ_id: data.user_typ_id,
-        clam_num: data.clam_num,
+        ...(data.user_first_name && { user_first_name: data.user_first_name }),
+        ...(data.user_last_name && { user_last_name: data.user_last_name }),
+        ...(data.user_phone_nbr && { user_phone_nbr: data.user_phone_nbr }),
+        ...(data.user_typ_id && { user_typ_id: data.user_typ_id }),
+        ...(data.clam_num && { clam_num: data.clam_num }),
       };
 
       const putUsrProfile = await db
@@ -182,12 +182,17 @@ export default class UserProfile {
         return { message: 'Error updating user profile', error: -1 };
       }
 
-      if (data.email) {
+      if (data.email || data.role_id) {
         const tmpUsr = {
-          email: data.email.toLowerCase(),
+          ...(data.email && { email: data.email.toLowerCase() }),
+          ...(data.role_id && { role_id: data.role_id }),
         };
 
-        const getUsr = await this.getUserProfileById(user_profile_id);
+        const getUsr = await this.getUserProfileById({
+          user_profile_id: user_profile_id,
+        });
+
+        // console.log('getUsr', getUsr);
 
         const putUsr = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
