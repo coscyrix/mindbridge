@@ -38,6 +38,8 @@ export default class UserProfileService {
       user_last_name: joi.string().min(2).required(),
       email: joi.string().email().required(),
       target_outcome_id: joi.number().required(),
+      clam_num: joi.number().optional(),
+      role_id: joi.number().optional(),
     });
 
     // Validate the entire data object against the schema

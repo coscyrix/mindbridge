@@ -63,10 +63,38 @@ export default class UserProfile {
         return { message: 'Email already exists', error: -1 };
       }
 
+      if (!data.clam_num) {
+        let isUnique = false;
+        while (!isUnique) {
+          const generateClamNum = await this.common.generateClamNum();
+          const checkClamNum = await this.getUserProfileById({
+            clam_num: generateClamNum,
+          });
+
+          if (!checkClamNum.rec || checkClamNum.rec.length === 0) {
+            data.clam_num = generateClamNum;
+            isUnique = true;
+          } else {
+            logger.warn(
+              'Generated clam number is already in use, generating a new one',
+            );
+          }
+        }
+      }
+
+      const checkClamNum = await this.getUserProfileById({
+        clam_num: data.clam_num,
+      });
+      if (checkClamNum.rec && checkClamNum.rec.length > 0) {
+        logger.error('Clam number is already in use');
+        return { message: 'Clam number already exists', error: -1 };
+      }
+
       const clientPassword = await this.authCommon.generatePassword(); // Generate a random password for the client
       const postUser = await this.common.postUserCOMMON({
         email: data.email,
         password: clientPassword,
+        role_id: data.role_id,
       });
 
       if (postUser.error) {
@@ -115,7 +143,7 @@ export default class UserProfile {
       }
 
       const emailSent = clientWelcomeEmail(data.email, clientPassword);
-      const sendEmail = await this.sendEmail.sendMail(emailSent);
+      const sendEmail = this.sendEmail.sendMail(emailSent);
 
       if (sendEmail.error) {
         logger.error('Error sending email');
@@ -124,6 +152,7 @@ export default class UserProfile {
 
       return { message: 'User profile created successfully' };
     } catch (error) {
+      console.log(error);
       logger.error(error);
 
       return { message: 'Error creating user profile', error: -1 };
@@ -210,17 +239,21 @@ export default class UserProfile {
         query.where('role_id', data.role_id);
       }
 
+      if (data.clam_num) {
+        query.where('clam_num', data.clam_num);
+      }
+
       const rec = await query;
 
       if (!rec.length) {
         logger.warn('User profile not found');
-        return { message: 'User profile not found' };
+        return { message: 'User profile not found', rec: [] };
       }
 
       return { message: 'User profile found', rec };
     } catch (error) {
       logger.error(error);
-      return { message: 'Error getting user profile', error: -1 };
+      return { message: 'Error getting user profile', error: -1, rec: [] };
     }
   }
 
