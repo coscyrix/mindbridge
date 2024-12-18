@@ -111,7 +111,7 @@ export default class Common {
       const tmpUsr = {
         email: data.email.toLowerCase(),
         password: await this.authCommon.hashPassword(data.password),
-        role_id: 2,
+        role_id: data.role_id || 1,
       };
 
       const postUsr = await db
@@ -224,5 +224,11 @@ export default class Common {
     } catch (error) {
       return { message: 'Error getting therapy request', error: -1 };
     }
+  }
+
+  //////////////////////////////////////////
+
+  async generateClamNum() {
+    return Math.floor(1000000 + Math.random() * 9000000).toString();
   }
 }
