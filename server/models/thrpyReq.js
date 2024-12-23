@@ -21,6 +21,130 @@ export default class ThrpyReq {
   }
   //////////////////////////////////////////
 
+  async listSessions(data) {
+    // Parse the intake date and time
+    const req_dte = data.intake_dte.split('T')[0];
+    const req_time = data.intake_dte.split('T')[1];
+
+    // Retrieve the service details
+    const servc = await this.service.getServiceById({
+      service_id: data.service_id,
+    });
+    const svc = servc.rec[0];
+
+    const drService = await this.service.getServiceById({
+      service_code: process.env.DISCHARGE_SERVICE_CODE,
+    });
+    const drSvc = drService.rec[0];
+
+    if (!svc || !drSvc) {
+      throw new Error('Service retrieval error');
+    }
+
+    // Prepare the therapy request object
+    const tmpThrpyReq = {
+      counselor_id: data.counselor_id,
+      client_id: data.client_id,
+      service_id: data.service_id,
+      session_format_id: data.session_format_id,
+      req_dte: req_dte,
+      req_time: req_time,
+      session_desc: svc.service_code,
+    };
+
+    // Generate session details based on service formula type
+    const sessions = [];
+
+    if (svc.svc_formula_typ === 's') {
+      // Standard interval formula
+      let svcFormula = svc.svc_formula;
+      let currentDate = new Date(`${req_dte}T00:00:00Z`);
+
+      // Ensure first session is not on weekend
+      while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
+        currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+      }
+
+      for (let i = 0; i < svc.nbr_of_sessions; i++) {
+        if (i !== 0) {
+          while (
+            currentDate.getUTCDay() === 0 ||
+            currentDate.getUTCDay() === 6
+          ) {
+            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+          }
+        }
+
+        const intakeDate = currentDate.toISOString().split('T')[0];
+
+        sessions.push({
+          thrpy_req_id: null, // To be set in saveSessions
+          service_id: data.service_id,
+          intake_date: intakeDate,
+          scheduled_time: req_time,
+          session_format: data.session_format_id,
+          session_description: svc.service_code,
+          is_report: sessions.length + 1 === svc.nbr_of_sessions ? 1 : 0,
+        });
+
+        currentDate.setUTCDate(currentDate.getUTCDate() + svcFormula[0]);
+      }
+    } else if (svc.svc_formula_typ === 'd') {
+      // Days apart formula
+      const svcFormula =
+        typeof svc.svc_formula === 'string'
+          ? JSON.parse(svc.svc_formula)
+          : svc.svc_formula;
+      let currentDate = new Date(`${req_dte}T00:00:00Z`);
+
+      for (let i = 0; i < svc.nbr_of_sessions; i++) {
+        currentDate.setUTCDate(currentDate.getUTCDate() + (svcFormula[i] || 7));
+        sessions.push({
+          thrpy_req_id: null, // To be set in saveSessions
+          service_id: data.service_id,
+          intake_date: currentDate.toISOString().split('T')[0],
+          scheduled_time: req_time,
+          session_format: data.session_format_id,
+          session_description: svc.service_code,
+          is_report: sessions.length + 1 === svc.nbr_of_sessions ? 1 : 0,
+        });
+      }
+    } else {
+      throw new Error('Unsupported svc_formula_typ');
+    }
+
+    return { tmpThrpyReq, sessions };
+  }
+
+  async saveSessions(tmpThrpyReq, sessions) {
+    // Insert therapy request into the database
+    const postThrpyReq = await db
+      .withSchema(`${process.env.MYSQL_DATABASE}`)
+      .from('thrpy_req')
+      .insert(tmpThrpyReq);
+
+    if (!postThrpyReq) {
+      throw new Error('Error creating therapy request');
+    }
+
+    // Assign req_id to sessions
+    sessions.forEach((session) => {
+      session.thrpy_req_id = postThrpyReq[0];
+    });
+
+    // Insert sessions into the database
+    const postSessions = await db
+      .withSchema(`${process.env.MYSQL_DATABASE}`)
+      .from('session')
+      .insert(sessions);
+
+    if (!postSessions) {
+      throw new Error('Error creating sessions');
+    }
+
+    return { message: 'Therapy request and sessions created successfully' };
+  }
+
   async postThrpyReq(data) {
     try {
       // Parse the intake date and time from the ISO string
@@ -151,16 +275,9 @@ export default class ThrpyReq {
             if (reportName && reportName.rec && reportName.rec[0]) {
               tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
               tmpSession.service_id = reportServiceId;
-              tmpSession.is_report =
-                reportName.rec[0].is_report &&
-                reportName.rec[0].is_report[0] === 1
-                  ? 1
-                  : 0;
+              tmpSession.is_report = reportName.rec[0].is_report === 1 ? 1 : 0;
               tmpSession.is_additional =
-                reportName.rec[0].is_additional &&
-                reportName.rec[0].is_additional[0] === 1
-                  ? 1
-                  : 0;
+                reportName.rec[0].is_additional === 1 ? 1 : 0;
             }
           }
 
@@ -193,7 +310,7 @@ export default class ThrpyReq {
           scheduled_time: req_time,
           session_format: data.session_format_id,
           session_description: `${svc.service_code} ${drSvc.service_name}`,
-          is_report: 1,
+          is_report: 1, // Use if appropriate
         };
 
         // Insert the discharge session into the database
@@ -288,10 +405,9 @@ export default class ThrpyReq {
             if (reportName && reportName.rec && reportName.rec[0]) {
               tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
               tmpSession.service_id = reportServiceId;
-              tmpSession.is_report =
-                reportName.rec[0].is_report[0] === 1 ? 1 : 0;
+              tmpSession.is_report = reportName.rec[0].is_report === 1 ? 1 : 0;
               tmpSession.is_additional =
-                reportName.rec[0].is_additional[0] === 1 ? 1 : 0;
+                reportName.rec[0].is_additional === 1 ? 1 : 0;
             }
           }
 
@@ -353,7 +469,6 @@ export default class ThrpyReq {
       };
     } catch (error) {
       logger.error(error);
-
       return {
         message: 'Error creating therapy request, sessions, and reports',
         error: -1,

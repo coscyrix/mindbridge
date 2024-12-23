@@ -7,22 +7,8 @@ export default class ThrpyReqService {
   //////////////////////////////////////////
 
   async postThrpyReq(data) {
-    const schema = joi.object({
-      counselor_id: joi.number().required(),
-      client_id: joi.number().required(),
-      service_id: joi.number().required(),
-      session_format_id: joi.number().required(),
-      intake_dte: joi.date().required(),
-    });
-
-    const { error } = schema.validate(data);
-
-    if (error) {
-      return { message: error.details[0].message, error: -1 };
-    }
-
-    const thrpyReq = new ThrpyReq();
-    return thrpyReq.postThrpyReq(data);
+    // Delegate the logic to the ThrpyReq model
+    return await this.ThrpyReqModel.postThrpyReq(data);
   }
 
   //////////////////////////////////////////
@@ -102,5 +88,44 @@ export default class ThrpyReqService {
 
     const thrpyReq = new ThrpyReq();
     return thrpyReq.getThrpyReqById(data);
+  }
+
+  //////////////////////////////////////////
+
+  async listSessions(data) {
+    const schema = joi.object({
+      counselor_id: joi.number().required(),
+      client_id: joi.number().required(),
+      service_id: joi.number().required(),
+      session_format_id: joi.number().required(),
+      intake_dte: joi.date().required(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const thrpyReq = new ThrpyReq();
+    return thrpyReq.listSessions(data);
+  }
+
+  //////////////////////////////////////////
+
+  async saveSessions(data) {
+    const schema = joi.object({
+      tmpThrpyReq: joi.object().required(),
+      sessions: joi.array().items(joi.object()).required(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const thrpyReq = new ThrpyReq();
+    return thrpyReq.saveSessions(data.tmpThrpyReq, data.sessions);
   }
 }
