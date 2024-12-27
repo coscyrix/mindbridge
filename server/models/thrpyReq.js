@@ -347,9 +347,19 @@ export default class ThrpyReq {
         return { message: 'Error loading session forms', error: -1 };
       }
 
+      const ThrpyReq = await this.getThrpyReqById({
+        thrpy_id: postThrpyReq[0],
+      });
+
+      if (!ThrpyReq) {
+        logger.error('Error getting therapy request');
+        return { message: 'Error getting therapy request', error: -1 };
+      }
+
       // Return a success message
       return {
         message: 'Therapy request, sessions, and reports created successfully',
+        rec: ThrpyReq,
       };
     } catch (error) {
       logger.error(error);
