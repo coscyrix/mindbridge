@@ -375,6 +375,20 @@ export default class ThrpyReq {
 
   async putThrpyReqById(data) {
     try {
+      const checkThrpyReq = await this.getThrpyReqById({
+        req_id: data.req_id,
+      });
+
+      if (checkThrpyReq.error) {
+        logger.error('Error getting therapy request');
+        return { message: 'Error getting therapy request', error: -1 };
+      }
+
+      if (!checkThrpyReq || checkThrpyReq.length === 0) {
+        logger.warn('Therapy request not found');
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
       if (data.intake_dte) {
         // Parse the intake date and time from the ISO string
         var req_dte = data.intake_dte.split('T')[0]; // 'YYYY-MM-DD'
@@ -382,14 +396,69 @@ export default class ThrpyReq {
       }
 
       const tmpThrpyReq = {
-        counselor_id: data.counselor_id,
-        client_id: data.client_id,
-        service_id: data.service_id,
-        session_format_id: data.session_format_id,
-        req_dte: req_dte,
-        req_time: req_time,
-        session_desc: data.session_desc,
+        ...(data.counselor_id && { counselor_id: data.counselor_id }),
+        ...(data.client_id && { client_id: data.client_id }),
+        ...(data.service_id && { service_id: data.service_id }),
+        ...(data.session_format_id && {
+          session_format_id: data.session_format_id,
+        }),
+        ...(req_dte && { req_dte: req_dte }),
+        ...(req_time && { req_time: req_time }),
+        ...(data.session_desc && { session_desc: data.session_desc }),
+        ...(data.status_yn && { status_yn: data.status_yn }),
+        ...(data.thrpy_status && { thrpy_status: data.thrpy_status }),
       };
+
+      // Logic for deleting a therapy request with sessions
+      if (data.status_yn) {
+        const thrpySessions = await this.session.getSessionByThrpyReqId({
+          thrpy_req_id: data.req_id,
+        });
+
+        if (thrpySessions.error) {
+          logger.error('Error getting therapy sessions');
+          return { message: 'Error getting therapy sessions', error: -1 };
+        }
+
+        if (thrpySessions && thrpySessions.length > 0) {
+          logger.warn(
+            'Cannot delete therapy request with sessions that were updated',
+          );
+          return {
+            message:
+              'Cannot delete therapy request with sessions that were updated',
+            error: -1,
+          };
+        }
+
+        if (thrpySessions) {
+          const updatedSessions = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('session')
+            .where('thrpy_req_id', data.req_id)
+            .update('status_yn', 2);
+
+          if (!updatedSessions) {
+            logger.error('Error deleting therapy sessions');
+            return { message: 'Error deleting therapy sessions', error: -1 };
+          }
+        }
+      }
+
+      // Logic for discharging a therapy request
+      if (data.thrpy_status) {
+        const putSessions = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('session')
+          .where('thrpy_req_id', data.req_id)
+          .andWhere('session_status', 1)
+          .update({ session_status: 3 });
+
+        if (!putSessions) {
+          logger.error('Error updating sessions');
+          return { message: 'Error updating sessions', error: -1 };
+        }
+      }
 
       const putThrpyReq = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -526,8 +595,8 @@ export default class ThrpyReq {
         .from('v_thrpy_req')
         .where('status_yn', 1);
 
-      if (data.thrpy_id) {
-        query.andWhere('req_id', data.thrpy_id);
+      if (data.req_id) {
+        query.andWhere('req_id', data.req_id);
       }
 
       const rec = await query;
@@ -536,6 +605,7 @@ export default class ThrpyReq {
         logger.error('Error getting therapy request');
         return { message: 'Error getting therapy request', error: -1 };
       }
+
       return rec;
     } catch (error) {
       logger.error(error);
