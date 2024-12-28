@@ -37,6 +37,8 @@ export default class ThrpyReqService {
       req_dte: joi.date().optional(),
       req_time: joi.date().optional(),
       session_desc: joi.string().optional(),
+      status_yn: joi.string().valid('y', 'n').optional(),
+      thrpy_status: joi.string().valid('ONGOING', 'DISCHARGED').optional(),
     });
 
     const { error } = schema.validate(data);
@@ -92,6 +94,7 @@ export default class ThrpyReqService {
       counselor_id: joi.number().optional(),
       client_id: joi.number().optional(),
       thrpy_id: joi.number().optional(),
+      thrpy_status: joi.string().optional(),
     });
 
     const { error } = schema.validate(data);
