@@ -250,7 +250,7 @@ export default class Form {
         .andWhereRaw(`JSON_CONTAINS(svc_ids, ?)`, [`${data.service_id}`]);
 
       const rec = await query;
-      if (!rec || rec.length === 0) {
+      if (!rec) {
         logger.error('Error getting form');
         return { message: 'Error getting form', error: -1 };
       }
