@@ -26,6 +26,7 @@ export default class ThrpyReq {
       // Parse the intake date and time from the ISO string
       const req_dte = data.intake_dte.split('T')[0]; // 'YYYY-MM-DD'
       const req_time = data.intake_dte.split('T')[1]; // 'HH:mm:ss.sssZ'
+      const currentDte = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
 
       // Retrieve the service details from the database
       const servc = await this.service.getServiceById({
@@ -37,6 +38,19 @@ export default class ThrpyReq {
       const drService = await this.service.getServiceById({
         service_code: process.env.DISCHARGE_SERVICE_CODE,
       });
+
+      if (svc.is_additional === 1) {
+        logger.error('Additional services cannot be requested');
+        return {
+          message: 'Additional services cannot be requested',
+          error: -1,
+        };
+      }
+
+      if (svc.is_report === 1) {
+        logger.error('Report services cannot be requested');
+        return { message: 'Report services cannot be requested', error: -1 };
+      }
 
       const drSvc = drService.rec[0];
 
@@ -50,6 +64,27 @@ export default class ThrpyReq {
           `Error getting discharge report service with service_code: DR`,
         );
         return { message: 'Error getting discharge report service', error: -1 };
+      }
+
+      // Check if the intake date is in the past
+      if (req_dte < currentDte) {
+        logger.warn('Intake date is in the past');
+        return { message: 'Intake date is in the past', error: -1 };
+      }
+
+      // Check if the client has an active therapy request with the same service and same counselor
+      const checkThrpyReqActiveData = {
+        counselor_id: data.counselor_id,
+        client_id: data.client_id,
+        service_id: data.service_id,
+      };
+
+      const checkThrpyReq = await this.checkThrpyReqActive(
+        checkThrpyReqActiveData,
+      );
+
+      if (checkThrpyReq.error) {
+        return checkThrpyReq;
       }
 
       // Parse svc_report_formula if needed
@@ -148,14 +183,12 @@ export default class ThrpyReq {
               is_report: 1,
             });
 
+            console.log('////////////////////////////////////', reportName);
+
             if (reportName && reportName.rec && reportName.rec[0]) {
               tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
               tmpSession.service_id = reportServiceId;
-              tmpSession.is_report =
-                reportName.rec[0].is_report &&
-                reportName.rec[0].is_report[0] === 1
-                  ? 1
-                  : 0;
+              tmpSession.is_report = reportName.rec[0].is_report === 1 ? 1 : 0;
               tmpSession.is_additional =
                 reportName.rec[0].is_additional &&
                 reportName.rec[0].is_additional[0] === 1
@@ -288,8 +321,7 @@ export default class ThrpyReq {
             if (reportName && reportName.rec && reportName.rec[0]) {
               tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
               tmpSession.service_id = reportServiceId;
-              tmpSession.is_report =
-                reportName.rec[0].is_report[0] === 1 ? 1 : 0;
+              tmpSession.is_report = reportName.rec[0].is_report === 1 ? 1 : 0;
               tmpSession.is_additional =
                 reportName.rec[0].is_additional[0] === 1 ? 1 : 0;
             }
@@ -340,7 +372,7 @@ export default class ThrpyReq {
         return { message: 'Unsupported formula type', error: -1 };
       }
 
-      const loadForms = await this.loadSessionForms(postThrpyReq[0]);
+      const loadForms = this.loadSessionForms(postThrpyReq[0]);
 
       if (!loadForms) {
         logger.error('Error loading session forms');
@@ -348,7 +380,7 @@ export default class ThrpyReq {
       }
 
       const ThrpyReq = await this.getThrpyReqById({
-        thrpy_id: postThrpyReq[0],
+        req_id: postThrpyReq[0],
       });
 
       if (!ThrpyReq) {
@@ -599,6 +631,18 @@ export default class ThrpyReq {
         query.andWhere('req_id', data.req_id);
       }
 
+      if (data.counselor_id) {
+        query.andWhere('counselor_id', data.counselor_id);
+      }
+
+      if (data.client_id) {
+        query.andWhere('client_id', data.client_id);
+      }
+
+      if (data.service_id) {
+        query.andWhere('service_id', data.service_id);
+      }
+
       const rec = await query;
 
       if (!rec) {
@@ -782,6 +826,99 @@ export default class ThrpyReq {
       console.error(error);
       logger.error(error);
       return { message: 'Error updating session forms', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async checkThrpyReqActive(data) {
+    try {
+      //Logic to check if the client has an active therapy request with the same service and same counselor
+      const checkThrpyReq = await this.getThrpyReqById({
+        counselor_id: data.counselor_id,
+        client_id: data.client_id,
+        service_id: data.service_id,
+      });
+
+      if (checkThrpyReq.error) {
+        logger.error('Error checking client for active therapy request');
+        return {
+          message: 'Error checking client for active therapy request',
+          error: -1,
+        };
+      }
+
+      if (checkThrpyReq && checkThrpyReq.length > 0) {
+        // check if the therapy request is active and not discharged
+        const activeThrpyReq = checkThrpyReq.filter(
+          (thrpyReq) =>
+            thrpyReq.thrpy_status === 'ONGOING' && thrpyReq.status_yn === 'y',
+        );
+
+        if (activeThrpyReq.length > 0) {
+          // Check for active sessions for the active therapy request
+          const activeSessions = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('v_session')
+            .where('thrpy_req_id', activeThrpyReq[0].req_id)
+            .whereNotIn('session_status', [2, 3, 4]);
+
+          if (activeSessions.error) {
+            logger.error('Error getting active sessions');
+            return { message: 'Error getting active sessions', error: -1 };
+          }
+
+          // Check if the client has an active session for the same therapy request
+          if (activeThrpyReq[0].session_obj.length !== activeSessions.length) {
+            console.log(
+              'activeThrpyReq[0].session_obj.length',
+              activeThrpyReq[0].session_obj.length,
+            );
+            console.log('activeSessions.length', activeSessions.length);
+            logger.warn(
+              'Client already has an active therapy request with some sessions updated',
+            );
+            return {
+              message:
+                'Client already has an active therapy request with some sessions updated',
+              error: -1,
+            };
+          }
+
+          // Check if the client doesn't have an active session for the same therapy request
+          if (activeThrpyReq[0].session_obj.length === activeSessions.length) {
+            console.log(
+              'activeThrpyReq[0].session_obj.length',
+              activeThrpyReq[0].session_obj.length,
+            );
+
+            const hardDelThrpyReq = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('thrpy_req')
+              .where('req_id', activeThrpyReq[0].req_id)
+              .del();
+
+            if (!hardDelThrpyReq) {
+              logger.error('Error deleting therapy request');
+              return { message: 'Error deleting therapy request', error: -1 };
+            }
+
+            console.log('activeSessions.length', activeSessions.length);
+            logger.warn(
+              'Client already has an active session for the same therapy request',
+            );
+          }
+        }
+      }
+
+      return { message: 'Client does not have an active therapy request' };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return {
+        message: 'Error checking client for active therapy request',
+        error: -1,
+      };
     }
   }
 }
