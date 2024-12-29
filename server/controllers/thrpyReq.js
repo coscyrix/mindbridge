@@ -123,4 +123,36 @@ export default class ThrpyReqController {
 
     res.status(200).json(rec);
   }
+
+  //////////////////////////////////////////
+
+  async listSessions(req, res) {
+    const data = req.body;
+
+    const thrpyReq = new ThrpyReqService();
+    const rec = await thrpyReq.listSessions(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
+  async saveSessions(req, res) {
+    const data = req.body;
+
+    const thrpyReq = new ThrpyReqService();
+    const rec = await thrpyReq.saveSessions(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
 }
