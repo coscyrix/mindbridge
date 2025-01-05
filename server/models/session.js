@@ -145,28 +145,24 @@ export default class Session {
       let tmpSession;
       if (data.session_status) {
         tmpSession = {
-          session_status: data.session_status,
+          ...(data.session_status && { session_status: data.session_status }),
+          // ...data.thrpy_req_id && {thrpy_req_id: data.thrpy_req_id},
+          ...(data.service_id && { service_id: data.service_id }),
+          ...(data.session_format && { session_format: data.session_format }),
+          ...(data.intake_date && { intake_date: data.intake_date }),
+          ...(data.scheduled_time && { scheduled_time: data.scheduled_time }),
+          // ...data.session_description && {session_description: data.session_description},
+          // ...data.is_additional && {is_additional: data.is_additional},
+          // ...data.is_report && {is_report: data.is_report},
         };
 
         this.SendTreatmentToolsEmail({
           session_id: data.session_id,
         });
-      } else {
-        tmpSession = {
-          // thrpy_req_id: data.thrpy_req_id,
-          service_id: data.service_id,
-          session_format: data.session_format,
-          intake_date: data.intake_date,
-          scheduled_time: data.scheduled_time,
-          // session_description: data.session_description,
-          // is_additional: data.is_additional,
-          // is_report: data.is_report,
-          session_status: data.session_status,
-        };
       }
 
       if (data.session_status === 3 && data.notes) {
-        const sessionNotes = await this.common.postNotes({
+        const sessionNotes = this.common.postNotes({
           session_id: data.session_id,
           message: data.notes,
         });
@@ -177,7 +173,7 @@ export default class Session {
         }
       }
 
-      if (tmpSession.length > 0) {
+      if (Object.keys(tmpSession).length > 0) {
         const putSession = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('session')
