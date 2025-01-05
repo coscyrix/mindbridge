@@ -7,7 +7,12 @@ import User from './auth/user.js';
 import Common from './common.js';
 import AuthCommon from './auth/authCommon.js';
 import SendEmail from '../middlewares/sendEmail.js';
-import { clientWelcomeEmail, emailUpdateEmail } from '../utils/emailTmplt.js';
+import {
+  clientWelcomeEmail,
+  consentFormEmail,
+  emailUpdateEmail,
+  welcomeAccountDetailsEmail,
+} from '../utils/emailTmplt.js';
 import UserTargetOutcome from './userTargetOutcome.js';
 
 const db = knex(DBconn.dbConn.development);
@@ -122,7 +127,7 @@ export default class UserProfile {
       }
 
       const postUserTargetOutcome =
-        await this.userTargetOutcome.postUserTargetOutcome({
+        this.userTargetOutcome.postUserTargetOutcome({
           user_profile_id: postUsrProfile[0],
           target_outcome_id: data.target_outcome_id,
           counselor_id: data.user_profile_id,
@@ -133,7 +138,7 @@ export default class UserProfile {
         return { message: 'Error creating user target outcome', error: -1 };
       }
 
-      const postClientEnrollment = await this.common.postClientEnrollment({
+      const postClientEnrollment = this.common.postClientEnrollment({
         user_id: data.user_profile_id, // This is the ID of the Counselor who is enrolling the client
         client_id: postUsrProfile[0], // i dont want this to be passed as an array but as a single value
       });
@@ -142,13 +147,61 @@ export default class UserProfile {
         return postClientEnrollment;
       }
 
+      ////////////////////////////////////////////////////////////////
+      // Logic to send an email to the client with their login details
+      const recTargetOutcome = await this.common.getTargetOutcomeById(
+        data.target_outcome_id,
+      );
+
+      console.log('recTargetOutcome', recTargetOutcome);
+
+      if (recTargetOutcome.error) {
+        return recTargetOutcome;
+      }
+
+      const recConselor = await this.getUserProfileById({
+        user_profile_id: data.user_profile_id,
+      });
+
+      if (recConselor.error) {
+        return recConselor;
+      }
+
+      const welcomeClientEmail = welcomeAccountDetailsEmail(
+        data.email,
+        `${data.user_first_name} ${data.user_last_name}`,
+        data.user_phone_nbr ? data.user_phone_nbr : 'N/A',
+        recTargetOutcome[0].target_name,
+        `${recConselor.rec[0].user_first_name} ${recConselor.rec[0].user_last_name}`,
+      );
+
       const emailSent = clientWelcomeEmail(data.email, clientPassword);
+      const sendClientConsentForm = consentFormEmail(
+        data.email,
+        `${data.user_first_name} ${data.user_last_name}`,
+        `https://mindbridge/consent-form/${data.clam_num}`,
+      );
+
+      const sendWelcomeEmail = this.sendEmail.sendMail(welcomeClientEmail);
       const sendEmail = this.sendEmail.sendMail(emailSent);
+      const sendConsentForm = this.sendEmail.sendMail(sendClientConsentForm);
 
       if (sendEmail.error) {
         logger.error('Error sending email');
         return { message: 'Error sending email', error: -1 };
       }
+
+      if (sendWelcomeEmail.error) {
+        logger.error('Error sending welcome email');
+        return { message: 'Error sending welcome email', error: -1 };
+      }
+
+      if (sendConsentForm.error) {
+        logger.error('Error sending consent form email');
+        return { message: 'Error sending consent form email', error: -1 };
+      }
+      ///////////////////////////////////////////////////////////////////////
+      ///////////////////////////////////////////////////////////////////////
 
       return { message: 'User profile created successfully' };
     } catch (error) {

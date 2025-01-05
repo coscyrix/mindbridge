@@ -165,19 +165,34 @@ export default class Session {
         };
       }
 
-      const putSession = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('session')
-        .where('session_id', data.session_id)
-        .update(tmpSession);
+      if (data.session_status === 3 && data.notes) {
+        const sessionNotes = await this.common.postNotes({
+          session_id: data.session_id,
+          message: data.notes,
+        });
 
-      if (!putSession) {
-        logger.error('Error updating session');
-        return { message: 'Error updating session', error: -1 };
+        if (sessionNotes.error) {
+          logger.error('Error adding notes');
+          return { message: 'Error adding notes', error: -1 };
+        }
+      }
+
+      if (tmpSession.length > 0) {
+        const putSession = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('session')
+          .where('session_id', data.session_id)
+          .update(tmpSession);
+
+        if (!putSession) {
+          logger.error('Error updating session');
+          return { message: 'Error updating session', error: -1 };
+        }
       }
 
       return { message: 'Session updated successfully' };
     } catch (error) {
+      console.log(error);
       logger.error(error);
 
       return { message: 'Error updating session', error: -1 };
@@ -218,7 +233,13 @@ export default class Session {
         for (const arry of session.forms_array) {
           const [form] = await this.form.getFormByFormId({ form_id: arry });
           const form_name = form.form_cde;
-          const toolsEmail = treatmentToolsEmail(recUser[0].email, form_name);
+          const client_full_name =
+            recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
+          const toolsEmail = treatmentToolsEmail(
+            recUser[0].email,
+            client_full_name,
+            form_name,
+          );
 
           const email = this.sendEmail.sendMail(toolsEmail);
 
@@ -310,6 +331,56 @@ export default class Session {
       }
       return rec;
     } catch (error) {
+      logger.error(error);
+      return { message: 'Error getting session', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getSessionTodayAndTomorrow(data) {
+    try {
+      const currentDate = new Date();
+      const tomorrowDate = new Date();
+      tomorrowDate.setDate(currentDate.getDate() + 1);
+
+      const formatDate = (date) => {
+        return date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+      };
+
+      const formattedCurrentDate = formatDate(currentDate);
+      const formattedTomorrowDate = formatDate(tomorrowDate);
+
+      const recToday = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_session')
+        .where('intake_date', formattedCurrentDate)
+        .andWhere('counselor_id', data.counselor_id);
+
+      if (!recToday) {
+        logger.error('Error getting session');
+        return { message: 'Error getting session', error: -1 };
+      }
+
+      const recTomorrow = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_session')
+        .where('intake_date', formattedTomorrowDate)
+        .andWhere('counselor_id', data.counselor_id);
+
+      if (!recTomorrow) {
+        logger.error('Error getting session');
+        return { message: 'Error getting session', error: -1 };
+      }
+
+      return { session_today: recToday, session_tomorrow: recTomorrow };
+    } catch (error) {
+      console.log(error);
       logger.error(error);
       return { message: 'Error getting session', error: -1 };
     }

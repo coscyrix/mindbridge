@@ -20,4 +20,10 @@ router.put(
 
 router.get('/', authenticate, AsyncWrapper(sessionController.getSessionById));
 
+router.get(
+  '/today',
+  authenticate,
+  AsyncWrapper(sessionController.getSessionTodayAndTomorrow),
+);
+
 export const sessionRouter = { baseUrl: '/api/session', router };
