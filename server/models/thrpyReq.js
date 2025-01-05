@@ -482,9 +482,11 @@ export default class ThrpyReq {
         const putSessions = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('session')
-          .where('thrpy_req_id', data.req_id)
+          .where('thrpy_req_id', parseInt(data.req_id))
           .andWhere('session_status', 1)
           .update({ session_status: 3 });
+
+        console.log('putSessions', putSessions);
 
         if (!putSessions) {
           logger.error('Error updating sessions');
@@ -870,11 +872,6 @@ export default class ThrpyReq {
 
           // Check if the client has an active session for the same therapy request
           if (activeThrpyReq[0].session_obj.length !== activeSessions.length) {
-            console.log(
-              'activeThrpyReq[0].session_obj.length',
-              activeThrpyReq[0].session_obj.length,
-            );
-            console.log('activeSessions.length', activeSessions.length);
             logger.warn(
               'Client already has an active therapy request with some sessions updated',
             );
@@ -887,11 +884,6 @@ export default class ThrpyReq {
 
           // Check if the client doesn't have an active session for the same therapy request
           if (activeThrpyReq[0].session_obj.length === activeSessions.length) {
-            console.log(
-              'activeThrpyReq[0].session_obj.length',
-              activeThrpyReq[0].session_obj.length,
-            );
-
             const hardDelThrpyReq = await db
               .withSchema(`${process.env.MYSQL_DATABASE}`)
               .from('thrpy_req')
@@ -903,7 +895,6 @@ export default class ThrpyReq {
               return { message: 'Error deleting therapy request', error: -1 };
             }
 
-            console.log('activeSessions.length', activeSessions.length);
             logger.warn(
               'Client already has an active session for the same therapy request',
             );

@@ -38,6 +38,13 @@ export default class SessionController {
       return;
     }
 
+    if (data.session_status === 3 && !data.notes) {
+      res
+        .status(400)
+        .json({ message: 'Provide a note for why the client was a NO SHOW' });
+      return;
+    }
+
     const session = new SessionService();
     const rec = await session.putSessionById(data);
 
@@ -90,6 +97,22 @@ export default class SessionController {
 
     const session = new SessionService();
     const rec = await session.getSessionById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
+  async getSessionTodayAndTomorrow(req, res) {
+    const data = req.query;
+
+    const session = new SessionService();
+    const rec = await session.getSessionTodayAndTomorrow(data);
 
     if (rec.error) {
       res.status(400).json(rec);

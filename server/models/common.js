@@ -231,4 +231,51 @@ export default class Common {
   async generateClamNum() {
     return Math.floor(1000000 + Math.random() * 9000000).toString();
   }
+
+  //////////////////////////////////////////
+
+  async getTargetOutcomeById(target_id) {
+    try {
+      console.log('target_id:', target_id);
+      let query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('ref_target_outcomes')
+        .where('target_id', target_id);
+
+      const rec = await query;
+
+      if (!rec || rec.length === 0) {
+        return { message: 'Target outcome not found', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error getting target outcome', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async postNotes(data) {
+    try {
+      const tmpNotes = {
+        session_id: data.session_id,
+        message: data.message,
+      };
+
+      const postNote = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('notes')
+        .insert(tmpNotes);
+
+      if (!postNote) {
+        return { message: 'Error creating note', error: -1 };
+      }
+
+      return { message: 'Note created successfully' };
+    } catch (error) {
+      return { message: 'Error creating note', error: -1 };
+    }
+  }
 }

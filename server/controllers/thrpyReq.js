@@ -52,51 +52,51 @@ export default class ThrpyReqController {
 
   //////////////////////////////////////////
 
-  async putThrpyDischarge(req, res) {
-    const req_id = req.query.req_id;
-    const data = req.body;
-    data.req_id = req_id;
+  // async putThrpyDischarge(req, res) {
+  //   const req_id = req.query.req_id;
+  //   const data = req.body;
+  //   data.req_id = req_id;
 
-    if (!data.req_id || !data.thrpy_status) {
-      res.status(400).json({ message: 'Missing mandatory fields' });
-      return;
-    }
+  //   if (!data.req_id || !data.thrpy_status) {
+  //     res.status(400).json({ message: 'Missing mandatory fields' });
+  //     return;
+  //   }
 
-    const thrpyReq = new ThrpyReqService();
-    const rec = await thrpyReq.putThrpyDischarge(data);
+  //   const thrpyReq = new ThrpyReqService();
+  //   const rec = await thrpyReq.putThrpyDischarge(data);
 
-    if (rec.error) {
-      res.status(400).json(rec);
-      return;
-    }
+  //   if (rec.error) {
+  //     res.status(400).json(rec);
+  //     return;
+  //   }
 
-    res.status(200).json(rec);
-  }
+  //   res.status(200).json(rec);
+  // }
 
   //////////////////////////////////////////
 
-  async delThrpyReqById(req, res) {
-    const thrpy_id = req.query.thrpy_id;
+  // async delThrpyReqById(req, res) {
+  //   const thrpy_id = req.query.thrpy_id;
 
-    if (!thrpy_id) {
-      res.status(400).json({ message: 'Missing mandatory params' });
-      return;
-    }
+  //   if (!thrpy_id) {
+  //     res.status(400).json({ message: 'Missing mandatory params' });
+  //     return;
+  //   }
 
-    const data = {
-      thrpy_id: thrpy_id,
-    };
+  //   const data = {
+  //     thrpy_id: thrpy_id,
+  //   };
 
-    const thrpyReq = new ThrpyReqService();
-    const rec = await thrpyReq.delThrpyReqById(data);
+  //   const thrpyReq = new ThrpyReqService();
+  //   const rec = await thrpyReq.delThrpyReqById(data);
 
-    if (rec.error) {
-      res.status(400).json(rec);
-      return;
-    }
+  //   if (rec.error) {
+  //     res.status(400).json(rec);
+  //     return;
+  //   }
 
-    res.status(200).json(rec);
-  }
+  //   res.status(200).json(rec);
+  // }
 
   //////////////////////////////////////////
 

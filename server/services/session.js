@@ -39,6 +39,7 @@ export default class SessionService {
       is_additional: joi.boolean().optional(),
       is_report: joi.boolean().optional(),
       session_status: joi.number().optional(),
+      notes: joi.string().optional(),
     });
 
     const { error } = schema.validate(data);
@@ -85,5 +86,22 @@ export default class SessionService {
 
     const session = new Session();
     return session.getSessionById(data);
+  }
+
+  //////////////////////////////////////////
+
+  async getSessionTodayAndTomorrow(data) {
+    const schema = joi.object({
+      counselor_id: joi.number().optional(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const session = new Session();
+    return session.getSessionTodayAndTomorrow(data);
   }
 }
