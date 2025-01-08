@@ -222,7 +222,22 @@ export default class UserProfile {
         ...(data.user_phone_nbr && { user_phone_nbr: data.user_phone_nbr }),
         ...(data.user_typ_id && { user_typ_id: data.user_typ_id }),
         ...(data.clam_num && { clam_num: data.clam_num }),
+        ...(data.status_yn && { status_yn: data.status_yn }),
       };
+
+      if (data.status_yn === 2) {
+        const checkActiveSchedule =
+          await this.checkClientHasActiveSchedule(user_profile_id);
+
+        if (checkActiveSchedule.rec.length === 0) {
+          logger.info('Client has no active schedule');
+        }
+
+        if (checkActiveSchedule.rec.length > 0) {
+          logger.info('Client has an active schedule');
+          return { message: 'Client has an active schedule', error: -1 };
+        }
+      }
 
       const putUsrProfile = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -293,12 +308,24 @@ export default class UserProfile {
         query.where('email', data.email);
       }
 
-      if (data.role_id) {
-        query.where('role_id', data.role_id);
-      }
+      // if (data.role_id) {
+      //   query.where('role_id', data.role_id);
+      // }
 
       if (data.clam_num) {
         query.where('clam_num', data.clam_num);
+      }
+
+      if (data.counselor_id && data.role_id == 2) {
+        const clientList = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .distinct('client_id')
+          .from('thrpy_req')
+          .where('counselor_id', data.counselor_id);
+
+        const clientIds = clientList.map((client) => client.client_id);
+
+        query.whereIn('user_profile_id', clientIds);
       }
 
       const rec = await query;
@@ -338,6 +365,33 @@ export default class UserProfile {
     } catch (error) {
       logger.error(error);
       return { message: 'Error deleting user profile', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async checkClientHasActiveSchedule(id) {
+    try {
+      const checkThrpyReq = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_thrpy_req')
+        .where('status_yn', 1)
+        .andWhere('client_id', id)
+        .andWhere('thrpy_status', 1);
+
+      if (!checkThrpyReq) {
+        logger.error('Error checking user schedule');
+        return { message: 'Error checking user schedule', error: -1, rec: [] };
+      }
+
+      if (checkThrpyReq.length > 0) {
+        return { message: 'User has active schedule', rec: checkThrpyReq };
+      }
+
+      return { message: 'User has no active schedule', rec: [] };
+    } catch (error) {
+      logger.error(error);
+      return { message: 'Error checking user schedule', error: -1, rec: [] };
     }
   }
 }

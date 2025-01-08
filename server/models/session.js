@@ -5,9 +5,10 @@ import knex from 'knex';
 import logger from '../config/winston.js';
 import Common from './common.js';
 import Form from './form.js';
+import UserProfile from './userProfile.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import { splitIsoDatetime } from '../utils/common.js';
-import { treatmentToolsEmail } from '../utils/emailTmplt.js';
+import { treatmentToolsEmail, dischargeEmail } from '../utils/emailTmplt.js';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -16,6 +17,7 @@ export default class Session {
     this.common = new Common();
     this.form = new Form();
     this.sendEmail = new SendEmail();
+    this.userProfile = new UserProfile();
   }
   //////////////////////////////////////////
 
@@ -105,6 +107,15 @@ export default class Session {
 
   async putSessionById(data) {
     try {
+      const checkSessionIfOngoing = await this.checkSessionONGOING(
+        data.session_id,
+      );
+
+      if (checkSessionIfOngoing.rec.length > 0) {
+        logger.error('Session is ongoing');
+        return { message: 'Session is ongoing', error: -1 };
+      }
+
       // Check if session is a discharge session
       const checkDischarge = await this.getSessionById({
         session_id: data.session_id,
@@ -139,6 +150,30 @@ export default class Session {
         if (!putThrpyReq) {
           logger.error('Error updating therapy request');
           return { message: 'Error updating therapy request', error: -1 };
+        }
+
+        // Send discharge email
+        const checkThrpyReq = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('v_thrpy_req')
+          .where('status_yn', 1)
+          .andWhere('req_id', checkDischarge[0].thrpy_req_id);
+
+        console.log(checkThrpyReq);
+
+        const recUser = await this.userProfile.getUserProfileById({
+          user_profile_id: checkThrpyReq[0].client_id,
+        });
+        const dischargeEmlTmplt = dischargeEmail(
+          recUser.rec[0].email,
+          `${recUser.rec[0].user_first_name} ${recUser.rec[0].user_last_name}`,
+        );
+        const sendDischargeEmlTmpltEmail =
+          this.sendEmail.sendMail(dischargeEmlTmplt);
+
+        if (!sendDischargeEmlTmpltEmail) {
+          logger.error('Error sending discharge email');
+          return { message: 'Error sending discharge email', error: -1 };
         }
       }
 
@@ -316,6 +351,7 @@ export default class Session {
 
   async getSessionByThrpyReqId(data) {
     try {
+      console.log('data', data);
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
@@ -407,6 +443,33 @@ export default class Session {
       console.log(error);
       logger.error(error);
       return { message: 'Error updating session', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async checkSessionONGOING(session_id) {
+    try {
+      const rec = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('session')
+        .where('session_id', session_id)
+        .whereNot('session_status', 1); // where not scheduled which is 1 (Default)
+
+      if (!rec) {
+        logger.error('Error getting session');
+        return { message: 'Error getting session', error: -1 };
+      }
+
+      if (rec.length > 0) {
+        return { message: 'Session is ongoing', rec };
+      }
+
+      return { message: 'Session is not ongoing', rec: [] };
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error getting session', error: -1 };
     }
   }
 }

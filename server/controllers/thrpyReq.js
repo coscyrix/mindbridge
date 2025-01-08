@@ -52,6 +52,29 @@ export default class ThrpyReqController {
 
   //////////////////////////////////////////
 
+  async putThrpyBigObjReqById(req, res) {
+    const req_id = req.query.req_id;
+    const data = req.body;
+    data.req_id = req_id;
+
+    if (!data.req_id) {
+      res.status(400).json({ message: 'Missing mandatory fields' });
+      return;
+    }
+
+    const thrpyReq = new ThrpyReqService();
+    const rec = await thrpyReq.putThrpyBigObjReqById(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
   // async putThrpyDischarge(req, res) {
   //   const req_id = req.query.req_id;
   //   const data = req.body;

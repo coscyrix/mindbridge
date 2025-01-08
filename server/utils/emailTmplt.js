@@ -167,49 +167,193 @@ export const welcomeAccountDetailsEmail = (
     subject:
       'Welcome to MindBridge - Account Details for Your Therapy Sessions',
     html: `
-      <style>
-        .branded-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        .branded-table th, .branded-table td {
-          border: 1px solid #ddd;
-          padding: 8px;
-          text-align: left;
-        }
-        .branded-table th {
-          background-color: #f2f2f2;
-        }
-      </style>
-      <p>Dear ${capitalizeFirstLetter(clientName)},</p>
-      <p>Welcome to [Your Company Name]! We are pleased to inform you that your account has been successfully created. Below are the details for your reference:</p>
-      <table class="branded-table">
-        <tr>
-          <th>Account Information</th>
-          <th>Details</th>
+  <style>
+    .branded-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 20px 0;
+      font-size: 16px;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .branded-table thead {
+      background: linear-gradient(90deg, #4CAF50, #2A9D8F);
+      color: white;
+    }
+    .branded-table th,
+    .branded-table td {
+      padding: 14px 18px;
+      text-align: left;
+    }
+    .branded-table th {
+      font-weight: bold;
+      text-align: center;
+    }
+    .branded-table tbody tr:nth-child(odd) {
+      background-color: #f9f9f9;
+    }
+    .branded-table tbody tr:nth-child(even) {
+      background-color: #ffffff;
+    }
+    .branded-table tbody tr:hover {
+      background-color: #f1f1f1;
+    }
+    .branded-table td {
+      border-top: 1px solid #ddd;
+    }
+  </style>
+  <p>Dear ${capitalizeFirstLetter(clientName)},</p>
+  <p>Welcome to ${process.env.PROJECT_NAME}! We are pleased to inform you that your account has been successfully created. Below are the details for your reference:</p>
+  <table class="branded-table">
+    <thead>
+      <tr>
+        <th>Account Information</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Name</td>
+        <td>${capitalizeFirstLetter(clientName)}</td>
+      </tr>
+      <tr>
+        <td>Email</td>
+        <td>${email}</td>
+      </tr>
+      <tr>
+        <td>Phone Number</td>
+        <td>${clientPhoneNumber || 'N/A'}</td>
+      </tr>
+      <tr>
+        <td>Target Outcome</td>
+        <td>${targetOutcome}</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Your designated counselor for these sessions will be <b>${capitalizeFirstLetter(counselorName)}</b>, who will guide and support you throughout your journey. We look forward to working with you to help achieve your goals.</p><br/>
+  <p>Throughout our therapy sessions, you'll receive a comprehensive package, including:</p>
+  <ul>
+    <li><b>Smart Goals:</b> Tailored objectives to guide our progress</li>
+    <li><b>Treatment Tools:</b> Evidence-based resources to support your growth</li>
+    <li><b>Homework Assignments:</b> Targeted exercises to reinforce new skills</li>
+  </ul>
+  <p>Together, we'll work collaboratively to achieve these goals, using these tools to facilitate a transformative healing process.</p>
+  <p>If you have any questions or need assistance accessing your account, please do not hesitate to contact us at ${process.env.SUPPORT_EMAIL} or ${process.env.SUPPORT_PHONE}.</p>
+  <p>We’re here to support you every step of the way.</p>
+  <p>Thank you,</p>
+  <p>The MindBridge Team</p>
+`,
+  };
+};
+
+const timeZoneConfig =
+  process.env.TIMEZONE === process.env.TIMEZONE ? process.env.TIMEZONE : 'UTC';
+
+export const therapyRequestDetailsEmail = (email, therapyRequest) => {
+  const {
+    counselor_first_name,
+    counselor_last_name,
+    client_first_name,
+    client_last_name,
+    service_name,
+    session_format_id,
+    session_obj,
+  } = therapyRequest;
+
+  const sessionDetails = session_obj
+    .map(
+      (session, index) => `
+        <tr style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px; ${
+          session.is_report ? 'font-weight: bold;' : ''
+        } background-color: ${
+          session.is_report
+            ? '#ffffcc'
+            : index % 2 === 0
+              ? '#f9f9f9'
+              : '#ffffff'
+        };">
+          <td style="padding: 8px;">${session.service_name}</td>
+          <td style="padding: 8px;">${session.intake_date}</td>
+          <td style="padding: 8px;">${new Date(
+            `1970-01-01T${session.scheduled_time}`,
+          ).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: timeZoneConfig,
+          })}</td>
+          <td style="padding: 8px;">${session.session_format}</td>
+          <td style="padding: 8px;">${session.session_status}</td>
         </tr>
-        <tr>
-          <td>Name</td>
-          <td>${capitalizeFirstLetter(clientName)}</td>
-        </tr>
-        <tr>
-          <td>Email</td>
-          <td>${email}</td>
-        </tr>
-        <tr>
-          <td>Phone Number</td>
-          <td>${clientPhoneNumber}</td>
-        </tr>
-        <tr>
-          <td>Target Outcome</td>
-          <td>${targetOutcome}</td>
-        </tr>
-      </table>
-      <p>Your designated counselor for these sessions will be <b>${capitalizeFirstLetter(counselorName)}</b>, who will guide and support you throughout your journey. We look forward to working with you to help achieve your goals.</p>
-      <p>If you have any questions or need assistance accessing your account, please do not hesitate to contact us at ${process.env.SUPPORT_EMAIL} or ${process.env.SUPPORT_PHONE}.</p>
-      <p>We’re here to support you every step of the way.</p>
-      <p>Thank you,</p>
-      <p>The MindBridge Team</p>
+      `,
+    )
+    .join('');
+
+  return {
+    to: email,
+    subject: `${service_name} Session Schedule`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h4 style="color: #007bff; text-align: left; margin-bottom: 20px; font-size: 16px;">Therapy Request Details</h4>
+         <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+          <tr style="text-align: left;">
+            <td style="padding: 4px; font-weight: bold;">Counselor:</td>
+            <td style="padding: 4px;">${capitalizeFirstLetter(counselor_first_name)} ${capitalizeFirstLetter(counselor_last_name)}</td>
+          </tr>
+          <tr style="text-align: left;">
+            <td style="padding: 4px; font-weight: bold;">Client:</td>
+            <td style="padding: 4px;">${capitalizeFirstLetter(client_first_name)} ${capitalizeFirstLetter(client_last_name)}</td>
+          </tr>
+          <tr style="text-align: left;">
+            <td style="padding: 4px; font-weight: bold;">Service:</td>
+            <td style="padding: 4px;">${service_name}</td>
+          </tr>
+          <tr style="text-align: left;">
+            <td style="padding: 4px; font-weight: bold;">Session Format:</td>
+            <td style="padding: 4px;">${session_format_id}</td>
+          </tr>
+        </table>
+        
+        <h4 style="color: #007bff; text-align: left; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Session Details</h4>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd; border-radius: 8px;">
+          <thead>
+            <tr style="background-color: #007bff; color: #fff; text-align: left;">
+              <th style="padding: 12px 8px;">Service Name</th>  
+              <th style="padding: 12px 8px;">Session Date</th>
+              <th style="padding: 12px 8px;">Session Time</th>
+              <th style="padding: 12px 8px;">Session Format</th>
+              <th style="padding: 12px 8px;">Session Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sessionDetails}
+          </tbody>
+        </table>
+        
+        <p style="text-align: left;">Thank you,</p>
+        <p style="text-align: left;"><strong>The MindBridge Team</strong></p>
+      </div>
+    `,
+  };
+};
+
+export const dischargeEmail = (email, clientName) => {
+  return {
+    to: email,
+    subject: 'Congratulations on Completing Your Therapy Journey!',
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>Dear ${capitalizeFirstLetter(clientName)},</p>
+        <p>I hope this email finds you well. I wanted to take a moment to acknowledge the completion of your therapy sessions and congratulate you on the progress you’ve made during this journey.</p>
+        <p>It has been a privilege to work alongside you and witness your growth, resilience, and commitment to your well-being. I am confident that the tools and insights you’ve developed during our sessions will continue to support you in navigating life’s challenges.</p>
+        <p>Thank you for trusting me to be part of your journey. I wish you continued strength, growth, and fulfillment in the path ahead.</p>
+        <p style="text-align: left;">Thank you,</p>
+        <p style="text-align: left;"><strong>The MindBridge Team</strong></p>
+      </div>
     `,
   };
 };
