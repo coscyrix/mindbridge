@@ -13,6 +13,12 @@ router.post('/', authenticate, AsyncWrapper(thrpyReqController.postThrpyReq));
 router.put('/', authenticate, AsyncWrapper(thrpyReqController.putThrpyReqById));
 
 router.put(
+  '/bigObj/',
+  authenticate,
+  AsyncWrapper(thrpyReqController.putThrpyBigObjReqById),
+);
+
+router.put(
   '/discharge/',
   authenticate,
   AsyncWrapper(thrpyReqController.putThrpyDischarge),

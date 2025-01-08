@@ -5,10 +5,16 @@ import knex from 'knex';
 import logger from '../config/winston.js';
 import Session from './session.js';
 import Service from './service.js';
+import UserProfile from './userProfile.js';
 import Form from './form.js';
 import dotenv from 'dotenv';
 import { capitalizeFirstLetter } from '../utils/common.js';
 import { splitIsoDatetime } from '../utils/common.js';
+import {
+  therapyRequestDetailsEmail,
+  dischargeEmail,
+} from '../utils/emailTmplt.js';
+import SendEmail from '../middlewares/sendEmail.js';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -18,6 +24,8 @@ export default class ThrpyReq {
     this.session = new Session();
     this.service = new Service();
     this.form = new Form();
+    this.userProfile = new UserProfile();
+    this.sendEmail = new SendEmail();
   }
   //////////////////////////////////////////
 
@@ -182,8 +190,6 @@ export default class ThrpyReq {
               service_id: reportServiceId,
               is_report: 1,
             });
-
-            console.log('////////////////////////////////////', reportName);
 
             if (reportName && reportName.rec && reportName.rec[0]) {
               tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
@@ -388,14 +394,36 @@ export default class ThrpyReq {
         return { message: 'Error getting therapy request', error: -1 };
       }
 
+      // Send an email to the client with the therapy request details
+      const recClient = await this.userProfile.getUserProfileById({
+        user_profile_id: data.client_id,
+      });
+
+      if (!recClient) {
+        logger.error('Error getting client profile');
+        return { message: 'Error getting client profile', error: -1 };
+      }
+
+      const thrpyReqEmlTmplt = therapyRequestDetailsEmail(
+        recClient.rec[0].email,
+        ThrpyReq[0],
+      );
+      const sendthrpyReqEmlTmpltEmail =
+        this.sendEmail.sendMail(thrpyReqEmlTmplt);
+
+      if (!sendthrpyReqEmlTmpltEmail) {
+        logger.error('Error sending therapy request email');
+        return { message: 'Error sending therapy request email', error: -1 };
+      }
+
       // Return a success message
       return {
         message: 'Therapy request, sessions, and reports created successfully',
         rec: ThrpyReq,
       };
     } catch (error) {
+      console.error(error);
       logger.error(error);
-
       return {
         message: 'Error creating therapy request, sessions, and reports',
         error: -1,
@@ -407,6 +435,31 @@ export default class ThrpyReq {
 
   async putThrpyReqById(data) {
     try {
+      if (data.session_obj) {
+        var session_obj = data.session_obj;
+        delete data.session_obj;
+      }
+
+      const checkIfThrpyReqIsOngoing = await this.checkThrpyReqIsONGOING(
+        data.req_id,
+      );
+
+      if (checkIfThrpyReqIsOngoing.error) {
+        logger.error('Error checking if therapy request is ongoing');
+        return {
+          message: 'Error checking if therapy request is ongoing',
+          error: -1,
+        };
+      }
+
+      if (checkIfThrpyReqIsOngoing.rec) {
+        logger.warn('Cannot update therapy request with ongoing sessions');
+        return {
+          message: 'Cannot update therapy request with ongoing sessions',
+          error: -1,
+        };
+      }
+
       const checkThrpyReq = await this.getThrpyReqById({
         req_id: data.req_id,
       });
@@ -486,11 +539,26 @@ export default class ThrpyReq {
           .andWhere('session_status', 1)
           .update({ session_status: 3 });
 
-        console.log('putSessions', putSessions);
-
         if (!putSessions) {
           logger.error('Error updating sessions');
           return { message: 'Error updating sessions', error: -1 };
+        }
+
+        // Send an email to the client with the discharge details
+        const recUser = await this.userProfile.getUserProfileById({
+          user_profile_id: checkThrpyReq[0].client_id,
+        });
+
+        const dischargeEmlTmplt = dischargeEmail(
+          recUser.rec[0].email,
+          `${recUser.rec[0].user_first_name} ${recUser.rec[0].user_last_name}`,
+        );
+        const sendDischargeEmlTmpltEmail =
+          this.sendEmail.sendMail(dischargeEmlTmplt);
+
+        if (!sendDischargeEmlTmpltEmail) {
+          logger.error('Error sending discharge email');
+          return { message: 'Error sending discharge email', error: -1 };
         }
       }
 
@@ -504,8 +572,25 @@ export default class ThrpyReq {
         logger.error('Error updating therapy request');
         return { message: 'Error updating therapy request', error: -1 };
       }
+
+      if (session_obj) {
+        for (const post of session_obj) {
+          const putSession = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('session')
+            .where('session_id', post.session_id)
+            .update(post);
+
+          if (!putSession) {
+            logger.error('Error updating session');
+            return { message: 'Error updating session', error: -1 };
+          }
+        }
+      }
+
       return { message: 'Therapy request updated successfully' };
     } catch (error) {
+      console.error(error);
       logger.error(error);
 
       return { message: 'Error updating therapy request', error: -1 };
@@ -584,41 +669,41 @@ export default class ThrpyReq {
 
   //////////////////////////////////////////
 
-  async putThrpyDischarge(data) {
-    try {
-      const putSessions = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('session')
-        .where('thrpy_req_id', data.req_id)
-        .andWhere('session_status', 1)
-        .update({ session_status: 3 });
+  // async putThrpyDischarge(data) {
+  //   try {
+  //     const putSessions = await db
+  //       .withSchema(`${process.env.MYSQL_DATABASE}`)
+  //       .from('session')
+  //       .where('thrpy_req_id', data.req_id)
+  //       .andWhere('session_status', 1)
+  //       .update({ session_status: 3 });
 
-      if (!putSessions) {
-        logger.error('Error updating sessions');
-        return { message: 'Error updating sessions', error: -1 };
-      }
+  //     if (!putSessions) {
+  //       logger.error('Error updating sessions');
+  //       return { message: 'Error updating sessions', error: -1 };
+  //     }
 
-      const tmpThrpyReq = {
-        thrpy_status: data.thrpy_status,
-      };
+  //     const tmpThrpyReq = {
+  //       thrpy_status: data.thrpy_status,
+  //     };
 
-      const putThrpyReq = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('thrpy_req')
-        .where('req_id', data.req_id)
-        .update(tmpThrpyReq);
+  //     const putThrpyReq = await db
+  //       .withSchema(`${process.env.MYSQL_DATABASE}`)
+  //       .from('thrpy_req')
+  //       .where('req_id', data.req_id)
+  //       .update(tmpThrpyReq);
 
-      if (!putThrpyReq) {
-        logger.error('Error discharging therapy request');
-        return { message: 'Error discharging therapy request', error: -1 };
-      }
-      return { message: 'Therapy request updated successfully' };
-    } catch (error) {
-      logger.error(error);
+  //     if (!putThrpyReq) {
+  //       logger.error('Error discharging therapy request');
+  //       return { message: 'Error discharging therapy request', error: -1 };
+  //     }
+  //     return { message: 'Therapy request updated successfully' };
+  //   } catch (error) {
+  //     logger.error(error);
 
-      return { message: 'Error updating therapy request', error: -1 };
-    }
-  }
+  //     return { message: 'Error updating therapy request', error: -1 };
+  //   }
+  // }
 
   //////////////////////////////////////////
 
@@ -910,6 +995,40 @@ export default class ThrpyReq {
         message: 'Error checking client for active therapy request',
         error: -1,
       };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async checkThrpyReqIsONGOING(req_id) {
+    try {
+      console.log('req_id', req_id);
+
+      const checkSessions = await this.session.getSessionByThrpyReqId({
+        thrpy_req_id: req_id,
+      });
+
+      if (!Array.isArray(checkSessions)) {
+        logger.error('Error checking therapy request status');
+        return { message: 'Error checking therapy request status', error: -1 };
+      }
+
+      for (const session of checkSessions) {
+        console.log(session.session_id, session.session_status);
+        if (session.session_status !== 'SCHEDULED') {
+          console.log('Therapy request has ongoing sessions');
+          return {
+            message: 'Therapy request has ongoing sessions',
+            rec: session,
+          };
+        }
+      }
+
+      return { message: 'Therapy request is not ONGOING' };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error checking therapy request status', error: -1 };
     }
   }
 }

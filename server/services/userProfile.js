@@ -64,6 +64,7 @@ export default class UserProfileService {
       user_phone_nbr: joi.number().optional(),
       user_typ_id: joi.number().optional(),
       clam_num: joi.number().optional(),
+      status_yn: joi.number().optional(),
     });
 
     // Validate the entire data object against the schema
@@ -103,6 +104,7 @@ export default class UserProfileService {
       user_id: joi.number().optional(),
       email: joi.string().email().optional(),
       role_id: joi.number().optional(),
+      counselor_id: joi.number().optional(),
     });
 
     // Validate the entire data object against the schema
