@@ -206,6 +206,43 @@ export default class Common {
 
   //////////////////////////////////////////
 
+  async getSessionById(data) {
+    try {
+      let query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_session')
+        .where('status_yn', 1);
+
+      if (data.session_id) {
+        query = query.andWhere('session_id', data.session_id);
+      }
+
+      if (data.thrpy_req_id) {
+        query = query.andWhere('thrpy_req_id', data.thrpy_req_id);
+      }
+
+      if (data.service_code) {
+        query = query.andWhere('service_code', data.service_code);
+      }
+
+      if (data.session_status) {
+        query = query.andWhere('session_status', data.session_status);
+      }
+
+      const rec = await query;
+      if (!rec) {
+        logger.error('Error getting session');
+        return { message: 'Error getting session', error: -1 };
+      }
+      return rec;
+    } catch (error) {
+      logger.error(error);
+      return { message: 'Error getting session', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
   async getThrpyReqById(id) {
     try {
       let query = db

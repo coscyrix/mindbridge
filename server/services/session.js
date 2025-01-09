@@ -76,6 +76,10 @@ export default class SessionService {
       session_id: joi.number().optional(),
       is_report: joi.boolean().optional(),
       service_code: joi.string().optional(),
+      session_status: joi
+        .alternatives()
+        .try(joi.string(), joi.number())
+        .optional(),
     });
 
     const { error } = schema.validate(data);

@@ -84,16 +84,12 @@ export default class SessionController {
   //////////////////////////////////////////
 
   async getSessionById(req, res) {
-    const session_id = req.query.session_id;
+    const data = req.query;
 
-    if (!session_id) {
-      res.status(400).json({ message: 'Missing mandatory params' });
-      return;
-    }
-
-    const data = {
-      session_id: session_id,
-    };
+    // if (!session_id) {
+    //   res.status(400).json({ message: 'Missing mandatory params' });
+    //   return;
+    // }
 
     const session = new SessionService();
     const rec = await session.getSessionById(data);
