@@ -7,6 +7,7 @@ import Common from './common.js';
 import Form from './form.js';
 import UserProfile from './userProfile.js';
 import SendEmail from '../middlewares/sendEmail.js';
+import EmailTmplt from './emailTmplt.js';
 import { splitIsoDatetime } from '../utils/common.js';
 import { treatmentToolsEmail, dischargeEmail } from '../utils/emailTmplt.js';
 
@@ -18,6 +19,7 @@ export default class Session {
     this.form = new Form();
     this.sendEmail = new SendEmail();
     this.userProfile = new UserProfile();
+    this.emailTmplt = new EmailTmplt();
   }
   //////////////////////////////////////////
 
@@ -159,22 +161,20 @@ export default class Session {
           .where('status_yn', 1)
           .andWhere('req_id', checkDischarge[0].thrpy_req_id);
 
-        console.log(checkThrpyReq);
-
-        const recUser = await this.userProfile.getUserProfileById({
-          user_profile_id: checkThrpyReq[0].client_id,
-        });
-        const dischargeEmlTmplt = dischargeEmail(
-          recUser.rec[0].email,
-          `${recUser.rec[0].user_first_name} ${recUser.rec[0].user_last_name}`,
-        );
-        const sendDischargeEmlTmpltEmail =
-          this.sendEmail.sendMail(dischargeEmlTmplt);
-
-        if (!sendDischargeEmlTmpltEmail) {
-          logger.error('Error sending discharge email');
-          return { message: 'Error sending discharge email', error: -1 };
-        }
+        // console.log(checkThrpyReq);
+        // const recUser = await this.userProfile.getUserProfileById({
+        //   user_profile_id: checkThrpyReq[0].client_id,
+        // });
+        // const dischargeEmlTmplt = dischargeEmail(
+        //   recUser.rec[0].email,
+        //   `${recUser.rec[0].user_first_name} ${recUser.rec[0].user_last_name}`,
+        // );
+        // const sendDischargeEmlTmpltEmail =
+        //   this.sendEmail.sendMail(dischargeEmlTmplt);
+        // if (!sendDischargeEmlTmpltEmail) {
+        //   logger.error('Error sending discharge email');
+        //   return { message: 'Error sending discharge email', error: -1 };
+        // }
       }
 
       let tmpSession;
@@ -191,7 +191,11 @@ export default class Session {
           // ...data.is_report && {is_report: data.is_report},
         };
 
-        this.SendTreatmentToolsEmail({
+        // this.SendTreatmentToolsEmail({
+        //   session_id: data.session_id,
+        // });
+
+        this.emailTmplt.sendTreatmetToolEmail({
           session_id: data.session_id,
         });
       }
@@ -232,60 +236,60 @@ export default class Session {
 
   //////////////////////////////////////////
 
-  async SendTreatmentToolsEmail(data) {
-    try {
-      const recSession = await this.getSessionById({
-        session_id: data.session_id,
-      });
-      if (!recSession || !Array.isArray(recSession)) {
-        logger.error('Session not found');
-        return { message: 'Session not found', error: -1 };
-      }
+  // async SendTreatmentToolsEmail(data) {
+  //   try {
+  //     const recSession = await this.getSessionById({
+  //       session_id: data.session_id,
+  //     });
+  //     if (!recSession || !Array.isArray(recSession)) {
+  //       logger.error('Session not found');
+  //       return { message: 'Session not found', error: -1 };
+  //     }
 
-      const recThrpy = await this.common.getThrpyReqById(
-        recSession[0].thrpy_req_id,
-      );
+  //     const recThrpy = await this.common.getThrpyReqById(
+  //       recSession[0].thrpy_req_id,
+  //     );
 
-      if (!recThrpy || !Array.isArray(recThrpy)) {
-        logger.error('Therapy request not found');
-        return { message: 'Therapy request not found', error: -1 };
-      }
+  //     if (!recThrpy || !Array.isArray(recThrpy)) {
+  //       logger.error('Therapy request not found');
+  //       return { message: 'Therapy request not found', error: -1 };
+  //     }
 
-      const recUser = await this.common.getUserProfileByUserProfileId(
-        recThrpy[0].client_id,
-      );
+  //     const recUser = await this.common.getUserProfileByUserProfileId(
+  //       recThrpy[0].client_id,
+  //     );
 
-      if (!recUser || !Array.isArray(recUser)) {
-        logger.error('User profile not found');
-        return { message: 'User profile not found', error: -1 };
-      }
+  //     if (!recUser || !Array.isArray(recUser)) {
+  //       logger.error('User profile not found');
+  //       return { message: 'User profile not found', error: -1 };
+  //     }
 
-      recSession.forEach(async (session) => {
-        for (const arry of session.forms_array) {
-          const [form] = await this.form.getFormByFormId({ form_id: arry });
-          const form_name = form.form_cde;
-          const client_full_name =
-            recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
-          const toolsEmail = treatmentToolsEmail(
-            recUser[0].email,
-            client_full_name,
-            form_name,
-          );
+  //     recSession.forEach(async (session) => {
+  //       for (const arry of session.forms_array) {
+  //         const [form] = await this.form.getFormByFormId({ form_id: arry });
+  //         const form_name = form.form_cde;
+  //         const client_full_name =
+  //           recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
+  //         const toolsEmail = treatmentToolsEmail(
+  //           recUser[0].email,
+  //           client_full_name,
+  //           form_name,
+  //         );
 
-          const email = this.sendEmail.sendMail(toolsEmail);
+  //         const email = this.sendEmail.sendMail(toolsEmail);
 
-          if (email.error) {
-            logger.error('Error sending email');
-            return { message: 'Error sending email', error: -1 };
-          }
-        }
-      });
-    } catch (error) {
-      console.log(error);
-      logger.error(error);
-      return { message: 'Something went wrong' };
-    }
-  }
+  //         if (email.error) {
+  //           logger.error('Error sending email');
+  //           return { message: 'Error sending email', error: -1 };
+  //         }
+  //       }
+  //     });
+  //   } catch (error) {
+  //     console.log(error);
+  //     logger.error(error);
+  //     return { message: 'Something went wrong' };
+  //   }
+  // }
 
   //////////////////////////////////////////
 
@@ -318,6 +322,8 @@ export default class Session {
 
   async getSessionById(data) {
     try {
+      console.log('data', data);
+
       let query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
@@ -333,6 +339,10 @@ export default class Session {
 
       if (data.service_code) {
         query = query.andWhere('service_code', data.service_code);
+      }
+
+      if (data.session_status) {
+        query = query.andWhere('session_status', data.session_status);
       }
 
       const rec = await query;
@@ -391,7 +401,7 @@ export default class Session {
       const recToday = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
-        .where('intake_date', formattedCurrentDate)
+        .where('intake_date_formatted', formattedCurrentDate)
         .andWhere('counselor_id', data.counselor_id);
 
       if (!recToday) {
@@ -402,7 +412,7 @@ export default class Session {
       const recTomorrow = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
-        .where('intake_date', formattedTomorrowDate)
+        .where('intake_date_formatted', formattedTomorrowDate)
         .andWhere('counselor_id', data.counselor_id);
 
       if (!recTomorrow) {

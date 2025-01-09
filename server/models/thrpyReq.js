@@ -7,6 +7,7 @@ import Session from './session.js';
 import Service from './service.js';
 import UserProfile from './userProfile.js';
 import Form from './form.js';
+import EmailTmplt from './emailTmplt.js';
 import dotenv from 'dotenv';
 import { capitalizeFirstLetter } from '../utils/common.js';
 import { splitIsoDatetime } from '../utils/common.js';
@@ -26,6 +27,7 @@ export default class ThrpyReq {
     this.form = new Form();
     this.userProfile = new UserProfile();
     this.sendEmail = new SendEmail();
+    this.emailTmplt = new EmailTmplt();
   }
   //////////////////////////////////////////
 
@@ -404,17 +406,22 @@ export default class ThrpyReq {
         return { message: 'Error getting client profile', error: -1 };
       }
 
-      const thrpyReqEmlTmplt = therapyRequestDetailsEmail(
-        recClient.rec[0].email,
-        ThrpyReq[0],
-      );
-      const sendthrpyReqEmlTmpltEmail =
-        this.sendEmail.sendMail(thrpyReqEmlTmplt);
+      const thrpyReqEmlTmplt = this.emailTmplt.sendThrpyReqDetailsEmail({
+        email: recClient.rec[0].email,
+        big_thrpy_req_obj: ThrpyReq[0],
+      });
 
-      if (!sendthrpyReqEmlTmpltEmail) {
-        logger.error('Error sending therapy request email');
-        return { message: 'Error sending therapy request email', error: -1 };
-      }
+      // const thrpyReqEmlTmplt = therapyRequestDetailsEmail(
+      //   recClient.rec[0].email,
+      //   ThrpyReq[0],
+      // );
+      // const sendthrpyReqEmlTmpltEmail =
+      //   this.sendEmail.sendMail(thrpyReqEmlTmplt);
+
+      // if (!sendthrpyReqEmlTmpltEmail) {
+      //   logger.error('Error sending therapy request email');
+      //   return { message: 'Error sending therapy request email', error: -1 };
+      // }
 
       // Return a success message
       return {
@@ -545,21 +552,26 @@ export default class ThrpyReq {
         }
 
         // Send an email to the client with the discharge details
-        const recUser = await this.userProfile.getUserProfileById({
-          user_profile_id: checkThrpyReq[0].client_id,
+
+        const sendDischargeEmail = await this.emailTmplt.sendDischargeEmail({
+          client_id: checkThrpyReq[0].client_id,
         });
 
-        const dischargeEmlTmplt = dischargeEmail(
-          recUser.rec[0].email,
-          `${recUser.rec[0].user_first_name} ${recUser.rec[0].user_last_name}`,
-        );
-        const sendDischargeEmlTmpltEmail =
-          this.sendEmail.sendMail(dischargeEmlTmplt);
+        // const recUser = await this.userProfile.getUserProfileById({
+        //   user_profile_id: checkThrpyReq[0].client_id,
+        // });
 
-        if (!sendDischargeEmlTmpltEmail) {
-          logger.error('Error sending discharge email');
-          return { message: 'Error sending discharge email', error: -1 };
-        }
+        // const dischargeEmlTmplt = dischargeEmail(
+        //   recUser.rec[0].email,
+        //   `${recUser.rec[0].user_first_name} ${recUser.rec[0].user_last_name}`,
+        // );
+        // const sendDischargeEmlTmpltEmail =
+        //   this.sendEmail.sendMail(dischargeEmlTmplt);
+
+        // if (!sendDischargeEmlTmpltEmail) {
+        //   logger.error('Error sending discharge email');
+        //   return { message: 'Error sending discharge email', error: -1 };
+        // }
       }
 
       const putThrpyReq = await db

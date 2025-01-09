@@ -7,6 +7,7 @@ import User from './auth/user.js';
 import Common from './common.js';
 import AuthCommon from './auth/authCommon.js';
 import SendEmail from '../middlewares/sendEmail.js';
+import EmailTmplt from './emailTmplt.js';
 import {
   clientWelcomeEmail,
   consentFormEmail,
@@ -25,6 +26,7 @@ export default class UserProfile {
     this.authCommon = new AuthCommon();
     this.sendEmail = new SendEmail();
     this.userTargetOutcome = new UserTargetOutcome();
+    this.emailTmplt = new EmailTmplt();
   }
 
   //////////////////////////////////////////
@@ -153,8 +155,6 @@ export default class UserProfile {
         data.target_outcome_id,
       );
 
-      console.log('recTargetOutcome', recTargetOutcome);
-
       if (recTargetOutcome.error) {
         return recTargetOutcome;
       }
@@ -167,41 +167,25 @@ export default class UserProfile {
         return recConselor;
       }
 
-      const welcomeClientEmail = welcomeAccountDetailsEmail(
-        data.email,
-        `${data.user_first_name} ${data.user_last_name}`,
-        data.user_phone_nbr ? data.user_phone_nbr : 'N/A',
-        recTargetOutcome[0].target_name,
-        `${recConselor.rec[0].user_first_name} ${recConselor.rec[0].user_last_name}`,
-      );
+      const welcomeClientEmail = this.emailTmplt.sendWelcomeClientEmail({
+        email: data.email,
+        client_name: `${data.user_first_name} ${data.user_last_name}`,
+        user_phone_nbr: data.user_phone_nbr,
+        target_name: recTargetOutcome[0].target_name,
+        counselor_name: `${recConselor.rec[0].user_first_name} ${recConselor.rec[0].user_last_name}`,
+      });
 
-      const emailSent = clientWelcomeEmail(data.email, clientPassword);
-      const sendClientConsentForm = consentFormEmail(
-        data.email,
-        `${data.user_first_name} ${data.user_last_name}`,
-        `https://mindbridge/consent-form/${data.clam_num}`,
-      );
+      const emailSentWithPassword =
+        this.emailTmplt.sendClientWelcomeWithPasswordEmail({
+          email: data.email,
+          password: clientPassword,
+        });
 
-      const sendWelcomeEmail = this.sendEmail.sendMail(welcomeClientEmail);
-      const sendEmail = this.sendEmail.sendMail(emailSent);
-      const sendConsentForm = this.sendEmail.sendMail(sendClientConsentForm);
-
-      if (sendEmail.error) {
-        logger.error('Error sending email');
-        return { message: 'Error sending email', error: -1 };
-      }
-
-      if (sendWelcomeEmail.error) {
-        logger.error('Error sending welcome email');
-        return { message: 'Error sending welcome email', error: -1 };
-      }
-
-      if (sendConsentForm.error) {
-        logger.error('Error sending consent form email');
-        return { message: 'Error sending consent form email', error: -1 };
-      }
-      ///////////////////////////////////////////////////////////////////////
-      ///////////////////////////////////////////////////////////////////////
+      const sendClientConsentForm = this.emailTmplt.sendClientConsentEmail({
+        email: data.email,
+        client_name: `${data.user_first_name} ${data.user_last_name}`,
+        form_url: `https://mindbridge/consent-form/${data.clam_num}`,
+      });
 
       return { message: 'User profile created successfully' };
     } catch (error) {
