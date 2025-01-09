@@ -744,6 +744,18 @@ export default class ThrpyReq {
 
       const rec = await query;
 
+      const orderSessionObj = (rec) => {
+        rec.forEach((thrpyReq) => {
+          if (thrpyReq.session_obj) {
+            thrpyReq.session_obj = thrpyReq.session_obj.sort(
+              (a, b) => a.session_id - b.session_id,
+            );
+          }
+        });
+      };
+
+      orderSessionObj(rec);
+
       if (!rec) {
         logger.error('Error getting therapy request');
         return { message: 'Error getting therapy request', error: -1 };
