@@ -161,6 +161,10 @@ export default class Session {
           .where('status_yn', 1)
           .andWhere('req_id', checkDischarge[0].thrpy_req_id);
 
+        const dischargeEmlTmplt = this.emailTmplt.sendDischargeEmail({
+          client_id: checkThrpyReq[0].client_id,
+        });
+
         // console.log(checkThrpyReq);
         // const recUser = await this.userProfile.getUserProfileById({
         //   user_profile_id: checkThrpyReq[0].client_id,
