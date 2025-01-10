@@ -32,4 +32,16 @@ router.put(
 
 router.get('/', authenticate, AsyncWrapper(thrpyReqController.getThrpyReqById));
 
+router.post(
+  '/listSessions',
+  authenticate,
+  AsyncWrapper(thrpyReqController.listSessions),
+);
+
+router.post(
+  '/saveSessions',
+  authenticate,
+  AsyncWrapper(thrpyReqController.saveSessions),
+);
+
 export const thrpyReqRouter = { baseUrl: '/api/thrpyReq', router };
