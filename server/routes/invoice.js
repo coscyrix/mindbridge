@@ -14,4 +14,10 @@ router.put('/', authenticate, AsyncWrapper(invoiceController.putInvoiceById));
 
 router.get('/', authenticate, AsyncWrapper(invoiceController.getInvoiceById));
 
+router.get(
+  '/multi',
+  authenticate,
+  AsyncWrapper(invoiceController.getInvoiceByMulti),
+);
+
 export const invoiceRouter = { baseUrl: '/api/invoice', router };

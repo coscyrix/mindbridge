@@ -126,4 +126,45 @@ export default class Invoice {
       return { message: 'Error getting invoice', error: -1 };
     }
   }
+
+  //////////////////////////////////////////
+
+  async getInvoiceByMulti(data) {
+    try {
+      const query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_invoice')
+        .where('status_yn', 'y');
+
+      if (data.counselor_id) {
+        query.andWhere('counselor_id', data.counselor_id);
+      }
+
+      if (data.client_id) {
+        query.andWhere('client_id', data.client_id);
+      }
+
+      if (data.req_id) {
+        query.andWhere('req_id', data.req_id);
+      }
+
+      if (data.req_dte) {
+        query.andWhere('req_dte', data.req_dte);
+      }
+
+      if (data.thrpy_status) {
+        query.andWhere('thrpy_status', data.thrpy_status);
+      }
+
+      const rec = await query;
+
+      if (!rec) {
+        return { message: 'Invoice not found', error: -1 };
+      }
+
+      return { message: 'Requested invoice returned', rec };
+    } catch (error) {
+      return { message: 'Error getting invoice', error: -1 };
+    }
+  }
 }

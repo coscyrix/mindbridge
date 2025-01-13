@@ -327,9 +327,11 @@ export default class UserProfile {
         query.where('email', data.email);
       }
 
-      // if (data.role_id) {
-      //   query.where('role_id', data.role_id);
-      // }
+      if (Object.keys(data).length === 1 && data.hasOwnProperty('role_id')) {
+        if (data.role_id) {
+          query.where('role_id', data.role_id);
+        }
+      }
 
       if (data.clam_num) {
         query.where('clam_num', data.clam_num);
