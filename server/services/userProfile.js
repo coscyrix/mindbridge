@@ -65,6 +65,9 @@ export default class UserProfileService {
       user_typ_id: joi.number().optional(),
       clam_num: joi.number().optional(),
       status_yn: joi.number().optional(),
+      //fields below are for target outcome
+      target_outcome_id: joi.number().optional(),
+      counselor_id: joi.number().optional(),
     });
 
     // Validate the entire data object against the schema
