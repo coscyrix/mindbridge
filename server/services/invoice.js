@@ -57,4 +57,25 @@ export default class InvoiceService {
     const invoice = new Invoice();
     return invoice.putInvoiceById(data);
   }
+
+  //////////////////////////////////////////
+
+  async getInvoiceByMulti(data) {
+    const schema = joi.object({
+      counselor_id: joi.number().optional(),
+      client_id: joi.number().optional(),
+      req_id: joi.number().optional(),
+      req_dte: joi.date().optional(),
+      thrpy_status: joi.string().optional(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const invoice = new Invoice();
+    return invoice.getInvoiceByMulti(data);
+  }
 }

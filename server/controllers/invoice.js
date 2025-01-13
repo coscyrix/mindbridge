@@ -50,4 +50,19 @@ export default class InvoiceController {
 
     return res.status(200).send(response);
   }
+
+  //////////////////////////////////////////
+
+  async getInvoiceByMulti(req, res) {
+    const data = req.query;
+
+    const invoice = new InvoiceService();
+    const response = await invoice.getInvoiceByMulti(data);
+
+    if (response.error) {
+      return res.status(400).send(response);
+    }
+
+    return res.status(200).send(response);
+  }
 }

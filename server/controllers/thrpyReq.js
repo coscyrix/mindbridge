@@ -39,6 +39,15 @@ export default class ThrpyReqController {
       return;
     }
 
+    if (data.target_outcome_id) {
+      if (!data.counselor_id) {
+        res
+          .status(400)
+          .json({ message: "Target outcome requires Counselor's id" });
+        return;
+      }
+    }
+
     const thrpyReq = new ThrpyReqService();
     const rec = await thrpyReq.putThrpyReqById(data);
 
