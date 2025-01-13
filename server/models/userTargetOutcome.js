@@ -34,6 +34,18 @@ export default class UserTargetOutcome {
   //////////////////////////////////////////
   async putUserTargetOutcome(data) {
     try {
+      if (data.user_profile_id) {
+        const deleteTargetOutcome =
+          await this.delAllDisabledUserTargetOutcomeByUserProfileId({
+            user_profile_id: data.user_profile_id,
+          });
+
+        if (deleteTargetOutcome.error) {
+          logger.error('Error deleting user target outcome');
+          return { message: 'Error deleting user target outcome', error: -1 };
+        }
+      }
+
       const tmpUserTargetOutcome = {
         user_profile_id: data.user_profile_id,
         target_outcome_id: data.target_outcome_id,
@@ -54,6 +66,7 @@ export default class UserTargetOutcome {
 
       return { message: 'User target outcome updated successfully' };
     } catch (error) {
+      console.log(error);
       logger.error(error ? error?.sqlMessage : error);
       return { message: 'Error updating user target outcome', error: -1 };
     }
@@ -95,6 +108,70 @@ export default class UserTargetOutcome {
       console.log(error);
       logger.error(error ? error?.sqlMessage : error);
       return { message: 'Error fetching user target outcome', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+  async getUserTargetOutcomeLatest(data) {
+    try {
+      const query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('user_target_outcome')
+        .where('status_enum', 'y')
+        .orderBy('created_at', 'desc')
+        .limit(1);
+      if (data.user_target_id) {
+        query.where('user_target_id', data.user_target_id);
+      }
+
+      if (data.user_profile_id) {
+        query.where('user_profile_id', data.user_profile_id);
+      }
+
+      if (data.target_outcome_id) {
+        query.where('target_outcome_id', data.target_outcome_id);
+      }
+
+      if (data.counselor_id) {
+        query.where('counselor_id', data.counselor_id);
+      }
+
+      const rec = await query;
+
+      if (!rec.length) {
+        logger.error('Error fetching user target outcome');
+        return { message: 'Error fetching user target outcome', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      console.log(error);
+      logger.error(error ? error?.sqlMessage : error);
+      return { message: 'Error fetching user target outcome', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async delAllDisabledUserTargetOutcomeByUserProfileId(data) {
+    try {
+      const result = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('user_target_outcome')
+        .where('status_enum', 'n')
+        .andWhere('user_profile_id', data.user_profile_id)
+        .del();
+
+      if (!result) {
+        logger.error('Error deleting user target outcome');
+        return { message: 'Error deleting user target outcome', error: -1 };
+      }
+
+      return { message: 'User target outcome deleted successfully' };
+    } catch (error) {
+      console.log(error);
+      logger.error(error ? error?.sqlMessage : error);
+      return { message: 'Error deleting user target outcome', error: -1 };
     }
   }
 }

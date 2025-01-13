@@ -223,15 +223,50 @@ export default class UserProfile {
         }
       }
 
-      const putUsrProfile = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('user_profile')
-        .where('user_profile_id', user_profile_id)
-        .update(tmpUsrProfile);
+      if (data.target_outcome_id) {
+        const getLatestUserTargetOutcome =
+          await this.userTargetOutcome.getUserTargetOutcomeLatest({
+            user_profile_id: user_profile_id,
+          });
 
-      if (!putUsrProfile) {
-        logger.error('Error updating user profile');
-        return { message: 'Error updating user profile', error: -1 };
+        if (getLatestUserTargetOutcome.error) {
+          return getLatestUserTargetOutcome;
+        }
+
+        const disableUserTargetOutcome =
+          await this.userTargetOutcome.putUserTargetOutcome({
+            user_target_id: getLatestUserTargetOutcome[0].user_target_id,
+            user_profile_id: user_profile_id,
+            status_enum: 'n',
+          });
+
+        if (disableUserTargetOutcome.error) {
+          return disableUserTargetOutcome;
+        }
+
+        const postUserTargetOutcome =
+          await this.userTargetOutcome.postUserTargetOutcome({
+            user_profile_id: user_profile_id,
+            target_outcome_id: data.target_outcome_id,
+            counselor_id: data.counselor_id,
+          });
+
+        if (postUserTargetOutcome.error) {
+          return postUserTargetOutcome;
+        }
+      }
+
+      if (tmpUsrProfile && Object.keys(tmpUsrProfile).length > 0) {
+        const putUsrProfile = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('user_profile')
+          .where('user_profile_id', user_profile_id)
+          .update(tmpUsrProfile);
+
+        if (!putUsrProfile) {
+          logger.error('Error updating user profile');
+          return { message: 'Error updating user profile', error: -1 };
+        }
       }
 
       if (data.email || data.role_id) {

@@ -681,6 +681,40 @@ export default class ThrpyReq {
 
   //////////////////////////////////////////
 
+  //This function is for Hard delete
+  async deleteThrpyReqById(req_id) {
+    try {
+      const deletedSessions = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('session')
+        .where('thrpy_req_id', req_id)
+        .del();
+
+      if (!deletedSessions) {
+        logger.error('Error deleting therapy sessions');
+        return { message: 'Error deleting therapy sessions', error: -1 };
+      }
+
+      const delThrpyReq = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('thrpy_req')
+        .where('req_id', req_id)
+        .del();
+      if (!delThrpyReq) {
+        logger.error('Error deleting therapy request');
+        return { message: 'Error deleting therapy request', error: -1 };
+      }
+
+      return { message: 'Therapy request and sessions deleted successfully' };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error deleting therapy request', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
   // async putThrpyDischarge(data) {
   //   try {
   //     const putSessions = await db

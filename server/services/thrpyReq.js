@@ -3,11 +3,13 @@
 import ThrpyReq from '../models/thrpyReq.js';
 import joi from 'joi';
 import Common from '../models/common.js';
+import Session from '../models/session.js';
 
 export default class ThrpyReqService {
   //////////////////////////////////////////
   constructor() {
     this.common = new Common();
+    this.session = new Session();
   }
   //////////////////////////////////////////
 
@@ -16,7 +18,10 @@ export default class ThrpyReqService {
       counselor_id: joi.number().required(),
       client_id: joi.number().required(),
       service_id: joi.number().required(),
-      session_format_id: joi.number().required(),
+      session_format_id: joi
+        .alternatives()
+        .try(joi.string(), joi.number())
+        .required(),
       intake_dte: joi.date().required(),
     });
 
@@ -33,19 +38,41 @@ export default class ThrpyReqService {
   //////////////////////////////////////////
 
   async putThrpyReqById(data) {
-    // const checkThrpyReq = await this.common.getThrpyReqById(data.req_id);
-    // if (checkThrpyReq.error) {
-    //   return checkThrpyReq;
-    // }
+    const checkThrpyReq = await this.common.getThrpyReqById(data.req_id);
+    if (checkThrpyReq.error) {
+      return checkThrpyReq;
+    }
 
-    // if (checkThrpyReq) {
-    //   if (
-    //     checkThrpyReq[0].session_format_id === data.session_format_id &&
-    //     checkThrpyReq[0].req_dte === data.req_dte
-    //   ) {
-    //     return { message: 'No changes detected', error: -1 };
-    //   }
-    // }
+    if (checkThrpyReq) {
+      if (
+        checkThrpyReq[0].session_format_id === data.session_format_id &&
+        checkThrpyReq[0].req_dte === data.req_dte
+      ) {
+        const tmpRegenThrpyRequest = {
+          counselor_id: data.counselor_id,
+          client_id: data.client_id,
+          service_id: data.service_id,
+          session_format_id: data.session_format_id,
+          intake_dte: `${data.req_dte_not_formatted}T${data.req_time}`,
+        };
+
+        const deleteThrpyReq = await this.deleteThrpyReqByClientId({
+          req_id: data.req_id,
+        });
+
+        if (deleteThrpyReq.error) {
+          return deleteThrpyReq;
+        }
+
+        const regenThrpyRequest = await this.postThrpyReq(tmpRegenThrpyRequest);
+
+        return {
+          message: 'No changes detected, This is the regenerated record',
+          rec: regenThrpyRequest,
+        };
+      }
+    }
+
     //delete unnecessary fields
     delete data.counselor_first_name;
     delete data.counselor_last_name;
@@ -56,7 +83,7 @@ export default class ThrpyReqService {
     delete data.service_id;
     delete data.service_name;
     delete data.service_code;
-    delete data.req_dte_formatted;
+    delete data.req_dte_not_formatted;
     delete data.created_at;
     delete data.updated_at;
 
@@ -70,6 +97,10 @@ export default class ThrpyReqService {
         delete post.service_code;
         delete post.service_name;
         delete post.status_yn;
+        delete post.session_gst;
+        delete post.session_price;
+        delete post.session_system_amt;
+        delete post.session_counselor_amt;
       });
     }
 
@@ -185,5 +216,50 @@ export default class ThrpyReqService {
 
     const thrpyReq = new ThrpyReq();
     return thrpyReq.getThrpyReqById(data);
+  }
+
+  //////////////////////////////////////////
+
+  async deleteThrpyReqByClientId(data) {
+    try {
+      const checkThrpyReq = await this.getThrpyReqById({
+        req_id: data.req_id,
+      });
+
+      if (checkThrpyReq.error) {
+        logger.error('Error getting therapy request');
+        return { message: 'Error getting therapy request', error: -1 };
+      }
+
+      if (!checkThrpyReq || checkThrpyReq.length === 0) {
+        logger.error('Therapy request not found');
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
+      const thrpySessions = await this.session.getSessionByThrpyReqId({
+        thrpy_req_id: data.req_id,
+      });
+
+      console.log('thrpySessions', thrpySessions);
+
+      if (thrpySessions.error) {
+        logger.error('Error getting therapy sessions');
+        return { message: 'Error getting therapy sessions', error: -1 };
+      }
+
+      if (thrpySessions && thrpySessions.length > 0) {
+        return {
+          message:
+            'Cannot delete therapy request with sessions that were updated',
+          error: -1,
+        };
+      }
+
+      const thrpyReq = new ThrpyReq();
+      return thrpyReq.deleteThrpyReqById(data.req_id);
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error deleting therapy request', error: -1 };
+    }
   }
 }
