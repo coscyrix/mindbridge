@@ -148,8 +148,12 @@ export default class Invoice {
         query.andWhere('req_id', data.req_id);
       }
 
-      if (data.req_dte) {
-        query.andWhere('req_dte', data.req_dte);
+      if (data.start_dte) {
+        query.andWhere('req_dte', '>=', data.start_dte);
+      }
+
+      if (data.end_dte) {
+        query.andWhere('req_dte', '<=', data.end_dte);
       }
 
       if (data.thrpy_status) {
@@ -162,7 +166,33 @@ export default class Invoice {
         return { message: 'Invoice not found', error: -1 };
       }
 
-      return { message: 'Requested invoice returned', rec };
+      // Calculate summary
+      let totalPrice = 0;
+      let totalCounselor = 0;
+      let totalSystem = 0;
+      let totalUnits = 0;
+
+      rec.forEach((item) => {
+        totalPrice += parseFloat(item.sum_session_price) || 0;
+        totalCounselor += parseFloat(item.sum_session_counselor_amt) || 0;
+        totalSystem += parseFloat(item.sum_session_system_amt) || 0;
+        totalUnits += parseFloat(item.sum_session_system_units) || 0;
+      });
+
+      const summary = {
+        sum_session_price: totalPrice.toFixed(4),
+        sum_session_counselor_amt: totalCounselor.toFixed(4),
+        sum_session_system_amt: totalSystem.toFixed(4),
+        sum_session_system_units: totalUnits,
+      };
+
+      return {
+        message: 'Requested invoice returned',
+        rec: {
+          summary,
+          rec_list: rec,
+        },
+      };
     } catch (error) {
       return { message: 'Error getting invoice', error: -1 };
     }

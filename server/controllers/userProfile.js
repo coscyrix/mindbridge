@@ -1,5 +1,6 @@
 //controllers/userProfile.js
 
+import e from 'express';
 import UserProfileService from '../services/userProfile.js';
 
 //////////////////////////////////////////
@@ -25,6 +26,31 @@ export default class UserProfileController {
 
   async userPostClientProfile(req, res) {
     const data = req.body;
+
+    if (!data.role_id) {
+      res.status(400).json({ message: 'Mandatory fields missing', error: -1 });
+      return;
+    }
+
+    if (data.role_id === 1) {
+      if (!data.target_outcome_id) {
+        res.status(400).json({
+          message: 'target_outcome_id is required on client creation',
+          error: -1,
+        });
+        return;
+      }
+    }
+
+    if (data.role_id === 2) {
+      if (data.target_outcome_id) {
+        res.status(400).json({
+          message: 'target_outcome_id is not required on counselor creation',
+          error: -1,
+        });
+        return;
+      }
+    }
 
     const userProfile = new UserProfileService();
     const rec = await userProfile.userPostClientProfile(data);
