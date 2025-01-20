@@ -70,6 +70,7 @@ export default class UserProfile {
         return { message: 'Email already exists', error: -1 };
       }
 
+      // Generate a clam number if one is not provided
       if (!data.clam_num) {
         let isUnique = false;
         while (!isUnique) {
@@ -80,6 +81,7 @@ export default class UserProfile {
 
           if (!checkClamNum.rec || checkClamNum.rec.length === 0) {
             data.clam_num = generateClamNum;
+            data.user_typ_id = 2; // Set the user type to external client because no clam number was provided
             isUnique = true;
           } else {
             logger.warn(
@@ -113,7 +115,7 @@ export default class UserProfile {
         user_id: postUser,
         user_first_name: data.user_first_name.toLowerCase(),
         user_last_name: data.user_last_name.toLowerCase(),
-        user_typ_id: data.user_typ_id || 2,
+        user_typ_id: data.user_typ_id || 1,
         user_phone_nbr: data.user_phone_nbr,
         clam_num: data.clam_num,
       };
@@ -128,16 +130,18 @@ export default class UserProfile {
         return { message: 'Error creating user profile', error: -1 };
       }
 
-      const postUserTargetOutcome =
-        this.userTargetOutcome.postUserTargetOutcome({
-          user_profile_id: postUsrProfile[0],
-          target_outcome_id: data.target_outcome_id,
-          counselor_id: data.user_profile_id,
-        });
+      if (data.target_outcome_id) {
+        const postUserTargetOutcome =
+          this.userTargetOutcome.postUserTargetOutcome({
+            user_profile_id: postUsrProfile[0],
+            target_outcome_id: data.target_outcome_id,
+            counselor_id: data.user_profile_id,
+          });
 
-      if (postUserTargetOutcome.error) {
-        logger.error('Error creating user target outcome');
-        return { message: 'Error creating user target outcome', error: -1 };
+        if (postUserTargetOutcome.error) {
+          logger.error('Error creating user target outcome');
+          return { message: 'Error creating user target outcome', error: -1 };
+        }
       }
 
       const postClientEnrollment = this.common.postClientEnrollment({
@@ -149,16 +153,6 @@ export default class UserProfile {
         return postClientEnrollment;
       }
 
-      ////////////////////////////////////////////////////////////////
-      // Logic to send an email to the client with their login details
-      const recTargetOutcome = await this.common.getTargetOutcomeById(
-        data.target_outcome_id,
-      );
-
-      if (recTargetOutcome.error) {
-        return recTargetOutcome;
-      }
-
       const recConselor = await this.getUserProfileById({
         user_profile_id: data.user_profile_id,
       });
@@ -167,13 +161,25 @@ export default class UserProfile {
         return recConselor;
       }
 
-      const welcomeClientEmail = this.emailTmplt.sendWelcomeClientEmail({
-        email: data.email,
-        client_name: `${data.user_first_name} ${data.user_last_name}`,
-        user_phone_nbr: data.user_phone_nbr,
-        target_name: recTargetOutcome[0].target_name,
-        counselor_name: `${recConselor.rec[0].user_first_name} ${recConselor.rec[0].user_last_name}`,
-      });
+      if (data.role_id === 1 && data.target_outcome_id) {
+        ////////////////////////////////////////////////////////////////
+        // Logic to send an email to the client with their login details
+        const recTargetOutcome = await this.common.getTargetOutcomeById(
+          data.target_outcome_id,
+        );
+
+        if (recTargetOutcome.error) {
+          return recTargetOutcome;
+        }
+
+        const welcomeClientEmail = this.emailTmplt.sendWelcomeClientEmail({
+          email: data.email,
+          client_name: `${data.user_first_name} ${data.user_last_name}`,
+          user_phone_nbr: data.user_phone_nbr,
+          target_name: recTargetOutcome[0].target_name,
+          counselor_name: `${recConselor.rec[0].user_first_name} ${recConselor.rec[0].user_last_name}`,
+        });
+      }
 
       const emailSentWithPassword =
         this.emailTmplt.sendClientWelcomeWithPasswordEmail({

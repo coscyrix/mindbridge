@@ -65,7 +65,8 @@ export default class InvoiceService {
       counselor_id: joi.number().optional(),
       client_id: joi.number().optional(),
       req_id: joi.number().optional(),
-      req_dte: joi.date().optional(),
+      start_dte: joi.date().optional(),
+      end_dte: joi.date().optional(),
       thrpy_status: joi.string().optional(),
     });
 
