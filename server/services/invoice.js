@@ -68,6 +68,7 @@ export default class InvoiceService {
       start_dte: joi.date().optional(),
       end_dte: joi.date().optional(),
       thrpy_status: joi.string().optional(),
+      role_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

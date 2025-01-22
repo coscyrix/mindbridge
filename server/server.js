@@ -13,6 +13,7 @@ import {
   invoiceRouter,
   formRouter,
   referencesRouter,
+  feedbackRouter,
   userTargetOutcomeRouter,
 } from './routes/index.js';
 
@@ -30,6 +31,7 @@ async function main() {
         invoiceRouter,
         formRouter,
         referencesRouter,
+        feedbackRouter,
         userTargetOutcomeRouter,
       ],
     });
