@@ -58,12 +58,16 @@ export default class EmailTmplt {
         for (const arry of session.forms_array) {
           const [form] = await this.form.getFormByFormId({ form_id: arry });
           const form_name = form.form_cde;
+          const form_id = form.form_id;
           const client_full_name =
             recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
+          const client_id = recUser[0].user_profile_id;
           const toolsEmail = treatmentToolsEmail(
             recUser[0].email,
             client_full_name,
             form_name,
+            form_id,
+            client_id,
           );
 
           const email = this.sendEmail.sendMail(toolsEmail);

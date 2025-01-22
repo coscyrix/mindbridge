@@ -6,6 +6,7 @@ import logger from '../config/winston.js';
 import Common from './common.js';
 import Form from './form.js';
 import UserProfile from './userProfile.js';
+import Invoice from './invoice.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import EmailTmplt from './emailTmplt.js';
 import { splitIsoDatetime } from '../utils/common.js';
@@ -20,6 +21,7 @@ export default class Session {
     this.sendEmail = new SendEmail();
     this.userProfile = new UserProfile();
     this.emailTmplt = new EmailTmplt();
+    this.invoice = new Invoice();
   }
   //////////////////////////////////////////
 
@@ -113,9 +115,11 @@ export default class Session {
         data.session_id,
       );
 
-      if (checkSessionIfOngoing.rec.length > 0) {
-        logger.error('Session is ongoing');
-        return { message: 'Session is ongoing', error: -1 };
+      if (!data.invoice_nbr) {
+        if (checkSessionIfOngoing.rec.length > 0) {
+          logger.error('Session is ongoing');
+          return { message: 'Session is ongoing', error: -1 };
+        }
       }
 
       // Check if session is a discharge session
@@ -204,6 +208,49 @@ export default class Session {
         });
       }
 
+      if (data.invoice_nbr) {
+        const checkInvoice = await this.invoice.getInvoiceOr({
+          invoice_nbr: data.invoice_nbr,
+        });
+
+        if (checkInvoice.error) {
+          logger.error('Error getting invoice');
+          return { message: 'Error getting invoice', error: -1 };
+        }
+
+        if (checkInvoice.rec.length > 0) {
+          logger.warn('Invoice number already used');
+          return { message: 'Invoice number already used', error: -1 };
+        }
+
+        const checkInvoiceSession = await this.invoice.getInvoiceOr({
+          session_id: data.session_id,
+        });
+
+        if (checkInvoiceSession.error) {
+          logger.error('Error getting invoice');
+          return { message: 'Error getting invoice', error: -1 };
+        }
+
+        if (checkInvoiceSession.rec.length > 0) {
+          logger.warn('Session already invoiced');
+          return { message: 'Session already invoiced', error: -1 };
+        }
+
+        if (checkInvoice.rec.length === 0) {
+          const tmpInvoice = {
+            session_id: data.session_id,
+            invoice_nbr: data.invoice_nbr,
+          };
+
+          const postInvoice = await this.invoice.postInvoice(tmpInvoice);
+
+          if (postInvoice.error) {
+            logger.error('Error creating invoice');
+            return { message: 'Error creating invoice', error: -1 };
+          }
+        }
+      }
       if (data.session_status === 3 && data.notes) {
         const sessionNotes = this.common.postNotes({
           session_id: data.session_id,
@@ -216,7 +263,7 @@ export default class Session {
         }
       }
 
-      if (Object.keys(tmpSession).length > 0) {
+      if (tmpSession && Object.keys(tmpSession).length > 0) {
         const putSession = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('session')
@@ -326,8 +373,6 @@ export default class Session {
 
   async getSessionById(data) {
     try {
-      console.log('data', data);
-
       let query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
@@ -365,7 +410,6 @@ export default class Session {
 
   async getSessionByThrpyReqId(data) {
     try {
-      console.log('data', data);
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')

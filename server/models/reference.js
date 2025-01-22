@@ -45,12 +45,33 @@ export default class Reference {
         .from('user_typ')
         .select('user_typ_id', 'user_typ_cde');
 
+      const forms = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('forms')
+        .select(
+          'form_id',
+          'form_cde',
+          'frequency_desc',
+          'frequency_typ',
+          'session_position',
+          'svc_ids',
+          'form_sequence_id',
+          'status_yn',
+        );
+
+      const ref_fees = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('ref_fees')
+        .select('fee_id', 'fee_name', 'fee_percent');
+
       return {
         ref_target_outcomes,
         ref_form_sequence,
         service,
         roles,
         user_typ,
+        forms,
+        ref_fees,
       };
     } catch (error) {
       console.log(error);

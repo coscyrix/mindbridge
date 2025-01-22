@@ -56,6 +56,16 @@ export default class InvoiceController {
   async getInvoiceByMulti(req, res) {
     const data = req.query;
 
+    if (!data.role_id) {
+      return res.status(400).send({ message: 'Mandatory fields are required' });
+    }
+
+    if (data.role_id == 2 && !data.counselor_id) {
+      return res
+        .status(400)
+        .send({ message: 'Counselor ID is required for that specific role' });
+    }
+
     const invoice = new InvoiceService();
     const response = await invoice.getInvoiceByMulti(data);
 

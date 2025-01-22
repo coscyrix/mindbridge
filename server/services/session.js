@@ -40,6 +40,7 @@ export default class SessionService {
       is_report: joi.boolean().optional(),
       session_status: joi.number().optional(),
       notes: joi.string().optional(),
+      invoice_nbr: joi.string().optional(),
     });
 
     const { error } = schema.validate(data);
