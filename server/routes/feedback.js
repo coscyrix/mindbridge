@@ -25,6 +25,12 @@ router.post(
 );
 
 router.post(
+  '/pcl5',
+  authenticate,
+  AsyncWrapper(feedbackController.postPCL5Feedback),
+);
+
+router.post(
   '/whodas',
   authenticate,
   AsyncWrapper(feedbackController.postWHODASFeedback),
@@ -34,6 +40,18 @@ router.post(
   '/ipf',
   authenticate,
   AsyncWrapper(feedbackController.postIPFSFeedback),
+);
+
+router.post(
+  '/smart-goal',
+  authenticate,
+  AsyncWrapper(feedbackController.postSMARTGOALFeedback),
+);
+
+router.post(
+  '/consent',
+  authenticate,
+  AsyncWrapper(feedbackController.postCONSENTFeedback),
 );
 
 export const feedbackRouter = { baseUrl: '/api/feedback', router };

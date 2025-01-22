@@ -190,7 +190,6 @@ export default class UserProfile {
       const sendClientConsentForm = this.emailTmplt.sendClientConsentEmail({
         email: data.email,
         client_name: `${data.user_first_name} ${data.user_last_name}`,
-        form_url: `https://mindbridge/consent-form/${data.clam_num}`,
       });
 
       return { message: 'User profile created successfully' };

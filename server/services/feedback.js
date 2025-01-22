@@ -75,6 +75,7 @@ export default class FeedbackService {
       item6: joi.number().min(0).max(3).required(),
       item7: joi.number().min(0).max(3).required(),
       session_id: joi.number().required(),
+      client_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -100,7 +101,9 @@ export default class FeedbackService {
       item7: joi.number().min(0).max(3).required(),
       item8: joi.number().min(0).max(3).required(),
       item9: joi.number().min(0).max(3).required(),
+      difficulty_score: joi.number().min(0).max(3).required(),
       session_id: joi.number().required(),
+      client_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -111,6 +114,44 @@ export default class FeedbackService {
 
     const feedback = new Feedback();
     return feedback.postPHQ9Feedback(data);
+  }
+
+  //////////////////////////////////////////
+
+  async postPCL5Feedback(data) {
+    const schema = joi.object({
+      item1: joi.number().min(0).max(4).required(),
+      item2: joi.number().min(0).max(4).required(),
+      item3: joi.number().min(0).max(4).required(),
+      item4: joi.number().min(0).max(4).required(),
+      item5: joi.number().min(0).max(4).required(),
+      item6: joi.number().min(0).max(4).required(),
+      item7: joi.number().min(0).max(4).required(),
+      item8: joi.number().min(0).max(4).required(),
+      item9: joi.number().min(0).max(4).required(),
+      item10: joi.number().min(0).max(4).required(),
+      item11: joi.number().min(0).max(4).required(),
+      item12: joi.number().min(0).max(4).required(),
+      item13: joi.number().min(0).max(4).required(),
+      item14: joi.number().min(0).max(4).required(),
+      item15: joi.number().min(0).max(4).required(),
+      item16: joi.number().min(0).max(4).required(),
+      item17: joi.number().min(0).max(4).required(),
+      item18: joi.number().min(0).max(4).required(),
+      item19: joi.number().min(0).max(4).required(),
+      item20: joi.number().min(0).max(4).required(),
+      session_id: joi.number().required(),
+      client_id: joi.number().required(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const feedback = new Feedback();
+    return feedback.postPCL5Feedback(data);
   }
 
   //////////////////////////////////////////
@@ -157,6 +198,7 @@ export default class FeedbackService {
       unableDays: joi.number().min(0).max(30).required(),
       healthConditionDays: joi.number().min(0).max(30).required(),
       session_id: joi.number().required(),
+      client_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -174,6 +216,7 @@ export default class FeedbackService {
   async postIPFFeedback(data) {
     const schema = joi.object({
       session_id: joi.number().required(),
+      client_id: joi.number().required(),
       item1: joi.number().min(0).max(6).required(),
       item2: joi.number().min(0).max(6).required(),
       item3: joi.number().min(0).max(6).required(),
@@ -264,5 +307,56 @@ export default class FeedbackService {
 
     const feedback = new Feedback();
     return feedback.postIPFSFeedback(data);
+  }
+
+  //////////////////////////////////////////
+
+  async postSMARTGOALFeedback(data) {
+    const schema = joi.object({
+      session_id: joi.number().required(),
+      client_id: joi.number().required(),
+      specific_1st_phase: joi.string().optional(),
+      specific_2nd_phase: joi.string().optional(),
+      specific_3rd_phase: joi.string().optional(),
+      measurable_1st_phase: joi.string().optional(),
+      measurable_2nd_phase: joi.string().optional(),
+      measurable_3rd_phase: joi.string().optional(),
+      achievable_1st_phase: joi.string().optional(),
+      achievable_2nd_phase: joi.string().optional(),
+      achievable_3rd_phase: joi.string().optional(),
+      relevant_1st_phase: joi.string().optional(),
+      relevant_2nd_phase: joi.string().optional(),
+      relevant_3rd_phase: joi.string().optional(),
+      time_bound_1st_phase: joi.string().optional(),
+      time_bound_2nd_phase: joi.string().optional(),
+      time_bound_3rd_phase: joi.string().optional(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const feedback = new Feedback();
+    return feedback.postSMARTGOALFeedback(data);
+  }
+
+  //////////////////////////////////////////
+
+  async postCONSENTFeedback(data) {
+    const schema = joi.object({
+      client_id: joi.number().required(),
+      imgBase64: joi.string().required(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const feedback = new Feedback();
+    return feedback.postCONSENTFeedback(data);
   }
 }

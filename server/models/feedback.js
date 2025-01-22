@@ -15,8 +15,11 @@ export default class Feedback {
   async postFeedback(data) {
     try {
       const tmpFeedback = {
-        session_id: data.session_id,
-        form_id: data.form_id,
+        ...(data.session_id && { session_id: data.session_id }),
+        ...(data.form_id && { form_id: data.form_id }),
+        client_id: data.client_id,
+        feedback_json: data.feedback_json,
+        is_discharged: data.is_discharged ? data.is_discharged : 'n',
       };
 
       const postFeedback = await db
@@ -31,6 +34,7 @@ export default class Feedback {
 
       return { message: 'Feedback created successfully', rec: postFeedback };
     } catch (error) {
+      console.log(error);
       logger.error(error);
       return { message: 'Error creating feedback', error: -1 };
     }
@@ -124,6 +128,7 @@ export default class Feedback {
 
       const checkFeedBackSessionId = await this.getFeedbackById({
         session_id: data.session_id,
+        form_id: 21,
       });
 
       if (checkFeedBackSessionId.length > 0) {
@@ -135,6 +140,8 @@ export default class Feedback {
 
       const recFeedback = await this.postFeedback({
         session_id: data.session_id,
+        client_id: data.client_id,
+        feedback_json: data,
         form_id: 21,
       });
 
@@ -194,6 +201,7 @@ export default class Feedback {
 
       const checkFeedBackSessionId = await this.getFeedbackById({
         session_id: data.session_id,
+        form_id: 20,
       });
 
       if (checkFeedBackSessionId.length > 0) {
@@ -205,6 +213,8 @@ export default class Feedback {
 
       const recFeedback = await this.postFeedback({
         session_id: data.session_id,
+        client_id: data.client_id,
+        feedback_json: data,
         form_id: 20,
       });
 
@@ -217,6 +227,7 @@ export default class Feedback {
 
       const tmpGAD7Feedback = {
         total_score: total,
+        difficulty_score: data.difficulty_score,
         feedback_id: recFeedback.rec[0],
       };
 
@@ -226,6 +237,90 @@ export default class Feedback {
         .insert(tmpGAD7Feedback);
 
       if (!postGAD7Feedback) {
+        logger.error('Error creating feedback');
+        return { message: 'Error creating feedback', error: -1 };
+      }
+
+      return { message: 'Feedback created successfully' };
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error creating feedback', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async postPCL5Feedback(data) {
+    try {
+      let total = 0;
+      total +=
+        data.item1 +
+        data.item2 +
+        data.item3 +
+        data.item4 +
+        data.item5 +
+        data.item6 +
+        data.item7 +
+        data.item8 +
+        data.item9 +
+        data.item10 +
+        data.item11 +
+        data.item12 +
+        data.item13 +
+        data.item14 +
+        data.item15 +
+        data.item16 +
+        data.item17 +
+        data.item18 +
+        data.item19 +
+        data.item20;
+
+      const checkSession = await this.session.getSessionById({
+        session_id: data.session_id,
+      });
+
+      if (checkSession.length === 0) {
+        return { message: 'Session not found', error: -1 };
+      }
+
+      const checkFeedBackSessionId = await this.getFeedbackById({
+        session_id: data.session_id,
+        form_id: 22,
+      });
+
+      if (checkFeedBackSessionId.length > 0) {
+        return {
+          message: 'Feedback already exists for this session',
+          error: -1,
+        };
+      }
+
+      const recFeedback = await this.postFeedback({
+        session_id: data.session_id,
+        client_id: data.client_id,
+        feedback_json: data,
+        form_id: 22,
+      });
+
+      console.log('recFeedback');
+      console.log(recFeedback);
+
+      if (recFeedback.error) {
+        return recFeedback;
+      }
+
+      const tmpPCL5Feedback = {
+        total_score: total,
+        feedback_id: recFeedback.rec[0],
+      };
+
+      const postPCL5Feedback = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('feedback_pcl5')
+        .insert(tmpPCL5Feedback);
+
+      if (!postPCL5Feedback) {
         logger.error('Error creating feedback');
         return { message: 'Error creating feedback', error: -1 };
       }
@@ -334,6 +429,7 @@ export default class Feedback {
 
       const checkFeedBackSessionId = await this.getFeedbackById({
         session_id: data.session_id,
+        form_id: 17,
       });
 
       if (checkFeedBackSessionId.length > 0) {
@@ -345,6 +441,8 @@ export default class Feedback {
 
       const recFeedback = await this.postFeedback({
         session_id: data.session_id,
+        client_id: data.client_id,
+        feedback_json: data,
         form_id: 17,
       });
 
@@ -514,6 +612,7 @@ export default class Feedback {
 
       const checkFeedBackSessionId = await this.getFeedbackById({
         session_id: data.session_id,
+        form_id: 19,
       });
 
       if (checkFeedBackSessionId.length > 0) {
@@ -525,6 +624,8 @@ export default class Feedback {
 
       const recFeedback = await this.postFeedback({
         session_id: data.session_id,
+        client_id: data.client_id,
+        feedback_json: data,
         form_id: 19,
       });
 
@@ -559,6 +660,144 @@ export default class Feedback {
       console.log(error);
       logger.error(error);
       return { message: 'Error creating IPFS feedback', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async postSMARTGOALFeedback(data) {
+    try {
+      const checkSession = await this.session.getSessionById({
+        session_id: data.session_id,
+      });
+
+      if (checkSession.length === 0) {
+        return { message: 'Session not found', error: -1 };
+      }
+
+      const checkFeedBackSessionId = await this.getFeedbackById({
+        session_id: data.session_id,
+        form_id: 16,
+      });
+
+      if (checkFeedBackSessionId.length > 0) {
+        return {
+          message: 'Feedback already exists for this session',
+          error: -1,
+        };
+      }
+
+      const recFeedback = await this.postFeedback({
+        session_id: data.session_id,
+        client_id: data.client_id,
+        feedback_json: data,
+        form_id: 16,
+      });
+
+      if (recFeedback.error) {
+        return recFeedback;
+      }
+
+      const tmpSMARTGOALFeedback = {
+        feedback_id: recFeedback.rec[0],
+        ...(data.specific_1st_phase && {
+          specific_1st_phase: data.specific_1st_phase,
+        }),
+        ...(data.specific_2nd_phase && {
+          specific_2nd_phase: data.specific_2nd_phase,
+        }),
+        ...(data.specific_3rd_phase && {
+          specific_3rd_phase: data.specific_3rd_phase,
+        }),
+        ...(data.measurable_1st_phase && {
+          measurable_1st_phase: data.measurable_1st_phase,
+        }),
+        ...(data.measurable_2nd_phase && {
+          measurable_2nd_phase: data.measurable_2nd_phase,
+        }),
+        ...(data.measurable_3rd_phase && {
+          measurable_3rd_phase: data.measurable_3rd_phase,
+        }),
+        ...(data.achievable_1st_phase && {
+          achievable_1st_phase: data.achievable_1st_phase,
+        }),
+        ...(data.achievable_2nd_phase && {
+          achievable_2nd_phase: data.achievable_2nd_phase,
+        }),
+        ...(data.achievable_3rd_phase && {
+          achievable_3rd_phase: data.achievable_3rd_phase,
+        }),
+        ...(data.relevant_1st_phase && {
+          relevant_1st_phase: data.relevant_1st_phase,
+        }),
+        ...(data.relevant_2nd_phase && {
+          relevant_2nd_phase: data.relevant_2nd_phase,
+        }),
+        ...(data.relevant_3rd_phase && {
+          relevant_3rd_phase: data.relevant_3rd_phase,
+        }),
+        ...(data.time_bound_1st_phase && {
+          time_bound_1st_phase: data.time_bound_1st_phase,
+        }),
+        ...(data.time_bound_2nd_phase && {
+          time_bound_2nd_phase: data.time_bound_2nd_phase,
+        }),
+        ...(data.time_bound_3rd_phase && {
+          time_bound_3rd_phase: data.time_bound_3rd_phase,
+        }),
+      };
+
+      const postSMARTGOALFeedback = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('feedback_smart_goal')
+        .insert(tmpSMARTGOALFeedback);
+
+      if (!postSMARTGOALFeedback) {
+        logger.error('Error creating feedback');
+        return { message: 'Error creating feedback', error: -1 };
+      }
+
+      return { message: 'Feedback created successfully' };
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error creating feedback', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async postCONSENTFeedback(data) {
+    try {
+      const recFeedback = await this.postFeedback({
+        client_id: data.client_id,
+        feedback_json: data,
+      });
+
+      if (recFeedback.error) {
+        return recFeedback;
+      }
+
+      const tmpCONSENTFeedback = {
+        feedback_id: recFeedback.rec[0],
+        imgBase64: data.imgBase64,
+      };
+
+      const postCONSENTFeedback = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('feedback_consent')
+        .insert(tmpCONSENTFeedback);
+
+      if (!postCONSENTFeedback) {
+        logger.error('Error creating feedback');
+        return { message: 'Error creating feedback', error: -1 };
+      }
+
+      return { message: 'Feedback created successfully' };
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error creating feedback', error: -1 };
     }
   }
 }

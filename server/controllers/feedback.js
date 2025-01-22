@@ -95,6 +95,22 @@ export default class FeedbackController {
 
   //////////////////////////////////////////
 
+  async postPCL5Feedback(req, res) {
+    const data = req.body;
+
+    const feedback = new FeedbackService();
+    const rec = await feedback.postPCL5Feedback(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
   async postWHODASFeedback(req, res) {
     const data = req.body;
 
@@ -116,6 +132,38 @@ export default class FeedbackController {
 
     const feedback = new FeedbackService();
     const rec = await feedback.postIPFFeedback(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
+  async postSMARTGOALFeedback(req, res) {
+    const data = req.body;
+
+    const feedback = new FeedbackService();
+    const rec = await feedback.postSMARTGOALFeedback(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
+  async postCONSENTFeedback(req, res) {
+    const data = req.body;
+
+    const feedback = new FeedbackService();
+    const rec = await feedback.postCONSENTFeedback(data);
 
     if (rec.error) {
       res.status(400).json(rec);
