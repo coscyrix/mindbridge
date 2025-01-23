@@ -190,6 +190,7 @@ export default class UserProfile {
       const sendClientConsentForm = this.emailTmplt.sendClientConsentEmail({
         email: data.email,
         client_name: `${data.user_first_name} ${data.user_last_name}`,
+        client_id: postUsrProfile[0],
       });
 
       return { message: 'User profile created successfully' };
