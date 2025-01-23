@@ -2,6 +2,7 @@ import DBconn from '../config/db.config.js';
 import knex from 'knex';
 import logger from '../config/winston.js';
 import Session from './session.js';
+import { cli } from 'winston/lib/winston/config/index.js';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -769,9 +770,22 @@ export default class Feedback {
 
   async postCONSENTFeedback(data) {
     try {
+      const checkFeedBackSessionId = await this.getFeedbackById({
+        client_id: data.client_id,
+        form_id: 23,
+      });
+
+      if (checkFeedBackSessionId.length > 0) {
+        return {
+          message: 'Feedback already exists for this session',
+          error: -1,
+        };
+      }
+
       const recFeedback = await this.postFeedback({
         client_id: data.client_id,
         feedback_json: data,
+        form_id: 23,
       });
 
       if (recFeedback.error) {
