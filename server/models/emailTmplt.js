@@ -65,9 +65,10 @@ export default class EmailTmplt {
           const toolsEmail = treatmentToolsEmail(
             recUser[0].email,
             client_full_name,
-            form_name,
+            form_name.toUpperCase(),
             form_id,
             client_id,
+            data.session_id,
           );
 
           const email = this.sendEmail.sendMail(toolsEmail);
@@ -166,7 +167,7 @@ export default class EmailTmplt {
       const sendClientConsentForm = consentFormEmail(
         data.email,
         data.client_name,
-        data.form_url,
+        `${process.env.BASE_URL}${process.env.FORMS}consent`,
       );
 
       const sendConsentForm = this.sendEmail.sendMail(sendClientConsentForm);
