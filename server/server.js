@@ -15,6 +15,7 @@ import {
   referencesRouter,
   feedbackRouter,
   userTargetOutcomeRouter,
+  notesRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -33,6 +34,7 @@ async function main() {
         referencesRouter,
         feedbackRouter,
         userTargetOutcomeRouter,
+        notesRouter,
       ],
     });
 

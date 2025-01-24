@@ -8,3 +8,4 @@ export { formRouter } from './form.js';
 export { referencesRouter } from './references.js';
 export { userTargetOutcomeRouter } from './userTargetOutcome.js';
 export { feedbackRouter } from './feedback.js';
+export { notesRouter } from './notes.js';

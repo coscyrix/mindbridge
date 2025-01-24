@@ -170,20 +170,18 @@ export default class Invoice {
       let totalPrice = 0;
       let totalCounselor = 0;
       let totalSystem = 0;
-      let totalUnits = 0;
 
       rec.forEach((item) => {
-        totalPrice += parseFloat(item.sum_session_price) || 0;
-        totalCounselor += parseFloat(item.sum_session_counselor_amt) || 0;
-        totalSystem += parseFloat(item.sum_session_system_amt) || 0;
-        totalUnits += parseFloat(item.sum_session_system_units) || 0;
+        totalPrice += parseFloat(item.session_price) || 0;
+        totalCounselor += parseFloat(item.session_counselor_amt) || 0;
+        totalSystem += parseFloat(item.session_system_amt) || 0;
       });
 
       const summary = {
         sum_session_price: totalPrice.toFixed(4),
         sum_session_counselor_amt: totalCounselor.toFixed(4),
         sum_session_system_amt: totalSystem.toFixed(4),
-        sum_session_system_units: totalUnits,
+        sum_session_system_units: rec.length,
       };
 
       return {
