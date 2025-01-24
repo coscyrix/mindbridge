@@ -758,7 +758,8 @@ export default class ThrpyReq {
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_thrpy_req')
-        .where('status_yn', 1);
+        .where('status_yn', 1)
+        .orderBy('created_at', 'desc');
 
       if (data.req_id) {
         query.andWhere('req_id', data.req_id);
