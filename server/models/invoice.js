@@ -10,9 +10,9 @@ export default class Invoice {
 
   async postInvoice(data) {
     try {
+      // Check if session already invoiced
       const checkInvoice = await this.getInvoiceOr({
         session_id: data.session_id,
-        invoice_nbr: data.invoice_nbr,
       });
 
       if (checkInvoice.rec[0]) {
@@ -21,6 +21,19 @@ export default class Invoice {
         }
         if (checkInvoice.rec.length > 0) {
           return { message: 'Invoice already exists', error: -1 };
+        }
+      }
+
+      const checkInvoiceNum = await this.getInvoiceOr({
+        invoice_nbr: data.invoice_nbr,
+      });
+
+      if (checkInvoiceNum.rec[0]) {
+        if (checkInvoiceNum.rec[0].invoice_nbr === data.invoice_nbr) {
+          return { message: 'Invoice number already exists', error: -1 };
+        }
+        if (checkInvoiceNum.rec.length > 0) {
+          return { message: 'Invoice number already exists', error: -1 };
         }
       }
 
@@ -40,6 +53,7 @@ export default class Invoice {
 
       return { message: 'Invoice created successfully' };
     } catch (error) {
+      console.log(error);
       return { message: 'Error creating invoice', error: -1 };
     }
   }
@@ -113,7 +127,7 @@ export default class Invoice {
         query.orWhere('invoice_nbr', data.invoice_nbr);
       }
 
-      query.andWhere('status_yn', 1);
+      query.andWhere('status_yn', 'y');
 
       const rec = await query;
 
@@ -193,6 +207,27 @@ export default class Invoice {
       };
     } catch (error) {
       return { message: 'Error getting invoice', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async delInvoiceBySessionId(data) {
+    try {
+      const delInvoice = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('invoice')
+        .where('session_id', data.session_id)
+        .update({ status_yn: 'n' });
+
+      if (!delInvoice) {
+        return { message: 'Error deleting invoice', error: -1 };
+      }
+
+      return { message: 'Invoice deleted successfully' };
+    } catch (error) {
+      console.log(error);
+      return { message: 'Error deleting invoice', error: -1 };
     }
   }
 }

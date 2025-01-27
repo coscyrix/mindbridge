@@ -168,21 +168,6 @@ export default class Session {
         const dischargeEmlTmplt = this.emailTmplt.sendDischargeEmail({
           client_id: checkThrpyReq[0].client_id,
         });
-
-        // console.log(checkThrpyReq);
-        // const recUser = await this.userProfile.getUserProfileById({
-        //   user_profile_id: checkThrpyReq[0].client_id,
-        // });
-        // const dischargeEmlTmplt = dischargeEmail(
-        //   recUser.rec[0].email,
-        //   `${recUser.rec[0].user_first_name} ${recUser.rec[0].user_last_name}`,
-        // );
-        // const sendDischargeEmlTmpltEmail =
-        //   this.sendEmail.sendMail(dischargeEmlTmplt);
-        // if (!sendDischargeEmlTmpltEmail) {
-        //   logger.error('Error sending discharge email');
-        //   return { message: 'Error sending discharge email', error: -1 };
-        // }
       }
 
       let tmpSession;
@@ -199,16 +184,13 @@ export default class Session {
           // ...data.is_report && {is_report: data.is_report},
         };
 
-        // this.SendTreatmentToolsEmail({
-        //   session_id: data.session_id,
-        // });
-
         this.emailTmplt.sendTreatmetToolEmail({
           session_id: data.session_id,
         });
       }
 
       if (data.invoice_nbr) {
+        // Check if invoice number already exists
         const checkInvoice = await this.invoice.getInvoiceOr({
           invoice_nbr: data.invoice_nbr,
         });
@@ -223,6 +205,7 @@ export default class Session {
           return { message: 'Invoice number already used', error: -1 };
         }
 
+        // Check if session has already been invoiced
         const checkInvoiceSession = await this.invoice.getInvoiceOr({
           session_id: data.session_id,
         });
@@ -232,9 +215,11 @@ export default class Session {
           return { message: 'Error getting invoice', error: -1 };
         }
 
+        // Delete invoice if it exists to save the new one
         if (checkInvoiceSession.rec.length > 0) {
-          logger.warn('Session already invoiced');
-          return { message: 'Session already invoiced', error: -1 };
+          const delInvoice = await this.invoice.delInvoiceBySessionId({
+            session_id: data.session_id,
+          });
         }
 
         if (checkInvoice.rec.length === 0) {

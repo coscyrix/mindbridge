@@ -779,6 +779,12 @@ export default class ThrpyReq {
 
       const rec = await query;
 
+      if (!data.req_id && !data.counselor_id && !data.client_id) {
+        rec.forEach((thrpyReq) => {
+          delete thrpyReq.session_obj;
+        });
+      }
+
       const orderSessionObj = (rec) => {
         rec.forEach((thrpyReq) => {
           if (thrpyReq.session_obj) {
