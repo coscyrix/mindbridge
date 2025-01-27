@@ -1,0 +1,15 @@
+:root {
+  --background-color: #f9fafb;
+  --color: #202534;
+  --input-color: #000000;
+  --primary-button-color: #2b5efc;
+  --primary-button-hover-color: #204cd7;
+  --secondary-button-color: #ffffff;
+  --theme-background-color: #2b5efc1f;
+  --theme-input-color: #2b5efc;
+  --active-tab-background: #2b5efc;
+  --inactive-tab-color: #767676;
+  --link-color: #2b5efc;
+  --error-color: #f04438;
+  --error-hover-color: #c0352c;
+}
