@@ -37,6 +37,12 @@ export default class UserProfileService {
       user_first_name: joi.string().min(2).required(),
       user_last_name: joi.string().min(2).required(),
       email: joi.string().email().required(),
+      user_phone_nbr: joi
+        .number()
+        .integer()
+        .min(1000000000)
+        .max(999999999999999)
+        .optional(),
       target_outcome_id: joi.number().optional(),
       clam_num: joi.number().optional(),
       role_id: joi.number().optional(),

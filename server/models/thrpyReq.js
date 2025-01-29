@@ -837,6 +837,16 @@ export default class ThrpyReq {
 
       const tmpSession = [];
 
+      //remove sessions where is_report = 1 in session_obj
+      rec.session_obj = rec.session_obj.filter((session) => {
+        return session.is_report !== 1;
+      });
+
+      //Sort session_obj by session_id
+      rec.session_obj = rec.session_obj.sort(
+        (a, b) => a.session_id - b.session_id,
+      );
+
       recForm.forEach((form) => {
         // Static forms placeholder logic
         if (form.frequency_typ === 'static') {
