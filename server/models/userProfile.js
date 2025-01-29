@@ -227,6 +227,18 @@ export default class UserProfile {
           logger.info('Client has an active schedule');
           return { message: 'Client has an active schedule', error: -1 };
         }
+
+        const checkClientOrCounselorHasActiveSchedule =
+          await this.checkClientOrCounselorHasActiveSchedule(user_profile_id);
+
+        if (checkClientOrCounselorHasActiveSchedule.rec.length === 0) {
+          logger.info('Client has no active schedule');
+        }
+
+        if (checkClientOrCounselorHasActiveSchedule.rec.length > 0) {
+          logger.info('Client has an active schedule');
+          return { message: 'Client has an active schedule', error: -1 };
+        }
       }
 
       if (data.target_outcome_id) {
@@ -416,6 +428,34 @@ export default class UserProfile {
       }
 
       return { message: 'User has no active schedule', rec: [] };
+    } catch (error) {
+      logger.error(error);
+      return { message: 'Error checking user schedule', error: -1, rec: [] };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async checkClientOrCounselorHasActiveSchedule(user_profile_id) {
+    try {
+      const checkUserHasActiveSchedule = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_user_profile')
+        .where('user_profile_id', user_profile_id)
+        .whereNotNull('counselor_ongoing_schedule')
+        .whereNotNull('has_schedule');
+
+      if (
+        !checkUserHasActiveSchedule ||
+        checkUserHasActiveSchedule.length === 0
+      ) {
+        return { message: 'User has no active schedule', rec: [] };
+      }
+
+      return {
+        message: 'User has active schedule',
+        rec: checkUserHasActiveSchedule,
+      };
     } catch (error) {
       logger.error(error);
       return { message: 'Error checking user schedule', error: -1, rec: [] };
