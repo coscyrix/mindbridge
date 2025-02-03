@@ -30,9 +30,14 @@ export default class SessionController {
   //////////////////////////////////////////
 
   async putSessionById(req, res) {
-    const session_id = req.query.session_id;
+    const query = req.query;
+    const session_id = query.session_id;
+    const role_id = query.role_id;
+    const user_profile_id = query.user_profile_id;
     const data = req.body;
     data.session_id = session_id;
+    data.role_id = role_id;
+    data.user_profile_id = user_profile_id;
     if (!data.session_id) {
       res.status(400).json({ message: 'Missing mandatory fields' });
       return;
@@ -43,6 +48,14 @@ export default class SessionController {
         .status(400)
         .json({ message: 'Provide a note for why the client was a NO SHOW' });
       return;
+    }
+
+    // This is to check the role of the user 
+    if (data.user_profile_id){
+      if (!data.role_id){
+        res.status(400).json({ message: 'Missing mandatory fields' });
+        return;
+      }
     }
 
     const session = new SessionService();

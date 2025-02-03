@@ -315,4 +315,28 @@ export default class Common {
       return { message: 'Error creating note', error: -1 };
     }
   }
+
+  //////////////////////////////////////////
+
+  async checkUserRole(data) {
+    try {
+      const rec = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select()
+        .where('user_profile_id', data.user_profile_id)
+        .from('v_user_profile');
+
+      if (!rec) {
+        return { message: 'User not found', error: -1 };
+      }
+
+      if (data.role_id ==4 && rec[0].role_id != 4) {
+        return { message: 'User does not have the necessary permissions to perform this task', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      return { message: 'Error getting user role', error: -1 };
+    }
+  }
 }
