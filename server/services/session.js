@@ -41,6 +41,8 @@ export default class SessionService {
       session_status: joi.number().optional(),
       notes: joi.string().optional(),
       invoice_nbr: joi.string().optional(),
+      role_id: joi.number().optional(),
+      user_profile_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

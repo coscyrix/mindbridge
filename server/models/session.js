@@ -116,9 +116,23 @@ export default class Session {
       );
 
       if (!data.invoice_nbr) {
-        if (checkSessionIfOngoing.rec.length > 0) {
-          logger.error('Session is ongoing');
-          return { message: 'Session is ongoing', error: -1 };
+        if (data.role_id != 4) {
+          if (checkSessionIfOngoing.rec.length > 0) {
+            logger.error('Session is ongoing');
+            return { message: 'Session is ongoing', error: -1 };
+          }
+        }
+      }
+
+      if (data.role_id == 4) {
+        const checkUserAccess = await this.common.checkUserRole({
+          user_profile_id: data.user_profile_id,
+          role_id: data.role_id,
+        });
+
+        if (checkUserAccess.error) {
+          logger.error('Error checking user role');
+          return { message: checkUserAccess.message, error: -1 };
         }
       }
 
