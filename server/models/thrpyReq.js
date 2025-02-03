@@ -38,6 +38,44 @@ export default class ThrpyReq {
       const req_time = data.intake_dte.split('T')[1]; // 'HH:mm:ss.sssZ'
       const currentDte = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
 
+      // Check if counselor in data role is for a counselor
+      const recCounselor = await this.userProfile.getUserProfileById({
+        user_profile_id: data.counselor_id,
+      });
+
+      if (!recCounselor) {
+        logger.error('Error getting counselor profile');
+        return { message: 'Error getting counselor profile', error: -1 };
+      }
+
+      if (recCounselor.rec[0].role_id !== 2) {
+        logger.error(
+          'The specified counselor does not have the counselor role',
+        );
+        return {
+          message: 'The specified counselor does not have the counselor role',
+          error: -1,
+        };
+      }
+
+      // Check if client in data role is for a client
+      const recClient = await this.userProfile.getUserProfileById({
+        user_profile_id: data.client_id,
+      });
+
+      if (!recClient) {
+        logger.error('Error getting client profile');
+        return { message: 'Error getting client profile', error: -1 };
+      }
+
+      if (recClient.rec[0].role_id !== 1) {
+        logger.error('The specified client does not have the client role');
+        return {
+          message: 'The specified client does not have the client role',
+          error: -1,
+        };
+      }
+
       // Retrieve the service details from the database
       const servc = await this.service.getServiceById({
         service_id: data.service_id,
@@ -397,15 +435,6 @@ export default class ThrpyReq {
       }
 
       // Send an email to the client with the therapy request details
-      const recClient = await this.userProfile.getUserProfileById({
-        user_profile_id: data.client_id,
-      });
-
-      if (!recClient) {
-        logger.error('Error getting client profile');
-        return { message: 'Error getting client profile', error: -1 };
-      }
-
       const thrpyReqEmlTmplt = this.emailTmplt.sendThrpyReqDetailsEmail({
         email: recClient.rec[0].email,
         big_thrpy_req_obj: ThrpyReq[0],

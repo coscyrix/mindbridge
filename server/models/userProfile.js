@@ -187,11 +187,13 @@ export default class UserProfile {
           password: clientPassword,
         });
 
-      const sendClientConsentForm = this.emailTmplt.sendClientConsentEmail({
-        email: data.email,
-        client_name: `${data.user_first_name} ${data.user_last_name}`,
-        client_id: postUsrProfile[0],
-      });
+      if (data.role_id === 1) {
+        const sendClientConsentForm = this.emailTmplt.sendClientConsentEmail({
+          email: data.email,
+          client_name: `${data.user_first_name} ${data.user_last_name}`,
+          client_id: postUsrProfile[0],
+        });
+      }
 
       return { message: 'User profile created successfully' };
     } catch (error) {
@@ -370,7 +372,11 @@ export default class UserProfile {
 
         // Merge the two arrays and remove duplicate elements
         const clientList = [
-          ...new Map([...clientListFromEnrollment, ...clientListFromThrpyReq].map(client => [client.client_id, client])).values()
+          ...new Map(
+            [...clientListFromEnrollment, ...clientListFromThrpyReq].map(
+              (client) => [client.client_id, client],
+            ),
+          ).values(),
         ];
 
         const clientIds = clientList.map((client) => client.client_id);
