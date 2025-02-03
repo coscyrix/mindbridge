@@ -356,11 +356,22 @@ export default class UserProfile {
       }
 
       if (data.counselor_id && data.role_id == 2) {
-        const clientList = await db
+        const clientListFromEnrollment = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .distinct('client_id')
+          .from('client_enrollments')
+          .where('user_id', data.counselor_id);
+
+        const clientListFromThrpyReq = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .distinct('client_id')
           .from('thrpy_req')
           .where('counselor_id', data.counselor_id);
+
+        // Merge the two arrays and remove duplicate elements
+        const clientList = [
+          ...new Map([...clientListFromEnrollment, ...clientListFromThrpyReq].map(client => [client.client_id, client])).values()
+        ];
 
         const clientIds = clientList.map((client) => client.client_id);
 
