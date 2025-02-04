@@ -198,7 +198,7 @@ export default class Session {
           // ...data.is_report && {is_report: data.is_report},
         };
 
-        this.emailTmplt.sendTreatmetToolEmail({
+        this.emailTmplt.sendTreatmentToolEmail({
           session_id: data.session_id,
         });
       }

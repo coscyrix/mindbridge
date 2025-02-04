@@ -109,15 +109,21 @@ export default class Feedback {
 
   async postGAD7Feedback(data) {
     try {
+      // Convert all item values to numbers to avoid string concatenation
+      const items = {};
+      for (let i = 1; i <= 7; i++) {
+        items['item' + i] = Number(data['item' + i]);
+      }
+
       let total = 0;
       total +=
-        data.item1 +
-        data.item2 +
-        data.item3 +
-        data.item4 +
-        data.item5 +
-        data.item6 +
-        data.item7;
+        items.item1 +
+        items.item2 +
+        items.item3 +
+        items.item4 +
+        items.item5 +
+        items.item6 +
+        items.item7;
 
       const checkSession = await this.session.getSessionById({
         session_id: data.session_id,
@@ -180,17 +186,23 @@ export default class Feedback {
 
   async postPHQ9Feedback(data) {
     try {
+      // Convert all item values to numbers to avoid string concatenation
+      const items = {};
+      for (let i = 1; i <= 9; i++) {
+        items['item' + i] = Number(data['item' + i]);
+      }
+
       let total = 0;
       total +=
-        data.item1 +
-        data.item2 +
-        data.item3 +
-        data.item4 +
-        data.item5 +
-        data.item6 +
-        data.item7 +
-        data.item8 +
-        data.item9;
+        items.item1 +
+        items.item2 +
+        items.item3 +
+        items.item4 +
+        items.item5 +
+        items.item6 +
+        items.item7 +
+        items.item8 +
+        items.item9;
 
       const checkSession = await this.session.getSessionById({
         session_id: data.session_id,
@@ -254,28 +266,34 @@ export default class Feedback {
 
   async postPCL5Feedback(data) {
     try {
+      // Convert all item values to numbers to avoid string concatenation
+      const items = {};
+      for (let i = 1; i <= 20; i++) {
+        items['item' + i] = Number(data['item' + i]);
+      }
+
       let total = 0;
       total +=
-        data.item1 +
-        data.item2 +
-        data.item3 +
-        data.item4 +
-        data.item5 +
-        data.item6 +
-        data.item7 +
-        data.item8 +
-        data.item9 +
-        data.item10 +
-        data.item11 +
-        data.item12 +
-        data.item13 +
-        data.item14 +
-        data.item15 +
-        data.item16 +
-        data.item17 +
-        data.item18 +
-        data.item19 +
-        data.item20;
+        items.item1 +
+        items.item2 +
+        items.item3 +
+        items.item4 +
+        items.item5 +
+        items.item6 +
+        items.item7 +
+        items.item8 +
+        items.item9 +
+        items.item10 +
+        items.item11 +
+        items.item12 +
+        items.item13 +
+        items.item14 +
+        items.item15 +
+        items.item16 +
+        items.item17 +
+        items.item18 +
+        items.item19 +
+        items.item20;
 
       const checkSession = await this.session.getSessionById({
         session_id: data.session_id,
@@ -338,85 +356,101 @@ export default class Feedback {
 
   async postWHODASFeedback(data) {
     try {
+      // Convert all item values to numbers to avoid string concatenation
+      const items = {};
+      for (let i = 1; i <= 36; i++) {
+        items['item' + i] = Number(data['item' + i]);
+      }
+
       let total = 0;
       //avg of 6 items (Understanding and communicating)
       let d1_avg =
-        (data.item1 +
-          data.item2 +
-          data.item3 +
-          data.item4 +
-          data.item5 +
-          data.item6) /
+        (items.item1 +
+          items.item2 +
+          items.item3 +
+          items.item4 +
+          items.item5 +
+          items.item6) /
         6;
       //avg of 5 items (Getting around)
       let d2_avg =
-        (data.item7 + data.item8 + data.item9 + data.item10 + data.item11) / 5;
+        (items.item7 +
+          items.item8 +
+          items.item9 +
+          items.item10 +
+          items.item11) /
+        5;
       //avg of 4 items (Self-care)
-      let d3_avg = (data.item12 + data.item13 + data.item14 + data.item15) / 4;
+      let d3_avg =
+        (items.item12 + items.item13 + items.item14 + items.item15) / 4;
       //avg of 5 items (Getting along with people)
       let d4_avg =
-        (data.item16 + data.item17 + data.item18 + data.item19 + data.item20) /
+        (items.item16 +
+          items.item17 +
+          items.item18 +
+          items.item19 +
+          items.item20) /
         5;
       //avg of 8 items (Life activities)
       let d5_avg =
-        (data.item21 +
-          data.item22 +
-          data.item23 +
-          data.item24 +
-          data.item25 +
-          data.item26 +
-          data.item27 +
-          data.item28) /
+        (items.item21 +
+          items.item22 +
+          items.item23 +
+          items.item24 +
+          items.item25 +
+          items.item26 +
+          items.item27 +
+          items.item28) /
         8;
       //avg of 8 items (Participation in society)
       let d6_avg =
-        (data.item29 +
-          data.item30 +
-          data.item31 +
-          data.item32 +
-          data.item33 +
-          data.item34 +
-          data.item35 +
-          data.item36) /
+        (items.item29 +
+          items.item30 +
+          items.item31 +
+          items.item32 +
+          items.item33 +
+          items.item34 +
+          items.item35 +
+          items.item36) /
         8;
 
       total +=
-        data.item1 +
-        data.item2 +
-        data.item3 +
-        data.item4 +
-        data.item5 +
-        data.item6 +
-        data.item7 +
-        data.item8 +
-        data.item9 +
-        data.item10 +
-        data.item11 +
-        data.item12 +
-        data.item13 +
-        data.item14 +
-        data.item15 +
-        data.item16 +
-        data.item17 +
-        data.item18 +
-        data.item19 +
-        data.item20 +
-        data.item21 +
-        data.item22 +
-        data.item23 +
-        data.item24 +
-        data.item25 +
-        data.item26 +
-        data.item27 +
-        data.item28 +
-        data.item29 +
-        data.item30 +
-        data.item31 +
-        data.item32 +
-        data.item33 +
-        data.item34 +
-        data.item35 +
-        data.item36;
+        items.item1 +
+        items.item2 +
+        items.item3 +
+        items.item4 +
+        items.item5 +
+        items.item6 +
+        items.item7 +
+        items.item8 +
+        items.item9 +
+        items.item10 +
+        items.item11 +
+        items.item12 +
+        items.item13 +
+        items.item14 +
+        items.item15 +
+        items.item16 +
+        items.item17 +
+        items.item18 +
+        items.item19 +
+        items.item20 +
+        items.item21 +
+        items.item22 +
+        items.item23 +
+        items.item24 +
+        items.item25 +
+        items.item26 +
+        items.item27 +
+        items.item28 +
+        items.item29 +
+        items.item30 +
+        items.item31 +
+        items.item32 +
+        items.item33 +
+        items.item34 +
+        items.item35 +
+        items.item36;
 
       let overall_score = (total / 144) * 100;
 
@@ -490,117 +524,123 @@ export default class Feedback {
 
   async postIPFSFeedback(data) {
     try {
+      // Convert all item values to numbers to avoid string concatenation
+      const items = {};
+      for (let i = 1; i <= 80; i++) {
+        items['item' + i] = Number(data['item' + i]);
+      }
+
       //avg for Romantic Relationship with Spouse or Partner
       let d1_avg =
         (6 -
-          data.item1 +
-          (6 - data.item2) +
-          data.item3 +
-          (6 - data.item4) +
-          data.item5 +
-          (6 - data.item6) +
-          data.item7 +
-          (6 - data.item8) +
-          (6 - data.item9) +
-          (6 - data.item10) +
-          data.item11) /
+          items.item1 +
+          (6 - items.item2) +
+          items.item3 +
+          (6 - items.item4) +
+          items.item5 +
+          (6 - items.item6) +
+          items.item7 +
+          (6 - items.item8) +
+          (6 - items.item9) +
+          (6 - items.item10) +
+          items.item11) /
         11;
 
       //avg for Family Relationship
       let d2_avg =
         (6 -
-          data.item12 +
-          (6 - data.item13) +
-          (6 - data.item14) +
-          data.item15 +
-          data.item16 +
-          data.item17 +
-          data.item18) /
+          items.item12 +
+          (6 - items.item13) +
+          (6 - items.item14) +
+          items.item15 +
+          items.item16 +
+          items.item17 +
+          items.item18) /
         7;
 
       //avg for Work Relationship
       let d3_avg =
-        (data.item19 +
-          (6 - data.item20) +
-          (6 - data.item21) +
-          (6 - data.item22) +
-          data.item23 +
-          (6 - data.item24) +
-          (6 - data.item25) +
-          data.item26 +
-          (6 - data.item27) +
-          (6 - data.item28) +
-          (6 - data.item29) +
-          (6 - data.item30) +
-          (6 - data.item31) +
-          (6 - data.item32) +
-          (6 - data.item33) +
-          (6 - data.item34) +
-          (6 - data.item35) +
-          (6 - data.item36) +
-          (6 - data.item37) +
-          data.item38 +
-          data.item39) /
+        (items.item19 +
+          (6 - items.item20) +
+          (6 - items.item21) +
+          (6 - items.item22) +
+          items.item23 +
+          (6 - items.item24) +
+          (6 - items.item25) +
+          items.item26 +
+          (6 - items.item27) +
+          (6 - items.item28) +
+          (6 - items.item29) +
+          (6 - items.item30) +
+          (6 - items.item31) +
+          (6 - items.item32) +
+          (6 - items.item33) +
+          (6 - items.item34) +
+          (6 - items.item35) +
+          (6 - items.item36) +
+          (6 - items.item37) +
+          items.item38 +
+          items.item39) /
         21;
 
       //avg for Social and Friendship Relationship
       let d4_avg =
         (6 -
-          data.item40 +
-          (6 - data.item41) +
-          (6 - data.item42) +
-          (6 - data.item43) +
-          data.item44 +
-          data.item45 +
-          data.item46 +
-          data.item47) /
+          items.item40 +
+          (6 - items.item41) +
+          (6 - items.item42) +
+          (6 - items.item43) +
+          items.item44 +
+          items.item45 +
+          items.item46 +
+          items.item47) /
         8;
 
       //avg for Parenting Relationship
       let d5_avg =
         (6 -
-          data.item48 +
-          (6 - data.item49) +
-          data.item50 +
-          (6 - data.item51) +
-          (6 - data.item52) +
-          (6 - data.item53) +
-          (6 - data.item54) +
-          (6 - data.item55) +
-          data.item56 +
-          data.item57) /
+          items.item48 +
+          (6 - items.item49) +
+          items.item50 +
+          (6 - items.item51) +
+          (6 - items.item52) +
+          (6 - items.item53) +
+          (6 - items.item54) +
+          (6 - items.item55) +
+          items.item56 +
+          items.item57) /
         10;
 
       //avg for Educational Relationship
       let d6_avg =
         (6 -
-          data.item58 +
-          (6 - data.item59) +
-          (6 - data.item60) +
-          data.item61 +
-          data.item62 +
-          (6 - data.item63) +
-          (6 - data.item64) +
-          (6 - data.item65) +
-          data.item66 +
-          data.item67 +
-          (6 - data.item68) +
-          (6 - data.item69) +
-          (6 - data.item70) +
-          (6 - data.item71) +
-          (6 - data.item72)) /
+          items.item58 +
+          (6 - items.item59) +
+          (6 - items.item60) +
+          items.item61 +
+          items.item62 +
+          (6 - items.item63) +
+          (6 - items.item64) +
+          (6 - items.item65) +
+          items.item66 +
+          items.item67 +
+          (6 - items.item68) +
+          (6 - items.item69) +
+          (6 - items.item70) +
+          (6 - items.item71) +
+          (6 - items.item72)) /
         15;
 
       //avg for Self-care Relationship
       let d7_avg =
-        (data.item73 +
-          (6 - data.item74) +
-          data.item75 +
-          (6 - data.item76) +
-          data.item77 +
-          data.item78 +
-          (6 - data.item79) +
-          (6 - data.item80)) /
+        (items.item73 +
+          (6 - items.item74) +
+          items.item75 +
+          (6 - items.item76) +
+          items.item77 +
+          items.item78 +
+          (6 - items.item79) +
+          (6 - items.item80)) /
         8;
 
       const checkSession = await this.session.getSessionById({
@@ -646,21 +686,23 @@ export default class Feedback {
         feedback_id: recFeedback.rec[0],
       };
 
+      console.log('tmpIPFSFeedback', tmpIPFSFeedback);
+
       const postIPFSFeedback = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('feedback_ipf')
         .insert(tmpIPFSFeedback);
 
       if (!postIPFSFeedback) {
-        logger.error('Error creating IPFS feedback');
-        return { message: 'Error creating IPFS feedback', error: -1 };
+        logger.error('Error creating IPF feedback');
+        return { message: 'Error creating IPF feedback', error: -1 };
       }
 
-      return { message: 'IPFS feedback created successfully' };
+      return { message: 'IPF feedback created successfully' };
     } catch (error) {
       console.log(error);
       logger.error(error);
-      return { message: 'Error creating IPFS feedback', error: -1 };
+      return { message: 'Error creating IPF feedback', error: -1 };
     }
   }
 
