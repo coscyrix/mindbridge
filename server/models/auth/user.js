@@ -9,6 +9,7 @@ import SendEmail from '../../middlewares/sendEmail.js';
 import {
   forgetPasswordEmail,
   accountDeactivatedEmail,
+  accountVerificationEmail,
   changePasswordEmail,
 } from '../../utils/emailTmplt.js';
 import UserProfile from '../userProfile.js';
@@ -84,17 +85,44 @@ export default class User {
         return { message: 'Email does not exist', error: -1 };
       }
 
-      if (checkEmail[0].status_yn === 2) {
-        logger.warn('Account is inactive');
+      // Check if account is deactivated
+      if (checkEmail[0].status_yn == 'n') {
+        logger.warn('Account is deactivated');
+
+        // Send an Account Deactivated email
         const emlMsg = accountDeactivatedEmail(data.email);
-        const emlDeact = await this.sendEmail.sendMail(emlMsg);
+        const emlDeact = this.sendEmail.sendMail(emlMsg);
         if (emlDeact.error) {
-          logger.warn('Error sending email. Account is inactive.');
+          logger.warn('Error sending email. Account is deactivated.');
           return {
-            message: 'Error sending email. Account is inactive.',
+            message: 'Error sending email. Account is deactivated.',
             error: -1,
           };
         }
+
+        return { message: 'Account is deactivated', error: -1 };
+      }
+
+      // Check if account is verified
+      if (checkEmail[0].is_verified === 0) {
+        logger.warn('Account is inactive');
+
+        // Send an OTP for verification if account is not deactivated
+        if (checkEmail[0].status_yn == 'y') {
+          // Send an Inactive Account email
+          const emlInactiveMsg = accountVerificationEmail(data.email);
+          const sendInactiveEml = this.sendEmail.sendMail(emlInactiveMsg);
+          if (sendInactiveEml.error) {
+            logger.warn('Error sending email. Account is deactivated.');
+            return {
+              message: 'Error sending email. Account is deactivated.',
+              error: -1,
+            };
+          }
+
+          const sendOTP = this.sendOTPforVerification({ email: data.email });
+        }
+
         return {
           message: 'Account is inactive. Please contact the adminstrator.',
           error: -1,

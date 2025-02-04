@@ -69,6 +69,21 @@ export const emailUpdateEmail = (email) => {
   };
 };
 
+export const accountVerificationEmail = (email) => {
+  return {
+    to: email,
+    subject: 'Account Not Verified',
+    html: `
+      <h1>Account Need Verification</h1>
+      <p>Hello,</p>
+      <p>Your account is not currently verified. An OTP code is required to activate your account. Please check your email for the OTP code.</p>
+      <p>If you have any questions or need assistance, please contact our support team.</p>
+      <p>Thank you,</p>
+      <p>The MindBridge Team</p>
+    `,
+  };
+};
+
 export const accountDeactivatedEmail = (email) => {
   return {
     to: email,
