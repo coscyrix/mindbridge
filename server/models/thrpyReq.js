@@ -8,6 +8,7 @@ import Service from './service.js';
 import UserProfile from './userProfile.js';
 import Form from './form.js';
 import EmailTmplt from './emailTmplt.js';
+import Common from './common.js';
 import dotenv from 'dotenv';
 import { capitalizeFirstLetter } from '../utils/common.js';
 import { splitIsoDatetime } from '../utils/common.js';
@@ -28,6 +29,7 @@ export default class ThrpyReq {
     this.userProfile = new UserProfile();
     this.sendEmail = new SendEmail();
     this.emailTmplt = new EmailTmplt();
+    this.common = new Common();
   }
   //////////////////////////////////////////
 
@@ -214,6 +216,7 @@ export default class ThrpyReq {
             intake_date: intakeDate,
             scheduled_time: req_time,
             session_format: data.session_format_id,
+            session_code: svc.service_code,
             session_description: svc.service_code,
           };
 
@@ -232,6 +235,7 @@ export default class ThrpyReq {
             });
 
             if (reportName && reportName.rec && reportName.rec[0]) {
+              tmpSession.session_code = `${svc.service_code}_${reportName.rec[0].service_code}`;
               tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
               tmpSession.service_id = reportServiceId;
               tmpSession.is_report = reportName.rec[0].is_report === 1 ? 1 : 0;
@@ -271,6 +275,7 @@ export default class ThrpyReq {
           intake_date: dischargeDate,
           scheduled_time: req_time,
           session_format: data.session_format_id,
+          session_code: `${svc.service_code}_${drSvc.service_code}`,
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
         };
@@ -347,6 +352,7 @@ export default class ThrpyReq {
             intake_date: intakeDate,
             scheduled_time: req_time,
             session_format: data.session_format_id,
+            session_code: svc.service_code,
             session_description: svc.service_code,
           };
 
@@ -365,6 +371,7 @@ export default class ThrpyReq {
             });
 
             if (reportName && reportName.rec && reportName.rec[0]) {
+              tmpSession.session_code = `${svc.service_code}_${reportName.rec[0].service_code}`;
               tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
               tmpSession.service_id = reportServiceId;
               tmpSession.is_report = reportName.rec[0].is_report === 1 ? 1 : 0;
@@ -401,6 +408,7 @@ export default class ThrpyReq {
           intake_date: dischargeDate,
           scheduled_time: req_time,
           session_format: data.session_format_id,
+          session_code: `${svc.service_code}_${drSvc.service_code}`,
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1, // Use if appropriate
         };
@@ -464,6 +472,7 @@ export default class ThrpyReq {
         delete data.session_obj;
       }
 
+      // Check if the therapy request is ongoing
       const checkIfThrpyReqIsOngoing = await this.checkThrpyReqIsONGOING(
         data.req_id,
       );
@@ -476,8 +485,26 @@ export default class ThrpyReq {
         };
       }
 
+      // Check if the therapy request is discharged
+      const checkIfThrpyReqIsDischarged =
+        await this.common.checkThrpyReqDischarge({
+          req_id: data.req_id,
+        });
+
+      if (checkIfThrpyReqIsDischarged.error) {
+        logger.warn(checkIfThrpyReqIsDischarged.message);
+        return { message: checkIfThrpyReqIsDischarged.message, error: -1 };
+      }
+
       if (!data.thrpy_status) {
-        if (checkIfThrpyReqIsOngoing.rec) {
+        // Last element of the array which is the Discharge Report
+        var checkIfThrpyReqIsOngoing_LastSession =
+          checkIfThrpyReqIsOngoing.rec.slice(-1)[0];
+
+        if (
+          checkIfThrpyReqIsOngoing_LastSession.session_status == 'SCHEDULED' &&
+          checkIfThrpyReqIsOngoing.rec
+        ) {
           logger.warn('Cannot update therapy request with ongoing sessions');
           return {
             message: 'Cannot update therapy request with ongoing sessions',
@@ -522,27 +549,34 @@ export default class ThrpyReq {
 
       // Logic for deleting a therapy request with sessions
       if (data.status_yn) {
-        const thrpySessions = await this.session.getSessionByThrpyReqId({
-          thrpy_req_id: data.req_id,
-        });
+        if (
+          checkIfThrpyReqIsOngoing_LastSession.session_status == 'SCHEDULED'
+        ) {
+          var thrpySessions = await this.session.getSessionByThrpyReqId({
+            thrpy_req_id: data.req_id,
+          });
 
-        if (thrpySessions.error) {
-          logger.error('Error getting therapy sessions');
-          return { message: 'Error getting therapy sessions', error: -1 };
-        }
+          if (thrpySessions.error) {
+            logger.error('Error getting therapy sessions');
+            return { message: 'Error getting therapy sessions', error: -1 };
+          }
 
-        if (thrpySessions && thrpySessions.length > 0) {
-          logger.warn(
-            'Cannot delete therapy request with sessions that were updated',
-          );
-          return {
-            message:
+          if (thrpySessions && thrpySessions.length > 0) {
+            logger.warn(
               'Cannot delete therapy request with sessions that were updated',
-            error: -1,
-          };
+            );
+            return {
+              message:
+                'Cannot delete therapy request with sessions that were updated',
+              error: -1,
+            };
+          }
         }
 
-        if (thrpySessions) {
+        if (
+          thrpySessions ||
+          checkIfThrpyReqIsOngoing_LastSession.session_status == 'DISCHARGED'
+        ) {
           const updatedSessions = await db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
             .from('session')
@@ -558,6 +592,29 @@ export default class ThrpyReq {
 
       // Logic for discharging a therapy request
       if (data.thrpy_status) {
+        // Check if the Discharge Report has been sent
+        const checkDischargeReport = await this.common.getSessionById({
+          thrpy_req_id: data.req_id,
+          service_code: process.env.DISCHARGE_SERVICE_CODE,
+        });
+
+        if (checkDischargeReport.error) {
+          logger.error('Error getting discharge report');
+          return { message: 'Error getting discharge report', error: -1 };
+        }
+
+        if (![2, 3].includes(checkDischargeReport[0].session_status)) {
+          logger.warn(
+            'Cannot proceed with discharge as the discharge report has not been completed',
+          );
+          return {
+            message:
+              'Cannot proceed with discharge as the discharge report has not been completed',
+            error: -1,
+          };
+        }
+
+        // Update all sessions with status SCHEDULED to NO-SHOW
         const putSessions = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('session')
@@ -807,8 +864,8 @@ export default class ThrpyReq {
 
       return rec;
     } catch (error) {
+      console.error(error);
       logger.error(error);
-
       return { message: 'Error getting therapy request', error: -1 };
     }
   }
@@ -1080,8 +1137,6 @@ export default class ThrpyReq {
 
   async checkThrpyReqIsONGOING(req_id) {
     try {
-      console.log('req_id', req_id);
-
       const checkSessions = await this.session.getSessionByThrpyReqId({
         thrpy_req_id: req_id,
       });
@@ -1092,12 +1147,11 @@ export default class ThrpyReq {
       }
 
       for (const session of checkSessions) {
-        console.log(session.session_id, session.session_status);
         if (session.session_status !== 'SCHEDULED') {
           console.log('Therapy request has ongoing sessions');
           return {
             message: 'Therapy request has ongoing sessions',
-            rec: session,
+            rec: checkSessions,
           };
         }
       }
