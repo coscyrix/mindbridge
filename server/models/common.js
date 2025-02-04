@@ -259,6 +259,7 @@ export default class Common {
 
       return rec;
     } catch (error) {
+      console.log(error);
       return { message: 'Error getting therapy request', error: -1 };
     }
   }
@@ -330,13 +331,50 @@ export default class Common {
         return { message: 'User not found', error: -1 };
       }
 
-      if (data.role_id ==4 && rec[0].role_id != 4) {
-        return { message: 'User does not have the necessary permissions to perform this task', error: -1 };
+      if (data.role_id == 4 && rec[0].role_id != 4) {
+        return {
+          message:
+            'User does not have the necessary permissions to perform this task',
+          error: -1,
+        };
       }
 
       return rec;
     } catch (error) {
       return { message: 'Error getting user role', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async checkThrpyReqDischarge(data) {
+    try {
+      const checkThrpyReq = await this.getThrpyReqById(data.req_id);
+
+      if (checkThrpyReq.error) {
+        logger.error('Error getting therapy request');
+        return { message: 'Error getting therapy request', error: -1 };
+      }
+
+      if (checkThrpyReq[0].thrpy_status == 'DISCHARGED') {
+        logger.warn(
+          'The therapy request you are trying to modify has already been discharged',
+        );
+        return {
+          message:
+            'The therapy request you are trying to modify has already been discharged',
+          error: -1,
+        };
+      }
+
+      logger.info('The therapy request is not discharged and can be modified');
+      return {
+        message: 'The therapy request is not discharged and can be modified',
+      };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error checking therapy request status', error: -1 };
     }
   }
 }

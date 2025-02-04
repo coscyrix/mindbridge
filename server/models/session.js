@@ -33,6 +33,7 @@ export default class Session {
         session_format: data.session_format,
         intake_date: data.intake_date,
         scheduled_time: data.scheduled_time,
+        session_code: data.session_code,
         session_description: data.session_description,
         is_additional: data.is_additional,
         is_report: data.is_report,
@@ -111,6 +112,7 @@ export default class Session {
 
   async putSessionById(data) {
     try {
+      // Check if session is ongoing
       const checkSessionIfOngoing = await this.checkSessionONGOING(
         data.session_id,
       );
@@ -124,6 +126,23 @@ export default class Session {
         }
       }
 
+      const recSession = await this.getSessionById({
+        session_id: data.session_id,
+      });
+
+      console.log('recSession:', recSession);
+
+      // Check if the ThrpyReq is discharged
+      const checkThrpyReqDischarge = await this.common.checkThrpyReqDischarge({
+        req_id: recSession[0].thrpy_req_id,
+      });
+
+      if (checkThrpyReqDischarge.error) {
+        logger.warn(checkThrpyReqDischarge.message);
+        return { message: checkThrpyReqDischarge.message, error: -1 };
+      }
+
+      // Check if user has access to update session. Can make an update even if a session is ongoing
       if (data.role_id == 4) {
         const checkUserAccess = await this.common.checkUserRole({
           user_profile_id: data.user_profile_id,
@@ -143,11 +162,13 @@ export default class Session {
       });
 
       if (checkDischarge && checkDischarge.length > 0) {
+        // Update all sessions with the same therapy request id to No Show if status is scheduled
         const putSessions = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('session')
           .where('thrpy_req_id', checkDischarge[0].thrpy_req_id)
           .andWhere('session_status', 1)
+          .whereNot('session_description', process.env.DISCHARGE_SERVICE_CODE)
           .update({ session_status: 3 });
 
         if (putSessions === 0) {
@@ -155,6 +176,23 @@ export default class Session {
         } else if (!putSessions) {
           logger.error('Error updating sessions');
           return { message: 'Error updating sessions', error: -1 };
+        }
+
+        // Update the discharge session to discharged
+        const putDischargeSession = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('session')
+          .where('thrpy_req_id', checkDischarge[0].thrpy_req_id)
+          .whereRaw('LOWER(session_code) LIKE LOWER(?)', [
+            `%_${process.env.DISCHARGE_SERVICE_CODE}%`,
+          ])
+          .update({ session_status: 'DISCHARGED' });
+
+        console.log('putDischargeSession:', putDischargeSession);
+
+        if (!putDischargeSession) {
+          logger.error('Error updating discharge session');
+          return { message: 'Error updating discharge session', error: -1 };
         }
 
         const tmpThrpyReq = {
@@ -198,9 +236,19 @@ export default class Session {
           // ...data.is_report && {is_report: data.is_report},
         };
 
-        this.emailTmplt.sendTreatmentToolEmail({
-          session_id: data.session_id,
-        });
+        if (recSession[0].is_report != 1) {
+          const sendTools = this.emailTmplt.sendTreatmentToolEmail({
+            session_id: data.session_id,
+          });
+
+          if (sendTools.error) {
+            logger.error('Error sending treatment tools email');
+            return {
+              message: 'Error sending treatment tools email',
+              error: -1,
+            };
+          }
+        }
       }
 
       if (data.invoice_nbr) {
@@ -262,7 +310,14 @@ export default class Session {
         }
       }
 
-      if (tmpSession && Object.keys(tmpSession).length > 0) {
+      // Update session if it is not a discharge session and has not been invoiced
+      if (
+        tmpSession &&
+        Object.keys(tmpSession).length > 0 &&
+        !recSession[0].session_code.includes(
+          `_${process.env.DISCHARGE_SERVICE_CODE}`,
+        )
+      ) {
         const putSession = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('session')
