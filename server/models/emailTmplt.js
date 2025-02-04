@@ -26,7 +26,7 @@ export default class EmailTmplt {
 
   //////////////////////////////////////////
   // sendTreatmentToolsEmail requires a session_id as an argument.
-  async sendTreatmetToolEmail(data) {
+  async sendTreatmentToolEmail(data) {
     try {
       const recSession = await this.common.getSessionById({
         session_id: data.session_id,
@@ -89,12 +89,15 @@ export default class EmailTmplt {
   //////////////////////////////////////////
 
   async sendDischargeEmail(data) {
-    const recUser = await this.common.getUserProfileByUserProfileId({
-      user_profile_id: data.client_id,
-    });
+    const recUser = await this.common.getUserProfileByUserProfileId(
+      data.client_id,
+    );
+
+    console.log('recUser:', recUser);
+
     const dischargeEmlTmplt = dischargeEmail(
-      recUser.rec[0].email,
-      `${recUser.rec[0].user_first_name} ${recUser.rec[0].user_last_name}`,
+      recUser.email,
+      `${recUser.user_first_name} ${recUser.user_last_name}`,
     );
     const sendDischargeEmlTmpltEmail =
       this.sendEmail.sendMail(dischargeEmlTmplt);
@@ -113,10 +116,10 @@ export default class EmailTmplt {
         data.email,
         data.big_thrpy_req_obj,
       );
-      const sendthrpyReqEmlTmpltEmail =
+      const sendThrpyReqEmlTmpltEmail =
         this.sendEmail.sendMail(thrpyReqEmlTmplt);
 
-      if (!sendthrpyReqEmlTmpltEmail) {
+      if (!sendThrpyReqEmlTmpltEmail) {
         logger.error('Error sending therapy request email');
         return { message: 'Error sending therapy request email', error: -1 };
       }

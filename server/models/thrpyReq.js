@@ -440,18 +440,6 @@ export default class ThrpyReq {
         big_thrpy_req_obj: ThrpyReq[0],
       });
 
-      // const thrpyReqEmlTmplt = therapyRequestDetailsEmail(
-      //   recClient.rec[0].email,
-      //   ThrpyReq[0],
-      // );
-      // const sendthrpyReqEmlTmpltEmail =
-      //   this.sendEmail.sendMail(thrpyReqEmlTmplt);
-
-      // if (!sendthrpyReqEmlTmpltEmail) {
-      //   logger.error('Error sending therapy request email');
-      //   return { message: 'Error sending therapy request email', error: -1 };
-      // }
-
       // Return a success message
       return {
         message: 'Therapy request, sessions, and reports created successfully',
@@ -488,12 +476,14 @@ export default class ThrpyReq {
         };
       }
 
-      if (checkIfThrpyReqIsOngoing.rec) {
-        logger.warn('Cannot update therapy request with ongoing sessions');
-        return {
-          message: 'Cannot update therapy request with ongoing sessions',
-          error: -1,
-        };
+      if (!data.thrpy_status) {
+        if (checkIfThrpyReqIsOngoing.rec) {
+          logger.warn('Cannot update therapy request with ongoing sessions');
+          return {
+            message: 'Cannot update therapy request with ongoing sessions',
+            error: -1,
+          };
+        }
       }
 
       const checkThrpyReq = await this.getThrpyReqById({
@@ -585,22 +575,6 @@ export default class ThrpyReq {
         const sendDischargeEmail = await this.emailTmplt.sendDischargeEmail({
           client_id: checkThrpyReq[0].client_id,
         });
-
-        // const recUser = await this.userProfile.getUserProfileById({
-        //   user_profile_id: checkThrpyReq[0].client_id,
-        // });
-
-        // const dischargeEmlTmplt = dischargeEmail(
-        //   recUser.rec[0].email,
-        //   `${recUser.rec[0].user_first_name} ${recUser.rec[0].user_last_name}`,
-        // );
-        // const sendDischargeEmlTmpltEmail =
-        //   this.sendEmail.sendMail(dischargeEmlTmplt);
-
-        // if (!sendDischargeEmlTmpltEmail) {
-        //   logger.error('Error sending discharge email');
-        //   return { message: 'Error sending discharge email', error: -1 };
-        // }
       }
 
       const putThrpyReq = await db
