@@ -45,10 +45,16 @@ export default class UserFormController {
   //////////////////////////////////////////
 
   async getUserFormById(req, res) {
-    const user_form_id = req.query.user_form_id;
+    const user_form_id = req.query;
 
     const data = {
-      user_form_id: user_form_id,
+      user_form_id: req.query.user_form_id,
+      session_id: req.query.session_id,
+      form_id: req.query.form_id,
+      client_id: req.query.client_id,
+      counselor_id: req.query.counselor_id,
+      start_date: req.query.start_date,
+      end_date: req.query.end_date,
     };
 
     const userForm = new UserFormService();

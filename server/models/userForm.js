@@ -118,6 +118,18 @@ export default class UserForm {
         query = query.andWhere('session_id', data.session_id);
       }
 
+      if (data.form_id) {
+        query = query.andWhere('form_id', data.form_id);
+      }
+
+      if (data.start_date) {
+        query = query.andWhere('intake_date', '>=', data.start_date);
+      }
+
+      if (data.end_date) {
+        query = query.andWhere('intake_date', '<=', data.end_date);
+      }
+
       const rec = await query;
       if (!rec) {
         logger.error('Error getting user form');
