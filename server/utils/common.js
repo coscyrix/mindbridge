@@ -1,5 +1,8 @@
 //utils/common.js
 
+import logger from '../config/winston.js';
+import moment from 'moment-timezone';
+
 export const capitalizeFirstLetter = (sentence) => {
   return sentence
     .split(' ')
@@ -15,8 +18,30 @@ export const splitIsoDatetime = (isoDatetime) => {
     // Return the components as an array
     return { date, time };
   } catch (error) {
-    throw new Error(
+    logger.error(
       'Invalid ISO datetime format. Please provide a valid ISO 8601 format string.',
     );
+    return {
+      message:
+        'Invalid ISO datetime format. Please provide a valid ISO 8601 format string.',
+      error: -1,
+    };
+  }
+};
+
+export const convertTimeToReadableFormat = (data) => {
+  try {
+    const timeString = moment(data.dateTimeString)
+      .tz(data.timeZone)
+      .format('h:mm A z');
+    const dateString = moment(data.dateTimeString).format('MMMM Do, YYYY');
+    return { timeString, dateString };
+  } catch (error) {
+    console.log(error);
+    logger.error('Invalid time format. Please provide a valid time string.');
+    return {
+      message: 'Invalid time format. Please provide a valid time string.',
+      error: -1,
+    };
   }
 };

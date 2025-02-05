@@ -98,8 +98,6 @@ export default class Common {
 
   //////////////////////////////////////////
 
-  //////////////////////////////////////////
-
   async postUserCOMMON(data) {
     try {
       const checkEmail = await this.getUserByEmail(data.email);

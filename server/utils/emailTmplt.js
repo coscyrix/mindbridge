@@ -379,3 +379,41 @@ export const dischargeEmail = (email, clientName) => {
     `,
   };
 };
+
+export const additionalServiceEmail = (
+  email,
+  clientName,
+  service_name,
+  date,
+  time,
+) => {
+  return {
+    to: email,
+    subject: 'Additional Service Scheduled',
+    html: `
+       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>Hello, ${capitalizeFirstLetter(clientName)},</p>
+        <p>I hope this email finds you well. I wanted to inform you that an additional service has been scheduled for you.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd; border-radius: 8px;">
+          <tbody>
+            <tr style="background-color: #f9f9f9; color: #333; text-align: left;">
+              <th style="padding: 12px 8px;">Service Name</th>
+              <td style="padding: 8px;">${service_name}</td>
+            </tr>
+            <tr style="background-color: #ffffff; color: #333; text-align: left;">
+              <th style="padding: 12px 8px;">Date</th>
+              <td style="padding: 8px;">${date}</td>
+            </tr>
+            <tr style="background-color: #f9f9f9; color: #333; text-align: left;">
+              <th style="padding: 12px 8px;">Time</th>
+              <td style="padding: 8px;">${time}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>If you have any questions or need to reschedule, please contact your assigned counselor or us at <strong>${process.env.SUPPORT_EMAIL}</strong> or <strong>${process.env.SUPPORT_PHONE}</strong>.</p>
+        <p>Thank you,</p>
+        <p><strong>The MindBridge Team</strong></p>
+      </div>
+    `,
+  };
+};
