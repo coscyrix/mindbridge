@@ -486,14 +486,19 @@ export default class ThrpyReq {
       }
 
       // Check if the therapy request is discharged
-      const checkIfThrpyReqIsDischarged =
-        await this.common.checkThrpyReqDischarge({
-          req_id: data.req_id,
-        });
+      if (
+        data.status_yn &&
+        !checkIfThrpyReqIsOngoing.rec[0].session_status == 'DISCHARGED'
+      ) {
+        const checkIfThrpyReqIsDischarged =
+          await this.common.checkThrpyReqDischarge({
+            req_id: data.req_id,
+          });
 
-      if (checkIfThrpyReqIsDischarged.error) {
-        logger.warn(checkIfThrpyReqIsDischarged.message);
-        return { message: checkIfThrpyReqIsDischarged.message, error: -1 };
+        if (checkIfThrpyReqIsDischarged.error) {
+          logger.warn(checkIfThrpyReqIsDischarged.message);
+          return { message: checkIfThrpyReqIsDischarged.message, error: -1 };
+        }
       }
 
       if (!data.thrpy_status) {
