@@ -51,6 +51,12 @@ export default class UserFormService {
   async getUserFormById(data) {
     const schema = joi.object({
       user_form_id: joi.number().optional(),
+      session_id: joi.number().optional(),
+      form_id: joi.number().optional(),
+      client_id: joi.number().optional(),
+      counselor_id: joi.number().optional(),
+      start_date: joi.date().optional(),
+      end_date: joi.date().optional(),
     });
 
     const { error } = schema.validate(data);

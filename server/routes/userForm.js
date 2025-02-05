@@ -6,10 +6,10 @@ import { authenticate } from '../middlewares/token.js';
 const router = Router();
 const userFormController = new UserFormController();
 
-router.post('/', authenticate, AsyncWrapper(userFormController.postUserForm));
+// router.post('/', authenticate, AsyncWrapper(userFormController.postUserForm));
 
 router.put('/', authenticate, AsyncWrapper(userFormController.putUserFormById));
 
 router.get('/', authenticate, AsyncWrapper(userFormController.getUserFormById));
 
-export const userFormRouter = { baseUrl: '/api/user_form', router };
+export const userFormRouter = { baseUrl: '/api/userForm', router };
