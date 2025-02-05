@@ -6,6 +6,7 @@ import logger from '../config/winston.js';
 import Session from './session.js';
 import Service from './service.js';
 import UserProfile from './userProfile.js';
+import UserForm from './userForm.js';
 import Form from './form.js';
 import EmailTmplt from './emailTmplt.js';
 import Common from './common.js';
@@ -27,6 +28,7 @@ export default class ThrpyReq {
     this.service = new Service();
     this.form = new Form();
     this.userProfile = new UserProfile();
+    this.userForm = new UserForm();
     this.sendEmail = new SendEmail();
     this.emailTmplt = new EmailTmplt();
     this.common = new Common();
@@ -901,6 +903,7 @@ export default class ThrpyReq {
       }
 
       const tmpSession = [];
+      const tmpForm = [];
 
       //remove sessions where is_report = 1 in session_obj
       rec.session_obj = rec.session_obj.filter((session) => {
@@ -922,7 +925,15 @@ export default class ThrpyReq {
                 form_array: [form.form_id],
               };
 
+              const tmpUserForm = {
+                client_id: rec.client_id,
+                counselor_id: rec.counselor_id,
+                form_id: form.form_id,
+                session_id: rec.session_obj[i - 1].session_id,
+              };
+
               tmpSession.push(tmpFormSession);
+              tmpForm.push(tmpUserForm);
             }
           }
         }
@@ -943,7 +954,14 @@ export default class ThrpyReq {
                     session_id: rec.session_obj[i].session_id,
                     form_array: [form.form_id],
                   };
+                  const tmpUserForm = {
+                    client_id: rec.client_id,
+                    counselor_id: rec.counselor_id,
+                    form_id: form.form_id,
+                    session_id: rec.session_obj[i].session_id,
+                  };
                   tmpSession.push(tmpFormSession);
+                  tmpForm.push(tmpUserForm);
                 }
               }
             }
@@ -960,7 +978,14 @@ export default class ThrpyReq {
                     session_id: rec.session_obj[i].session_id,
                     form_array: [form.form_id],
                   };
+                  const tmpUserForm = {
+                    client_id: rec.client_id,
+                    counselor_id: rec.counselor_id,
+                    form_id: form.form_id,
+                    session_id: rec.session_obj[i].session_id,
+                  };
                   tmpSession.push(tmpFormSession);
+                  tmpForm.push(tmpUserForm);
                 }
               }
 
@@ -970,7 +995,14 @@ export default class ThrpyReq {
                   session_id: rec.session_obj[0].session_id,
                   form_array: [form.form_id],
                 };
+                const tmpUserForm = {
+                  client_id: rec.client_id,
+                  counselor_id: rec.counselor_id,
+                  form_id: form.form_id,
+                  session_id: rec.session_obj[0].session_id,
+                };
                 tmpSession.push(tmpFormSession);
+                tmpForm.push(tmpUserForm);
               }
 
               //Last logic
@@ -980,7 +1012,15 @@ export default class ThrpyReq {
                     rec.session_obj[rec.session_obj.length - 1].session_id,
                   form_array: [form.form_id],
                 };
+                const tmpUserForm = {
+                  client_id: rec.client_id,
+                  counselor_id: rec.counselor_id,
+                  form_id: form.form_id,
+                  session_id:
+                    rec.session_obj[rec.session_obj.length - 1].session_id,
+                };
                 tmpSession.push(tmpFormSession);
+                tmpForm.push(tmpUserForm);
               }
 
               //Second to last logic
@@ -990,7 +1030,15 @@ export default class ThrpyReq {
                     rec.session_obj[rec.session_obj.length - 2].session_id,
                   form_array: [form.form_id],
                 };
+                const tmpUserForm = {
+                  client_id: rec.client_id,
+                  counselor_id: rec.counselor_id,
+                  form_id: form.form_id,
+                  session_id:
+                    rec.session_obj[rec.session_obj.length - 2].session_id,
+                };
                 tmpSession.push(tmpFormSession);
+                tmpForm.push(tmpUserForm);
               }
             }
           }
@@ -1002,6 +1050,13 @@ export default class ThrpyReq {
       if (!updteFormSession) {
         logger.error('Error updating session forms');
         return { message: 'Error updating session forms', error: -1 };
+      }
+
+      const postUserForm = await this.userForm.postUserForm(tmpForm);
+
+      if (!postUserForm) {
+        logger.error('Error creating user forms');
+        return { message: 'Error creating user forms', error: -1 };
       }
 
       return { message: 'Session forms loaded successfully' };

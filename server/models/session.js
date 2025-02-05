@@ -6,6 +6,7 @@ import logger from '../config/winston.js';
 import Common from './common.js';
 import Form from './form.js';
 import UserProfile from './userProfile.js';
+import UserForm from './userForm.js';
 import Invoice from './invoice.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import EmailTmplt from './emailTmplt.js';
@@ -19,6 +20,7 @@ export default class Session {
     this.form = new Form();
     this.sendEmail = new SendEmail();
     this.userProfile = new UserProfile();
+    this.userForm = new UserForm();
     this.emailTmplt = new EmailTmplt();
     this.invoice = new Invoice();
   }
@@ -258,6 +260,16 @@ export default class Session {
               message: 'Error sending treatment tools email',
               error: -1,
             };
+          }
+
+          const uptUserForm = await this.userForm.putUserFormBySessionId({
+            session_id: data.session_id,
+            is_sent: 1,
+          });
+
+          if (uptUserForm.error) {
+            logger.error('Error updating user form');
+            return { message: 'Error updating user form', error: -1 };
           }
         }
       }
