@@ -11,7 +11,12 @@ import {
   clientWelcomeEmail,
   consentFormEmail,
   welcomeAccountDetailsEmail,
+  additionalServiceEmail,
 } from '../utils/emailTmplt.js';
+import {
+  capitalizeFirstLetter,
+  convertTimeToReadableFormat,
+} from '../utils/common.js';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -93,11 +98,9 @@ export default class EmailTmplt {
       data.client_id,
     );
 
-    console.log('recUser:', recUser);
-
     const dischargeEmlTmplt = dischargeEmail(
-      recUser.email,
-      `${recUser.user_first_name} ${recUser.user_last_name}`,
+      recUser[0].email,
+      `${recUser[0].user_first_name} ${recUser[0].user_last_name}`,
     );
     const sendDischargeEmlTmpltEmail =
       this.sendEmail.sendMail(dischargeEmlTmplt);
@@ -174,6 +177,46 @@ export default class EmailTmplt {
       );
 
       const sendConsentForm = this.sendEmail.sendMail(sendClientConsentForm);
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Something went wrong' };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async sendAdditionalServiceEmail(data) {
+    try {
+      const recSession = await this.common.getSessionById({
+        session_id: data.session_id,
+      });
+
+      const recClient = await this.common.getUserProfileByUserProfileId(
+        recSession[0].client_id,
+      );
+
+      const convertedDate = convertTimeToReadableFormat({
+        dateTimeString: `${recSession[0].intake_date}T${recSession[0].scheduled_time}`,
+        timeZone: process.env.TIMEZONE,
+      });
+
+      if (convertedDate.error) {
+        logger.error('Error converting date');
+        return { message: 'Error converting date', error: -1 };
+      }
+
+      const sendAdditionalServiceEmail = additionalServiceEmail(
+        recClient[0].email,
+        `${recSession[0].client_first_name} ${recSession[0].client_last_name}`,
+        recSession[0].service_name,
+        convertedDate.dateString,
+        convertedDate.timeString,
+      );
+
+      const sendAdditionalService = this.sendEmail.sendMail(
+        sendAdditionalServiceEmail,
+      );
     } catch (error) {
       console.log(error);
       logger.error(error);

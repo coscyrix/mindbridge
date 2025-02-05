@@ -10,7 +10,6 @@ import Invoice from './invoice.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import EmailTmplt from './emailTmplt.js';
 import { splitIsoDatetime } from '../utils/common.js';
-import { treatmentToolsEmail, dischargeEmail } from '../utils/emailTmplt.js';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -63,19 +62,30 @@ export default class Session {
     try {
       let tmpSession;
 
+      // Function to split the date and time from the intake date
       const { date: req_dte, time: req_time } = splitIsoDatetime(
         data.intake_date,
       );
 
+      // Check if the ThrpyReq is discharged
+      const checkThrpyReqDischarge = await this.common.checkThrpyReqDischarge({
+        req_id: data.thrpy_req_id,
+      });
+
+      if (checkThrpyReqDischarge.error) {
+        logger.warn(checkThrpyReqDischarge.message);
+        return { message: checkThrpyReqDischarge.message, error: -1 };
+      }
+
       const [svc] = await this.common.getServiceById(data.service_id);
 
-      console.log(svc);
-
       if (!svc) {
+        logger.warn('Service not found');
         return { message: 'Service not found', error: -1 };
       }
 
       if (svc.is_additional[0] === 0) {
+        logger.warn('Service is not additional');
         return { message: 'Service is not additional', error: -1 };
       }
 
@@ -99,6 +109,11 @@ export default class Session {
         logger.error('Error creating session');
         return { message: 'Error creating session', error: -1 };
       }
+
+      const sendAdditionalServiceEmail =
+        this.emailTmplt.sendAdditionalServiceEmail({
+          session_id: postSession[0],
+        });
 
       return { message: 'Session created successfully' };
     } catch (error) {
@@ -129,8 +144,6 @@ export default class Session {
       const recSession = await this.getSessionById({
         session_id: data.session_id,
       });
-
-      console.log('recSession:', recSession);
 
       // Check if the ThrpyReq is discharged
       const checkThrpyReqDischarge = await this.common.checkThrpyReqDischarge({
@@ -187,8 +200,6 @@ export default class Session {
             `%_${process.env.DISCHARGE_SERVICE_CODE}%`,
           ])
           .update({ session_status: 'DISCHARGED' });
-
-        console.log('putDischargeSession:', putDischargeSession);
 
         if (!putDischargeSession) {
           logger.error('Error updating discharge session');
