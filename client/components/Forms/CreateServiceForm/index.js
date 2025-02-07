@@ -8,6 +8,7 @@ import CustomMultiSelect from "../../CustomMultiSelect";
 import { POSITIONS, SERVICE_ID } from "../../../utils/constants";
 import { CrossIcon } from "../../../public/assets/icons";
 import Spinner from "../../common/Spinner";
+import { useReferenceContext } from "../../../context/ReferenceContext";
 
 export default function CreateServiceForm({
   isOpen,
@@ -23,10 +24,16 @@ export default function CreateServiceForm({
   const [optionValue, setOptionValue] = useState();
   const [fields, setFields] = useState([{ position: "", service_id: "" }]);
   const [formButton, setFormButton] = useState("Create");
-
+  const { servicesData } = useReferenceContext();
+  const servicesDropdown = servicesData
+    ?.filter((service) => service.is_report === 1)
+    .map((report) => ({
+      value: report.service_id,
+      label: report.service_name,
+    }));
   const handleRadioChange = (value) => {
     setOptionValue(value);
-    methods.setValue("svc_formula_typ", value); // Set the value in form state
+    methods.setValue("svc_formula_typ", value);
   };
 
   const handleSaveService = async (data) => {
@@ -34,9 +41,9 @@ export default function CreateServiceForm({
     if (initialData) {
       const svcFormula = methods.getValues("svc_formula");
       const svcFormulaArray = svcFormula
-        ?.split(",")
-        .map((item) => item.trim())
-        .filter((item) => item !== "")
+        // ?.split(",")
+        // .map((item) => item.trim())
+        // .filter((item) => item !== "")
         .map(Number);
     }
 
@@ -44,11 +51,11 @@ export default function CreateServiceForm({
       service_name: data.service_name,
       service_code: data.service_code,
       total_invoice: parseFloat(data.total_invoice),
-      nbr_of_sessions: data.nbr_of_sessions,
+      // nbr_of_sessions: data.nbr_of_sessions,
       gst: data.gst,
       // svc_formula: svcFormulaArray,
-      // position: positionTags,
-      // service_id: serviceIdTags,
+      position: positionTags?.map((item) => Number(item)),
+      service_id: serviceIdTags?.map((item) => Number(item)),
       // svc_formula_typ: data.svc_formula_typ, // Include the svc_formula_typ in the payload
     };
 
@@ -83,7 +90,7 @@ export default function CreateServiceForm({
     setFields(updatedFields);
 
     if (key === "position") {
-      setPositionTags(updatedFields.map((field) => field.position?.value));
+      setPositionTags(updatedFields.map((field) => field.position));
     }
     if (key === "service_id") {
       setServiceIdTags(updatedFields.map((field) => field.service_id?.value));
@@ -94,10 +101,6 @@ export default function CreateServiceForm({
     e.preventDefault();
     const { id, active, ...processedData } = initialData;
     methods.reset(processedData);
-    // methods.setValue("user_profile_id", initialData.user_profile_id);
-    // methods.setValue("user_first_name", initialData.user_first_name);
-    // methods.setValue("user_last_name", initialData.user_last_name);
-    // methods.setValue("email", initialData.email);
   };
 
   useEffect(() => {
@@ -137,17 +140,15 @@ export default function CreateServiceForm({
               <div className="fields">
                 <CustomInputField
                   name="service_name"
-                  label="Service Name"
+                  label="Service Type"
                   placeholder="Enter service name"
                   type="text"
-                  required
                 />
                 <CustomInputField
                   placeholder="Enter service code"
                   name="service_code"
                   label="Service Code"
                   type="text"
-                  required
                 />
               </div>
               <div className="fields">
@@ -156,14 +157,13 @@ export default function CreateServiceForm({
                   name="total_invoice"
                   label="Invoice Amount"
                   type="number"
-                  required
+                  step="0.01"
                 />
                 <CustomInputField
                   placeholder="Enter number of session"
                   name="nbr_of_sessions"
                   label="Number of Sessions"
                   type="text"
-                  required
                 />
               </div>
               <div className="fields">
@@ -172,7 +172,6 @@ export default function CreateServiceForm({
                   label="Tax (%)"
                   placeholder="Enter GST"
                   type="text"
-                  required
                 />
                 <div style={{ marginBottom: "12px" }}>
                   <label>Formula</label>
@@ -248,7 +247,19 @@ export default function CreateServiceForm({
               )}
               {fields.map((field, index) => (
                 <div key={index} className="position-container">
-                  <Controller
+                  <div style={{ width: "100%" }}>
+                    <CustomInputField
+                      name={`fields[${index}].position`}
+                      label="Position"
+                      type="text"
+                      placeholder="Enter position"
+                      value={field.position}
+                      onChange={(e) =>
+                        handleFieldChange(index, "position", e.target.value)
+                      }
+                    />
+                  </div>
+                  {/* <Controller
                     name={`fields[${index}].position`}
                     control={methods.control}
                     render={({ field: controllerField }) => (
@@ -268,7 +279,7 @@ export default function CreateServiceForm({
                         }
                       />
                     )}
-                  />
+                  /> */}
 
                   <Controller
                     name={`fields[${index}].service_id`}
@@ -278,7 +289,7 @@ export default function CreateServiceForm({
                         {...controllerField}
                         placeholder="Select an option"
                         isMulti={false}
-                        options={SERVICE_ID}
+                        options={servicesDropdown}
                         value={field.service_id}
                         onChange={(value) =>
                           handleFieldChange(index, "service_id", value)

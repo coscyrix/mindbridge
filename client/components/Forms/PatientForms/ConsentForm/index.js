@@ -43,7 +43,6 @@ const ConsentForm = () => {
   };
 
   const onSubmit = async (data) => {
-    console.log("Form Data:", data);
     const { client_name, date, imgBase64 } = data;
     const { client_id } = router.query;
     try {

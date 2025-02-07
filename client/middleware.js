@@ -4,7 +4,9 @@ export function middleware(request) {
   const { pathname } = request.nextUrl; // Extract pathname from the request URL
 
   const token = request.cookies.get("token")?.value;
-
+  const user = request.cookies.get("user")?.value;
+  const userObj = user && JSON.parse(user);
+  const admin = userObj?.role_id == 4;
   const protectedRoutes = [
     "/dashboard",
     "/current-session",
@@ -31,6 +33,10 @@ export function middleware(request) {
   if (isAuthRoute && token) {
     const loginUrl = new URL("/dashboard", request.url);
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (!admin && ["/services", "/invoice"].includes(pathname)) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();

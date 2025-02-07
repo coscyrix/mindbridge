@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import CustomSearch from "../../components/CustomSearch";
 import CustomButton from "../../components/CustomButton";
 import {
@@ -12,12 +12,14 @@ import { ClientSessionContainer } from "../../styles/client-session";
 import { useRouter } from "next/router";
 import {
   CLIENT_SESSION_LIST_DATA_BY_ID,
+  CONDITIONAL_ROW_STYLES,
   DOWNLOAD_OPTIONS,
 } from "../../utils/constants";
 import CustomTable from "../../components/CustomTable";
 import HomeworkModal from "../../components/HomeworkModalContent";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import NotesModalContent from "../../components/NotesModalContent";
+import { api } from "../../utils/auth";
 const tabLabels = ["Primary", "Additional"];
 
 function ClientDetails() {
@@ -26,18 +28,24 @@ function ClientDetails() {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [edit, setEdit] = useState({});
-
+  const [loading, setLoading] = useState(true);
+  const [clientDetails, setClientDetails] = useState(null);
+  const [services, setServices] = useState(null);
+  const [activeData, setActiveData] = useState(null);
   const [note, setNote] = useState("");
+  const [filterText, setFilterText] = useState("");
+  const router = useRouter();
+  const { id } = router.query;
+  const actionDropdownRef = useRef(null);
 
   const handleCellClick = (row) => {
-    setActiveData((prev) => {
-      return {
-        columns: prev?.columns,
-        data: prev?.data?.map((data) =>
-          data.id === row.id ? { ...data, active: !data.active } : data
-        ),
-      };
-    });
+    setActiveData((prev) =>
+      prev?.map((data) =>
+        data.session_id === row.session_id
+          ? { ...data, active: !data.active }
+          : data
+      )
+    );
   };
 
   const handleEdit = (row) => {
@@ -45,26 +53,22 @@ function ClientDetails() {
   };
 
   const handleDelete = (row) => {
-    setActiveData((prev) => {
-      return {
-        ...prev,
-        data: prev.data.filter((col) => col.id !== row.id),
-      };
-    });
+    setActiveData((prev) =>
+      prev?.filter((data) => data.session_id !== row.session_id)
+    );
   };
 
-  const [activeData, setActiveData] = useState(
-    CLIENT_SESSION_LIST_DATA_BY_ID(handleCellClick, handleEdit, handleDelete)
-      .primaryServices || []
+  const columns = CLIENT_SESSION_LIST_DATA_BY_ID(
+    handleCellClick,
+    handleEdit,
+    handleDelete,
+    actionDropdownRef
   );
   const [visibleColumns, setVisibleColumns] = useState(
-    activeData?.columns?.map((col) => ({ ...col, omit: false }))
+    columns?.map((col) => ({ ...col, omit: false }))
   );
-  const [filterText, setFilterText] = useState("");
-  const router = useRouter();
-  const { id } = router.query;
 
-  const filteredItems = activeData?.data?.filter((item) => {
+  const filteredItems = activeData?.filter((item) => {
     return item.serviceDesc
       ? item.serviceDesc.toLowerCase().includes(filterText.toLowerCase())
       : item;
@@ -81,9 +85,7 @@ function ClientDetails() {
   const handleTabChange = (index) => {
     setActiveTab(index);
     setActiveData(
-      index === 0
-        ? CLIENT_SESSION_LIST_DATA_BY_ID().primaryServices
-        : CLIENT_SESSION_LIST_DATA_BY_ID().additionalServices
+      index === 0 ? services?.primaryServices : services?.additionalServices
     );
   };
   const renderFooter = () => (
@@ -165,13 +167,78 @@ function ClientDetails() {
     setNote("");
   };
 
+  const fetchClientSessions = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/thrpyReq/?req_id=${id}`);
+      if (response.status === 200) {
+        setClientDetails(response?.data?.at(0));
+        setServices({
+          primaryServices:
+            response?.data
+              ?.at(0)
+              .session_obj?.filter((services) => services.is_additional == 0) ||
+            [],
+          additionalServices:
+            response?.data
+              ?.at(0)
+              .session_obj?.filter((services) => services.is_additional == 1) ||
+            [],
+        });
+        setActiveData(
+          response?.data
+            ?.at(0)
+            .session_obj?.filter((services) => services.is_additional == 0) ||
+            []
+        );
+      }
+    } catch (error) {
+      console.error("Error while fetching client sessions :", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClickOutside = (e) => {
+    if (
+      actionDropdownRef?.current &&
+      !actionDropdownRef?.current?.contains(e.target)
+    ) {
+      setActiveData((prev) => {
+        return prev?.map((session) => {
+          return { ...session, active: false };
+        });
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (id && !clientDetails) {
+      fetchClientSessions();
+    }
+  }, [id]);
+
+  useEffect(() => {
+    window.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <ClientSessionContainer>
       <div className="content-container">
         <div className="heading-container">
           <div className="heading">
-            <h2>Client Session List for id :&quot;{id}&quot;</h2>
-            <p>#45678567 Mika</p>
+            <h2>
+              Client Session List for :&quot;{clientDetails?.service_name}&quot;
+            </h2>
+            <p style={{ textTransform: "capitalize" }}>
+              {`#${clientDetails?.client_clam_num || ""}${
+                clientDetails?.client_first_name || ""
+              } ${clientDetails?.client_last_name || ""}`}
+            </p>
           </div>
           <div className="search-container">
             <CustomSearch
@@ -216,8 +283,8 @@ function ClientDetails() {
                   icon={<MenuIcon />}
                   title="More Option"
                   dropdownOptions={DOWNLOAD_OPTIONS(
-                    activeData?.columns,
-                    activeData?.data,
+                    columns,
+                    activeData,
                     `Client Session List for ${id}`
                   )}
                 />
@@ -227,8 +294,8 @@ function ClientDetails() {
                   icon={<DownloadIcon />}
                   title="Download"
                   dropdownOptions={DOWNLOAD_OPTIONS(
-                    activeData?.columns,
-                    activeData?.data,
+                    columns,
+                    activeData,
                     `Client Session List for ${id}`
                   )}
                 />
@@ -270,8 +337,8 @@ function ClientDetails() {
               icon={<DownloadIcon />}
               title="Download"
               dropdownOptions={DOWNLOAD_OPTIONS(
-                activeData?.columns,
-                activeData?.data,
+                columns,
+                activeData,
                 `Client Session List for ${id}`
               )}
             />
@@ -301,7 +368,13 @@ function ClientDetails() {
             />
           </div>
         </div>
-        <CustomTable columns={visibleColumns} data={filteredItems} />
+        <CustomTable
+          loading={loading}
+          columns={visibleColumns}
+          data={filteredItems}
+          conditionalRowStyles={CONDITIONAL_ROW_STYLES?.clientSessionSchedule}
+          fixedHeaderScrollHeight="650px"
+        />
       </div>
       <HomeworkModal isOpen={isWorkModalOpen} onClose={handleCloseWorkModal} />
       <ConfirmationModal

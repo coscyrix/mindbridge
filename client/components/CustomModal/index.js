@@ -4,7 +4,7 @@ import styles from "./Modal.module.css";
 
 Modal.setAppElement("#__next");
 
-const CustomModal = ({ isOpen, onRequestClose, title, children ,...rest}) => {
+const CustomModal = ({ isOpen, onRequestClose, title, children, ...rest }) => {
   return (
     <Modal
       isOpen={isOpen}

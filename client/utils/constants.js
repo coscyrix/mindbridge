@@ -406,7 +406,10 @@ export const CLIENT_SESSION_LIST_DATA = (
         cell: (row, handleClick) => (
           <div
             style={{ color: "var(--link-color)", cursor: "pointer" }}
-            onClick={() => handleClick(row.client_clam_num)}
+            onClick={() =>
+              {
+              handleClick(row.req_id)}
+            }
           >
             {row?.client_clam_num || "N/A"}
           </div>
@@ -466,21 +469,27 @@ export const SESSION_TABLE_COLUMNS = (args) => {
     },
     {
       name: "Serial Number",
-      selector: (row) => row.client_id,
+      selector: (row) => row.client_clam_num || "N/A",
       sortable: true,
-      selectorId: "client_id",
+      selectorId: "client_clam_num",
     },
     {
       name: "Client Name",
-      selector: (row) => row.client_id,
+      selector: (row) => {
+        const capitalize = (name) =>
+          name[0].toUpperCase() + name.slice(1).toLowerCase();
+        return `${capitalize(row.client_first_name)} ${capitalize(
+          row?.client_last_name
+        )}`;
+      },
       sortable: true,
-      selectorId: "client_id",
+      selectorId: "client_first_name",
     },
     {
       name: "Service Type",
-      selector: (row) => row.session_description,
+      selector: (row) => row.service_name,
       sortable: true,
-      selectorId: "session_description",
+      selectorId: "service_name",
     },
     {
       name: "Start Time",
@@ -562,6 +571,214 @@ export const SESSION_TABLE_COLUMNS = (args) => {
       ignoreRowClick: true,
       button: true,
     },
+  ];
+};
+export const CLIENT_ALLSESSION_LIST_DATA = (args) => {
+  const { moment, handleNoteOpen } = args || {};
+  return [
+    {
+      name: "Service Type",
+      selector: (row) => row.service_name,
+      selectorId: "service_desc",
+    },
+    {
+      name: "Session Date",
+      selector: (row) => row.intake_date,
+      selectorId: "intake_date",
+    },
+
+    {
+      name: "Session Time",
+      selector: (row) =>
+        moment.utc(row.scheduled_time, "HH:mm:ss.SSS[Z]").format("hh:mm A"),
+      selectorId: "session_time",
+    },
+    {
+      name: "Session Status",
+      selector: (row) => row.session_status,
+      selectorId: "session_status",
+    },
+    // {
+    //   name: "Attached Forms",
+    //   cell: (row) => {
+    //     console.log(row, "row");
+    //     const attachedFormIds = Array.isArray(row?.forms_array)
+    //       ? row?.forms_array
+    //       : [];
+    //     const attachedFormCodes = attachedFormIds
+    //       .map((id) => {
+    //         const form = forms.find((form) => form.form_id === Number(id));
+    //         return form?.form_cde || null;
+    //       })
+    //       .filter((code) => code)
+    //       .join(", ");
+
+    //     return (
+    //       <span style={{ textAlign: "center" }}>
+    //         {attachedFormCodes || "--"}
+    //       </span>
+    //     );
+    //   },
+    // },
+    {
+      name: "Notes",
+      selector: (row) => row.notes,
+      sortable: true,
+      cell: (row) =>
+        !row.notes ? (
+          <CustomButton
+            type="button"
+            icon={<AddIcon />}
+            customClass="add-notes"
+            title="Add Notes"
+            onClick={() => handleNoteOpen(row, "add")}
+          />
+        ) : (
+          <span
+            onClick={() => handleNoteOpen(row, "edit")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              gap: "4px",
+              maxWidth: "150px",
+            }}
+          >
+            <span
+              style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                flex: 1,
+              }}
+            >
+              {row.notes}
+            </span>
+            <EditIcon />
+          </span>
+        ),
+      selectorId: "notes",
+    },
+    // {
+    //   name: "Email Send Notification",
+    //   selector: (row) => row.emailSendNotification,
+    //   sortable: true,
+    //   cell: (row) => (
+    //     <CustomButton
+    //       icon={<MailIcon />}
+    //       customClass="send-mail"
+    //       title="Send Email"
+    //       onClick={() => handleSendMail(row)}
+    //     />
+    //   ),
+    //   selectorId: "emailSendNotification",
+    // },
+    // {
+    //   name: "",
+    //   minWidth: "220px",
+    //   cell: (row, rowIndex) => {
+    //     const scheduledTime = moment.utc(
+    //       `${row.intake_date} ${row.scheduled_time}`,
+    //       "YYYY-MM-DD HH:mm:ssZ"
+    //     );
+    //     const sessionStatus = row?.session_status.toLowerCase();
+    //     const showNoShowButtonDisplay =
+    //       initialData &&
+    //       scheduledTime.isAfter(currentTime) &&
+    //       sessionStatus != "show" &&
+    //       sessionStatus != "no-show";
+    //     return (
+    //       <div style={{ cursor: "pointer" }}>
+    //         {showNoShowButtonDisplay && (
+    //           <div
+    //             className="action-buttons-container"
+    //             style={{ display: "flex" }}
+    //           >
+    //             <CustomButton
+    //               type="button"
+    //               title="Show"
+    //               customClass="show-button"
+    //               onClick={() => {
+    //                 setActiveRow(row);
+    //                 setShowStatusConfirmationModal(true);
+    //               }}
+    //             />
+    //             <CustomButton
+    //               type="button"
+    //               title="No Show"
+    //               customClass="no-show-button"
+    //               onClick={() => handleNoShowStatus(row)}
+    //             />
+    //             <CustomButton
+    //               type="button"
+    //               title="Edit"
+    //               customClass="edit-button"
+    //               onClick={() => {
+    //                 setEditSessionModal(true);
+    //                 setActiveRow({ ...row, rowIndex });
+    //                 const tempData = initialData
+    //                   ? scheduledSession
+    //                   : sessionTableData?.filter((data) => {
+    //                       return data?.is_additional === 0;
+    //                     });
+
+    //                 if (rowIndex < tempData.length - 1) {
+    //                   let minDate = new Date(row.intake_date);
+    //                   let maxDate = new Date(
+    //                     tempData[rowIndex + 1].intake_date
+    //                   );
+    //                   setSessionRange((prev) => ({
+    //                     ...prev,
+    //                     min: formatDate(minDate),
+    //                     max: formatDate(maxDate),
+    //                   }));
+    //                 } else {
+    //                   setSessionRange((prev) => ({
+    //                     min: false,
+    //                     max: false,
+    //                   }));
+    //                 }
+    //               }}
+    //             />
+    //           </div>
+    //         )}
+    //         {!initialData && (
+    //           <CustomButton
+    //             type="button"
+    //             title="Edit"
+    //             customClass="edit-button"
+    //             onClick={() => {
+    //               setEditSessionModal(true);
+    //               setActiveRow({
+    //                 ...row,
+    //                 rowIndex,
+    //                 sessionFormType: initialData
+    //                   ? "UpdateSessionForm"
+    //                   : "CreateSessionForm",
+    //               });
+    //               const tempData = initialData
+    //                 ? scheduledSession
+    //                 : sessionTableData?.filter((data) => {
+    //                     return data?.is_additional === 0;
+    //                   });
+
+    //               if (rowIndex < tempData.length - 1) {
+    //                 let minDate = new Date(row.intake_date);
+    //                 let maxDate = new Date(tempData[rowIndex + 1].intake_date);
+    //                 maxDate.setDate(maxDate.getDate() - 1);
+    //                 setSessionRange((prev) => ({
+    //                   ...prev,
+    //                   min: formatDate(minDate),
+    //                   max: formatDate(maxDate),
+    //                 }));
+    //               }
+    //             }}
+    //           />
+    //         )}
+    //       </div>
+    //     );
+    //   },
+    // },
   ];
 };
 
@@ -1181,302 +1398,98 @@ export const CLIENT_DETAIL_DATA = (handleDischarge) => ({
 export const CLIENT_SESSION_LIST_DATA_BY_ID = (
   handleCellClick,
   handleEdit,
-  handleDelete
-) => {
-  return {
-    primaryServices: {
-      columns: [
-        {
-          name: "ID",
-          selector: (row) => row.id,
-        },
-        {
-          name: "Session date/time",
-          selector: (row) => row.sessionDateTime,
-        },
-        {
-          name: "Service code",
-          selector: (row) => row.serviceCode,
-        },
-        {
-          name: "Service desc",
-          selector: (row) => row.serviceDesc,
-        },
-        {
-          name: "Session Amount",
-          selector: (row) => row.sessionAmount,
-        },
-        {
-          name: "GST",
-          selector: (row) => row.gst,
-        },
-        {
-          name: "T. Amount",
-          selector: (row) => row.tAmount,
-        },
-        {
-          name: "Amount to Associate",
-          selector: (row) => row.amountToAssociate,
-        },
-        {
-          name: "",
-          cell: (row) => (
-            <div style={{ cursor: "pointer", display: "flex", gap: "10px" }}>
-              <div
-                style={{
-                  background: "#D1FADF",
-                  borderRadius: "20px",
-                  padding: "5px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "5px",
-                  color: "#002709",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  lineHeight: "14.1px",
-                  letterSpacing: "-0.02em",
-                  textAlign: "left",
-                  width: "56px",
-                  height: "18px",
-                }}
-              >
-                <div
-                  style={{
-                    borderRadius: "50%",
-                    width: "6px",
-                    height: "6px",
-                    background: "#00AE14",
-                  }}
-                />
-                Online
-              </div>
-            </div>
-          ),
-          // width: "50px",
-          ignoreRowClick: true,
-          allowOverflow: true,
-          button: true,
-        },
-        {
-          name: "",
-          cell: (row) => (
-            <div style={{ cursor: "pointer", position: "relative" }}>
-              <div
-                onClick={(e) => {
-                  handleCellClick(row);
-                }}
-              >
-                <MenuIcon />
-              </div>
-              {row.active && (
-                <div>
-                  <TooltipContainer>
-                    <div
-                      onClick={(e) => {
-                        handleCellClick(row);
-                        handleEdit(row);
-                      }}
-                    >
-                      <TooltipButton title="Edit" icon={<EditIcon />} />
-                    </div>
-                    <div
-                      onClick={(e) => {
-                        handleDelete(row);
-                        handleCellClick(row);
-                      }}
-                    >
-                      <TooltipButton
-                        title="Delete"
-                        icon={<DeleteIcon />}
-                        color="#d30028"
-                      />
-                    </div>
-                  </TooltipContainer>
-                </div>
-              )}
-            </div>
-          ),
-          width: "50px",
-          // ignoreRowClick: true,
-          allowOverflow: true,
-          button: true,
-        },
-      ],
-      data: [
-        {
-          id: 1,
-          sessionDateTime: "2024-12-01 10:00 AM",
-          serviceCode: "SRV001",
-          serviceDesc: "Consultation",
-          sessionAmount: 1000,
-          gst: 180,
-          tAmount: 1180,
-          amountToAssociate: 100,
-          active: false,
-        },
-        {
-          id: 2,
-          sessionDateTime: "2024-12-02 02:00 PM",
-          serviceCode: "SRV002",
-          serviceDesc: "Therapy",
-          sessionAmount: 1500,
-          gst: 270,
-          tAmount: 1770,
-          amountToAssociate: 150,
-          active: false,
-        },
-        {
-          id: 3,
-          sessionDateTime: "2024-12-03 04:00 PM",
-          serviceCode: "SRV003",
-          serviceDesc: "Diagnostics",
-          sessionAmount: 2000,
-          gst: 360,
-          tAmount: 2360,
-          amountToAssociate: 200,
-          active: false,
-        },
-        {
-          id: 4,
-          sessionDateTime: "2024-12-04 11:00 AM",
-          serviceCode: "SRV004",
-          serviceDesc: "Follow-up",
-          sessionAmount: 500,
-          gst: 90,
-          tAmount: 590,
-          amountToAssociate: 50,
-          active: false,
-        },
-        {
-          id: 5,
-          sessionDateTime: "2024-12-05 09:00 AM",
-          serviceCode: "SRV005",
-          serviceDesc: "Consultation (Extended)",
-          sessionAmount: 1200,
-          gst: 216,
-          tAmount: 1416,
-          amountToAssociate: 120,
-          active: false,
-        },
-      ],
-    },
-    additionalServices: {
-      columns: [
-        {
-          name: "ID",
-          selector: (row) => row.id,
-        },
-        {
-          name: "Session date/time",
-          selector: (row) => row.sessionDateTime,
-        },
-        {
-          name: "Service code",
-          selector: (row) => row.serviceCode,
-        },
-        {
-          name: "Service desc",
-          selector: (row) => row.serviceDesc,
-        },
-        {
-          name: "Session Amount",
-          selector: (row) => row.sessionAmount,
-        },
-        {
-          name: "GST",
-          selector: (row) => row.gst,
-        },
-        {
-          name: "T. Amount",
-          selector: (row) => row.tAmount,
-        },
-        {
-          name: "Amount to Associate",
-          selector: (row) => row.amountToAssociate,
-        },
-        {
-          name: "",
-          cell: (row) => (
-            <div style={{ cursor: "pointer", position: "relative" }}>
-              <div
-                onClick={(e) => {
-                  handleCellClick(row);
-                }}
-              >
-                <MenuIcon />
-              </div>
-              {row.active && (
-                <div>
-                  <TooltipContainer>
-                    <div
-                      onClick={(e) => {
-                        handleCellClick(row);
-                        handleEdit(row);
-                      }}
-                    >
-                      <TooltipButton title="Edit" icon={<EditIcon />} />
-                    </div>
-                    <div
-                      onClick={(e) => {
-                        handleCellClick(row);
-                        handleDelete(row);
-                      }}
-                    >
-                      <TooltipButton
-                        title="Delete"
-                        icon={<DeleteIcon />}
-                        color="#d30028"
-                      />
-                    </div>
-                  </TooltipContainer>
-                </div>
-              )}
-            </div>
-          ),
-          width: "50px",
-          // ignoreRowClick: true,
-          allowOverflow: true,
-          button: true,
-        },
-      ],
-      data: [
-        {
-          id: 1,
-          sessionDateTime: "2024-12-01 10:00 AM",
-          serviceCode: "SRV001",
-          serviceDesc: "Consultation",
-          sessionAmount: 1000,
-          gst: 180,
-          tAmount: 1180,
-          amountToAssociate: 100,
-          active: false,
-        },
-        {
-          id: 2,
-          sessionDateTime: "2024-12-02 02:00 PM",
-          serviceCode: "SRV002",
-          serviceDesc: "Therapy",
-          sessionAmount: 1500,
-          gst: 270,
-          tAmount: 1770,
-          amountToAssociate: 150,
-          active: false,
-        },
-        {
-          id: 3,
-          sessionDateTime: "2024-12-03 04:00 PM",
-          serviceCode: "SRV003",
-          serviceDesc: "Diagnostics",
-          sessionAmount: 2000,
-          gst: 360,
-          tAmount: 2360,
-          amountToAssociate: 200,
-          active: false,
-        },
-      ],
-    },
-  };
-};
+  handleDelete,
+  dropdownRef
+) => [
+  {
+    name: "ID",
+    selector: (row) => row.session_id,
+  },
+  {
+    name: "Session date/time",
+    selector: (row) => row.intake_date,
+  },
+  {
+    name: "Service code",
+    selector: (row) => row.service_code,
+  },
+  {
+    name: "Service desc",
+    selector: (row) => row.service_name,
+    minWidth: "220px",
+  },
+  {
+    name: "Session Amount",
+    selector: (row) => `$${row.session_price}`,
+  },
+  {
+    name: "GST",
+    selector: (row) => `${row.session_gst}%`,
+  },
+  {
+    name: "T. Amount",
+    selector: (row) => `$${row.session_counselor_amt + row.session_price}`,
+  },
+  {
+    name: "Amount to Associate",
+    selector: (row) => `$${row.session_counselor_amt}`,
+  },
+  {
+    name: "",
+    cell: (row) => (
+      <div style={{ cursor: "pointer", display: "flex", gap: "10px" }}>
+        <div
+          style={{
+            background: "#D1FADF",
+            borderRadius: "20px",
+            padding: "5px",
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            color: "#002709",
+            fontSize: "12px",
+            fontWeight: 600,
+            lineHeight: "14.1px",
+            letterSpacing: "-0.02em",
+            textAlign: "left",
+            width: "56px",
+            height: "18px",
+            textTransform: "capitalize",
+          }}
+        >
+          <div
+            style={{
+              borderRadius: "50%",
+              width: "6px",
+              height: "6px",
+              background: "#00AE14",
+            }}
+          />
+          {row.session_format.toLowerCase()}
+        </div>
+      </div>
+    ),
+    ignoreRowClick: true,
+    allowOverflow: true,
+    button: true,
+  },
+  {
+    name: "",
+    cell: (row, index) => (
+      <Dropdown
+        ref={dropdownRef}
+        row={row}
+        index={index}
+        handleCellClick={handleCellClick}
+        handleEdit={handleEdit}
+        handleDelete={handleDelete}
+      />
+    ),
+    width: "50px",
+    allowOverflow: true,
+    button: true,
+  },
+];
 
 export const DOWNLOAD_OPTIONS = (columns, data, tableCaption) => [
   {
@@ -1704,9 +1717,9 @@ export const TARGET = [
 ];
 
 export const POSITIONS = [
-  { value: "ocean", label: "Ocean" },
-  { value: "blue", label: "Blue" },
-  { value: "purple", label: "Purple" },
+  { value: "0", label: "0" },
+  { value: "1", label: "1" },
+  { value: "2", label: "2" },
 ];
 
 export const SERVICE_ID = [

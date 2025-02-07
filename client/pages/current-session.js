@@ -2,21 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { CurrentSessionHeadingWrapper } from "../styles/current-session";
 import { SESSION_TABLE_COLUMNS } from "../utils/constants";
 import { api } from "../utils/auth";
-import NotesModalContent from "../components/NotesModalContent";
 import CustomTable from "../components/CustomTable";
 import CustomSearch from "../components/CustomSearch";
 import CustomButton from "../components/CustomButton";
-import {
-  ClosedEyeIcon,
-  OpenEyeIcon,
-  SettingsIcon,
-} from "../public/assets/icons";
-
-const handleSendMail = (row) => {
-  console.log("::: Show alter Box", { ...row });
-  alert(`Sending mail to clientId  ${row.client_id}`);
-};
-
+import { OpenEyeIcon, SettingsIcon } from "../public/assets/icons";
+import CommonServices from "../services/CommonServices";
+import CustomMultiSelect from "../components/CustomMultiSelect";
+import { useReferenceContext } from "../context/ReferenceContext";
+import Cookies from "js-cookie";
 function CurrentSession() {
   const [rowToEdit, setRowToEdit] = useState();
   const [todaySession, setTodaySession] = useState([]);
@@ -24,28 +17,34 @@ function CurrentSession() {
   const [todaySessionToBeDisplayed, setTodaySessionToBeDisplayed] = useState(
     []
   );
+  const [userData, setUserData] = useState({});
   const [tomorrowSession, setTomorrowSession] = useState([]);
   const [tomorrowSessionFilterText, setTomorrowSessionFilterText] =
     useState("");
   const [tomorrowSessionToBeDisplayed, setTomorrowSessionToBeDisplayed] =
     useState([]);
+  const [counselors, setCounselors] = useState([
+    { label: "All counselors", value: "allCounselors" },
+  ]);
+  const { userObj } = useReferenceContext();
 
   const [activeRow, setActiveRow] = useState({});
   const [loading, setLoading] = useState(false);
-  // const [noteData, setNoteData] = useState({
-  //   isOpen: false,
-  //   sessionId: null,
-  //   notes: "",
-  //   mode: "add",
-  // });
   const dropdownTodayRef = useRef(null);
   const dropdownTomorrowRef = useState(null);
 
   // fun to get session data
-  async function getCurrentSessionData() {
+  async function getCurrentSessionData(counselorId) {
     setLoading(true);
+    let response;
     try {
-      const response = await api.get(`/session/today?counselor_id=3`);
+      if (counselorId && counselorId !== "allCounselors") {
+        response = await api.get(`/session/today?counselor_id=${counselorId}`);
+      } else {
+        response = await api.get(
+          `/session/today?counselor_id=${userObj?.user_profile_id}`
+        );
+      }
       if (response?.status === 200) {
         setTodaySession(response?.data?.session_today);
         setTodaySessionToBeDisplayed(response?.data?.session_today);
@@ -58,16 +57,6 @@ function CurrentSession() {
       setLoading(false);
     }
   }
-
-  // fun to open note
-  // const handleNoteOpen = (row, mode) => {
-  //   setNoteData({
-  //     isOpen: true,
-  //     sessionId: row.session_id,
-  //     notes: row.notes || "",
-  //     mode: mode,
-  //   });
-  // };
 
   // fun to handle when user click on action buttons
   const handleCellClickTodaySession = (row) => {
@@ -104,8 +93,6 @@ function CurrentSession() {
 
   // getting today Session Columns
   const todayColumns = SESSION_TABLE_COLUMNS({
-    // handleNoteOpen,
-    // handleSendMail,
     handleCellClick: handleCellClickTodaySession,
     handleEdit,
     handleDelete,
@@ -113,8 +100,6 @@ function CurrentSession() {
   });
   // getting tomorrow Session columns
   const tomorrowColumns = SESSION_TABLE_COLUMNS({
-    // handleNoteOpen,
-    // handleSendMail,
     handleCellClick: handleCellClickTomorrowSession,
     handleEdit,
     handleDelete,
@@ -220,66 +205,6 @@ function CurrentSession() {
       );
     };
   }, []);
-
-  // // fun to close notes modal
-  // const handleNoteClose = () => {
-  //   setNoteData({
-  //     isOpen: false,
-  //     sessionId: null,
-  //     notes: "",
-  //   });
-  // };
-
-  // // fun to save Notes
-  // const handleSaveNotes = (updatedNotes) => {
-  //   console.log(":: handleSaveNotes");
-  //   const isTodaySession = todaySessionToBeDisplayed?.find(
-  //     (session) => session?.session_id === noteData?.sessionId
-  //   );
-  //   if (isTodaySession) {
-  //     setTodaySessionToBeDisplayed((prev) => {
-  //       return prev?.map((session) => {
-  //         if (session?.session_id === noteData?.sessionId)
-  //           return { ...session, notes: updatedNotes };
-  //         else return session;
-  //       });
-  //     });
-  //   } else {
-  //     setTomorrowSessionToBeDisplayed((prev) => {
-  //       return prev?.map((session) => {
-  //         if (session?.session_id === noteData?.sessionId)
-  //           return { ...session, notes: updatedNotes };
-  //         else return session;
-  //       });
-  //     });
-  //   }
-  //   handleNoteClose();
-  // };
-  // // fun to Edit Notes
-  // const handleEditNote = (updatedNotes) => {
-  //   console.log(":: handleEditNotes");
-  //   const isTodaySession = todaySessionToBeDisplayed?.find(
-  //     (session) => session?.session_id === noteData?.sessionId
-  //   );
-  //   if (isTodaySession) {
-  //     setTodaySessionToBeDisplayed((prev) => {
-  //       return prev?.map((session) => {
-  //         if (session?.session_id === noteData?.sessionId)
-  //           return { ...session, notes: updatedNotes };
-  //         else return session;
-  //       });
-  //     });
-  //   } else {
-  //     setTomorrowSessionToBeDisplayed((prev) => {
-  //       return prev?.map((session) => {
-  //         if (session?.session_id === noteData?.sessionId)
-  //           return { ...session, notes: updatedNotes };
-  //         else return session;
-  //       });
-  //     });
-  //   }
-  //   handleNoteClose();
-  // };
 
   // creating heading and subHeadings to pass in CustomButtopn => to implement functiaonlity of options => in Today Session Table
   let todaySubHeadings = todaySessionVisibleColumns
@@ -424,6 +349,32 @@ function CurrentSession() {
     setTomorrowSessionToBeDisplayed(filteredData);
   };
 
+  const fetchCounsellor = async () => {
+    try {
+      const response = await CommonServices.getClients();
+      if (response.status === 200) {
+        const { data } = response;
+        const allCounselors = data?.rec?.filter(
+          (counselor) => counselor?.role_id == 2
+        );
+        const counselorOptions = allCounselors?.map((item) => {
+          return {
+            label: item?.user_first_name + " " + item?.user_last_name,
+            value: item?.user_profile_id,
+          };
+        });
+        setCounselors([...counselors, ...counselorOptions]);
+      }
+    } catch (error) {
+      console.log("Error fetching clients", error);
+    }
+  };
+
+  const handleSelectCounselor = (data) => {
+    const counselorId = data?.value;
+    getCurrentSessionData(counselorId);
+  };
+
   useEffect(() => {
     updateTodaySessionToDisplay();
   }, [todaySessionFilterText]);
@@ -433,7 +384,11 @@ function CurrentSession() {
   }, [tomorrowSessionFilterText]);
 
   useEffect(() => {
+    const userData = Cookies.get("user");
+    setUserData(JSON.parse(userData));
+
     getCurrentSessionData();
+    fetchCounsellor();
   }, []);
 
   return (
@@ -445,15 +400,29 @@ function CurrentSession() {
           times, and real-time updates for seamless session management.
         </p>
       </div>
-      {todaySession?.length > 0 && (
-        <div className="today-header">
-          <div className={"today"}>Today Session</div>
-          <div style={{ display: "flex", gap: "20px" }}>
+      <div className="today-header">
+        <div className={"today"}>Today Session</div>
+        <div style={{ display: "flex", gap: "20px" }}>
+          {todaySession?.length > 0 && (
             <CustomSearch
               filterText={todaySessionFilterText}
               onFilter={(e) => setTodaySessionFilterText(e.target.value)}
               placeholder="Search in today session"
             />
+          )}
+          <div>
+            {userData?.role_id == 4 ? (
+              <div key="counselor-select" className="custom-select-container">
+                <CustomMultiSelect
+                  options={counselors}
+                  onChange={handleSelectCounselor}
+                  isMulti={false}
+                  placeholder="Select a counselor"
+                />
+              </div>
+            ) : null}
+          </div>
+          {todaySession?.length > 0 && (
             <div style={{ position: "relative" }}>
               <CustomButton
                 icon={<SettingsIcon />}
@@ -462,9 +431,9 @@ function CurrentSession() {
                 renderFooter={renderTodaySessionFooter}
               />
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       <CustomTable
         columns={todaySessionVisibleColumns}
@@ -474,9 +443,9 @@ function CurrentSession() {
         paginationRowsPerPageOptions={[5, 10, 15, 20, 25]}
         paginationPerPage={5}
       />
-      {tomorrowSession?.length > 0 && (
-        <div className={"tomorrow-header"}>
-          <div className={"tomorrow"}>Tomorrow Session</div>
+      <div className={"tomorrow-header"}>
+        <div className={"tomorrow"}>Tomorrow Session</div>
+        {tomorrowSession?.length > 0 && (
           <div style={{ display: "flex", gap: "30px" }}>
             <CustomSearch
               filterText={tomorrowSessionFilterText}
@@ -492,8 +461,9 @@ function CurrentSession() {
               />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
       {!loading && (
         <CustomTable
           columns={tomorrowSessionVisibleColumns}
@@ -503,15 +473,6 @@ function CurrentSession() {
           paginationPerPage={5}
         />
       )}
-      {/* <NotesModalContent
-        noteData={noteData}
-        setNoteData={setNoteData}
-        isOpen={noteData.isOpen}
-        onClose={handleNoteClose}
-        saveNotes={noteData.notes ? handleEditNote : handleSaveNotes}
-        initialNotes={noteData.notes}
-        hidePagination
-      /> */}
     </CurrentSessionHeadingWrapper>
   );
 }

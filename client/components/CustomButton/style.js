@@ -1,6 +1,7 @@
 import styled from "styled-components";
 
 export const CustomButtonContainer = styled.div`
+  position: relative;
   button {
     padding: 10.5px 12px;
     border-radius: 6px;

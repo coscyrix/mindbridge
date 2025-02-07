@@ -48,14 +48,33 @@ const AuthForm = () => {
     <Wrapper>
       <LeftPanel>
         <div className="company-greetings">
-          <img src="/assets/images/logo.png" alt="company-logo" />
+          <img src="/assets/images/Mindbridge_logo_1.svg" alt="company-logo" />
           <div>
             <h1>Welcome to Mind Bridge! 👋</h1>
             <p>
-              Lorem Ipsum is simply dummy text of the printing and typesetting
-              industry. Lorem Ipsum has been the industry&apos;s standard dummy
-              text ever since the 1500s.
+              Your secure intelligent platform for streamlined counseling and
+              client management.
             </p>
+            <ul>
+              <li>
+                <b>Effortless Navigation: </b>Access client-sessions, treatment
+                tools and actionable insights with minimal clicks.
+              </li>
+              <li>
+                <b>Crisis Response: </b>A <b>one-click</b> link to &ldquo;
+                <b>Responding to a Suicidal Client</b>
+                &rdquo; is available on all main screens for immediate guidance.
+              </li>
+              <li>
+                <b>Data-Driven Decisions: </b>Track client progress, automate
+                SMART goal templates, and generate visual insights.
+              </li>
+              <li>
+                <b>Seamless Session Management: </b>Schedule, monitor, and
+                adjust treatment plans efficiently.
+              </li>
+            </ul>
+            <p>Login now and bridge the gap between care and innovation</p>
           </div>
         </div>
         <span>© 2024 MindBridge. All rights reserved.</span>
@@ -148,7 +167,7 @@ const AuthForm = () => {
                 </div>
               </form>
             </FormProvider>
-            <p className="loginOrSignUp">
+            {/* <p className="loginOrSignUp">
               {isSignUp ? (
                 <>
                   Already have an account? <Link href="/login">Login now</Link>.
@@ -159,7 +178,7 @@ const AuthForm = () => {
                   <Link href="/sign-up">Create a new account now</Link>
                 </>
               )}
-            </p>
+            </p> */}
           </FormContainer>
         )}
       </RightPanel>

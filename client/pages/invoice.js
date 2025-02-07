@@ -6,15 +6,23 @@ import CustomModal from "../components/CustomModal";
 import CustomInputField from "../components/CustomInputField";
 import { FormProvider, useForm } from "react-hook-form";
 import CustomButton from "../components/CustomButton";
-import { AddIcon, ArrowIcon } from "../public/assets/icons";
+import {
+  AddIcon,
+  ArrowIcon,
+  DownloadIcon,
+  OpenEyeIcon,
+  SettingsIcon,
+} from "../public/assets/icons";
 import CustomTab from "../components/CustomTab";
 import CustomSelect from "../components/CustomSelect";
+import CustomMultiSelect from "../components/CustomMultiSelect";
 import CustomSearch from "../components/CustomSearch";
 import CommonServices from "../services/CommonServices";
 import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import Spinner from "../components/common/Spinner";
-import ReactPaginate from "react-paginate";
+import CustomPagination from "../components/CustomPagination";
+import { DOWNLOAD_OPTIONS } from "../utils/constants";
 
 const Invoice = () => {
   const [invoices, setInvoices] = useState(null);
@@ -27,7 +35,9 @@ const Invoice = () => {
   const [selectCounselor, setSelectCounselor] = useState(null);
   const [filterText, setFilterText] = useState(null);
   const [loading, setLoading] = useState("tableData");
-  const [counselors, setCounselors] = useState([]);
+  const [counselors, setCounselors] = useState([
+    { label: "All counselors", value: "allCounselors" },
+  ]);
   const [invoiceData, setInvoiceData] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 9;
@@ -38,51 +48,6 @@ const Invoice = () => {
     setOpen(true);
     setInvoiceData(row);
     setValue("invoice_nbr", "");
-  };
-
-  const handleCreateOrUpdateInvoice = async (data) => {
-    try {
-      setLoading("invoiceNumber");
-      const payload = {
-        session_id: invoiceData?.session_id,
-        invoice_nbr: data?.invoice_nbr,
-      };
-      let response;
-      if (!invoiceData?.invoice_nbr) {
-        response = await api.post("/invoice", payload);
-      } else {
-        response = await api.put(
-          `/session/?session_id=${invoiceData?.session_id}`,
-          { invoice_nbr: data?.invoice_nbr }
-        );
-      }
-      if (response.status === 200) {
-        const successMessage = invoiceData?.invoice_nbr
-          ? "Invoice updated successfully!"
-          : "Invoice created successfully!";
-        toast.success(successMessage);
-        setInvoiceTableData((prevData) =>
-          prevData.map((invoice) =>
-            invoice.session_id === payload.session_id
-              ? { ...invoice, invoice_nbr: payload.invoice_nbr }
-              : invoice
-          )
-        );
-      }
-    } catch (error) {
-      const errorMessage = invoiceData?.invoice_nbr
-        ? "Error while updating invoice."
-        : "Error while creating invoice.";
-      console.error("Error while creating invoice: ", error);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(null);
-      setOpen(false);
-    }
-  };
-
-  const handlePageChange = ({ selected }) => {
-    setCurrentPage(selected);
   };
 
   const columns = [
@@ -175,6 +140,59 @@ const Invoice = () => {
     },
   ];
 
+  const [visibleColumns, setVisibleColumns] = useState(
+    columns?.map((col) => ({ ...col, omit: false }))
+  );
+
+  const toggleColumn = (field) => {
+    setVisibleColumns((prev) =>
+      prev.map((col) =>
+        col.name === field ? { ...col, omit: !col.omit } : col
+      )
+    );
+  };
+
+  const handleCreateOrUpdateInvoice = async (data) => {
+    try {
+      setLoading("invoiceNumber");
+      const payload = {
+        session_id: invoiceData?.session_id,
+        invoice_nbr: data?.invoice_nbr,
+      };
+      let response;
+      if (!invoiceData?.invoice_nbr) {
+        response = await api.post("/invoice", payload);
+      } else {
+        response = await api.put(
+          `/session/?session_id=${invoiceData?.session_id}`,
+          { invoice_nbr: data?.invoice_nbr }
+        );
+      }
+      if (response.status === 200) {
+        const successMessage = invoiceData?.invoice_nbr
+          ? "Invoice updated successfully!"
+          : "Invoice created successfully!";
+        toast.success(successMessage);
+        setInvoiceTableData((prevData) =>
+          prevData.map((invoice) =>
+            invoice.session_id === payload.session_id
+              ? { ...invoice, invoice_nbr: payload.invoice_nbr }
+              : invoice
+          )
+        );
+      }
+    } catch (error) {
+      const errorMessage = invoiceData?.invoice_nbr
+        ? "Error while updating invoice."
+        : "Error while creating invoice.";
+      console.error("Error while creating invoice: ", error);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(null);
+      setOpen(false);
+    }
+  };
+
   const getInvoice = async () => {
     setLoading("tableData");
     try {
@@ -211,7 +229,7 @@ const Invoice = () => {
             value: item?.user_profile_id,
           };
         });
-        setCounselors(counselorOptions);
+        setCounselors([...counselors, ...counselorOptions]);
       }
     } catch (error) {
       console.log("Error fetching clients", error);
@@ -223,7 +241,8 @@ const Invoice = () => {
     try {
       setLoading("tableData");
       const params = new URLSearchParams();
-      if (counselorId) params.append("counselor_id", counselorId);
+      if (counselorId !== "allCounselors" && counselorId)
+        params.append("counselor_id", counselorId);
       if (startDate) params.append("start_dte", startDate);
       if (endDate) params.append("end_dte", endDate);
 
@@ -294,7 +313,6 @@ const Invoice = () => {
     if (filterText) {
       filteredData = filteredData?.filter((row) => {
         return Object.keys(row)?.some((columnKey) => {
-          console.log(columnKey, "row");
           const value = row[columnKey];
           const rowColumns = columns || [];
           const isColumnKeyFound = rowColumns?.some(
@@ -313,6 +331,55 @@ const Invoice = () => {
     }
     setInvoiceTableData(filteredData);
   };
+
+  const columnTitles = visibleColumns
+    ?.filter((col) => col.name)
+    .map((col) => ({
+      ...col,
+      onClick: () => toggleColumn(col.name),
+      toggleIcon: true,
+    }));
+
+  let columnOptions = [];
+
+  // Add column titles to subHeadings
+  columnOptions.push({
+    heading: "Show/Hide Columns",
+    subHeadings: columnTitles,
+  });
+
+  const renderFooter = () => (
+    <div
+      style={{
+        borderTop: "1px solid #ccc",
+        cursor: "pointer",
+        fontSize: "13px",
+        fontWeight: 500,
+        lineHeight: "15.6px",
+        letterSpacing: "-0.02em",
+        textAlign: "left",
+        padding: "7px 10px",
+        margin: "0px",
+      }}
+    >
+      <p
+        style={{
+          margin: "0px",
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+        }}
+        onClick={() =>
+          setVisibleColumns(
+            visibleColumns?.map((col) => ({ ...col, omit: false }))
+          )
+        }
+      >
+        <OpenEyeIcon />
+        Show All columns
+      </p>
+    </div>
+  );
 
   useEffect(() => {
     updateInvoiceDataToDisplay();
@@ -342,8 +409,6 @@ const Invoice = () => {
   if (roleId === null) {
     return null;
   }
-
-  console.log(paginatedData, "paginatedData");
 
   return (
     <InvoiceContainer>
@@ -390,55 +455,80 @@ const Invoice = () => {
             />
           </div>
           <div className="search-container">
-            <div className="custom-search-container">
-              <CustomSearch
-                filterText={filterText}
-                onFilter={(e) => setFilterText(e.target.value)}
-              />
-            </div>
-            <div className="custom-select-container">
-              {roleId == 4 ? (
-                <div key="counselor-select">
-                  <label>Counselor</label>
-                  <CustomSelect
-                    name="counselor"
-                    options={counselors}
-                    value={selectCounselor}
-                    onChange={handleSelectCounselor}
-                    dropdownIcon={
-                      <ArrowIcon style={{ transform: "rotate(90deg)" }} />
-                    }
-                    placeholder="Select a counselor"
+            <div className="search-and-select">
+              <div className="custom-search-container">
+                <CustomSearch
+                  filterText={filterText}
+                  onFilter={(e) => setFilterText(e.target.value)}
+                />
+              </div>
+              <div className="custom-select-container">
+                {roleId == 4 ? (
+                  <div key="counselor-select">
+                    <label>Counselor</label>
+                    {/* <CustomSelect
+                      name="counselor"
+                      options={counselors}
+                      value={selectCounselor}
+                      onChange={handleSelectCounselor}
+                      dropdownIcon={
+                        <ArrowIcon style={{ transform: "rotate(90deg)" }} />
+                      }
+                      placeholder="Select a counselor"
+                    /> */}
+                    <CustomMultiSelect
+                      options={counselors}
+                      placeholder="Select a counselor"
+                      isMulti={false}
+                      onChange={handleSelectCounselor}
+                    />
+                  </div>
+                ) : null}
+                <div>
+                  <label>Start Date</label>
+                  <input
+                    onChange={handleStartDateChange}
+                    type="date"
+                    value={startDate ? startDate : ""}
+                    placeholder="Select start date"
+                    className="date-fields"
                   />
                 </div>
-              ) : null}
-              <div>
-                <label>Start Date</label>
-                <input
-                  onChange={handleStartDateChange}
-                  type="date"
-                  value={startDate ? startDate : ""}
-                  placeholder="Select start date"
-                  className="date-fields"
-                />
+                <div>
+                  <label>End Date</label>
+                  <input
+                    onChange={handleEndDateChange}
+                    type="date"
+                    value={endDate ? endDate : ""}
+                    placeholder="Select end date"
+                    className="date-fields"
+                  />
+                </div>
               </div>
-              <div>
-                <label>End Date</label>
-                <input
-                  onChange={handleEndDateChange}
-                  type="date"
-                  value={endDate ? endDate : ""}
-                  placeholder="Select end date"
-                  className="date-fields"
-                />
-              </div>
+            </div>
+            <div className="downloads-container">
+              <CustomButton
+                icon={<DownloadIcon />}
+                title="Download"
+                dropdownOptions={DOWNLOAD_OPTIONS(
+                  columns,
+                  invoiceTableData,
+                  "Invoices List"
+                )}
+              />
+              <CustomButton
+                icon={<SettingsIcon />}
+                title="Columns"
+                dropdownOptions={columnOptions}
+                renderFooter={renderFooter}
+              />
             </div>
           </div>
         </div>
       </div>
 
       <CustomTable
-        columns={columns}
+        columns={visibleColumns}
         data={paginatedData || []}
         onRowclick={(row) => handleEdit(row)}
         loading={loading === "tableData"}
@@ -447,31 +537,14 @@ const Invoice = () => {
       />
 
       {/* Pagination controls */}
-      <div style={{ width: "100%" }}>
-        <ReactPaginate
-          previousLabel={
-            <CustomButton
-              title="Previous"
-              icon={<ArrowIcon />}
-              disabled={currentPage === 0}
-            />
-          }
-          nextLabel={
-            <CustomButton
-              title="Next"
-              icon={<ArrowIcon />}
-              disabled={
-                currentPage === invoiceTableData?.length / itemsPerPage - 1
-              }
-            />
-          }
-          breakLabel={"..."}
-          pageCount={Math.ceil(invoiceTableData?.length / itemsPerPage)}
-          onPageChange={handlePageChange}
-          containerClassName={"pagination"}
-          activeClassName={"active"}
+      {!loading && itemsPerPage < invoiceTableData?.length && (
+        <CustomPagination
+          totalItems={invoiceTableData?.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
         />
-      </div>
+      )}
 
       <CustomModal
         isOpen={open}

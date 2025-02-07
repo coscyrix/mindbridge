@@ -21,6 +21,7 @@ export const login = async (credentials) => {
       const { token, usr } = response.data;
       Cookies.set("token", token);
       Cookies.set("user", JSON.stringify(usr));
+      Cookies.set("email", credentials.email);
       return response.data;
     } else {
       throw new Error("Login failed");
@@ -49,6 +50,8 @@ export const logout = () => {
 
   Cookies.remove("token");
   Cookies.remove("user");
+  // remove access to view notes
+  Cookies.remove("note_verification_time");
   toast.info("You have been logged out.", { position: "top-right" });
 
   Router.push("/login").finally(() => {

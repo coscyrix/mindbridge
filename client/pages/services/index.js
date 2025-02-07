@@ -71,7 +71,6 @@ function Services() {
         toast.success("Service created successfully", {
           position: "top-right",
         });
-        fetchdata();
         setShowCreateFlyout(false);
       }
     } catch (error) {
@@ -93,7 +92,6 @@ function Services() {
         toast.success("Service updated successfully", {
           position: "top-right",
         });
-        fetchdata();
         setShowCreateFlyout(false);
       }
     } catch (error) {

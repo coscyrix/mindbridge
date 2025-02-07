@@ -10,7 +10,6 @@ import Spinner from "../../common/Spinner";
 
 const EditSessionScheduleForm = ({
   activeData,
-  clientId,
   setScheduledSessions,
   setEditSessionModal,
   sessionRange = { min: false, max: false },
@@ -22,8 +21,8 @@ const EditSessionScheduleForm = ({
     reset,
   } = methods;
 
-  const { userObj } = useReferenceContext();
   const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     if (activeData) {
       const formattedData = {
@@ -41,44 +40,30 @@ const EditSessionScheduleForm = ({
   };
 
   const handleUpdateSessionSchedule = async (formData) => {
+    console.log(formData, "formdata");
     try {
-      if (
-        activeData?.rowIndex === 0 &&
-        activeData?.sessionFormType === "CreateSessionForm"
-      ) {
-        setLoading(true);
-        const payloadDate = moment
-          .utc(
-            `${formData?.intake_date} ${formData?.scheduled_time}`,
-            "YYYY-MM-DD HH:mm"
-          )
-          .format();
+      setLoading(true);
+      const intakeDate = moment
+        .utc(formData?.intake_date, "YYYY-MM-DD")
+        .format("YYYY-MM-DD");
+      const scheduledTime = moment
+        .utc(
+          `${formData?.intake_date} ${formData?.scheduled_time}`,
+          "YYYY-MM-DD HH:mm"
+        )
+        .format("YYYY-MM-DD HH:mm:ss[Z]");
 
-        const payload = {
-          counselor_id: userObj?.role_id,
-          client_id: clientId,
-          service_id: Number(formData?.service_id),
-          session_format_id: formData?.session_format === "ONLINE" ? 1 : 2,
-          intake_dte: payloadDate,
-        };
+      const payload = {
+        intake_date: intakeDate,
+        scheduled_time: scheduledTime,
+      };
 
-        const response = await api.post("/thrpyReq", payload);
+      const response = await api.put(
+        `session/?session_id=${formData?.session_id}`,
+        payload
+      );
 
-        if (response?.status === 200) {
-          const updatedSessions = response?.data?.rec?.[0]?.session_obj;
-          if (updatedSessions) {
-            setScheduledSessions(updatedSessions);
-            toast.success("Session updated successfully!");
-          } else {
-            console.warn("No session object found in the response.");
-            toast.error("No session object found in the response.");
-          }
-          console.log("Session schedule updated successfully.");
-        } else {
-          console.error("Unexpected response status:", response.status);
-          toast.error("Unexpected response status:");
-        }
-      } else {
+      if (response?.status === 200) {
         const sessionTableFormattedTime = moment
           .utc(formData?.scheduled_time, "HH:mm")
           .format("HH:mm:ss.SSSZ");
@@ -93,6 +78,7 @@ const EditSessionScheduleForm = ({
               : item
           )
         );
+        toast?.success("Session updated successfuly!");
       }
       setEditSessionModal(false);
     } catch (error) {

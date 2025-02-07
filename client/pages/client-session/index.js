@@ -12,6 +12,7 @@ import CustomTab from "../../components/CustomTab";
 import moment from "moment";
 import CustomButton from "../../components/CustomButton";
 import { AddIcon } from "../../public/assets/icons";
+import { useReferenceContext } from "../../context/ReferenceContext";
 
 function ClientSession() {
   const [showFlyout, setShowFlyout] = useState(false);
@@ -20,6 +21,10 @@ function ClientSession() {
   const actionDropdownRef = useRef(null);
   const [sessions, setSessions] = useState();
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [summaryData, setSummaryData] = useState({});
+  const [selectCounselor, setSelectCounselor] = useState(null);
+  const { userObj } = useReferenceContext();
+
   const tabLabels = [
     { id: 0, label: "Current Session", value: "currentSession" },
     { id: 1, label: "All Sessions", value: "allSessions" },
@@ -29,10 +34,24 @@ function ClientSession() {
     console.log("handleFilterData has been called");
   };
 
-  const fetchSessions = async () => {
+  const fetchSessions = async (counselorId) => {
     try {
       setSessionsLoading(true);
-      const response = await CommonServices.getSessions();
+      let response;
+      if (userObj?.role_id !== 4) {
+        response = await CommonServices.getSessionsByCounselor({
+          role_id: userObj?.role_id,
+          counselor_id: userObj?.user_profile_id,
+        });
+      } else {
+        if (counselorId && counselorId !== "allCounselors") {
+          response = await CommonServices.getSessionsByCounselor({
+            counselor_id: counselorId,
+          });
+        } else {
+          response = await CommonServices.getSessions();
+        }
+      }
       if (response.status === 200) {
         const { data } = response;
         setSessions(data);
@@ -42,6 +61,12 @@ function ClientSession() {
     } finally {
       setSessionsLoading(false);
     }
+  };
+
+  const handleSelectCounselor = (data) => {
+    const counselorId = data?.value;
+    setSelectCounselor(counselorId);
+    fetchSessions(counselorId);
   };
 
   const handleClickOutside = (e) => {
@@ -119,6 +144,24 @@ function ClientSession() {
     setShowFlyout(true);
   };
 
+  const getInvoice = async () => {
+    try {
+      let response;
+      if (userObj?.role_id == 2) {
+        response = await api.get(
+          `/invoice/multi?counselor_id=${userObj?.user_profile_id}&role_id=${userObj?.role_id}`
+        );
+      } else {
+        response = await api.get(`/invoice/multi?role_id=${userObj?.role_id}`);
+      }
+      if (response.status === 200) {
+        setSummaryData(response?.data?.rec?.summary);
+      }
+    } catch (error) {
+      console.log(":: Invoice.getInvoice()", error);
+    }
+  };
+
   useEffect(() => {
     window.addEventListener("mousedown", handleClickOutside);
 
@@ -129,8 +172,8 @@ function ClientSession() {
 
   useEffect(() => {
     fetchSessions();
+    getInvoice();
   }, []);
-
   return (
     <ClientSessionWrapper>
       <div className="client-session-heading">
@@ -144,8 +187,8 @@ function ClientSession() {
           />
         </div>
         <p className="sub-heading">
-          A detailed table tracking client session schedules, session times and
-          dates.
+          A detailed table tracking client session schedules, session times, and
+          dates, with auto-submission of treatment assessment tools.
         </p>
       </div>
       <CreateSessionLayout
@@ -167,23 +210,40 @@ function ClientSession() {
       <CustomClientDetails
         customTab={
           <div className="tab-container">
-            <CustomTab
+            {/* <CustomTab
               heading={"Current Date"}
               value={moment().format("dddd, D MMMM YYYY")}
-            />
+            /> */}
             <CustomTab
               heading={"Total Amount For A Month"}
-              value={"$852.272"}
+              value={`$${
+                summaryData
+                  ? Number(summaryData?.sum_session_price).toFixed(2) || 0
+                  : 0
+              }`}
             />
             <CustomTab
               heading={"Total Amount to Associate for a Month: "}
-              value={"$340.908"}
+              value={`$${
+                summaryData
+                  ? Number(summaryData?.sum_session_counselor_amt)?.toFixed(
+                      2
+                    ) || 0
+                  : 0
+              }`}
             />
             <CustomTab
               heading={"Total Amount to Vapendama for a Month:"}
-              value={"$511.362"}
+              value={`$${
+                summaryData
+                  ? Number(summaryData?.sum_session_system_amt)?.toFixed(2) || 0
+                  : 0
+              }`}
             />
-            <CustomTab heading={"Total Amount of Units:"} value={"5"} />
+            <CustomTab
+              heading={"Total Amount of Units:"}
+              value={summaryData?.sum_session_system_units || 0}
+            />
           </div>
         }
         tableCaption="Client Session List"
@@ -191,7 +251,9 @@ function ClientSession() {
           columns: sessionsDataColumns,
           data: sessions,
         }}
-        primaryButton="Add Client Session"
+        primaryButton={userObj?.role_id !== 4 && "Add Client Session"}
+        selectCounselor={selectCounselor}
+        handleSelectCounselor={handleSelectCounselor}
         handleCreate={handleShowAddClientSession}
         onRowClicked={handleEdit}
         loading={sessionsLoading}

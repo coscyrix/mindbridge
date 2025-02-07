@@ -1,5 +1,6 @@
 const ApiConfig = {
   getReferences: "/references",
+  getAllCounselors: "/user-profile/?role_id=2",
   services: { getServices: "/service", updateService: "/", deleteService: "/" },
   clients: {
     getClients: "/user-profile",

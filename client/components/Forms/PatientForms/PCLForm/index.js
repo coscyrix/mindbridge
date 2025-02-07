@@ -91,13 +91,11 @@ const PCL5Form = () => {
         setLoading(false);
         return;
       }
-      console.log(data, "data");
       const payload = {
         session_id: session_id,
         client_id: client_id,
         ...data,
       };
-      console.log(payload, "payload");
       const response = await api.post("/feedback/pcl5", payload);
       if (response.status === 200) {
         toast.success("Form submitted successfully!");

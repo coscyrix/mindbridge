@@ -77,6 +77,14 @@ export const CreateServiceFormWrapper = styled.div`
   .position-container {
     display: flex;
     gap: 20px;
+
+    .select-container {
+      .multi-select {
+        .select__control {
+          width: 100%;
+        }
+      }
+    }
   }
 
   .remove-field-button {

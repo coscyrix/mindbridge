@@ -13,6 +13,7 @@ export const ReferenceContextProvider = ({ children }) => {
   const [targetOutcomes, setTargetOutcomes] = useState();
   const [servicesData, setServicesData] = useState();
   const [forms, setForms] = useState();
+  const [allCounselors, setAllCounselors] = useState();
   const user = Cookies.get("user");
   const userObj = user && JSON.parse(user);
   const router = useRouter();
@@ -26,13 +27,27 @@ export const ReferenceContextProvider = ({ children }) => {
         setRoles(data?.roles);
         setTargetOutcomes(data?.ref_target_outcomes);
         setForms(data?.forms);
+        getAllCounselors();
       }
     } catch (err) {
-      if (err.status === 403) {
-        logout();
-        return;
-      }
+      // if (err.status === 403) {
+      //   logout();
+      //   return;
+      // }
       console.error("Error fetching references:", err);
+    }
+  };
+
+  const getAllCounselors = async () => {
+    try {
+      const response = await CommonServices.getAllCounselors();
+      if (response.status === 200) {
+        const { data } = response;
+        setAllCounselors(data?.rec);
+        console.log(data, "data");
+      }
+    } catch (error) {
+      console.error("Error while fetching all the users", error);
     }
   };
 
@@ -52,6 +67,7 @@ export const ReferenceContextProvider = ({ children }) => {
         servicesData,
         userObj,
         forms,
+        allCounselors,
       }}
     >
       {children}

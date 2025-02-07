@@ -13,6 +13,9 @@ const AdditionalServicesForm = ({
   initialData,
   setShowAdditionalService,
   requestData,
+  setAddittionalSessions,
+  setActiveRow,
+  fetchClients,
 }) => {
   const { servicesData } = useReferenceContext();
   const methods = useForm();
@@ -30,6 +33,10 @@ const AdditionalServicesForm = ({
     reset();
   };
 
+  const additionalServicesArray = servicesData?.filter(
+    (service) => service?.is_additional !== 0
+  );
+
   const handleAddOrUpdateService = async (formData) => {
     setLoading(true);
     const { services, intake_date, scheduled_time } = formData;
@@ -37,7 +44,6 @@ const AdditionalServicesForm = ({
       const service = additionalServicesArray?.find(
         (item) => item.service_code === services.value
       );
-
       if (service) {
         const payload = {
           thrpy_req_id: requestData?.req_id,
@@ -46,35 +52,55 @@ const AdditionalServicesForm = ({
             requestData?.session_format_id.toLowerCase() == "online" ? 1 : 2,
           intake_date: intake_date,
         };
-        const response = await api.post("/session", payload);
-        if (response?.status == 200) {
-          setAdditionalServices((prevState) => {
-            const existingServiceIndex = prevState?.findIndex(
-              (item) => item.service_id === service.service_id
-            );
 
-            if (existingServiceIndex !== -1) {
-              const updatedServices = [...prevState];
-              updatedServices[existingServiceIndex] = {
-                ...updatedServices[existingServiceIndex],
-                intake_date,
-                scheduled_time,
-              };
-              return updatedServices;
-            }
-            return [
-              ...prevState,
-              {
-                ...service,
-                intake_date,
-                scheduled_time,
-              },
-            ];
-          });
-          toast.success("Additional service added !");
+        if (formData?.session_id) {
+          const response = await api.put(
+            `/session/?session_id=${formData?.session_id}`
+          );
+          if (response?.status === 200) {
+            setAdditionalServices((prevState) => {
+              if (prevState?.session_id === formData?.session_id) {
+                return formData;
+              } else {
+                return prevState;
+              }
+            });
+            setActiveRow("");
+            toast.success("Addittional service updated.");
+          }
+        } else {
+          const response = await api.post("/session", payload);
+          if (response?.status === 200) {
+            await fetchClients();
+            setAddittionalSessions((prevState) => {
+              return [
+                ...prevState,
+                {
+                  ...service,
+                  intake_date,
+                  scheduled_time,
+                },
+              ];
+            });
+            toast.success("Additional service added.");
+          }
         }
-      } else {
-        console.error("Service not found!");
+
+        //   if (response?.status == 200) {
+        //     setAddittionalSessions((prevState) => {
+        //       return [
+        //         ...prevState,
+        //         {
+        //           ...service,
+        //           intake_date,
+        //           scheduled_time,
+        //         },
+        //       ];
+        //     });
+        //     toast.success("Additional service added !");
+        //   }
+        // } else {
+        //   console.error("Service not found!");
       }
     } catch (error) {
       console.log("Error occurred while adding services: ", error);
@@ -84,10 +110,6 @@ const AdditionalServicesForm = ({
       setLoading(false);
     }
   };
-
-  const additionalServicesArray = servicesData?.filter(
-    (service) => service?.is_additional !== 0
-  );
 
   const additionalServiceDropdown = additionalServicesArray?.map((service) => {
     return {

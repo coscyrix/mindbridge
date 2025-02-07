@@ -40,6 +40,12 @@ export const LeftPanel = styled.div`
     max-width: 660px;
   }
 
+  ul {
+    list-style-image: url("/assets/images/check_mark_img.svg");
+    padding-left: 20px;
+    font-size: 1.2rem;
+  }
+
   span {
     font-size: 1rem;
     opacity: 0.8;

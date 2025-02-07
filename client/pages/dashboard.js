@@ -22,6 +22,13 @@ function Dashboard() {
   // }, []);
   return (
     <>
+      <h2 style={{ padding: "0px 30px", marginBottom: 0 }}>
+        MindBridge Analytics
+      </h2>
+      <p style={{ padding: "0px 30px", marginBottom: 0 }}>
+        The MindBridge app provides an intuitive and real-time overview of key
+        metrics and insights for counselors and administrators.
+      </p>
       <DashboardContainer>
         <OverallSession />
         <OverallScore />

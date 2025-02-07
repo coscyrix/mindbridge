@@ -1,6 +1,6 @@
 import CustomTable from "../CustomTable";
 import Image from "next/image";
-import logo from "../../public/assets/images/Mindbridge_logo.svg";
+import logo from "../../public/assets/images/Mindbridge_logo_1.svg";
 const InvoiceDetail = ({ selectedInvoice }) => {
   const updateData = selectedInvoice?.services;
 

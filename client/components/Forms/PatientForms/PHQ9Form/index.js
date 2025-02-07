@@ -54,7 +54,6 @@ const PHQ9Form = () => {
 
   const onSubmit = async (data) => {
     const { client_id, session_id } = router.query;
-    console.log(data, "data");
     try {
       setLoading(true);
       if (!client_id || !session_id) {
@@ -62,18 +61,15 @@ const PHQ9Form = () => {
         setLoading(false);
         return;
       }
-      console.log(data, "data");
       const { name, date, ...payloadData } = data;
       const payload = {
         session_id: session_id,
         client_id: client_id,
         ...payloadData,
       };
-      console.log(payload, "payload");
       const response = await api.post("/feedback/phq9", payload);
       if (response.status === 200) {
         toast.success("Form submitted successfully!");
-        console.log("Payload Data in PCL5 form", payload);
         reset();
       }
     } catch (error) {

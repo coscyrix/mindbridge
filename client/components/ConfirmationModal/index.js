@@ -27,7 +27,6 @@ const ConfirmationModal = ({
             customClass="cancel-button"
             title={discardAction}
           />
-
           <CustomButton
             onClick={!loading && handleAffirmativeAction}
             style={{ padding: loading ? "5.75px 12px" : "10.5px 12px" }}

@@ -2,12 +2,14 @@ import CustomButton from "../CustomButton";
 import { AddIcon } from "../../public/assets/icons";
 import CustomModal from "../CustomModal";
 import { NotesModalContentContainer } from "./style";
+import Spinner from "../common/Spinner";
 
 const NotesModalContent = ({
   noteData,
   setNoteData,
   isOpen,
   onClose,
+  loading,
   saveNotes,
 }) => {
   const handleNoteChange = (e) => {
@@ -40,9 +42,14 @@ const NotesModalContent = ({
           <CustomButton
             onClick={() => saveNotes(noteData?.notes)}
             customClass="save-button"
-            icon={<AddIcon />}
+            icon={loading ? null : <AddIcon />}
             type="button"
-            title={noteData?.mode == "edit" ? "Update Notes" : "Add Notes"}
+            style={{
+              padding: loading ? "8.5px 12px" : "10.5px 12px",
+            }}
+            title={
+              loading ? <Spinner height="20px" width="20px" /> : "Add Note"
+            }
           />
         </div>
       </NotesModalContentContainer>

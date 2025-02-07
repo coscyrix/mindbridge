@@ -38,9 +38,13 @@ export const ClientValidationSchema = z
       )
       .optional(),
     target_outcome_id: z
-      .preprocess((value) => {
-        return Number(value);
-      }, z.number().min(1, { message: "Target Outcomes is required" }))
+      .object({
+        label: z.string(),
+        value: z.preprocess(
+          (val) => Number(val),
+          z.number().min(1, { message: "Target Outcomes is required" })
+        ),
+      })
       .optional(),
   })
   .refine(
@@ -115,9 +119,19 @@ export const ClientValidationSchema = z
 // });
 
 export const CreateClientSessionValidationSchema = z.object({
-  client_first_name: z.number().min(1, { message: "Please select an option" }),
-  service_id: z.number().min(1, { message: "Please select an option" }),
-  session_format_id: z.string().min(1, { message: "Please select an option" }),
+  client_first_name: z.object({
+    label: z.string().min(1, { message: "Invalid client name" }),
+    value: z.number().min(1, { message: "Invalid client ID" }),
+    serialNumber: z.number().optional(), // Optional since it might be "N/A" or missing
+  }),
+  service_id: z.object({
+    label: z.string().min(1, { message: "Invalid service label" }),
+    value: z.number().min(1, { message: "Invalid service ID" }),
+  }),
+  session_format_id: z.object({
+    label: z.string().min(1, { message: "Invalid session format" }),
+    value: z.string().min(1, { message: "Invalid session format ID" }), // Keeping it as string since "1" and "2" are strings
+  }),
   // session_desc: z
   //   .string()
   //   .min(2, { message: "Please enter more then 2 wordds" }),

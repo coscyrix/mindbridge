@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name"> mind-bridge</string>
+    <string name="title_activity_main"> mind-bridge</string>
+    <string name="package_name">com.cyrixservices.mindbridge</string>
+    <string name="custom_url_scheme">com.cyrixservices.mindbridge</string>
+</resources>

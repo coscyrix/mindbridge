@@ -11,6 +11,8 @@ import { ArrowIcon } from "../../../public/assets/icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ClientValidationSchema } from "../../../utils/validationSchema/validationSchema";
 import { useReferenceContext } from "../../../context/ReferenceContext";
+import Spinner from "../../common/Spinner";
+import CustomMultiSelect from "../../CustomMultiSelect";
 
 function CreateClientForm({
   isOpen,
@@ -18,13 +20,16 @@ function CreateClientForm({
   initialData,
   setInitialData,
   setTableData,
+  fetchClients
 }) {
   const [formButton, setFormButton] = useState("Create");
   const { targetOutcomes, roles, servicesData } = useReferenceContext();
+  const [loading, setLoading] = useState(false);
 
   const userData = Cookies.get("user");
   const user = userData ? JSON.parse(userData) : null;
   const managerOrCounselor = user?.role_id == 3 || user?.role_id == 2;
+  const admin = user?.role_id == 4;
 
   const Target = targetOutcomes?.map((target) => ({
     label: target?.target_name,
@@ -32,9 +37,12 @@ function CreateClientForm({
   }));
 
   const RoleIds = roles
-    ?.filter(
-      (roledetail) => initialData?.role_id === 1 || roledetail?.role_id !== 1
-    )
+    ?.filter((roledetail) => {
+      if (initialData) return true;
+      if (managerOrCounselor) return roledetail?.role_id === 1;
+      if (admin) return roledetail?.role_id !== 1;
+      return true;
+    })
     .map((roledetail) => ({
       label: roledetail?.role_cde,
       value: roledetail?.role_id,
@@ -51,7 +59,7 @@ function CreateClientForm({
     email: "",
     role_id: managerOrCounselor ? 1 : "",
     clam_num: "",
-    service: "",
+    // service: "",
     target_outcome_id: "",
     user_phone_nbr: "",
   };
@@ -62,28 +70,32 @@ function CreateClientForm({
   });
 
   const handleCreateClient = async (data) => {
+    console.log(data, " handleCreateClient data");
     let processedData;
     if (role == 1) {
       processedData = {
-        user_profile_id: 175, //Static user_profile_id sent for client creation.It gets updated from GET users request. So, it is unique. Inform client to remove compulsion from this field.
+        user_profile_id: user?.user_profile_id, //Static user_profile_id sent for client creation.It gets updated from GET users request. So, it is unique. Inform client to remove compulsion from this field.
         clam_num: parseInt(data?.clam_num),
         user_first_name: data?.user_first_name,
         user_last_name: data?.user_last_name,
         email: data?.email,
-        target_outcome_id: data?.target_outcome_id,
+        target_outcome_id: data?.target_outcome_id?.value,
         role_id: data?.role_id,
+        user_phone_nbr:data?.user_phone_nbr
       };
     } else {
       processedData = {
-        user_profile_id: 175,
+        user_profile_id: user?.user_profile_id,
         user_first_name: data?.user_first_name,
         user_last_name: data?.user_last_name,
         email: data?.email,
         role_id: data?.role_id,
+        user_phone_nbr:data?.user_phone_nbr
       };
     }
 
     try {
+      setLoading(true);
       const res = await api.post(
         "/user-profile/user-client-profile",
         processedData
@@ -92,12 +104,15 @@ function CreateClientForm({
         toast.success("New Client Created Successfully", {
           position: "top-right",
         });
-        setTableData((prevTableData) => [processedData, ...prevTableData]);
+        // setTableData((prev) => [processedData, ...prev]);
+        fetchClients();
         methods.reset(defaultValues);
         setIsOpen(false);
       }
     } catch (error) {
       toast.error(`Error while creating the client: ${error?.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -114,6 +129,7 @@ function CreateClientForm({
     };
 
     try {
+      setLoading(true);
       const res = await api.put(
         `/user-profile/?user_profile_id=${initialData?.user_profile_id}`,
         processedData
@@ -137,6 +153,8 @@ function CreateClientForm({
       toast.error("Failed to update Client data. Please try again.", {
         position: "top-right",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -163,11 +181,11 @@ function CreateClientForm({
   useEffect(() => {
     if (role === 1) {
       methods.register("clam_num");
-      methods.register("service");
+      // methods.register("service");
       methods.register("target_outcome_id");
     } else {
       methods.unregister("clam_num");
-      methods.unregister("service");
+      // methods.unregister("service");
       methods.unregister("target_outcome_id");
     }
   }, [role]);
@@ -249,12 +267,12 @@ function CreateClientForm({
             <div className="fields">
               <CustomInputField
                 name="email"
-                label="Client Email*"
+                label="Email*"
                 placeholder="Enter your email"
                 type="email"
               />
             </div>
-            {role == 1 && (
+            {/* {role == 1 && (
               <div className="select-field-wrapper">
                 <label>Service Type*</label>
                 <Controller
@@ -280,7 +298,7 @@ function CreateClientForm({
                   </p>
                 )}
               </div>
-            )}
+            )} */}
             {role == 1 && (
               <div className="select-field-wrapper">
                 <label>Target Outcomes*</label>
@@ -288,22 +306,18 @@ function CreateClientForm({
                   name="target_outcome_id"
                   control={methods.control}
                   render={({ field }) => (
-                    <CustomSelect
+                    <CustomMultiSelect
                       {...field}
                       options={Target}
-                      dropdownIcon={
-                        <ArrowIcon style={{ transform: "rotate(90deg)" }} />
-                      }
-                      isError={methods?.formState?.errors?.target_outcome_id}
-                      onChange={(selectedOption) => {
-                        field.onChange(selectedOption?.value);
-                      }}
+                      placeholder="Select an option"
+                      isMulti={false}
                     />
                   )}
                 />
                 {methods?.formState?.errors?.target_outcome_id && (
                   <p className="custom-error-massage">
-                    {methods.formState.errors.target_outcome_id.message}
+                    {/* {methods.formState.errors.target_outcome_id.message} */}
+                    Target Outcomes is required
                   </p>
                 )}
               </div>
@@ -318,8 +332,9 @@ function CreateClientForm({
             <button
               className={formButton === "Create" ? "create-button" : ""}
               type="submit"
+              style={{ padding: loading ? "5.75px 12px" : "10.5px 12px" }}
             >
-              {formButton}
+              {loading ? <Spinner width="25px" height="25px" /> : formButton}
             </button>
           </div>
         </form>

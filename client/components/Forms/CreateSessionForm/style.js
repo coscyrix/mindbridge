@@ -15,7 +15,7 @@ export const CreateSessionFormWrapper = styled.div`
       height: 100%;
       display: flex;
       flex-direction: column;
-      // justify-content: space-between;
+      justify-content: space-between;
     }
   }
 
@@ -89,8 +89,7 @@ export const CreateSessionFormWrapper = styled.div`
       align-items: baseline;
       gap: 50px;
       .session-details {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        display: flex;
         column-gap: 40px;
         row-gap: 10px;
       }

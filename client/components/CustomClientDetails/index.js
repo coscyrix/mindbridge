@@ -15,6 +15,11 @@ import { TABLE_DATA } from "../../utils/constants";
 import { ClientDetailsContainer } from "./style";
 import { DOWNLOAD_OPTIONS } from "../../utils/constants";
 import moment from "moment";
+import CustomPagination from "../CustomPagination";
+import { useReferenceContext } from "../../context/ReferenceContext";
+import CommonServices from "../../services/CommonServices";
+import CustomMultiSelect from "../CustomMultiSelect";
+import Cookies from "js-cookie";
 
 function CustomClientDetails({
   title,
@@ -24,15 +29,30 @@ function CustomClientDetails({
   children,
   primaryButton,
   handleCreate,
+  selectCounselor,
+  handleSelectCounselor,
   tableCaption = "",
   loading,
   customTab,
   ...props
 }) {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
+  const { userObj } = useReferenceContext();
+  const { allCounselors } = useReferenceContext();
+  const dropdownAdjustedCounselors =
+    allCounselors?.map((counselor) => ({
+      label: counselor.user_first_name + " " + counselor.user_last_name,
+      value: counselor.user_profile_id,
+    })) || [];
+
+  const counselors = [
+    { label: "All counselors", value: "allCounselors" },
+    ...dropdownAdjustedCounselors,
+  ];
   const [visibleColumns, setVisibleColumns] = useState(
     tableData?.columns?.map((col) => ({ ...col, omit: false }))
   );
+  const [user, setUser] = useState(null);
 
   const [filterText, setFilterText] = useState("");
 
@@ -132,29 +152,16 @@ function CustomClientDetails({
     });
   });
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
   const totalItems = filterText ? currentData.length : tableData?.data?.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const currentPageData = currentData?.slice(
-    startIndex,
-    startIndex + itemsPerPage
+    currentPage * itemsPerPage,
+    (currentPage + 1) * itemsPerPage
   );
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
+  const handlePageChange = ({ selected }) => {
+    setCurrentPage(selected);
   };
 
   const renderFooter = () => (
@@ -207,7 +214,7 @@ function CustomClientDetails({
   });
 
   useEffect(() => {
-    setCurrentPage(1);
+    setCurrentPage(0);
   }, [filterText]);
 
   const formatDownloadOption = DOWNLOAD_OPTIONS(
@@ -215,6 +222,34 @@ function CustomClientDetails({
     tableData?.data,
     tableCaption
   );
+
+  // const fetchCounsellor = async () => {
+  //   try {
+  //     const response = await CommonServices.getClients();
+  //     if (response.status === 200) {
+  //       const { data } = response;
+  //       const allCounselors = data?.rec?.filter(
+  //         (counselor) => counselor?.role_id == 2
+  //       );
+
+  //       const counselorOptions = allCounselors?.map((item) => {
+  //         return {
+  //           label: item?.user_first_name + " " + item?.user_last_name,
+  //           value: item?.user_profile_id,
+  //         };
+  //       });
+  //       setCounselors([...counselors, ...counselorOptions]);
+  //     }
+  //   } catch (error) {
+  //     console.log("Error fetching clients", error);
+  //   }
+  // };
+
+  useEffect(() => {
+    // fetchCounsellor();
+    const userData = Cookies.get("user");
+    setUser(JSON.parse(userData));
+  }, []);
 
   return (
     <>
@@ -240,33 +275,48 @@ function CustomClientDetails({
                 </div>
                 {children && <div className="children-wrapper">{children}</div>}
               </div>
-              <div className="mobile-button-group">
-                <div className="search">
-                  <CustomSearch
-                    onFilter={(e) => {
-                      setFilterText(e.target.value);
-                    }}
-                    filterText={filterText}
-                  />
-                </div>
-                <div className="dropdowns-container">
-                  <div className="action-button-wrapper">
-                    <CustomButton
-                      icon={<MenuIcon />}
-                      title="More Option"
-                      dropdownOptions={DOWNLOAD_OPTIONS(
-                        tableData?.columns,
-                        tableData?.data,
-                        tableCaption
-                      )}
+              <div>
+                {user?.role_id == 4 && handleSelectCounselor ? (
+                  <div
+                    key="counselor-select"
+                    className="custom-select-container"
+                  >
+                    <CustomMultiSelect
+                      options={counselors}
+                      onChange={handleSelectCounselor}
+                      isMulti={false}
+                      placeholder="Select a counselor"
                     />
                   </div>
-                  <div className="action-button-wrapper">
-                    <CustomButton
-                      icon={<SettingsIcon />}
-                      dropdownOptions={columnOptions}
-                      renderFooter={renderFooter}
+                ) : null}
+                <div className="mobile-button-group">
+                  <div className="search">
+                    <CustomSearch
+                      onFilter={(e) => {
+                        setFilterText(e.target.value);
+                      }}
+                      filterText={filterText}
                     />
+                  </div>
+                  <div className="dropdowns-container">
+                    <div className="action-button-wrapper">
+                      <CustomButton
+                        icon={<MenuIcon />}
+                        title="More Option"
+                        dropdownOptions={DOWNLOAD_OPTIONS(
+                          tableData?.columns,
+                          tableData?.data,
+                          tableCaption
+                        )}
+                      />
+                    </div>
+                    <div className="action-button-wrapper">
+                      <CustomButton
+                        icon={<SettingsIcon />}
+                        dropdownOptions={columnOptions}
+                        renderFooter={renderFooter}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -279,6 +329,19 @@ function CustomClientDetails({
                   />
                 </div>
                 <div className="function-button">
+                  {user?.role_id == 4 && handleSelectCounselor ? (
+                    <div
+                      key="counselor-select"
+                      className="custom-select-container"
+                    >
+                      <CustomMultiSelect
+                        options={counselors}
+                        onChange={handleSelectCounselor}
+                        isMulti={false}
+                        placeholder="Select a counselor"
+                      />
+                    </div>
+                  ) : null}
                   <CustomButton
                     icon={<DownloadIcon />}
                     title="Download"
@@ -317,37 +380,12 @@ function CustomClientDetails({
 
           {/* Pagination Controls */}
           {!loading && itemsPerPage < totalItems && (
-            <div className="pagination-controls">
-              <CustomButton
-                title="Previous"
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-                icon={<ArrowIcon />}
-                customClass="prev-button"
-              />
-
-              {/* Page Numbers */}
-              <div className="page-numbers">
-                {Array.from({ length: totalPages }, (_, index) => (
-                  <button
-                    key={index + 1}
-                    className={`page-number ${
-                      currentPage === index + 1 ? "active" : ""
-                    }`}
-                    onClick={() => handlePageChange(index + 1)}
-                  >
-                    {index + 1}
-                  </button>
-                ))}
-              </div>
-
-              <CustomButton
-                title="Next"
-                onClick={handleNextPage}
-                icon={<ArrowIcon />}
-                disabled={currentPage === totalPages || !totalItems}
-              />
-            </div>
+            <CustomPagination
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+            />
           )}
         </div>
       </ClientDetailsContainer>

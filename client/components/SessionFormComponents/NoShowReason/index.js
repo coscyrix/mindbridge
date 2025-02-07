@@ -4,6 +4,7 @@ import CustomTextArea from "../../CustomTextArea";
 import { api } from "../../../utils/auth";
 import { toast } from "react-toastify";
 import Spinner from "../../common/Spinner";
+import { useReferenceContext } from "../../../context/ReferenceContext";
 
 const NoShowReasonForm = ({
   activeData,
@@ -13,11 +14,14 @@ const NoShowReasonForm = ({
 }) => {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
+  const { userObj } = useReferenceContext();
   const handleDiscardReason = () => {
     setReason("");
   };
   const handleUpdateReason = async () => {
+    console.log("handleUpdateReason entered");
     try {
+      console.log("handleUpdateReason entered");
       setLoading(true);
       const payload = {
         session_status: 3,
@@ -26,10 +30,18 @@ const NoShowReasonForm = ({
       const updateIndex = scheduledSession?.findIndex(
         (session) => session.session_id == activeData?.session_id
       );
-      const response = await api.put(
-        `/session/?session_id=${activeData?.session_id}`,
-        payload
-      );
+      let response;
+      if (userObj?.role_id == 4) {
+        response = await api.put(
+          `/session/?session_id=${activeData?.session_id}&role_id=4&user_profile_id=${userObj?.user_profile_id}`,
+          payload
+        );
+      } else {
+        response = await api.put(
+          `/session/?session_id=${activeData?.session_id}`,
+          payload
+        );
+      }
       if (response?.status === 200) {
         toast.success("Session status updated successfully!");
         setScheduledSession((prev) =>

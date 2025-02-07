@@ -13,6 +13,8 @@ body {
   font-family: "Alegreya Sans";
   color: var(--color);
   background: var(--background-color);
+  /* overflow-y: scroll; */
+  /* touch-action: none */
 }
 body:has(.layout_open) {
   overflow: hidden;

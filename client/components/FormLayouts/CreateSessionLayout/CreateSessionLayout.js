@@ -23,7 +23,7 @@ function CreateSessionLayout({
       <CreateSessionLayoutWrapper className={`${isOpen ? "layout_open" : ""}`}>
         <div className="heading">
           <div className="close_button" onClick={handleClose}>
-            <CrossIcon />
+            Close
           </div>
         </div>
         <div style={{ height: "100%", overflow: "auto" }}>{children}</div>

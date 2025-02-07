@@ -266,15 +266,6 @@ const allQuestions = [
   },
 ];
 
-// const WHODASValidationSchema = z.object({
-//   item1: z.string().nonempty("This field is required."),
-//   item2: z.string().nonempty("This field is required."),
-//   item3: z.string().nonempty("This field is required."),
-//   item4: z.string().nonempty("This field is required."),
-//   item5: z.string().nonempty("This field is required."),
-//   item6: z.string().nonempty("This field is required."),
-// });
-
 const WHODASForm = () => {
   const methods = useForm();
   const {
@@ -286,7 +277,6 @@ const WHODASForm = () => {
   const { client_id, session_id } = router.query;
 
   const onSubmit = async (data) => {
-    console.log("::: data in WHODas form", data);
     try {
       const payload = {
         ...data,

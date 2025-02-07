@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import CommonServices from "../../services/CommonServices";
 import CreateSessionForm from "../../components/Forms/CreateSessionForm";
 import Spinner from "../../components/common/Spinner";
+import { useReferenceContext } from "../../context/ReferenceContext";
 const CreateClientForm = dynamic(
   () => import("../../components/Forms/CreateClientForm"),
   { ssr: false }
@@ -27,18 +28,34 @@ function ClientManagement() {
   const [clientsLoading, setClientsLoading] = useState();
   const [showCreateSessionLayout, setShowCreateSessionLayout] = useState(false);
   const [activeData, setActiveData] = useState();
-  const [clientData, setClientData] = useState();
+  const [clientData, setClientData] = useState([]);
   const [showFlyout, setShowFlyout] = useState(false);
   const [initialDataLoading, setInitialDataLoading] = useState(false);
   const [confirmationModal, setConfirmationModal] = useState(false);
   const [userProfileId, setUserProfileId] = useState(null);
-
+  const [selectCounselor, setSelectCounselor] = useState(null);
   const actionDropdownRef = useRef(null);
+  const { userObj } = useReferenceContext();
 
-  const fetchClients = async () => {
+  const fetchClients = async (counselorId) => {
     try {
       setClientsLoading(true);
-      const response = await CommonServices.getClients();
+      let response;
+      if (userObj?.role_id !== 4) {
+        response = await CommonServices.getClientsByCounselor({
+          role_id: userObj?.role_id,
+          counselor_id: userObj?.user_profile_id,
+        });
+      } else {
+        // in case of admin
+        if (counselorId && counselorId !== "allCounselors") {
+          response = await CommonServices.getClientsByCounselor({
+            counselor_id: counselorId,
+          });
+        } else {
+          response = await CommonServices.getClients();
+        }
+      }
       if (response.status === 200) {
         const { data } = response;
         setClients(data?.rec);
@@ -50,10 +67,20 @@ function ClientManagement() {
     }
   };
 
+  const handleSelectCounselor = (data) => {
+    const counselorId = data?.value;
+    setSelectCounselor(counselorId);
+    fetchClients(counselorId);
+  };
+
   const handleEditSessionInfo = async (row) => {
     try {
       setInitialDataLoading(true);
-      setUserProfileId(row?.user_profile_id);
+      setUserProfileId({
+        label:row?.user_first_name + " " + row?.user_last_name,
+        serialNumber:row?.clam_num,
+        value:row?.user_profile_id
+      });
       setShowFlyout(true);
       if (row?.has_schedule) {
         const { req_id } = row?.has_schedule;
@@ -74,7 +101,6 @@ function ClientManagement() {
   };
 
   const handleCellClick = (row) => {
-    console.log(row, "row");
     setClientData((prev) => {
       return prev?.map((data) => {
         if (data.user_profile_id === row.user_profile_id) {
@@ -161,7 +187,9 @@ function ClientManagement() {
 
   useEffect(() => {
     if (clients?.length > 0) {
-      const filteredData = clients.filter((client) => client.status_yn === "y");
+      const filteredData = clients.filter(
+        (client) => client.status_yn === "y" && client.role_id == 1
+      );
       setClientData(filteredData);
     }
   }, [clients]);
@@ -183,6 +211,7 @@ function ClientManagement() {
           setInitialData={setActiveData}
           tableData={clientData}
           setTableData={setClientData}
+          fetchClients={fetchClients}
         />
       </CreateSessionLayout>
       <CreateSessionLayout
@@ -202,6 +231,7 @@ function ClientManagement() {
             confirmationModal={confirmationModal}
             setConfirmationModal={setConfirmationModal}
             userProfileId={userProfileId}
+            fetchCounselorClient={fetchClients} // after creating session =>when user click on submit => we update client // => to make green
           />
         )}
       </CreateSessionLayout>
@@ -216,6 +246,8 @@ function ClientManagement() {
         conditionalRowStyles={CONDITIONAL_ROW_STYLES?.clientManagent}
         onRowclick={handleEditSessionInfo}
         fixedHeaderScrollHeight="700px"
+        selectCounselor={selectCounselor}
+        handleSelectCounselor={handleSelectCounselor}
       />
     </ClientManagementContainer>
   );

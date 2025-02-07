@@ -7,15 +7,18 @@ import { ArrowIcon } from "../public/assets/icons";
 import CustomSearch from "../components/CustomSearch";
 import CustomClientDetails from "../components/CustomClientDetails";
 import CommonServices from "../services/CommonServices";
+import { useReferenceContext } from "../context/ReferenceContext";
 
 function SessionHistory() {
   const [sessions, setSessios] = useState([]);
   const [sessionToBeDisplayed, setSessionToBeDisplayed] = useState([]);
   const [sessionLoading, setSessionLoading] = useState([]);
-  const [counselors, setCounselors] = useState([]);
-  const [selectUser, setSelectUser] = useState("User");
+  // const [counselors, setCounselors] = useState([]);
+  const [selectCounselor, setSelectCounselor] = useState(null);
+  // const [selectUser, setSelectUser] = useState("User");
   const [filterText, setFilterText] = useState("");
   const [selectDate, setSelectDate] = useState(null);
+  const { userObj } = useReferenceContext();
 
   const actionDropdownRef = useRef(null);
   const handleCellClick = (row) => {
@@ -27,7 +30,6 @@ function SessionHistory() {
           return session;
         }
       });
-      console.log(":: session Data to be DISPLAYED", data);
       return data;
     });
   };
@@ -59,10 +61,25 @@ function SessionHistory() {
     true
   );
 
-  const fetchSessions = async () => {
+  const fetchSessions = async (counselorId) => {
     try {
       setSessionLoading(true);
-      const response = await CommonServices.getSessions();
+      let response;
+      if (userObj?.role_id !== 4) {
+        response = await CommonServices.getSessionsByCounselor({
+          role_id: userObj?.role_id,
+          counselor_id: userObj?.user_profile_id,
+        });
+      } else {
+        // in case of Admin
+        if (counselorId && counselorId !== "allCounselors") {
+          response = await CommonServices.getSessionsByCounselor({
+            counselor_id: counselorId,
+          });
+        } else {
+          response = await CommonServices.getSessions();
+        }
+      }
       if (response.status === 200) {
         const { data } = response;
         setSessios(data);
@@ -75,42 +92,48 @@ function SessionHistory() {
     }
   };
 
-  const fetchCounsellor = async () => {
-    try {
-      const response = await CommonServices.getClients();
-      if (response.status === 200) {
-        const { data } = response;
-        const allCounselors = data?.rec?.filter(
-          (client) => client?.role_id === 2
-        );
-        const counselorOptions = allCounselors?.map((item) => {
-          return {
-            label: item?.user_first_name + " " + item?.user_last_name,
-            value: item?.user_profile_id,
-          };
-        });
-        setCounselors([
-          { label: "All user", value: "User" },
-          ...counselorOptions,
-        ]);
-      }
-    } catch (error) {
-      console.log("Error fetching clients", error);
-    }
+  const handleSelectCounselor = (data) => {
+    const counselorId = data?.value;
+    setSelectCounselor(counselorId);
+    fetchSessions(counselorId);
   };
 
-  const handleSelectUser = (user) => {
-    setSelectUser(user?.value);
-  };
+  // const fetchCounsellor = async () => {
+  //   try {
+  //     const response = await CommonServices.getClients();
+  //     if (response.status === 200) {
+  //       const { data } = response;
+  //       const allCounselors = data?.rec?.filter(
+  //         (client) => client?.role_id === 2
+  //       );
+  //       const counselorOptions = allCounselors?.map((item) => {
+  //         return {
+  //           label: item?.user_first_name + " " + item?.user_last_name,
+  //           value: item?.user_profile_id,
+  //         };
+  //       });
+  //       setCounselors([
+  //         { label: "All user", value: "User" },
+  //         ...counselorOptions,
+  //       ]);
+  //     }
+  //   } catch (error) {
+  //     console.log("Error fetching clients", error);
+  //   }
+  // };
+
+  // const handleSelectUser = (user) => {
+  //   setSelectUser(user?.value);
+  // };
 
   const updateUserDataToDisplay = () => {
     let filteredData = sessions;
 
-    if (selectUser !== "User" && selectUser !== "All Users") {
-      filteredData = filteredData.filter(
-        (data) => data.client_id === selectUser
-      );
-    }
+    // if (selectUser !== "User" && selectUser !== "All Users") {
+    //   filteredData = filteredData.filter(
+    //     (data) => data.client_id === selectUser
+    //   );
+    // }
 
     if (selectDate) {
       filteredData = filteredData.filter(
@@ -141,17 +164,17 @@ function SessionHistory() {
   };
   const router = useRouter();
   const getClientSessionDetail = (id) => {
-    router.push(`/client-session-detail/${id}`);
+    router.push(`/client-session/${id}`);
   };
 
   useEffect(() => {
     fetchSessions();
-    fetchCounsellor();
+    // fetchCounsellor();
   }, []);
 
   useEffect(() => {
     updateUserDataToDisplay();
-  }, [selectUser, selectDate, filterText]);
+  }, [selectDate, filterText]);
 
   useEffect(() => {
     window.addEventListener("mousedown", handleClickOutside);
@@ -183,6 +206,8 @@ function SessionHistory() {
           }),
           data: sessionToBeDisplayed,
         }}
+        selectCounselor={selectCounselor}
+        handleSelectCounselor={handleSelectCounselor}
         loading={sessionLoading}
         tableCaption="Session History"
       >
@@ -193,13 +218,13 @@ function SessionHistory() {
               filterText={filterText}
             />
           </div>
-          <CustomSelect
+          {/* <CustomSelect
             options={counselors}
             value={selectUser}
             onChange={handleSelectUser}
             dropdownIcon={<ArrowIcon style={{ transform: "rotate(90deg)" }} />}
             placeholder="Select a user"
-          />
+          /> */}
           <div>
             <input
               type="date"

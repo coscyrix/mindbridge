@@ -47,59 +47,71 @@ const CustomButton = ({
 
   return (
     <CustomButtonContainer ref={dropdownRef}>
-      <button onClick={handleButtonClick} className={customClass} {...props}>
-        {title !== "Next" && icon}
-        <span>{title}</span>
-        {title === "Next" && icon}
-      </button>
-      {dropdownOptions.length > 0 && isDropdownOpen && (
-        <DropdownContainer className="dropdown_list-container">
-          {dropdownOptions.map((dropdown, dropdownIndex) => (
-            <div key={dropdownIndex} className="dropdown-section">
-              {/* Render the heading */}
-              {dropdown.heading && (
-                <h3
-                  className={`${
-                    dropdownIndex ? "dropdown-heading" : "top-dropdown-heading"
-                  }`}
-                >
-                  {dropdown.heading}
-                </h3>
-              )}
+      <div
+        className={`${
+          title == "Download" || title == "Columns" ? title?.toLowerCase() : ""
+        }-content`}
+      >
+        <button onClick={handleButtonClick} className={customClass} {...props}>
+          {title !== "Next" && icon}
+          <span>{title}</span>
+          {title === "Next" && icon}
+        </button>
+        {dropdownOptions.length > 0 && isDropdownOpen && (
+          <DropdownContainer className="dropdown_list-container">
+            {dropdownOptions.map((dropdown, dropdownIndex) => (
+              <div key={dropdownIndex} className="dropdown-section">
+                {/* Render the heading */}
+                {dropdown.heading && (
+                  <h3
+                    className={`${
+                      dropdownIndex
+                        ? "dropdown-heading"
+                        : "top-dropdown-heading"
+                    }`}
+                  >
+                    {dropdown.heading}
+                  </h3>
+                )}
 
-              {/* Render subHeadings with toggle icons */}
-              {dropdown.subHeadings && dropdown.subHeadings.length > 0 && (
-                <div className="dropdown-sub-options">
-                  {dropdown.subHeadings.map((option, optionIndex) => (
-                    <div
-                      key={optionIndex}
-                      className="dropdown-option"
-                      onClick={() => handleOptionClick(option.onClick)}
-                    >
-                      <div className="option-wrapper">
-                        {option.icon && (
-                          <span className="option-icon">{option.icon}</span>
+                {/* Render subHeadings with toggle icons */}
+                {dropdown.subHeadings && dropdown.subHeadings.length > 0 && (
+                  <div className="dropdown-sub-options">
+                    {dropdown.subHeadings.map((option, optionIndex) => (
+                      <div
+                        key={optionIndex}
+                        className="dropdown-option"
+                        onClick={() => handleOptionClick(option.onClick)}
+                      >
+                        <div className="option-wrapper">
+                          {option.icon && (
+                            <span className="option-icon">{option.icon}</span>
+                          )}
+                          <span className="option-title">{option.name}</span>
+                        </div>
+                        {option.toggleIcon && (
+                          <span className="toggle-icon">
+                            {!option?.omit ? (
+                              <OpenEyeIcon />
+                            ) : (
+                              <ClosedEyeIcon />
+                            )}
+                          </span>
                         )}
-                        <span className="option-title">{option.name}</span>
                       </div>
-                      {option.toggleIcon && (
-                        <span className="toggle-icon">
-                          {!option?.omit ? <OpenEyeIcon /> : <ClosedEyeIcon />}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
 
-          {/* Optional footer section (e.g., Reset or Show All Columns) */}
-          {renderFooter && (
-            <div className="dropdown-footer">{renderFooter()}</div>
-          )}
-        </DropdownContainer>
-      )}
+            {/* Optional footer section (e.g., Reset or Show All Columns) */}
+            {renderFooter && (
+              <div className="dropdown-footer">{renderFooter()}</div>
+            )}
+          </DropdownContainer>
+        )}
+      </div>
     </CustomButtonContainer>
   );
 };

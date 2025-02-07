@@ -77,6 +77,28 @@ export const ClientDetailsContainer = styled.div`
         text-align:center;
       }
     }
+    .custom-select-container {
+      display:none;
+      .select-container .multi-select {
+        padding-bottom:0px;
+        .select__control{
+          width: max-content;
+        padding:1px 6px;
+      }}
+      @media screen and (max-width : 640px){
+        display:block;
+        .custom-select {
+          width: 100%;
+          margin-bottom: 10px;
+          &__selected {
+            border: 1px solid #e1e1e1;
+            padding: 10px 12px;
+            border-radius: 8px;
+            box-shadow: 0px 1px 2px 0px #a4acb933;
+          }
+        }
+      }
+    }
 
     .mobile-button-group{
         display:none;
@@ -238,6 +260,22 @@ export const ClientDetailsContainer = styled.div`
     .button-group {
       display: flex;
       gap: 8px;
+
+      .custom-select-container {
+        display: flex;
+        gap: 8px;
+        align-items: end;
+        .custom-select {
+          width: max-content;
+          margin-bottom: 0px;
+          &__selected {
+            border: 1px solid #e1e1e1;
+            padding: 10px 12px;
+            border-radius: 8px;
+            box-shadow: 0px 1px 2px 0px #a4acb933;
+          }
+        }
+      }
 
       @media screen and (max-width: 1100px) {
         width:100%;
