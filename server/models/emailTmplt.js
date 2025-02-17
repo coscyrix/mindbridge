@@ -63,69 +63,67 @@ export default class EmailTmplt {
       }
 
       for (const session of recSession) {
-        for (const arry of session.forms_array) {
-          const [form] = await this.form.getFormByFormId({ form_id: arry });
-          const form_name = form.form_cde;
-          const form_id = form.form_id;
-          const client_full_name =
-            recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
-          const client_id = recUser[0].user_profile_id;
-          const toolsEmail = treatmentToolsEmail(
-            recUser[0].email,
-            client_full_name,
-            form_name.toUpperCase(),
-            form_id,
-            client_id,
-            data.session_id,
-          );
-
-          if (arry !== 24) {
-            const email = await this.sendEmail.sendMail(toolsEmail);
-            if (email.error) {
-              logger.error('Error sending email');
-              return { message: 'Error sending email', error: -1 };
-            }
-          } else {
-            const sessions = recThrpy[0].session_obj;
-            const sortedSessions = sessions.sort(
-              (a, b) => a.session_id - b.session_id,
-            );
-            const filteredSessions = sortedSessions.filter(
-              (session) => session.session_id <= data.session_id,
-            );
-
-            const attendedSessions = filteredSessions.filter(
-              (session) => session.session_status === 'SHOW',
-            ).length;
-            const cancelledSessions = filteredSessions.filter(
-              (session) => session.session_status === 'NO-SHOW',
-            ).length;
-
-            const attendancePDFTemplt = AttendancePDF(
-              `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
-              client_full_name,
-              recUser[0].clam_num,
-              filteredSessions.length,
-              attendedSessions,
-              cancelledSessions,
-            );
-
-            const attendancePDF = await PDFGenerator(attendancePDFTemplt);
-
-            console.log('attendancePDF', attendancePDF);
-
-            const attendanceEmail = attendanceSummaryEmail(
+        if (isNaN(session.forms_array)) {
+          for (const arry of session.forms_array) {
+            const [form] = await this.form.getFormByFormId({ form_id: arry });
+            const form_name = form.form_cde;
+            const form_id = form.form_id;
+            const client_full_name =
+              recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
+            const client_id = recUser[0].user_profile_id;
+            const toolsEmail = treatmentToolsEmail(
               recUser[0].email,
               client_full_name,
-              attendancePDF,
+              form_name.toUpperCase(),
+              form_id,
+              client_id,
+              data.session_id,
             );
 
-            console.log('attendanceEmail', attendanceEmail);
+            if (arry !== 24) {
+              const email = await this.sendEmail.sendMail(toolsEmail);
+              if (email.error) {
+                logger.error('Error sending email');
+                return { message: 'Error sending email', error: -1 };
+              }
+            } else {
+              const sessions = recThrpy[0].session_obj;
+              const sortedSessions = sessions.sort(
+                (a, b) => a.session_id - b.session_id,
+              );
+              const filteredSessions = sortedSessions.filter(
+                (session) => session.session_id <= data.session_id,
+              );
 
-            const email = await this.sendEmail.sendMail(attendanceEmail);
-            if (email.error) {
-              logger.error('Error sending email');
-              return { message: 'Error sending email', error: -1 };
+              const attendedSessions = filteredSessions.filter(
+                (session) => session.session_status === 'SHOW',
+              ).length;
+              const cancelledSessions = filteredSessions.filter(
+                (session) => session.session_status === 'NO-SHOW',
+              ).length;
+
+              const attendancePDFTemplt = AttendancePDF(
+                `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
+                client_full_name,
+                recUser[0].clam_num,
+                filteredSessions.length,
+                attendedSessions,
+                cancelledSessions,
+              );
+
+              const attendancePDF = await PDFGenerator(attendancePDFTemplt);
+
+              const attendanceEmail = attendanceSummaryEmail(
+                recUser[0].email,
+                client_full_name,
+                attendancePDF,
+              );
+
+              const email = await this.sendEmail.sendMail(attendanceEmail);
+              if (email.error) {
+                logger.error('Error sending email');
+                return { message: 'Error sending email', error: -1 };
+              }
             }
           }
         }

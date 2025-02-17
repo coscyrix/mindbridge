@@ -249,27 +249,29 @@ export default class Session {
           // ...data.is_report && {is_report: data.is_report},
         };
 
-        if (recSession[0].is_report != 1) {
-          const sendTools = this.emailTmplt.sendTreatmentToolEmail({
-            session_id: data.session_id,
-          });
+        if (recSession[0].is_additional != 1) {
+          if (recSession[0].is_report != 1) {
+            const sendTools = this.emailTmplt.sendTreatmentToolEmail({
+              session_id: data.session_id,
+            });
 
-          if (sendTools.error) {
-            logger.error('Error sending treatment tools email');
-            return {
-              message: 'Error sending treatment tools email',
-              error: -1,
-            };
-          }
+            if (sendTools.error) {
+              logger.error('Error sending treatment tools email');
+              return {
+                message: 'Error sending treatment tools email',
+                error: -1,
+              };
+            }
 
-          const uptUserForm = await this.userForm.putUserFormBySessionId({
-            session_id: data.session_id,
-            is_sent: 1,
-          });
+            const uptUserForm = await this.userForm.putUserFormBySessionId({
+              session_id: data.session_id,
+              is_sent: 1,
+            });
 
-          if (uptUserForm.error) {
-            logger.error('Error updating user form');
-            return { message: 'Error updating user form', error: -1 };
+            if (uptUserForm.error) {
+              logger.error('Error updating user form');
+              return { message: 'Error updating user form', error: -1 };
+            }
           }
         }
       }
@@ -335,11 +337,14 @@ export default class Session {
 
       // Update session if it is not a discharge session and has not been invoiced
       if (
-        tmpSession &&
-        Object.keys(tmpSession).length > 0 &&
-        !recSession[0].session_code.includes(
-          `_${process.env.DISCHARGE_SERVICE_CODE}`,
-        )
+        (tmpSession &&
+          Object.keys(tmpSession).length > 0 &&
+          recSession[0].is_additional === 1) ||
+        (tmpSession &&
+          Object.keys(tmpSession).length > 0 &&
+          !recSession[0].session_code.includes(
+            `_${process.env.DISCHARGE_SERVICE_CODE}`,
+          ))
       ) {
         const putSession = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
