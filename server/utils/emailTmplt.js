@@ -142,20 +142,21 @@ export const treatmentToolsEmail = (
 export const attendanceSummaryEmail = (
   email,
   client_full_name,
-  attendanceLink,
+  pdfAttachment, // pdfAttachment is expected to be a Buffer
 ) => {
   return {
     to: email,
     subject: 'Attendance Summary',
     html: `
-      <p>Hi ${capitalizeFirstLetter(client_full_name)},</p>
-      <p>I hope this message finds you well. As part of our commitment to supporting your wellness journey, please find a summary of your recent attendance record below. This summary can help you track your progress and stay informed of your session history.</p>
-      <p>Attendance Record:</p>
-      <p><a href="${attendanceLink}">View Attendance Record</a></p>
-      <p>Please let me know if you have any questions or if there’s anything specific you’d like to discuss in our upcoming sessions.</p>
+      <p>Hi ${client_full_name},</p>
+      <p>Please find attached your attendance record summary.</p>
+      <p>Let us know if you have any questions.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
     `,
+    attachments: [
+      { filename: 'attendance-record.pdf', content: pdfAttachment },
+    ],
   };
 };
 

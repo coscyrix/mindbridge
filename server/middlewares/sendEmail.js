@@ -23,6 +23,7 @@ export default class SendEmail {
         to: msg.to,
         subject: msg.subject,
         html: msg.html,
+        attachments: msg.attachments, // Ensure attachments are included
       });
 
       if (!info.messageId) {

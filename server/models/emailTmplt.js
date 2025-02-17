@@ -12,7 +12,10 @@ import {
   consentFormEmail,
   welcomeAccountDetailsEmail,
   additionalServiceEmail,
+  attendanceSummaryEmail,
 } from '../utils/emailTmplt.js';
+import { AttendancePDF } from '../utils/pdfTmplt.js';
+import PDFGenerator from '../middlewares/pdf.js';
 import {
   capitalizeFirstLetter,
   convertTimeToReadableFormat,
@@ -59,7 +62,7 @@ export default class EmailTmplt {
         return { message: 'User profile not found', error: -1 };
       }
 
-      recSession.forEach(async (session) => {
+      for (const session of recSession) {
         for (const arry of session.forms_array) {
           const [form] = await this.form.getFormByFormId({ form_id: arry });
           const form_name = form.form_cde;
@@ -76,14 +79,57 @@ export default class EmailTmplt {
             data.session_id,
           );
 
-          const email = this.sendEmail.sendMail(toolsEmail);
+          if (arry !== 24) {
+            const email = await this.sendEmail.sendMail(toolsEmail);
+            if (email.error) {
+              logger.error('Error sending email');
+              return { message: 'Error sending email', error: -1 };
+            }
+          } else {
+            const sessions = recThrpy[0].session_obj;
+            const sortedSessions = sessions.sort(
+              (a, b) => a.session_id - b.session_id,
+            );
+            const filteredSessions = sortedSessions.filter(
+              (session) => session.session_id <= data.session_id,
+            );
 
-          if (email.error) {
-            logger.error('Error sending email');
-            return { message: 'Error sending email', error: -1 };
+            const attendedSessions = filteredSessions.filter(
+              (session) => session.session_status === 'SHOW',
+            ).length;
+            const cancelledSessions = filteredSessions.filter(
+              (session) => session.session_status === 'NO-SHOW',
+            ).length;
+
+            const attendancePDFTemplt = AttendancePDF(
+              `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
+              client_full_name,
+              recUser[0].clam_num,
+              filteredSessions.length,
+              attendedSessions,
+              cancelledSessions,
+            );
+
+            const attendancePDF = await PDFGenerator(attendancePDFTemplt);
+
+            console.log('attendancePDF', attendancePDF);
+
+            const attendanceEmail = attendanceSummaryEmail(
+              recUser[0].email,
+              client_full_name,
+              attendancePDF,
+            );
+
+            console.log('attendanceEmail', attendanceEmail);
+
+            const email = await this.sendEmail.sendMail(attendanceEmail);
+            if (email.error) {
+              logger.error('Error sending email');
+              return { message: 'Error sending email', error: -1 };
+            }
           }
         }
-      });
+      }
     } catch (error) {
       console.log(error);
       logger.error(error);
