@@ -181,11 +181,13 @@ export default class UserProfile {
         });
       }
 
-      const emailSentWithPassword =
-        this.emailTmplt.sendClientWelcomeWithPasswordEmail({
-          email: data.email,
-          password: clientPassword,
-        });
+      if (!data.role_id == 1) {
+        const emailSentWithPassword =
+          this.emailTmplt.sendClientWelcomeWithPasswordEmail({
+            email: data.email,
+            password: clientPassword,
+          });
+      }
 
       if (data.role_id === 1) {
         const sendClientConsentForm = this.emailTmplt.sendClientConsentEmail({

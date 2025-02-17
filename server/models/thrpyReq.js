@@ -489,6 +489,7 @@ export default class ThrpyReq {
 
       // Check if the therapy request is discharged
       if (
+        checkIfThrpyReqIsOngoing.rec &&
         data.status_yn &&
         !checkIfThrpyReqIsOngoing.rec[0].session_status == 'DISCHARGED'
       ) {
@@ -503,7 +504,7 @@ export default class ThrpyReq {
         }
       }
 
-      if (!data.thrpy_status) {
+      if (checkIfThrpyReqIsOngoing.rec && !data.thrpy_status) {
         // Last element of the array which is the Discharge Report
         var checkIfThrpyReqIsOngoing_LastSession =
           checkIfThrpyReqIsOngoing.rec.slice(-1)[0];
@@ -557,6 +558,8 @@ export default class ThrpyReq {
       // Logic for deleting a therapy request with sessions
       if (data.status_yn) {
         if (
+          checkThrpyReq[0].session_obj.slice(-1)[0].session_status ==
+            'SCHEDULED' ||
           checkIfThrpyReqIsOngoing_LastSession.session_status == 'SCHEDULED'
         ) {
           var thrpySessions = await this.session.getSessionByThrpyReqId({

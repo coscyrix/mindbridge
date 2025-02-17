@@ -112,10 +112,10 @@ export default class Session {
         return { message: 'Error creating session', error: -1 };
       }
 
-      const sendAdditionalServiceEmail =
-        this.emailTmplt.sendAdditionalServiceEmail({
-          session_id: postSession[0],
-        });
+      // const sendAdditionalServiceEmail =
+      //   this.emailTmplt.sendAdditionalServiceEmail({
+      //     session_id: postSession[0],
+      //   });
 
       return { message: 'Session created successfully' };
     } catch (error) {
