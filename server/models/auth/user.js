@@ -11,6 +11,7 @@ import {
   accountDeactivatedEmail,
   accountVerificationEmail,
   changePasswordEmail,
+  accountRestoredEmail,
 } from '../../utils/emailTmplt.js';
 import UserProfile from '../userProfile.js';
 import e from 'express';
@@ -31,8 +32,54 @@ export default class User {
   async signUp(data) {
     try {
       const checkEmail = await this.common.getUserByEmail(data.email);
+      // console.log('checkEmail', checkEmail);
       if (checkEmail.length > 0) {
         logger.warn('Email already exists');
+
+        // Check if account is deactivated and restore account
+        if (checkEmail[0].status_yn == 'n') {
+          logger.warn('Account is deactivated, restoring account');
+
+          const newPassword = await this.authCommon.generatePassword();
+          const hashPassword = await this.authCommon.hashPassword(newPassword);
+
+          const updateUserProfile = await this.common.putUserProfileById({
+            user_id: checkEmail[0].user_id,
+            status_yn: 'y',
+          });
+          if (updateUserProfile === 0) {
+            logger.error('Error restoring account');
+            return { message: 'Error restoring account', error: -1 };
+          }
+
+          const updateUser = await this.common.putUserById({
+            user_id: checkEmail[0].user_id,
+            is_verified: 0,
+            password: hashPassword,
+          });
+          if (updateUser === 0) {
+            logger.error('Error restoring account');
+            return { message: 'Error restoring account', error: -1 };
+          }
+
+          const sendOTP = this.sendOTPforVerification({ email: data.email });
+          if (sendOTP.error) {
+            return sendOTP.message;
+          }
+
+          const emlMsg = accountRestoredEmail(data.email, newPassword);
+          const emlRestore = this.sendEmail.sendMail(emlMsg);
+          if (emlRestore.error) {
+            logger.warn('Error sending email. Account is restored.');
+            return {
+              message: 'Error sending email. Account is restored.',
+              error: -1,
+            };
+          }
+
+          return { message: 'Account restored successfully' };
+        }
+
         return { message: 'Email already exists', error: -1 };
       }
 
@@ -64,6 +111,11 @@ export default class User {
 
       if (postUsrProfile.error) {
         return postUsrProfile;
+      }
+
+      const sendOTP = this.sendOTPforVerification({ email: data.email });
+      if (sendOTP.error) {
+        return sendOTP.message;
       }
 
       const rec = { message: 'User created successfully' };
@@ -152,6 +204,11 @@ export default class User {
           role_id: usrPro[0].role_id,
           role_cde: usrPro[0].role_cde,
         };
+      }
+
+      const sendOTP = this.sendOTPforVerification({ email: data.email });
+      if (sendOTP.error) {
+        return sendOTP.message;
       }
 
       const token = await this.authCommon.generateAccessToken(usr);

@@ -22,7 +22,7 @@ export default class Common {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select()
         .where('email', email)
-        .from('users');
+        .from('v_user');
 
       return rec;
     } catch (error) {
@@ -45,6 +45,39 @@ export default class Common {
       return error;
     }
   }
+
+  /////////////////////////////////////////
+
+  async putUserById(data) {
+    try {
+      const rec = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('users')
+        .where('user_id', data.user_id)
+        .update(data);
+
+      return rec;
+    } catch (error) {
+      return error;
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async putUserProfileById(data) {
+    try {
+      const rec = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('user_profile')
+        .where('user_id', data.user_id)
+        .update(data);
+
+      return rec;
+    } catch (error) {
+      return error;
+    }
+  }
+
   //////////////////////////////////////////
 
   async getUserProfileByUserId(id) {

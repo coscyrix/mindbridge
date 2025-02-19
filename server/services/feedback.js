@@ -51,6 +51,7 @@ export default class FeedbackService {
       session_id: joi.number().optional(),
       form_id: joi.number().optional(),
       client_id: joi.number().optional(),
+      is_submitted: joi.string().valid('y', 'n').optional(),
     });
 
     const { error } = schema.validate(data);

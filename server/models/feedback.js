@@ -77,6 +77,28 @@ export default class Feedback {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_feedback');
 
+      if (data.is_submitted) {
+        if (data.client_id && data.form_id && data.session_id) {
+          query = query
+            .andWhere('client_id', data.client_id)
+            .andWhere('form_id', data.form_id)
+            .andWhere('session_id', data.session_id);
+        }
+
+        const rec = await query;
+        if (!rec) {
+          logger.error('Error getting feedback');
+          return { message: 'Error getting feedback', error: -1 };
+        }
+
+        if (rec.length > 0) {
+          return {
+            message: 'Feedback already exists for this session',
+            error: -1,
+          };
+        }
+      }
+
       if (data.feedback_id) {
         query = query.andWhere('feedback_id', data.feedback_id);
       }

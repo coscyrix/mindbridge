@@ -55,6 +55,23 @@ export const clientWelcomeEmail = (email, password) => {
   };
 };
 
+export const accountRestoredEmail = (email, newPassword) => {
+  return {
+    to: email,
+    subject: 'Account Restored',
+    html: `
+      <h1>Account Restored</h1>
+      <p>Hello,</p>
+      <p>Your account has been successfully restored. Here are your login details:</p>
+      <p>Password: <strong>${newPassword}</strong></p>
+      <p>Please keep this information secure.</p>
+      <p> <strong>We recommend you change your password once you log in. </strong></p>
+      <p>Thank you for choosing MindBridge!</p>
+      <p>The MindBridge Team</p>
+    `,
+  };
+};
+
 export const emailUpdateEmail = (email) => {
   return {
     to: email,
@@ -416,5 +433,24 @@ export const additionalServiceEmail = (
         <p><strong>The MindBridge Team</strong></p>
       </div>
     `,
+  };
+};
+
+export const homeworkEmailAttachment = (
+  email,
+  homework_title,
+  fileBuffer,
+  fileName,
+) => {
+  return {
+    to: email,
+    subject: `${homework_title} Assignment`,
+    html: `
+        <p>Hello,</p>
+        <p>Please find attached the homework assignment for your review and completion.</p>
+        <p>Thank you,</p>
+        <p>The MindBridge Team</p>
+      `,
+    attachments: [{ filename: fileName, content: fileBuffer }],
   };
 };

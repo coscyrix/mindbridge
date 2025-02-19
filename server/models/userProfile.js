@@ -12,6 +12,7 @@ import {
   clientWelcomeEmail,
   consentFormEmail,
   emailUpdateEmail,
+  accountRestoredEmail,
   welcomeAccountDetailsEmail,
 } from '../utils/emailTmplt.js';
 import UserTargetOutcome from './userTargetOutcome.js';
@@ -67,6 +68,47 @@ export default class UserProfile {
       const checkEmail = await this.common.getUserByEmail(data.email);
       if (checkEmail.length > 0) {
         logger.error('Email already exists');
+
+        console.log('checkEmail', checkEmail);
+        // Check if account is deactivated and restore account
+        if (checkEmail[0].status_yn == 'n') {
+          logger.warn('Account is deactivated, restoring account');
+
+          const newPassword = await this.authCommon.generatePassword();
+          const hashPassword = await this.authCommon.hashPassword(newPassword);
+
+          const updateUserProfile = await this.common.putUserProfileById({
+            user_id: checkEmail[0].user_id,
+            status_yn: 'y',
+          });
+          if (updateUserProfile === 0) {
+            logger.error('Error restoring account');
+            return { message: 'Error restoring account', error: -1 };
+          }
+
+          const updateUser = await this.common.putUserById({
+            user_id: checkEmail[0].user_id,
+            is_verified: 0,
+            password: hashPassword,
+          });
+          if (updateUser === 0) {
+            logger.error('Error restoring account');
+            return { message: 'Error restoring account', error: -1 };
+          }
+
+          const emlMsg = accountRestoredEmail(data.email, newPassword);
+          const emlRestore = this.sendEmail.sendMail(emlMsg);
+          if (emlRestore.error) {
+            logger.warn('Error sending email. Account is restored.');
+            return {
+              message: 'Error sending email. Account is restored.',
+              error: -1,
+            };
+          }
+
+          return { message: 'Account restored successfully' };
+        }
+
         return { message: 'Email already exists', error: -1 };
       }
 

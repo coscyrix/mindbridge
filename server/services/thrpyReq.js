@@ -117,6 +117,7 @@ export default class ThrpyReqService {
       session_desc: joi.string().optional(),
       status_yn: joi.string().valid('y', 'n').optional(),
       thrpy_status: joi.string().valid('ONGOING', 'DISCHARGED').optional(),
+      role_id: joi.number().optional(),
       session_obj: joi
         .array()
         .items(

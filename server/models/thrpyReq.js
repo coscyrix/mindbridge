@@ -557,6 +557,15 @@ export default class ThrpyReq {
 
       // Logic for deleting a therapy request with sessions
       if (data.status_yn) {
+        // Admin cannot delete a therapy request
+        if (data.role_id == 4) {
+          logger.warn('Admin cannot delete a therapy request');
+          return {
+            message: 'Admin cannot delete a therapy request',
+            error: -1,
+          };
+        }
+
         if (
           checkThrpyReq[0].session_obj.slice(-1)[0].session_status ==
             'SCHEDULED' ||
@@ -845,6 +854,10 @@ export default class ThrpyReq {
 
       if (data.service_id) {
         query.andWhere('service_id', data.service_id);
+      }
+
+      if (data.thrpy_status) {
+        query.andWhere('thrpy_status', data.thrpy_status);
       }
 
       const rec = await query;

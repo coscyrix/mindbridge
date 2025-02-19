@@ -1,3 +1,5 @@
+import e from 'express';
+
 export { userRouter } from './user.js';
 export { userProfileRouter } from './userProfile.js';
 export { serviceRouter } from './service.js';
@@ -10,3 +12,4 @@ export { userTargetOutcomeRouter } from './userTargetOutcome.js';
 export { feedbackRouter } from './feedback.js';
 export { notesRouter } from './notes.js';
 export { userFormRouter } from './userForm.js';
+export { homeWorkRouter } from './homework.js';

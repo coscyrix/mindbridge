@@ -32,8 +32,10 @@ export default class ThrpyReqController {
 
   async putThrpyReqById(req, res) {
     const req_id = req.query.req_id;
+    const role_id = req.query.role_id;
     const data = req.body;
     data.req_id = req_id;
+    data.role_id = role_id;
     if (!data.req_id) {
       res.status(400).json({ message: 'Missing mandatory fields' });
       return;
@@ -137,12 +139,14 @@ export default class ThrpyReqController {
     const counselor_id = req.query.counselor_id;
     const client_id = req.query.client_id;
     const thrpy_id = req.query.thrpy_id;
+    const thrpy_status = req.query.thrpy_status;
 
     const data = {
       req_id: req_id,
       counselor_id: counselor_id,
       client_id: client_id,
       thrpy_id: thrpy_id,
+      thrpy_status: thrpy_status,
     };
 
     const thrpyReq = new ThrpyReqService();
