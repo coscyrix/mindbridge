@@ -55,6 +55,7 @@ export default class UserFormController {
       counselor_id: req.query.counselor_id,
       start_date: req.query.start_date,
       end_date: req.query.end_date,
+      is_sent: req.query.is_sent,
     };
 
     const userForm = new UserFormService();

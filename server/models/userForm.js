@@ -130,6 +130,10 @@ export default class UserForm {
         query = query.andWhere('intake_date', '<=', data.end_date);
       }
 
+      if (data.is_sent) {
+        query = query.andWhere('is_sent', data.is_sent);
+      }
+
       const rec = await query;
       if (!rec) {
         logger.error('Error getting user form');

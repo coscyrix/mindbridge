@@ -63,7 +63,7 @@ export default class EmailTmplt {
       }
 
       for (const session of recSession) {
-        if (isNaN(session.forms_array)) {
+        if (isNaN(session.forms_array) || session.forms_array.length > 0) {
           for (const arry of session.forms_array) {
             const [form] = await this.form.getFormByFormId({ form_id: arry });
             const form_name = form.form_cde;

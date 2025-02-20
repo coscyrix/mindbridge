@@ -251,6 +251,7 @@ export default class Session {
 
         if (recSession[0].is_additional != 1) {
           if (recSession[0].is_report != 1) {
+            console.log('/////////////////////////////////////////////');
             const sendTools = this.emailTmplt.sendTreatmentToolEmail({
               session_id: data.session_id,
             });

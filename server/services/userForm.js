@@ -57,6 +57,10 @@ export default class UserFormService {
       counselor_id: joi.number().optional(),
       start_date: joi.date().optional(),
       end_date: joi.date().optional(),
+      is_sent: joi
+        .alternatives()
+        .try(joi.boolean(), joi.number().valid(0, 1))
+        .optional(),
     });
 
     const { error } = schema.validate(data);

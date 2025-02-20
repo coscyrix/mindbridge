@@ -10,6 +10,6 @@ const userFormController = new UserFormController();
 
 router.put('/', authenticate, AsyncWrapper(userFormController.putUserFormById));
 
-router.get('/', authenticate, AsyncWrapper(userFormController.getUserFormById));
+router.get('/', AsyncWrapper(userFormController.getUserFormById));
 
 export const userFormRouter = { baseUrl: '/api/userForm', router };
