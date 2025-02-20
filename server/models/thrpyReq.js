@@ -1132,10 +1132,11 @@ export default class ThrpyReq {
   async checkThrpyReqActive(data) {
     try {
       //Logic to check if the client has an active therapy request with the same service and same counselor
+      //RAsham said we need to change this to client id alone
       const checkThrpyReq = await this.getThrpyReqById({
-        counselor_id: data.counselor_id,
+        // counselor_id: data.counselor_id,
         client_id: data.client_id,
-        service_id: data.service_id,
+        // service_id: data.service_id,
       });
 
       if (checkThrpyReq.error) {
