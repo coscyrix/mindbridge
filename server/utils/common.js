@@ -10,6 +10,13 @@ export const capitalizeFirstLetter = (sentence) => {
     .join(' ');
 };
 
+export const capitalizeFirstLetterOfEachWord = (sentence) => {
+  return sentence
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 export const splitIsoDatetime = (isoDatetime) => {
   try {
     // Split the ISO datetime into date and time components

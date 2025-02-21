@@ -91,10 +91,18 @@ export default class EmailTmplt {
               const sortedSessions = sessions.sort(
                 (a, b) => a.session_id - b.session_id,
               );
-              const filteredSessions = sortedSessions.filter(
+
+              // Remove reports sessions
+              const removeReportsSessions = sortedSessions.filter(
+                (session) => session.is_report !== 1,
+              );
+
+              // Filter sessions up to the current session
+              const filteredSessions = removeReportsSessions.filter(
                 (session) => session.session_id <= data.session_id,
               );
 
+              // Count attended and cancelled sessions
               const attendedSessions = filteredSessions.filter(
                 (session) => session.session_status === 'SHOW',
               ).length;
@@ -106,7 +114,7 @@ export default class EmailTmplt {
                 `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
                 client_full_name,
                 recUser[0].clam_num,
-                filteredSessions.length,
+                removeReportsSessions.length,
                 attendedSessions,
                 cancelledSessions,
               );
@@ -217,7 +225,7 @@ export default class EmailTmplt {
       const sendClientConsentForm = consentFormEmail(
         data.email,
         data.client_name,
-        `${process.env.BASE_URL}${process.env.FORMS}consent?client_id=${data.client_id}`,
+        `${process.env.BASE_URL}${process.env.FORMS}consent?client_id=${data.client_id}&form_id=23`,
       );
 
       const sendConsentForm = this.sendEmail.sendMail(sendClientConsentForm);

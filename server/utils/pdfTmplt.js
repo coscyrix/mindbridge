@@ -1,3 +1,5 @@
+import { capitalizeFirstLetterOfEachWord } from './common.js';
+
 export const AttendancePDF =
   (
     counselor_full_name,
@@ -12,9 +14,15 @@ export const AttendancePDF =
     doc.fontSize(20).text('Attendance Record', { align: 'center' }).moveDown();
 
     // Counselor Details
-    doc.fontSize(12).text(`Counselor Name: ${counselor_full_name}`);
+    doc
+      .fontSize(12)
+      .text(
+        `Counselor Name: ${capitalizeFirstLetterOfEachWord(counselor_full_name)}`,
+      );
     doc.text(`Date of Report: ${new Date().toLocaleDateString()}`);
-    doc.text(`Client Name: ${client_full_name}`);
+    doc.text(
+      `Client Name: ${capitalizeFirstLetterOfEachWord(client_full_name)}`,
+    );
     doc.text(`Serial Number: ${client_clam_nbr}`).moveDown();
 
     // Session Overview
@@ -34,7 +42,7 @@ export const AttendancePDF =
     doc.fontSize(12);
     const table = [
       [`Field`, `Details`],
-      [`Client Name`, `${client_full_name}`],
+      [`Client Name`, `${capitalizeFirstLetterOfEachWord(client_full_name)}`],
       [`Serial Number`, `${client_clam_nbr}`],
       [`Total Sessions`, `${total_sessions}`],
       [`Total Attendance`, `${total_attended_sessions}`],

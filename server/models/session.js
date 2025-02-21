@@ -249,32 +249,32 @@ export default class Session {
           // ...data.is_report && {is_report: data.is_report},
         };
 
-        if (recSession[0].is_additional != 1) {
-          if (recSession[0].is_report != 1) {
-            console.log('/////////////////////////////////////////////');
-            const sendTools = this.emailTmplt.sendTreatmentToolEmail({
-              session_id: data.session_id,
-            });
+        // if (recSession[0].is_additional != 1) {
+        //   if (recSession[0].is_report != 1) {
+        //     console.log('/////////////////////////////////////////////');
+        //     const sendTools = this.emailTmplt.sendTreatmentToolEmail({
+        //       session_id: data.session_id,
+        //     });
 
-            if (sendTools.error) {
-              logger.error('Error sending treatment tools email');
-              return {
-                message: 'Error sending treatment tools email',
-                error: -1,
-              };
-            }
+        //     if (sendTools.error) {
+        //       logger.error('Error sending treatment tools email');
+        //       return {
+        //         message: 'Error sending treatment tools email',
+        //         error: -1,
+        //       };
+        //     }
 
-            const uptUserForm = await this.userForm.putUserFormBySessionId({
-              session_id: data.session_id,
-              is_sent: 1,
-            });
+        //     const uptUserForm = await this.userForm.putUserFormBySessionId({
+        //       session_id: data.session_id,
+        //       is_sent: 1,
+        //     });
 
-            if (uptUserForm.error) {
-              logger.error('Error updating user form');
-              return { message: 'Error updating user form', error: -1 };
-            }
-          }
-        }
+        //     if (uptUserForm.error) {
+        //       logger.error('Error updating user form');
+        //       return { message: 'Error updating user form', error: -1 };
+        //     }
+        //   }
+        // }
       }
 
       if (data.invoice_nbr) {
@@ -352,6 +352,35 @@ export default class Session {
           .from('session')
           .where('session_id', data.session_id)
           .update(tmpSession);
+
+        if (data.session_status) {
+          if (recSession[0].is_additional != 1) {
+            if (recSession[0].is_report != 1) {
+              console.log('/////////////////////////////////////////////');
+              const sendTools = this.emailTmplt.sendTreatmentToolEmail({
+                session_id: data.session_id,
+              });
+
+              if (sendTools.error) {
+                logger.error('Error sending treatment tools email');
+                return {
+                  message: 'Error sending treatment tools email',
+                  error: -1,
+                };
+              }
+
+              const uptUserForm = await this.userForm.putUserFormBySessionId({
+                session_id: data.session_id,
+                is_sent: 1,
+              });
+
+              if (uptUserForm.error) {
+                logger.error('Error updating user form');
+                return { message: 'Error updating user form', error: -1 };
+              }
+            }
+          }
+        }
 
         if (!putSession) {
           logger.error('Error updating session');

@@ -8,6 +8,7 @@ import Common from './common.js';
 import AuthCommon from './auth/authCommon.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import EmailTmplt from './emailTmplt.js';
+import UserForm from './userForm.js';
 import {
   clientWelcomeEmail,
   consentFormEmail,
@@ -27,6 +28,7 @@ export default class UserProfile {
     this.authCommon = new AuthCommon();
     this.sendEmail = new SendEmail();
     this.userTargetOutcome = new UserTargetOutcome();
+    this.userForm = new UserForm();
     this.emailTmplt = new EmailTmplt();
   }
 
@@ -237,6 +239,19 @@ export default class UserProfile {
           client_name: `${data.user_first_name} ${data.user_last_name}`,
           client_id: postUsrProfile[0],
         });
+      }
+
+      // Post consent form in user_form table
+      const postConsentForm = await this.userForm.postUserForm([
+        {
+          client_id: postUsrProfile[0],
+          counselor_id: data.user_profile_id,
+          form_id: 23,
+        },
+      ]);
+
+      if (postConsentForm.error) {
+        return postConsentForm;
       }
 
       return { message: 'User profile created successfully' };
