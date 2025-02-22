@@ -44,6 +44,18 @@ export default class EmailTmplt {
         return { message: 'Session not found', error: -1 };
       }
 
+      const checkSessionTreatmentToolsSentStatus =
+        await this.common.checkTreatmentToolsSentStatus({
+          session_id: data.session_id,
+        });
+      if (checkSessionTreatmentToolsSentStatus?.error) {
+        logger.error(checkSessionTreatmentToolsSentStatus?.message);
+        return {
+          message: checkSessionTreatmentToolsSentStatus?.message,
+          error: -1,
+        };
+      }
+
       const recThrpy = await this.common.getThrpyReqById(
         recSession[0].thrpy_req_id,
       );

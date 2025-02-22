@@ -4,6 +4,7 @@ import DBconn from '../config/db.config.js';
 import knex from 'knex';
 import logger from '../config/winston.js';
 import AuthCommon from './auth/authCommon.js';
+import UserForm from './userForm.js';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -12,6 +13,7 @@ export default class Common {
 
   constructor() {
     this.authCommon = new AuthCommon();
+    this.userForm = new UserForm();
   }
 
   //////////////////////////////////////////
@@ -406,6 +408,50 @@ export default class Common {
       console.error(error);
       logger.error(error);
       return { message: 'Error checking therapy request status', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async checkTreatmentToolsSentStatus(data) {
+    try {
+      const checkSession = await this.getSessionById(data.session_id);
+      if (checkSession.error) {
+        logger.error('Error getting session');
+        return { message: 'Error getting session', error: -1 };
+      }
+
+      const getAllSessionUserForm = await this.userForm.getUserFormById({
+        session_id: data.session_id,
+      });
+
+      if (getAllSessionUserForm.error) {
+        logger.error('Error getting user form');
+        return { message: 'Error getting user form', error: -1 };
+      }
+
+      const checkTreatmentToolsSentStatus = getAllSessionUserForm.filter(
+        (item) => item.is_sent == 1,
+      );
+
+      if (checkTreatmentToolsSentStatus.length > 0) {
+        logger.warn('The treatment tools have already been sent');
+        return {
+          message: 'The treatment tools have already been sent',
+          error: -1,
+        };
+      }
+
+      return {
+        message: 'The treatment tools have not been sent',
+      };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return {
+        message: 'Error checking treatment tools sent status',
+        error: -1,
+      };
     }
   }
 }

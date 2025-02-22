@@ -356,17 +356,12 @@ export default class Session {
         if (data.session_status) {
           if (recSession[0].is_additional != 1) {
             if (recSession[0].is_report != 1) {
-              console.log('/////////////////////////////////////////////');
-              const sendTools = this.emailTmplt.sendTreatmentToolEmail({
+              const sendTools = await this.emailTmplt.sendTreatmentToolEmail({
                 session_id: data.session_id,
               });
 
-              if (sendTools.error) {
-                logger.error('Error sending treatment tools email');
-                return {
-                  message: 'Error sending treatment tools email',
-                  error: -1,
-                };
+              if (sendTools?.error) {
+                logger.error(sendTools?.message);
               }
 
               const uptUserForm = await this.userForm.putUserFormBySessionId({
