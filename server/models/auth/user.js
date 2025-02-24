@@ -308,16 +308,16 @@ export default class User {
         return verifyOTP.message;
       }
 
-      const updateAccount = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('users')
-        .where('email', data.email)
-        .update({ is_verified: 1 });
+      // const updateAccount = await db
+      //   .withSchema(`${process.env.MYSQL_DATABASE}`)
+      //   .from('users')
+      //   .where('email', data.email)
+      //   .update({ is_verified: 1 });
 
-      if (updateAccount === 0) {
-        logger.error('Error verifying account');
-        return { message: 'Error verifying account', error: -1 };
-      }
+      // if (updateAccount === 0) {
+      //   logger.error('Error verifying account');
+      //   return { message: 'Error verifying account', error: -1 };
+      // }
 
       const rec = { message: 'Account verified successfully' };
 

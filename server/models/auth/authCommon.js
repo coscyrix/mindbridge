@@ -1,7 +1,7 @@
 //models/auth/authCommon.js
 
 import bcrypt from 'bcrypt';
-import dotenv from 'dotenv';
+import dotenv, { parse } from 'dotenv';
 import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import DBconn from '../../config/db.config.js';
@@ -173,7 +173,7 @@ export default class AuthCommon {
 
     let validOTP = null;
     for (const otpRecord of checkOTPArray) {
-      if (otpRecord.otp === data.otp) {
+      if (otpRecord.otp === parseInt(data.otp)) {
         validOTP = otpRecord;
         break;
       }
