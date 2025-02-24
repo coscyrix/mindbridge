@@ -156,30 +156,30 @@ export default class User {
       }
 
       // Check if account is verified
-      if (checkEmail[0].is_verified === 0) {
-        logger.warn('Account is inactive');
+      // if (checkEmail[0].is_verified === 0) {
+      //   logger.warn('Account is inactive');
 
-        // Send an OTP for verification if account is not deactivated
-        if (checkEmail[0].status_yn == 'y') {
-          // Send an Inactive Account email
-          const emlInactiveMsg = accountVerificationEmail(data.email);
-          const sendInactiveEml = this.sendEmail.sendMail(emlInactiveMsg);
-          if (sendInactiveEml.error) {
-            logger.warn('Error sending email. Account is deactivated.');
-            return {
-              message: 'Error sending email. Account is deactivated.',
-              error: -1,
-            };
-          }
+      //   // Send an OTP for verification if account is not deactivated
+      //   if (checkEmail[0].status_yn == 'y') {
+      //     // Send an Inactive Account email
+      //     const emlInactiveMsg = accountVerificationEmail(data.email);
+      //     const sendInactiveEml = this.sendEmail.sendMail(emlInactiveMsg);
+      //     if (sendInactiveEml.error) {
+      //       logger.warn('Error sending email. Account is deactivated.');
+      //       return {
+      //         message: 'Error sending email. Account is deactivated.',
+      //         error: -1,
+      //       };
+      //     }
 
-          const sendOTP = this.sendOTPforVerification({ email: data.email });
-        }
+      //     const sendOTP = this.sendOTPforVerification({ email: data.email });
+      //   }
 
-        return {
-          message: 'Account is inactive. Please contact the adminstrator.',
-          error: -1,
-        };
-      }
+      //   return {
+      //     message: 'Account is inactive. Please contact the adminstrator.',
+      //     error: -1,
+      //   };
+      // }
 
       const checkPassword = await this.authCommon.comparePassword(
         data.password,
