@@ -45,6 +45,7 @@ export default class UserForm {
         form_id: data.form_id,
         session_id: data.session_id,
         is_sent: data.is_sent,
+        form_submit: data.form_submit,
         status_yn: data.status_yn,
       };
 
@@ -72,6 +73,7 @@ export default class UserForm {
     try {
       const tmpUserForm = {
         is_sent: data.is_sent,
+        form_submit: data.form_submit,
         status_yn: data.status_yn,
       };
 
@@ -79,6 +81,36 @@ export default class UserForm {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('user_forms')
         .where('session_id', data.session_id)
+        .update(tmpUserForm);
+
+      if (!putUserForm) {
+        logger.error('Error updating user form');
+        return { message: 'Error updating user form', error: -1 };
+      }
+
+      return { message: 'User form updated successfully' };
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error updating user form', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async putUserFormBySessionIdAndFormID(data) {
+    try {
+      const tmpUserForm = {
+        is_sent: data.is_sent,
+        form_submit: data.form_submit,
+        status_yn: data.status_yn,
+      };
+
+      const putUserForm = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('user_forms')
+        .where('session_id', data.session_id)
+        .andWhere('form_id', data.form_id)
         .update(tmpUserForm);
 
       if (!putUserForm) {
@@ -132,6 +164,10 @@ export default class UserForm {
 
       if (data.is_sent) {
         query = query.andWhere('is_sent', data.is_sent);
+      }
+
+      if (data.form_submit) {
+        query = query.andWhere('form_submit', data.form_submit);
       }
 
       const rec = await query;

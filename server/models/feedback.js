@@ -2,7 +2,7 @@ import DBconn from '../config/db.config.js';
 import knex from 'knex';
 import logger from '../config/winston.js';
 import Session from './session.js';
-import { cli } from 'winston/lib/winston/config/index.js';
+import UserForm from './userForm.js';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -10,6 +10,7 @@ export default class Feedback {
   //////////////////////////////////////////
   constructor() {
     this.session = new Session();
+    this.userForm = new UserForm();
   }
   //////////////////////////////////////////
 
@@ -31,6 +32,18 @@ export default class Feedback {
       if (!postFeedback) {
         logger.error('Error creating feedback');
         return { message: 'Error creating feedback', error: -1 };
+      }
+
+      const updateUserForm =
+        await this.userForm.putUserFormBySessionIdAndFormID({
+          session_id: data.session_id,
+          form_id: data.form_id,
+          form_submit: true,
+        });
+
+      if (updateUserForm?.error) {
+        logger.error('Error updating user form');
+        return { message: 'Error updating user form', error: -1 };
       }
 
       return { message: 'Feedback created successfully', rec: postFeedback };

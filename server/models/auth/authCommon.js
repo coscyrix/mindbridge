@@ -197,11 +197,11 @@ export default class AuthCommon {
     try {
       await db.transaction(async (trx) => {
         // Update the user's verification status
-        await trx
-          .withSchema(`${process.env.MYSQL_DATABASE}`)
-          .from('users')
-          .where('email', data.email)
-          .update({ is_verified: 1 });
+        // await trx
+        //   .withSchema(`${process.env.MYSQL_DATABASE}`)
+        //   .from('users')
+        //   .where('email', data.email)
+        //   .update({ is_verified: 1 });
 
         // Delete the OTP as used
         await trx

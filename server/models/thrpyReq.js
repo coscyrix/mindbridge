@@ -119,10 +119,10 @@ export default class ThrpyReq {
       }
 
       // Check if the intake date is in the past
-      if (req_dte < currentDte) {
-        logger.warn('Intake date is in the past');
-        return { message: 'Intake date is in the past', error: -1 };
-      }
+      // if (req_dte < currentDte) {
+      //   logger.warn('Intake date is in the past');
+      //   return { message: 'Intake date is in the past', error: -1 };
+      // }
 
       // Check if the client has an active therapy request with the same service and same counselor
       const checkThrpyReqActiveData = {

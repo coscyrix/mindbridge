@@ -587,14 +587,11 @@ export default class Session {
 
   async dailyUpdateSessionStatus() {
     try {
-      const currentDate = new Date()
-        .toISOString()
-        .slice(0, 19)
-        .replace('T', ' ');
+      const currentDate = new Date().toISOString().slice(0, 10); // Only get the date part
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('session')
-        .where('created_at', '<=', currentDate)
+        .where('intake_date', '<=', currentDate)
         .andWhere('session_status', 1)
         .update({ session_status: 3 });
 
