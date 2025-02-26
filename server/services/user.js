@@ -95,6 +95,8 @@ export default class UserService {
     return user.verifyAccount(data);
   }
 
+  //////////////////////////////////////////
+
   async changePassword(data) {
     const schema = joi.object({
       email: joi.string().email().required(),

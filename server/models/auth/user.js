@@ -305,7 +305,7 @@ export default class User {
 
       const verifyOTP = await this.authCommon.verifyAccount(data);
       if (verifyOTP.error) {
-        return verifyOTP.message;
+        return { message: verifyOTP.message, error: -1 };
       }
 
       // const updateAccount = await db
