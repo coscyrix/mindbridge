@@ -593,6 +593,7 @@ export default class Session {
         .from('session')
         .where('intake_date', '<=', currentDate)
         .andWhere('session_status', 1)
+        .andWhereNot('is_report', 1)
         .update({ session_status: 3 });
 
       if (typeof rec !== 'number') {
