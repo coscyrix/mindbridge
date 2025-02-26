@@ -13,3 +13,4 @@ export { feedbackRouter } from './feedback.js';
 export { notesRouter } from './notes.js';
 export { userFormRouter } from './userForm.js';
 export { homeWorkRouter } from './homework.js';
+export { reportRouter } from './report.js';

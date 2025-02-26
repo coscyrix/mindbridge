@@ -18,6 +18,7 @@ import {
   notesRouter,
   userFormRouter,
   homeWorkRouter,
+  reportRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -39,6 +40,7 @@ async function main() {
         notesRouter,
         userFormRouter,
         homeWorkRouter,
+        reportRouter,
       ],
     });
 
