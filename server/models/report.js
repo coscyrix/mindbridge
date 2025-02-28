@@ -14,16 +14,24 @@ export default class Report {
         .select(
           'client_first_name',
           'client_last_name',
+          'client_id',
+          'counselor_id',
           'form_id',
           'form_cde',
-          'counselor_id',
-          'intake_date',
-          'due_date',
-          'is_sent',
-          'form_submit',
-          'session_id',
+          'thrpy_req_id',
         )
-        .where('thrpy_status', 'ONGOING');
+        .where('thrpy_status', 'ONGOING')
+        .andWhere('is_sent', 1)
+        .andWhere('form_submit', 0)
+        .groupBy([
+          'client_first_name',
+          'client_last_name',
+          'form_id',
+          'form_cde',
+          'client_id',
+          'counselor_id',
+          'thrpy_req_id',
+        ]);
 
       if (data.counselor_id) {
         query.where('counselor_id', data.counselor_id);
