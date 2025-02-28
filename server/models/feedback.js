@@ -34,7 +34,7 @@ export default class Feedback {
         return { message: 'Error creating feedback', error: -1 };
       }
 
-      if (form_id !== 23) {
+      if (data.form_id !== 23) {
         const updateUserForm =
           await this.userForm.putUserFormBySessionIdAndFormID({
             session_id: data.session_id,
