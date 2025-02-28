@@ -20,6 +20,7 @@ export default class Report {
           'form_id',
           'form_cde',
           'thrpy_req_id',
+          db.raw('MAX(updated_at) as updated_at'), // Added MAX aggregation
         )
         .where(function () {
           this.where('thrpy_status', 'ONGOING').orWhere(function () {
@@ -35,7 +36,8 @@ export default class Report {
           'client_id',
           'counselor_id',
           'thrpy_req_id',
-        ]);
+        ])
+        .orderBy('updated_at', 'desc'); // Added ORDER BY clause
 
       if (data.counselor_id) {
         query.where('counselor_id', data.counselor_id);
