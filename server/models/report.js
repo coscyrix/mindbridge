@@ -14,6 +14,7 @@ export default class Report {
         .select(
           'client_first_name',
           'client_last_name',
+          'client_clam_num',
           'client_id',
           'counselor_id',
           'form_id',
@@ -26,6 +27,7 @@ export default class Report {
         .groupBy([
           'client_first_name',
           'client_last_name',
+          'client_clam_num',
           'form_id',
           'form_cde',
           'client_id',
@@ -44,21 +46,12 @@ export default class Report {
       if (data.form_id) {
         query.where('form_id', data.form_id);
       }
-      if (data.session_id) {
-        query.where('session_id', data.session_id);
-      }
-      if (data.is_sent) {
-        query.where('is_sent', data.is_sent);
-      }
-      if (data.form_submit) {
-        query.where('form_submit', data.form_submit);
-      }
-      if (data.start_date) {
-        query.where('intake_date', '>=', data.start_date);
-      }
-      if (data.end_date) {
-        query.where('intake_date', '<=', data.end_date);
-      }
+      // if (data.is_sent) {
+      //   query.where('is_sent', data.is_sent);
+      // }
+      // if (data.form_submit) {
+      //   query.where('form_submit', data.form_submit);
+      // }
 
       const rec = await query;
 
