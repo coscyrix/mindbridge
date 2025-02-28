@@ -21,9 +21,11 @@ export default class Report {
           'form_cde',
           'thrpy_req_id',
         )
-        .where('thrpy_status', 'ONGOING')
-        .andWhere('is_sent', 1)
-        .andWhere('form_submit', 0)
+        .where(function () {
+          this.where('thrpy_status', 'ONGOING').orWhere(function () {
+            this.where('is_sent', 1).andWhere('form_submit', 0);
+          });
+        })
         .groupBy([
           'client_first_name',
           'client_last_name',
