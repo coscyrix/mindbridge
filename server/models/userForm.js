@@ -15,6 +15,7 @@ export default class UserForm {
           counselor_id: data.counselor_id,
           form_id: data.form_id,
           session_id: data.session_id,
+          is_sent: data.is_sent,
         };
 
         const postUserForm = await db
@@ -105,17 +106,30 @@ export default class UserForm {
         form_submit: data.form_submit,
         status_yn: data.status_yn,
       };
+      if (data.session_id) {
+        const putUserForm = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('user_forms')
+          .where('form_id', data.form_id)
+          .andWhere('session_id', data.session_id)
+          .update(tmpUserForm);
 
-      const putUserForm = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('user_forms')
-        .where('session_id', data.session_id)
-        .andWhere('form_id', data.form_id)
-        .update(tmpUserForm);
+        if (!putUserForm) {
+          logger.error('Error updating user form');
+          return { message: 'Error updating user form', error: -1 };
+        }
+      } else if (data.client_id) {
+        const putUserForm = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('user_forms')
+          .where('form_id', data.form_id)
+          .andWhere('client_id', data.client_id)
+          .update(tmpUserForm);
 
-      if (!putUserForm) {
-        logger.error('Error updating user form');
-        return { message: 'Error updating user form', error: -1 };
+        if (!putUserForm) {
+          logger.error('Error updating user form');
+          return { message: 'Error updating user form', error: -1 };
+        }
       }
 
       return { message: 'User form updated successfully' };

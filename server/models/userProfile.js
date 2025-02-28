@@ -247,6 +247,7 @@ export default class UserProfile {
           client_id: postUsrProfile[0],
           counselor_id: data.user_profile_id,
           form_id: 23,
+          is_sent: 1,
         },
       ]);
 
