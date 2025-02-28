@@ -34,16 +34,18 @@ export default class Feedback {
         return { message: 'Error creating feedback', error: -1 };
       }
 
-      const updateUserForm =
-        await this.userForm.putUserFormBySessionIdAndFormID({
-          session_id: data.session_id,
-          form_id: data.form_id,
-          form_submit: true,
-        });
+      if (form_id !== 23) {
+        const updateUserForm =
+          await this.userForm.putUserFormBySessionIdAndFormID({
+            session_id: data.session_id,
+            form_id: data.form_id,
+            form_submit: true,
+          });
 
-      if (updateUserForm?.error) {
-        logger.error('Error updating user form');
-        return { message: 'Error updating user form', error: -1 };
+        if (updateUserForm?.error) {
+          logger.error('Error updating user form');
+          return { message: 'Error updating user form', error: -1 };
+        }
       }
 
       return { message: 'Feedback created successfully', rec: postFeedback };
