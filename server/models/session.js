@@ -557,7 +557,8 @@ export default class Session {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
         .where('intake_date_formatted', formattedCurrentDate)
-        .andWhere('counselor_id', data.counselor_id);
+        .andWhere('counselor_id', data.counselor_id)
+        .andWhere('thrpy_status', 'ONGOING');
 
       if (!recToday) {
         logger.error('Error getting session');
@@ -568,7 +569,8 @@ export default class Session {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
         .where('intake_date_formatted', formattedTomorrowDate)
-        .andWhere('counselor_id', data.counselor_id);
+        .andWhere('counselor_id', data.counselor_id)
+        .andWhere('thrpy_status', 'ONGOING');
 
       if (!recTomorrow) {
         logger.error('Error getting session');
