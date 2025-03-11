@@ -2,7 +2,6 @@ import styled from "styled-components";
 
 export const CustomCardContainer = styled.div`
   width: 100%;
-  height: 400px;
   border-radius: 6px;
   color: #333333;
   background: #fff;
@@ -13,11 +12,24 @@ export const CustomCardContainer = styled.div`
     background: white;
     padding-top: 20px;
     border-bottom: 1px solid #e1e1e1;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     align-items: center;
-    padding-bottom: 10px;
     margin-bottom: 20px;
+  }
+
+  .select-container {
+    .multi-select {
+      .select__control {
+        border: none;
+        border-radius: 0px;
+        border-bottom: 1px solid #e1e1e1;
+        box-shadow: none;
+        &--menu-is-open {
+          border-bottom: 1px solid #000;
+        }
+      }
+    }
   }
   @media (max-width: 767px) {
     padding: 0px 16px;

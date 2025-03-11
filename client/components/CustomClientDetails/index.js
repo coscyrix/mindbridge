@@ -3,7 +3,6 @@ import CustomTable from "../../components/CustomTable";
 import CustomButton from "../../components/CustomButton";
 import {
   AddIcon,
-  ArrowIcon,
   DownloadIcon,
   SearchIcon,
   SettingsIcon,
@@ -217,36 +216,7 @@ function CustomClientDetails({
     setCurrentPage(0);
   }, [filterText]);
 
-  const formatDownloadOption = DOWNLOAD_OPTIONS(
-    tableData?.columns,
-    tableData?.data,
-    tableCaption
-  );
-
-  // const fetchCounsellor = async () => {
-  //   try {
-  //     const response = await CommonServices.getClients();
-  //     if (response.status === 200) {
-  //       const { data } = response;
-  //       const allCounselors = data?.rec?.filter(
-  //         (counselor) => counselor?.role_id == 2
-  //       );
-
-  //       const counselorOptions = allCounselors?.map((item) => {
-  //         return {
-  //           label: item?.user_first_name + " " + item?.user_last_name,
-  //           value: item?.user_profile_id,
-  //         };
-  //       });
-  //       setCounselors([...counselors, ...counselorOptions]);
-  //     }
-  //   } catch (error) {
-  //     console.log("Error fetching clients", error);
-  //   }
-  // };
-
   useEffect(() => {
-    // fetchCounsellor();
     const userData = Cookies.get("user");
     setUser(JSON.parse(userData));
   }, []);

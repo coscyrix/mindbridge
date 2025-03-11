@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { CreateSessionFormWrapper } from "./style";
-import CustomSelect from "../../CustomSelect";
-import { ArrowIcon } from "../../../public/assets/icons";
 import CustomInputField from "../../CustomInputField";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import CustomTable from "../../CustomTable";
 import CustomButton from "../../CustomButton";
 import { toast } from "react-toastify";
-import { zodResolver } from "@hookform/resolvers/zod";
 import moment from "moment";
-import { CreateClientSessionValidationSchema } from "../../../utils/validationSchema/validationSchema";
 import { useReferenceContext } from "../../../context/ReferenceContext";
-import { AddIcon } from "../../../public/assets/icons";
+import { AddIcon, InfoIcon } from "../../../public/assets/icons";
 import { api } from "../../../utils/auth";
 import CustomModal from "../../CustomModal";
 import AdditionalServicesForm from "../../SessionFormComponents/AdditionalServices";
@@ -19,13 +15,18 @@ import NoShowReasonForm from "../../SessionFormComponents/NoShowReason";
 import EditSessionScheduleForm from "../../SessionFormComponents/EditSessionSchedule";
 import ConfirmationModal from "../../ConfirmationModal";
 import CommonServices from "../../../services/CommonServices";
-import { CONDITIONAL_ROW_STYLES } from "../../../utils/constants";
+import {
+  CONDITIONAL_ROW_STYLES,
+  isWithin24Hours,
+} from "../../../utils/constants";
 import NotesModalContent from "../../NotesModalContent";
 import AllNotesModalContent from "../../AllNotesModalContent";
 import Link from "next/link";
 import Spinner from "../../common/Spinner";
 import Cookies from "js-cookie";
 import CustomMultiSelect from "../../CustomMultiSelect";
+import { Tooltip } from "react-tooltip";
+
 function CreateSessionForm({
   isOpen,
   initialData,
@@ -35,12 +36,9 @@ function CreateSessionForm({
   setConfirmationModal,
   userProfileId,
   fetchCounselorClient,
-  setSessions,
+  fetchSessions,
 }) {
   const methods = useForm();
-  // {
-  //   resolver: zodResolver(CreateClientSessionValidationSchema),
-  // }
   const { servicesData, userObj } = useReferenceContext();
   const [formButton, setFormButton] = useState("Submit");
   const [editSessionModal, setEditSessionModal] = useState(false);
@@ -54,7 +52,7 @@ function CreateSessionForm({
   const [sessionTableData, setSessionTableData] = useState(null);
   const [formButtonLoading, setFormButtonLoading] = useState(false);
   const [clientId, setClientId] = useState(null);
-  const [dischargeOrDelete, setDischargeOrDelete] = useState(null);
+  const [dischargeOrDelete, setDischargeOrDelete] = useState("Delete");
   const [loader, setLoader] = useState(null);
   const [deleteConfirmationModal, setDeleteConfirmationModal] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
@@ -78,15 +76,21 @@ function CreateSessionForm({
   });
   const [showStatusConfirmationModal, setShowStatusConfirmationModal] =
     useState(false);
+  const [showResetConfirmationModal, setShowResetConfirmationModal] =
+    useState(false);
   const [clientSerialNum, setClientSerialNum] = useState(null);
-  const currentTime = moment();
   const { forms } = useReferenceContext();
 
   const clientsDropdown = clients?.map((client) => ({
     label: `${client.user_first_name} ${client.user_last_name}`,
     value: client.user_profile_id,
     serialNumber: client.clam_num || "N/A",
+    has_schedule: client.has_schedule,
+    user_target_outcome: client.user_target_outcome,
   }));
+
+  const infoTooltipContent =
+    methods?.watch("client_first_name")?.user_target_outcome;
 
   const formatDate = (date) => {
     const formattedDate =
@@ -136,6 +140,14 @@ function CreateSessionForm({
       );
       if (response?.status === 200) {
         const scheduledSession = response?.data[0]?.session_obj;
+        const result =
+          scheduledSession &&
+          scheduledSession?.some(
+            (session) => session.session_status.toLowerCase() === "show"
+          )
+            ? "Discharge"
+            : "Delete";
+        setDischargeOrDelete(result);
         const addittionalSession = scheduledSession?.filter(
           (session) => session?.is_additional === 1
         );
@@ -223,6 +235,7 @@ function CreateSessionForm({
       name: "Session Date",
       selector: (row) => row.intake_date,
       selectorId: "intake_date",
+      maxWidth: "120px",
     },
     {
       name: "Session Time",
@@ -231,95 +244,124 @@ function CreateSessionForm({
           ? moment.utc(row.scheduled_time, "HH:mm:ss.SSS[Z]").format("hh:mm A")
           : "N/A",
       selectorId: "session_time",
+      maxWidth: "120px",
     },
     {
       name: "Session Status",
       selector: (row) => row.session_status,
       selectorId: "session_status",
+      maxWidth: "120px",
     },
 
     {
       name: "Actions",
-      // minWidth: "220px",
+      minWidth: "220px",
       cell: (row, rowIndex) => {
         const scheduledTime = moment.utc(
           `${row.intake_date} ${row.scheduled_time}`,
           "YYYY-MM-DD HH:mm:ssZ"
         );
         const sessionStatus = row?.session_status?.toLowerCase();
-        // if user is Admin then we are showing show/notshow/edit button for each session.
-        // Case 1: If the status is "Scheduled" but the scheduled time has already passed (possibly on the same day),
-        //  we do not display the Show, Not Show, or Edit buttons as per the client's request.
-        // Case 2: If the session time is null, we do not display the Show, Not Show, or Edit buttons.
+        {
+          /* Display requirements for the action buttons and their data :
+          REQ:1=> These buttons are only visible to admin and counselors for changing the status and updating the session time.
+          REQ:2=> Once, clicked on any of the status action button, the action button hides if the session status has been set to show or no show
+          for the case of counselor whereas in case of admin, the action button changes to reset so that the session status can be set to scheduled again.
+          REQ:3=> The action buttons for all the sessions will only be visible till 24 hrs past the session. After 24 hours, they hide for both the
+          admin and counselors.
+          REQ:4=> The action buttons will not be visible for 'DISCHARGE REPORT'.
+          REQ:5=> If the session time is null, the action buttons are not shown.
+          
+          //Effects of the Action buttons :
+          EFFECT:1=> The 'DELETE' button will be converted to 'DISCHARGE' button as soon as one of the sessions has been set to SHOW.
+          EFFECT:2=> The 'DISCHARGE' button will only be enabled once the status of all the sessions except 'DISCHARGE REPORT' session status has either 'SHOW'
+          or 'NO SHOW' as status.*/
+        }
         const showNoShowButtonDisplay =
-          user?.role_id == 4 ||
-          (initialData &&
-            scheduledTime.isAfter(currentTime) &&
-            sessionStatus != "show" &&
-            sessionStatus != "no-show");
+          initialData &&
+          sessionStatus != "show" &&
+          sessionStatus != "no-show" &&
+          sessionStatus != "discharged";
         return (
           <div style={{ cursor: "pointer" }}>
-            {showNoShowButtonDisplay && (
-              <div
-                className="action-buttons-container"
-                style={{ display: "flex" }}
-              >
+            {userObj?.role_id !== 4 &&
+              showNoShowButtonDisplay &&
+              isWithin24Hours(row.intake_date, row.scheduled_time) && (
+                <div
+                  className="action-buttons-container"
+                  style={{ display: "flex" }}
+                >
+                  <CustomButton
+                    type="button"
+                    title="Show"
+                    customClass="show-button"
+                    onClick={() => {
+                      setActiveRow(row);
+                      setShowStatusConfirmationModal(true);
+                    }}
+                  />
+                  <CustomButton
+                    type="button"
+                    title="No Show"
+                    customClass="no-show-button"
+                    onClick={() => handleNoShowStatus(row)}
+                  />
+                  <CustomButton
+                    type="button"
+                    title="Edit"
+                    customClass="edit-button"
+                    onClick={() => {
+                      if (row?.is_additional === 1) {
+                        setShowAdditionalService(true);
+                        setActiveRow(row);
+                      } else {
+                        setEditSessionModal(true);
+                        setActiveRow({ ...row, rowIndex });
+                      }
+                      const tempData = initialData
+                        ? scheduledSession
+                        : sessionTableData
+                        ? sessionTableData?.filter((data) => {
+                            return data?.is_additional === 0;
+                          })
+                        : [];
+
+                      if (rowIndex < tempData.length - 1) {
+                        let minDate = new Date(row.intake_date);
+                        let maxDate = new Date(
+                          tempData[rowIndex + 1].intake_date
+                        );
+                        setSessionRange((prev) => ({
+                          ...prev,
+                          min: formatDate(minDate),
+                          max: formatDate(maxDate),
+                        }));
+                      } else {
+                        setSessionRange((prev) => ({
+                          ...prev,
+                          min: false,
+                          max: false,
+                        }));
+                      }
+                    }}
+                  />
+                </div>
+              )}
+            {initialData &&
+              userObj?.role_id == 4 &&
+              isWithin24Hours(row.intake_date, row.scheduled_time) && (
                 <CustomButton
                   type="button"
-                  title="Show"
-                  customClass="show-button"
+                  title="Reset"
+                  customClass="edit-button"
+                  style={{ cursor: showNoShowButtonDisplay && "auto" }}
                   onClick={() => {
                     setActiveRow(row);
-                    setShowStatusConfirmationModal(true);
+                    setShowResetConfirmationModal(true);
                   }}
+                  disabled={showNoShowButtonDisplay}
                 />
-                <CustomButton
-                  type="button"
-                  title="No Show"
-                  customClass="no-show-button"
-                  onClick={() => handleNoShowStatus(row)}
-                />
-                <CustomButton
-                  type="button"
-                  title="Edit"
-                  customClass="edit-button"
-                  onClick={() => {
-                    if (row?.is_additional === 1) {
-                      setShowAdditionalService(true);
-                      setActiveRow(row);
-                    } else {
-                      setEditSessionModal(true);
-                      setActiveRow({ ...row, rowIndex });
-                    }
-                    const tempData = initialData
-                      ? scheduledSession
-                      : sessionTableData
-                      ? sessionTableData?.filter((data) => {
-                          return data?.is_additional === 0;
-                        })
-                      : [];
-
-                    if (rowIndex < tempData.length - 1) {
-                      let minDate = new Date(row.intake_date);
-                      let maxDate = new Date(
-                        tempData[rowIndex + 1].intake_date
-                      );
-                      setSessionRange((prev) => ({
-                        ...prev,
-                        min: formatDate(minDate),
-                        max: formatDate(maxDate),
-                      }));
-                    } else {
-                      setSessionRange((prev) => ({
-                        ...prev,
-                        min: false,
-                        max: false,
-                      }));
-                    }
-                  }}
-                />
-              </div>
-            )}
+              )}
             {!initialData && (
               <CustomButton
                 type="button"
@@ -358,6 +400,31 @@ function CreateSessionForm({
           </div>
         );
       },
+    },
+    {
+      name: "Total Amt.",
+      selector: (row) =>
+        `$${Number(row.session_price + row.session_gst).toFixed(2)}`,
+      selectorId: "session_price",
+      maxWidth: "100px",
+    },
+    {
+      name: "Tax",
+      selector: (row) => `$${Number(row.session_gst).toFixed(2)}`,
+      selectorId: "session_gst",
+      maxWidth: "70px",
+    },
+    {
+      name: "Amt. to Counselor",
+      selector: (row) => `$${Number(row.session_counselor_amt).toFixed(2)}`,
+      selectorId: "session_counselor_amt",
+      maxWidth: "130px",
+    },
+    {
+      name: "Amt. to Admin",
+      selector: (row) => `$${Number(row.session_system_amt).toFixed(2)}`,
+      selectorId: "session_system_amt",
+      maxWidth: "120px",
     },
     {
       ...(user?.role_id != 4 && {
@@ -484,6 +551,7 @@ function CreateSessionForm({
           status_yn: "n",
         });
         if (response.status === 200) {
+          await fetchCounselorClient();
           toast.success("Client session data deleted!");
         }
       }
@@ -491,9 +559,9 @@ function CreateSessionForm({
       const errorMessage =
         dischargeOrDelete == "Discharge"
           ? "Error updating the client session status"
-          : "Error deleting the client session.";
+          : error.message;
       console.error("Error updating the client session status :", error);
-      toast.error(errorMessage);
+      toast.error(error?.message);
     } finally {
       setLoader(null);
       setDeleteConfirmationModal(false);
@@ -512,9 +580,6 @@ function CreateSessionForm({
       const payload = {
         session_status: 2,
       };
-      const updateIndex = scheduledSession?.findIndex(
-        (session) => session.session_id == row?.session_id
-      );
       let response;
       if (userObj?.role_id == 4) {
         response = await api.put(
@@ -528,23 +593,50 @@ function CreateSessionForm({
         );
       }
       if (response?.status === 200) {
+        setShowStatusConfirmationModal(false);
         toast.success("Session status updated successfully!");
-        setScheduledSession((prev) =>
-          prev.map((session, index) =>
-            index === updateIndex
-              ? { ...session, session_status: "SHOW", hide: true }
-              : session
-          )
-        );
+        await getAllSessionOfClients();
         dischargeOrDelete == "Delete" && setDischargeOrDelete("Discharge");
         setSessionStatusModal(false);
       }
     } catch (error) {
+      toast.error(error?.message || "Error while updating the session status!");
+    } finally {
+      setLoader(null);
+      setActiveRow("");
+      setShowStatusConfirmationModal(false);
+    }
+  };
+
+  const handleResetStatus = async (row) => {
+    try {
+      setLoader("resetStatusLoader");
+      const payload = {
+        session_status: 1,
+      };
+      let response;
+      if (userObj?.role_id == 4) {
+        response = await api.put(
+          `/session/?session_id=${row?.session_id}&role_id=4&user_profile_id=${userObj?.user_profile_id}`,
+          payload
+        );
+      } else {
+        response = await api.put(
+          `/session/?session_id=${row?.session_id}`,
+          payload
+        );
+      }
+      if (response?.status === 200) {
+        setShowResetConfirmationModal(false);
+        toast.success("Session status updated successfully!");
+        await getAllSessionOfClients();
+      }
+    } catch (error) {
       toast.error("Error while updating the session status!");
     } finally {
-      console?.log("finally block entrance");
       setLoader(null);
-      setShowStatusConfirmationModal(false);
+      setActiveRow("");
+      setShowResetConfirmationModal(false);
     }
   };
 
@@ -573,10 +665,16 @@ function CreateSessionForm({
   };
 
   const handleGenerateSchedule = async () => {
+    const formData = methods.getValues();
+    const { client_first_name } = formData;
+    if (client_first_name?.has_schedule) {
+      toast.error(
+        "Cannot generate new session for the client having ongoing session!"
+      );
+      return;
+    }
     try {
-      const formData = methods.getValues();
       setLoader("generateSessionSchedule");
-
       if (formData) {
         const payloadDate = moment
           .utc(`${formData?.req_dte} ${formData?.req_time}`, "YYYY-MM-DD HH:mm")
@@ -606,9 +704,12 @@ function CreateSessionForm({
       }
     } catch (error) {
       console.error("Error generating schedule:", error);
-      toast.error(error?.message || "Failed to generate schedule. Please try again.", {
-        position: "top-right",
-      });
+      toast.error(
+        error?.message || "Failed to generate schedule. Please try again.",
+        {
+          position: "top-right",
+        }
+      );
     } finally {
       setLoader(null);
     }
@@ -635,81 +736,30 @@ function CreateSessionForm({
   const showStatusModalContent = (
     <div>
       <p>Are you sure you want to mark this client as shown and post fees?</p>
-      {/* <CustomTable
-        columns={[
-          {
-            name: "System Amt.",
-            selector: (row) => `$${Number(row.session_system_amt).toFixed(2)}`,
-          },
-          {
-            name: "GST",
-            selector: (row) => `${Number(row.session_gst).toFixed(2)}%`,
-          },
-          {
-            name: "T. Amt.",
-            selector: (row) => `$${Number(row.session_price).toFixed(2)}`,
-          },
-          {
-            name: "Amt. to Associate",
-            selector: (row) =>
-              `$${Number(row.session_counselor_amt).toFixed(2)}`,
-            minWidth: 100,
-          },
-        ]}
-        data={[activeRow]}
-        selectableRows={false}
-      /> */}
     </div>
   );
 
   const onSubmit = async (formData) => {
     setIsOpen(false);
-    // try {
-    //   setFormButtonLoading(true);
-    //   let response;
-    //   if (initialData) {
-    //     response = await api.put(`/thrpyReq/?req_id=${initialData?.req_id}`, {
-    //       ...initialData,
-    //       ...formData,
-    //     });
-    //     if (response.status === 200) {
-    //       toast.success("Session Updated Successfully!", {
-    //         position: "top-right",
-    //       });
-    //       setIsOpen(false);
-    //     }
-    //   } else {
-    //     response = await api.put(
-    //       `/thrpyReq/?req_id=${thrpyReqId}`,
-    //       createSessionPayload
-    //     );
-    //     if (response.status === 200) {
-    //       setSessionTableData([]);
-    //       setSessions((prev) => [...prev, createSessionPayload]);
-    //       toast.success("New Session Created Successfully!", {
-    //         position: "top-right",
-    //       });
-    //       methods.reset();
-    //     }
-    //   }
-    // } catch (error) {
-    //   const errorMessage = initialData
-    //     ? "Failed to update the session. Please try again."
-    //     : "Failed to create a new session. Please try again.";
-
-    //   console.error(error);
-    //   toast.error(errorMessage, { position: "top-right" });
-    // } finally {
-    //   setSessionTableData([]);
-    //   setFormButtonLoading(false);
-    //   setIsOpen(false);
-    // }
   };
 
   const allSessionsStatusScheduled =
     loader != "scheduledSessionLoading" &&
     scheduledSession?.every(
       (session) => session.session_status.toLowerCase() === "scheduled"
+    );
+
+  const allSessionsStatusShowNoShow =
+    loader !== "scheduledSessionLoading" &&
+    scheduledSession?.every(
+      (session) =>
+        (session.service_code === "DR"
+          ? ["show", "no-show", "discharged"].includes(
+              session.session_status.toLowerCase()
+            )
+          : session.service_code === "DR") ||
+        session.session_status.toLowerCase() === "show" ||
+        session.session_status.toLowerCase() === "no-show"
     );
 
   useEffect(() => {
@@ -723,15 +773,6 @@ function CreateSessionForm({
     }
 
     if (initialData) {
-      const sessionObj = initialData?.session_obj;
-      const result =
-        sessionObj &&
-        sessionObj?.some(
-          (session) => session.session_status.toLowerCase() === "show"
-        )
-          ? "Discharge"
-          : "Delete";
-      setDischargeOrDelete(result);
       const formattedData = {
         ...initialData,
         req_dte: initialData.req_dte
@@ -782,10 +823,7 @@ function CreateSessionForm({
     if (initialData?.req_id) {
       getAllSessionOfClients();
     }
-  }, [isOpen, clients]);
-
-
-  
+  }, [isOpen]);
 
   useEffect(() => {
     fetchClients();
@@ -794,22 +832,22 @@ function CreateSessionForm({
   }, []);
 
   const handleIntakeDate = (e) => {
-    methods.setValue("req_dte",e.target.value);
+    methods.setValue("req_dte", e.target.value);
     if (initialData) {
       setScheduledSession([]);
     } else {
       setSessionTableData([]);
     }
-  }
+  };
 
   const handleSessionTime = (e) => {
-    methods.setValue("req_time",e.target.value);
+    methods.setValue("req_time", e.target.value);
     if (initialData) {
       setScheduledSession([]);
     } else {
       setSessionTableData([]);
     }
-  }
+  };
 
   return (
     <CreateSessionFormWrapper>
@@ -852,7 +890,9 @@ function CreateSessionForm({
                             "N/A"}
                         </span>
                       </label>
-                      {!loader && !allSessionsStatusScheduled && (
+
+                      {(userObj?.role_id === 4 ||
+                        (!loader && !allSessionsStatusScheduled)) && (
                         <>
                           <label>
                             <strong>Intake Date : </strong>
@@ -877,12 +917,25 @@ function CreateSessionForm({
                       <span>
                         Update session schedule as per your convenience.
                       </span>
-                      <CustomButton
-                        type="button"
-                        title={dischargeOrDelete}
-                        customClass="discharge-delete-button"
-                        onClick={() => setDeleteConfirmationModal(true)}
-                      />
+                      {(userObj?.role_id !== 4 ||
+                        (userObj?.role_id === 4 &&
+                          dischargeOrDelete === "Delete")) && (
+                        <CustomButton
+                          type="button"
+                          title={dischargeOrDelete}
+                          customClass={
+                            !allSessionsStatusShowNoShow &&
+                            dischargeOrDelete != "Delete"
+                              ? "discharge-delete-button_disabled"
+                              : "discharge-delete-button"
+                          }
+                          onClick={() => setDeleteConfirmationModal(true)}
+                          disabled={
+                            !allSessionsStatusShowNoShow &&
+                            dischargeOrDelete != "Delete"
+                          }
+                        />
+                      )}
                     </>
                   ) : (
                     "Schedule a session for any client."
@@ -918,26 +971,26 @@ function CreateSessionForm({
 
                   {/* Change this field name so that it can value when we edit the sessions */}
                   <div className="select-wrapper">
-                    <label>Service Type*</label>
+                    <label style={{ display: "flex", gap: "4px" }}>
+                      Service Type*
+                      <InfoIcon data-tooltip-id="target-outcome-tooltip" />
+                    </label>
+                    <Tooltip
+                      id="target-outcome-tooltip"
+                      place="top"
+                      variant="info"
+                      content={
+                        infoTooltipContent
+                          ? infoTooltipContent[0].target_name
+                          : `Select client to show the client's program.`
+                      }
+                    />
                     <Controller
                       name="service_id"
                       control={methods.control}
                       defaultValue=""
                       rules={{ required: "This field is required" }}
                       render={({ field }) => (
-                        // <CustomSelect
-                        //   {...field}
-                        //   options={servicesDropdown}
-                        //   dropdownIcon={
-                        //     <ArrowIcon style={{ transform: "rotate(90deg)" }} />
-                        //   }
-                        //   isError={!!methods.formState.errors.service_name}
-                        //   disable={initialData}
-                        //   onChange={(selectedOption) => {
-                        //     setSessionTableData([]);
-                        //     field.onChange(selectedOption?.value);
-                        //   }}
-                        // />
                         <CustomMultiSelect
                           {...field}
                           options={servicesDropdown}
@@ -967,29 +1020,12 @@ function CreateSessionForm({
                       defaultValue=""
                       rules={{ required: "This field is required" }}
                       render={({ field }) => (
-                        // <CustomSelect
-                        //   {...field}
-                        //   options={sessionFormatDropdown}
-                        //   dropdownIcon={
-                        //     <ArrowIcon style={{ transform: "rotate(90deg)" }} />
-                        //   }
-                        //   isError={!!methods.formState.errors.session_format_id}
-                        //   className={initialData && "disabled"}
-                        //   disable={initialData}
-                        //   onChange={(selectedOption) => {
-                        //     field.onChange(selectedOption?.value);
-                        //   }}
-                        // />
                         <CustomMultiSelect
                           {...field}
                           options={sessionFormatDropdown}
                           placeholder="Select a format"
                           isMulti={false}
                           isDisabled={initialData}
-                          // onChange={(selectedOption) => {
-                          //   setSessionTableData([]);
-                          //   field.onChange(selectedOption);
-                          // }}
                         />
                       )}
                     />
@@ -1002,13 +1038,12 @@ function CreateSessionForm({
                 </div>
               )}
               {/* Create Session Schedule Date and Time Fields */}
-              {allSessionsStatusScheduled && (
+              {allSessionsStatusScheduled && userObj?.role_id != 4 && (
                 <div className="date-time-wrapper">
                   <CustomInputField
                     name="req_dte"
                     label="Intake Date*"
                     type="date"
-                    // required
                     placeholder="Select Date"
                     customClass="date-input"
                     onChange={(e) => handleIntakeDate(e)}
@@ -1017,7 +1052,6 @@ function CreateSessionForm({
                     name="req_time"
                     label="Session Time*"
                     type="time"
-                    // required
                     placeholder="Select Time"
                     customClass="time-input"
                     onChange={(e) => handleSessionTime(e)}
@@ -1075,20 +1109,24 @@ function CreateSessionForm({
                     alignItems: "center",
                   }}
                 >
-                  <div style={{ fontWeight: 400 }}>Addittional Service</div>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "2px",
-                      cursor: "pointer",
-                      padding: "20px",
-                      color: "var(--link-color)",
-                    }}
-                    onClick={() => setShowAdditionalService(true)}
-                  >
-                    <AddIcon color="var(--link-color)" />
-                    Add
+                  <div style={{ fontWeight: 400, margin: "20px 0px" }}>
+                    Additional Service
                   </div>
+                  {userObj?.role_id !== 4 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "2px",
+                        cursor: "pointer",
+                        padding: "20px",
+                        color: "var(--link-color)",
+                      }}
+                      onClick={() => setShowAdditionalService(true)}
+                    >
+                      <AddIcon color="var(--link-color)" />
+                      Add
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1096,14 +1134,12 @@ function CreateSessionForm({
                 <CustomTable
                   columns={sessionTableColumns}
                   data={additionalSessions}
-                  // loading={initialData && loader === "scheduledSessionLoading"}
-                  // loaderBackground="#fff"
                   defaultSortFieldId="schedule_date"
                   selectableRows={false}
                   conditionalRowStyles={
                     CONDITIONAL_ROW_STYLES?.clientSessionSchedule
                   }
-                  fixedHeaderScrollHeight="350px"
+                  fixedHeaderScrollHeight="190px"
                 />
               )}
             </div>
@@ -1115,17 +1151,18 @@ function CreateSessionForm({
                   }
                   type="submit"
                   style={{ padding: formButtonLoading ? "5px 10px" : "10px" }}
-                  onClick={() => {
+                  onClick={async () => {
                     methods.reset();
                     setThrpyReqId(null);
                     setSessionTableData([]);
                     setFormButtonLoading(false);
                     setIsOpen(false);
-                    if(userProfileId && fetchCounselorClient){
-                      fetchCounselorClient()
+                    if (formButton == "Submit" && fetchSessions)
+                      await fetchSessions();
+                    if (userProfileId && fetchCounselorClient) {
+                      await fetchCounselorClient();
                     }
-                  }
-                  }
+                  }}
                 >
                   {formButtonLoading ? <Spinner /> : formButton}
                 </button>
@@ -1150,8 +1187,8 @@ function CreateSessionForm({
           setActiveRow={setActiveRow}
           setShowAdditionalService={setShowAdditionalService}
           requestData={initialData}
-          setAddittionalSessions={setAddittionalSessions}
           fetchClients={fetchClients}
+          getAllSessionOfClients={getAllSessionOfClients}
         />
       </CustomModal>
       <CustomModal
@@ -1161,9 +1198,9 @@ function CreateSessionForm({
       >
         <NoShowReasonForm
           activeData={activeRow}
+          setActiveData={setActiveRow}
           setSessionStatusModal={setSessionStatusModal}
-          setScheduledSession={setScheduledSession}
-          scheduledSession={scheduledSession}
+          getAllSessionsOfClient={getAllSessionOfClients}
         />
       </CustomModal>
       <CustomModal
@@ -1176,6 +1213,7 @@ function CreateSessionForm({
       >
         <EditSessionScheduleForm
           activeData={activeRow}
+          setActiveData={setActiveRow}
           clientId={clientId}
           setScheduledSessions={
             initialData ? setScheduledSession : setSessionTableData
@@ -1208,12 +1246,24 @@ function CreateSessionForm({
       />
       <ConfirmationModal
         isOpen={showStatusConfirmationModal}
-        onClose={() => setShowStatusConfirmationModal(false)}
+        onClose={() => {
+          setActiveRow("");
+          setShowStatusConfirmationModal(false);
+        }}
         affirmativeAction="Yes"
         discardAction="No"
         content={showStatusModalContent}
         handleAffirmativeAction={() => handleShowStatus(activeRow)}
         loading={loader == "showStatusLoader"}
+      />
+      <ConfirmationModal
+        isOpen={showResetConfirmationModal}
+        onClose={() => setShowResetConfirmationModal(false)}
+        affirmativeAction="Yes"
+        discardAction="No"
+        content="Are you sure you want to reset this client's status to scheduled?"
+        handleAffirmativeAction={() => handleResetStatus(activeRow)}
+        loading={loader == "resetStatusLoader"}
       />
       {noteOpenModal && (
         <AllNotesModalContent

@@ -3,7 +3,6 @@ import styled from "styled-components";
 export const ReportsContainer = styled.div`
   .content {
     height: 300px;
-    overflow: auto;
     padding: 0px;
 
     .tab-and-heading-container {

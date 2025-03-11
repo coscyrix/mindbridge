@@ -58,9 +58,12 @@ const IPFForm = () => {
       const response = await api.post("/feedback/ipf", payload);
       if (response.status === 200) {
         toast.success("Form submitted successfully!");
+        router.push("/patient-forms/form-submission");
       }
     } catch (error) {
       toast.error("Failed to submit the form!");
+    } finally {
+      setLoading(false);
     }
   };
 

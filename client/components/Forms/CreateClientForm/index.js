@@ -20,7 +20,8 @@ function CreateClientForm({
   initialData,
   setInitialData,
   setTableData,
-  fetchClients
+  fetchClients,
+  setActiveTab,
 }) {
   const [formButton, setFormButton] = useState("Create");
   const { targetOutcomes, roles, servicesData } = useReferenceContext();
@@ -60,17 +61,21 @@ function CreateClientForm({
     role_id: managerOrCounselor ? 1 : "",
     clam_num: "",
     // service: "",
-    target_outcome_id: "",
+    target_outcome_id: initialData
+      ? {
+          label: initialData?.user_target_outcome?.at(0).target_name,
+          value: initialData?.user_target_outcome?.at(0)?.target_outcome_id,
+        }
+      : "",
     user_phone_nbr: "",
   };
 
   const methods = useForm({
     resolver: zodResolver(ClientValidationSchema),
-    defaultValues,
+    defaultValues: defaultValues,
   });
 
   const handleCreateClient = async (data) => {
-    console.log(data, " handleCreateClient data");
     let processedData;
     if (role == 1) {
       processedData = {
@@ -81,7 +86,7 @@ function CreateClientForm({
         email: data?.email,
         target_outcome_id: data?.target_outcome_id?.value,
         role_id: data?.role_id,
-        user_phone_nbr:data?.user_phone_nbr
+        user_phone_nbr: data?.user_phone_nbr,
       };
     } else {
       processedData = {
@@ -90,7 +95,7 @@ function CreateClientForm({
         user_last_name: data?.user_last_name,
         email: data?.email,
         role_id: data?.role_id,
-        user_phone_nbr:data?.user_phone_nbr
+        user_phone_nbr: data?.user_phone_nbr,
       };
     }
 
@@ -112,13 +117,21 @@ function CreateClientForm({
     } catch (error) {
       toast.error(`Error while creating the client: ${error?.message}`);
     } finally {
+      setActiveTab && setActiveTab(0);
       setLoading(false);
     }
   };
 
   const handleUpdateClient = async (data) => {
-    const { user_first_name, user_last_name, email, role_id, user_phone_nbr } =
-      data;
+    console.log(data, "data");
+    const {
+      user_first_name,
+      user_last_name,
+      email,
+      role_id,
+      user_phone_nbr,
+      target_outcome_id,
+    } = data;
 
     const processedData = {
       user_first_name,
@@ -126,6 +139,7 @@ function CreateClientForm({
       email,
       role_id,
       user_phone_nbr,
+      target_outcome_id: target_outcome_id?.value,
     };
 
     try {
@@ -146,14 +160,19 @@ function CreateClientForm({
         toast.success("Client Updated Successfully", {
           position: "top-right",
         });
+        fetchClients();
         setIsOpen(false);
         methods.reset(defaultValues);
       }
     } catch (error) {
-      toast.error("Failed to update Client data. Please try again.", {
-        position: "top-right",
-      });
+      toast.error(
+        error?.message || "Failed to update Client data. Please try again.",
+        {
+          position: "top-right",
+        }
+      );
     } finally {
+      setActiveTab && setActiveTab(0);
       setLoading(false);
     }
   };
@@ -165,6 +184,7 @@ function CreateClientForm({
     } else if (initialData) {
       setFormButton("Update");
       methods.reset(initialData);
+      methods.setValue("target_outcome_id", defaultValues?.target_outcome_id);
     } else {
       setFormButton("Create");
       methods.reset(defaultValues);
@@ -174,6 +194,7 @@ function CreateClientForm({
   const handleDiscard = (e) => {
     e.preventDefault();
     methods.reset(initialData || defaultValues);
+    setIsOpen(false);
   };
 
   const role = methods.watch("role_id");

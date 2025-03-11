@@ -1,54 +1,75 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import CustomCard from "../../CustomCard";
-import ReactECharts from "echarts-for-react";
-import { GRAPH_DATA } from "../../../utils/constants";
-import useWindowResize from "../../../utils/hooks/useWindowResize";
-function OverallSession() {
+import BarGraph from "../../CustomGraphs/BarGraph";
+
+function OverallSession({ overallSessionsData }) {
   const [selectedClient, setSelectedClient] = useState({
     label: "All Clients",
     value: "allClients",
   });
+  const [loading, setLoading] = useState(true);
+  const [axisX, setAxisX] = useState([]);
+  const [initialAxisX, setInitialAxisX] = useState([]);
+  const [totalSessionsData, setTotalSessionsData] = useState([]);
+  const [totalAttendanceData, setTotalAttendanceData] = useState([]);
+  const [totalCancelledData, setTotalCancelledData] = useState([]);
 
+  useEffect(() => {
+    setLoading(true);
+    if (overallSessionsData?.length > 0) {
+      const X_AXIS_DATA = overallSessionsData.map((clientInfo) => ({
+        label: `${clientInfo.client_first_name} ${clientInfo.client_last_name}`,
+        value: clientInfo.client_id,
+      }));
 
-  const { pageSize } = useWindowResize();
-
-  const isSmallScreen = pageSize.width <= 576;
-
-  const [axisX, setAxisX] = useState(GRAPH_DATA.X_AXIS_DATA);
-  const [totalSessionsData, setTotalSessionsData] = useState(
-    GRAPH_DATA.TOTAL_SESSIONS_DATA
-  );
-  const [totalAttendanceData, setTotalAttendanceData] = useState(
-    GRAPH_DATA.TOTAL_ATTENDANCE_DATA
-  );
-  const [totalCancelledData, setTotalCancelledData] = useState(
-    GRAPH_DATA.TOTAL_CANCELLED_DATA
-  );
+      setInitialAxisX(X_AXIS_DATA);
+      setAxisX(X_AXIS_DATA);
+      setTotalSessionsData(
+        overallSessionsData.map((s) => s.total_session_count)
+      );
+      setTotalAttendanceData(
+        overallSessionsData.map((s) => s.show_session_count)
+      );
+      setTotalCancelledData(
+        overallSessionsData.map((s) => s.no_show_session_count)
+      );
+      setLoading(false);
+    }
+  }, [overallSessionsData]);
 
   const options = [
     { label: "All Clients", value: "allClients" },
-    ...new Set(GRAPH_DATA.X_AXIS_DATA),
+    ...initialAxisX,
   ];
 
   const handleClientChange = (client) => {
-
     setSelectedClient(client);
-    const clientIndex = GRAPH_DATA.X_AXIS_DATA.findIndex((item) => {
-      return item?.value === client?.value;
-    });
-   
-
-    if (clientIndex !== -1) {
-      setAxisX([client]);
-      setTotalSessionsData([GRAPH_DATA.TOTAL_SESSIONS_DATA[clientIndex]]);
-      setTotalAttendanceData([GRAPH_DATA.TOTAL_ATTENDANCE_DATA[clientIndex]]);
-      setTotalCancelledData([GRAPH_DATA.TOTAL_CANCELLED_DATA[clientIndex]]);
-    }
-    else {
-      setAxisX(GRAPH_DATA.X_AXIS_DATA);
-      setTotalSessionsData(GRAPH_DATA.TOTAL_SESSIONS_DATA);
-      setTotalAttendanceData(GRAPH_DATA.TOTAL_ATTENDANCE_DATA);
-      setTotalCancelledData(GRAPH_DATA.TOTAL_CANCELLED_DATA);
+    if (client.value !== "allClients") {
+      const clientData = overallSessionsData.find(
+        (item) => item.client_id === client.value
+      );
+      if (clientData) {
+        setAxisX([client]);
+        setTotalSessionsData([clientData.total_session_count]);
+        setTotalAttendanceData([clientData.show_session_count]);
+        setTotalCancelledData([clientData.no_show_session_count]);
+      }
+    } else {
+      setAxisX(
+        overallSessionsData.map((s) => ({
+          label: `${s.client_first_name} ${s.client_last_name}`,
+          value: s.client_id,
+        }))
+      );
+      setTotalSessionsData(
+        overallSessionsData.map((s) => s.total_session_count)
+      );
+      setTotalAttendanceData(
+        overallSessionsData.map((s) => s.show_session_count)
+      );
+      setTotalCancelledData(
+        overallSessionsData.map((s) => s.no_show_session_count)
+      );
     }
   };
 
@@ -57,77 +78,62 @@ function OverallSession() {
       title="Overall Session"
       dropdown
       options={options}
-      value={selectedClient?.value}
       onChange={handleClientChange}
+      placeholder="Select a client"
     >
-      <ReactECharts
-        notMerge={true}
-        lazyUpdate={true}
-        theme={"theme_name"}
-        option={{
-          tooltip: {
-            trigger: "axis",
-            axisPointer: {
-              type: "cross",
-              crossStyle: {
-                color: "#999",
-              },
+      <BarGraph
+        xAxisTitle="Client Name"
+        yAxisTitle="Session Count"
+        xAxisLabels={axisX.map((item) => {
+          const nameParts = item?.label?.split(" ");
+          return nameParts.length > 1
+            ? `${nameParts[0].toUpperCase()} ${nameParts[1]
+                .charAt(0)
+                .toUpperCase()}.`
+            : nameParts[0];
+        })}
+        seriesData={[
+          {
+            name: "Total Sessions",
+            type: "bar",
+            data: totalSessionsData,
+            itemStyle: { color: "#0000ff" },
+            label: {
+              show: true,
+              position: "top",
+              fontSize: 12,
+              color: "#333",
+              formatter: "{c}",
             },
           },
-          toolbox: {
-            feature: {
-              magicType: { show: true, type: ["line", "bar"] },
-              saveAsImage: { show: true },
+          {
+            name: "Show",
+            type: "bar",
+            data: totalAttendanceData,
+            itemStyle: { color: "#008200" },
+            label: {
+              show: true,
+              position: "top",
+              fontSize: 12,
+              color: "#333",
+              formatter: "{c}",
             },
           },
-          legend: {
-            data: ["Sessions", "Attendance", "Cancellations"],
-            orient: "horizontal",
-            left: "center",
-            bottom: "0%",
-            icon: "circle",
-          },
-          grid: {
-            left: "3%",
-            right: "4%",
-            bottom: "3%",
-            containLabel: true,
-            bottom: "15%",
-          },
-          xAxis: {
-            type: "category",
-            data: axisX,
-            axisPointer: {
-              type: "shadow",
-            },
-            axisLabel: {
-              interval: 0, // Show all labels
-              rotate:
-                (selectedClient.value == "allClients" && 45) ||
-                (selectedClient == "allClients" && 45), // Rotate labels 45 degrees for readability
+          {
+            name: "No Show",
+            type: "bar",
+            data: totalCancelledData,
+            itemStyle: { color: "#ff0000" },
+            label: {
+              show: true,
+              position: "top",
+              fontSize: 12,
+              color: "#333",
+              formatter: "{c}",
             },
           },
-          yAxis: {
-            type: "value",
-          },
-          series: [
-            {
-              name: "Sessions",
-              type: "bar",
-              data: totalSessionsData,
-            },
-            {
-              name: "Attendance",
-              type: "bar",
-              data: totalAttendanceData,
-            },
-            {
-              name: "Cancellations",
-              type: "bar",
-              data: totalCancelledData,
-            },
-          ],
-        }}
+        ]}
+        loading={loading}
       />
     </CustomCard>
   );

@@ -16,6 +16,7 @@ export default function CreateServiceForm({
   setInitialData,
   handleCreateService,
   handleUpdateService,
+  setIsOpen,
   loading,
 }) {
   const methods = useForm({ mode: "onTouched" });
@@ -101,6 +102,7 @@ export default function CreateServiceForm({
     e.preventDefault();
     const { id, active, ...processedData } = initialData;
     methods.reset(processedData);
+    setIsOpen(false);
   };
 
   useEffect(() => {

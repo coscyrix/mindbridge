@@ -7,12 +7,14 @@ import { ReferenceContextProvider } from "../context/ReferenceContext";
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  const allowedPath = ["/login", "/sign-up", "/reset-password"];
-  const isAuthPage = allowedPath.includes(router.pathname);
+  const allowedPaths = ["/login", "/sign-up", "/reset-password"];
+  const isAbsolutePage =
+    allowedPaths.includes(router.pathname) ||
+    router.pathname.startsWith("/patient-forms");
 
   return (
     <>
-      {isAuthPage ? (
+      {isAbsolutePage ? (
         <Component {...pageProps} />
       ) : (
         <ReferenceContextProvider>

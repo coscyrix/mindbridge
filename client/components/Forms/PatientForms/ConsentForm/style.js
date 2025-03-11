@@ -51,6 +51,10 @@ export const ConsentFormContainer = styled.div`
         display: flex;
         width: 100%;
         align-items: center;
+        div {
+          width: 300px;
+          margin: 0px;
+        }
       }
 
       img {

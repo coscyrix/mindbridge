@@ -1,16 +1,25 @@
 import React, { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, FormProvider } from "react-hook-form";
 import { ConsentFormContainer } from "./style";
 import moment from "moment";
 import CustomButton from "../../../CustomButton";
 import { api } from "../../../../utils/auth";
 import { toast } from "react-toastify";
 import { useRouter } from "next/router";
+import CustomInputField from "../../../CustomInputField";
 
 const ConsentForm = () => {
   const signaturePadRef = useRef(null);
   const [loading, setLoading] = useState(false);
+
+  const methods = useForm({
+    defaultValues: {
+      client_name: "",
+      date: moment().format("DD/MM/YYYY"),
+      signature: null,
+    },
+  });
 
   const {
     handleSubmit,
@@ -18,13 +27,7 @@ const ConsentForm = () => {
     setValue,
     formState: { errors },
     reset,
-  } = useForm({
-    defaultValues: {
-      client_name: "Test",
-      date: moment().format("DD/MM/YYYY"),
-      signature: null,
-    },
-  });
+  } = methods;
 
   const router = useRouter();
 
@@ -44,10 +47,10 @@ const ConsentForm = () => {
 
   const onSubmit = async (data) => {
     const { client_name, date, imgBase64 } = data;
-    const { client_id } = router.query;
+    const { client_id, form_id } = router.query;
     try {
       setLoading(true);
-      if (!client_id || !session_id) {
+      if (!client_id || !form_id) {
         toast.error("Required parameters are missing from the route.");
         setLoading(false);
         return;
@@ -58,12 +61,13 @@ const ConsentForm = () => {
       };
       const response = await api.post("/feedback/consent", payload);
       if (response.status === 200) {
-        toast.success("Consent form submitted successfully!");
+        toast.success(data?.message || "Consent form submitted successfully!");
         reset();
+        router.push("/patient-forms/form-submission");
       }
     } catch (error) {
-      console.error("Error while submitting the consent form!");
-      toast.error("Error while submitting the consent form");
+      console.error("Error while submitting the consent form: ", error);
+      toast.error(error?.message || "Error while submitting the consent form");
     } finally {
       setLoading(false);
     }
@@ -153,113 +157,106 @@ const ConsentForm = () => {
           asked questions for clarification, and understand the content.
         </p>
       </div>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="client-details-container">
-          <h4>Client Details :</h4>
-          <div className="signature-container">
-            <div className="client-details-field">
-              <label>Client Print Name :</label>
-              <Controller
-                name="client_name"
-                control={control}
-                rules={{ required: "Client Name is required" }}
-                render={({ field, fieldState }) => (
-                  <>
-                    {/* <label {...field} disabled /> */}
-                    <input type="text" {...field} disabled />
-                    {fieldState.error && (
-                      <small>{fieldState.error.message}</small>
-                    )}
-                  </>
-                )}
-              />
-            </div>
-            <div>
-              <label>Date :</label>
-              <Controller
-                name="date"
-                control={control}
-                rules={{ required: "Date is required" }}
-                render={({ field, fieldState }) => (
-                  <>
-                    <input type="text" {...field} disabled />
-                    {fieldState.error && (
-                      <small>{fieldState.error.message}</small>
-                    )}
-                  </>
-                )}
-              />
-            </div>
-            <div style={{ display: "flex" }}>
-              <label> Client Signature : </label>
-              <Controller
-                name="imgBase64"
-                control={control}
-                rules={{
-                  required: "Signature is required",
-                  validate: (value) =>
-                    value !== null || "Please provide a valid signature",
-                }}
-                render={({ field }) => (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "10px",
-                      alignItems: "center",
-                    }}
-                  >
-                    {!field.value && (
-                      <SignatureCanvas
-                        ref={signaturePadRef}
-                        penColor="black"
-                        canvasProps={{
-                          className: "signature-canvas",
-                        }}
-                      />
-                    )}
-                    {field.value && (
-                      <div>
-                        <img src={field.value} alt="Client Signature" />
-                      </div>
-                    )}
-                    <div>
+      <FormProvider {...methods}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="client-details-container">
+            <h4>Client Details :</h4>
+            <div className="signature-container">
+              <div className="client-details-field">
+                <label>Client Print Name :</label>
+                <CustomInputField
+                  name="client_name"
+                  customClass="name-input"
+                  placeholder="Full Name"
+                />
+              </div>
+              <div>
+                <label>Date :</label>
+                <Controller
+                  name="date"
+                  control={control}
+                  rules={{ required: "Date is required" }}
+                  render={({ field, fieldState }) => (
+                    <>
+                      <input type="text" {...field} disabled />
+                      {fieldState.error && (
+                        <small>{fieldState.error.message}</small>
+                      )}
+                    </>
+                  )}
+                />
+              </div>
+              <div style={{ display: "flex" }}>
+                <label> Client Signature : </label>
+                <Controller
+                  name="imgBase64"
+                  control={control}
+                  rules={{
+                    required: "Signature is required",
+                    validate: (value) =>
+                      value !== null || "Please provide a valid signature",
+                  }}
+                  render={({ field }) => (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "center",
+                      }}
+                    >
                       {!field.value && (
+                        <SignatureCanvas
+                          ref={signaturePadRef}
+                          penColor="black"
+                          canvasProps={{
+                            className: "signature-canvas",
+                          }}
+                        />
+                      )}
+                      {field.value && (
+                        <div>
+                          <img src={field.value} alt="Client Signature" />
+                        </div>
+                      )}
+                      <div>
+                        {!field.value && (
+                          <button
+                            type="button"
+                            onClick={() => saveSignature(field)}
+                          >
+                            Save
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={() => saveSignature(field)}
+                          onClick={() => {
+                            clearSignature();
+                            field.onChange(null);
+                          }}
                         >
-                          Save
+                          Clear
                         </button>
+                      </div>
+                      {errors.signature && (
+                        <small style={{ color: "red" }}>
+                          {errors.signature.message}
+                        </small>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          clearSignature();
-                          field.onChange(null);
-                        }}
-                      >
-                        Clear
-                      </button>
                     </div>
-                    {errors.signature && (
-                      <small style={{ color: "red" }}>
-                        {errors.signature.message}
-                      </small>
-                    )}
-                  </div>
-                )}
-              />
+                  )}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        <CustomButton
-          title="Submit"
-          style={{ marginLeft: "auto", marginTop: "20px", minWidth: "100px" }}
-          type="submit"
-          customClass="primary"
-        />
-      </form>
+          <CustomButton
+            title="Submit"
+            style={{ marginLeft: "auto", marginTop: "20px", minWidth: "100px" }}
+            type="submit"
+            customClass="primary"
+          />
+        </form>
+      </FormProvider>
     </ConsentFormContainer>
   );
 };

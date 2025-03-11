@@ -9,7 +9,6 @@ import { api } from "../../utils/auth";
 import { toast } from "react-toastify";
 import CommonServices from "../../services/CommonServices";
 import CustomTab from "../../components/CustomTab";
-import moment from "moment";
 import CustomButton from "../../components/CustomButton";
 import { AddIcon } from "../../public/assets/icons";
 import { useReferenceContext } from "../../context/ReferenceContext";
@@ -21,8 +20,9 @@ function ClientSession() {
   const actionDropdownRef = useRef(null);
   const [sessions, setSessions] = useState();
   const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [summaryData, setSummaryData] = useState({});
+  const [summaryData, setSummaryData] = useState(null);
   const [selectCounselor, setSelectCounselor] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
   const { userObj } = useReferenceContext();
 
   const tabLabels = [
@@ -54,7 +54,9 @@ function ClientSession() {
       }
       if (response.status === 200) {
         const { data } = response;
-        setSessions(data);
+        setSessions(
+          data?.filter((session) => session.thrpy_status !== "DISCHARGED")
+        );
       }
     } catch (error) {
       console.log("Error fetching sessions", error);
@@ -174,6 +176,7 @@ function ClientSession() {
     fetchSessions();
     getInvoice();
   }, []);
+
   return (
     <ClientSessionWrapper>
       <div className="client-session-heading">
@@ -205,6 +208,7 @@ function ClientSession() {
           confirmationModal={confirmationModal}
           setConfirmationModal={setConfirmationModal}
           setSessions={setSessions}
+          fetchSessions={fetchSessions}
         />
       </CreateSessionLayout>
       <CustomClientDetails
@@ -261,13 +265,12 @@ function ClientSession() {
         itemsPerPage={10}
       >
         <div className="custom-client-children">
-          <SmartTab tabLabels={tabLabels} handleFilterData={handleFilterData} />
-          {/* <CustomButton
-            icon={<AddIcon />}
-            title="Add Client Session"
-            onClick={handleShowAddClientSession}
-            customClass="create-client-button"
-          /> */}
+          <SmartTab
+            tabLabels={tabLabels}
+            handleFilterData={handleFilterData}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
         </div>
       </CustomClientDetails>
     </ClientSessionWrapper>

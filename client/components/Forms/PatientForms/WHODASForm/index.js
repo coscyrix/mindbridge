@@ -290,6 +290,7 @@ const WHODASForm = () => {
       const response = await api.post("/feedback/whodas", payload);
       if (response.status === 200) {
         toast.success("Form submitted successfully!");
+        router.push("/patient-forms/form-submission");
         reset();
       }
     } catch (error) {

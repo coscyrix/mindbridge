@@ -1,5 +1,4 @@
-import { ArrowIcon } from "../../public/assets/icons";
-import CustomSelect from "../CustomSelect";
+import CustomMultiSelect from "../CustomMultiSelect";
 import { CustomCardContainer } from "./style";
 
 function CustomCard({
@@ -9,17 +8,18 @@ function CustomCard({
   options,
   value,
   onChange,
+  ...rest
 }) {
   return (
     <CustomCardContainer>
       <div className="heading">
         <span>{title}</span>
         {dropdown && (
-          <CustomSelect
+          <CustomMultiSelect
             options={options}
-            value={value}
+            isMulti={false}
             onChange={onChange}
-            dropdownIcon={<ArrowIcon style={{ transform: "rotate(90deg)" }} />}
+            {...rest}
           />
         )}
       </div>

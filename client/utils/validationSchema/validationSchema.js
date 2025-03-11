@@ -15,17 +15,20 @@ export const ClientValidationSchema = z
       .string()
       .min(2, { message: "At least 2 characters required" }),
 
-    user_phone_nbr: z
-      .string({
-        required_error: "Number is required",
-        invalid_type_error: "Please enter phone number",
-      })
-      .min(1, { message: "Phone number is required" })
-      .regex(/^[\d\s\(\)\-\+]+$/, { message: "Invalid phone number format" })
-      .transform((value) => value.replace(/[\D]/g, ""))
-      .refine((value) => value.length >= 10 && value.length <= 15, {
-        message: "Phone number must be between 10 and 15 digits",
-      }),
+    user_phone_nbr: z.preprocess(
+      (val) => (typeof val === "number" ? String(val) : val),
+      z
+        .string({
+          required_error: "Number is required",
+          invalid_type_error: "Please enter phone number",
+        })
+        .min(1, { message: "Phone number is required" })
+        .regex(/^[\d\s\(\)\-\+]+$/, { message: "Invalid phone number format" })
+        .transform((value) => value.replace(/[\D]/g, ""))
+        .refine((value) => value.length >= 10 && value.length <= 15, {
+          message: "Phone number must be between 10 and 15 digits",
+        })
+    ),
     email: z
       .string()
       .nonempty("Email is required")

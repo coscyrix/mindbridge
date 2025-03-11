@@ -10,7 +10,14 @@ import CommonServices from "../services/CommonServices";
 import CustomMultiSelect from "../components/CustomMultiSelect";
 import { useReferenceContext } from "../context/ReferenceContext";
 import Cookies from "js-cookie";
+import CreateSessionLayout from "../components/FormLayouts/CreateSessionLayout/CreateSessionLayout";
+import CreateSessionForm from "../components/Forms/CreateSessionForm";
+
 function CurrentSession() {
+  const [showFlyout, setShowFlyout] = useState(false);
+  const [confirmationModal, setConfirmationModal] = useState(false);
+  const [activeData, setActiveData] = useState();
+  const [sessions, setSessions] = useState();
   const [rowToEdit, setRowToEdit] = useState();
   const [todaySession, setTodaySession] = useState([]);
   const [todaySessionFilterText, setTodaySessionFilterText] = useState("");
@@ -23,28 +30,33 @@ function CurrentSession() {
     useState("");
   const [tomorrowSessionToBeDisplayed, setTomorrowSessionToBeDisplayed] =
     useState([]);
-  const [counselors, setCounselors] = useState([
-    { label: "All counselors", value: "allCounselors" },
-  ]);
+  const [counselors, setCounselors] = useState([]);
   const { userObj } = useReferenceContext();
 
   const [activeRow, setActiveRow] = useState({});
+  const [selectedCounselor, setSelectedCounselor] = useState(null);
   const [loading, setLoading] = useState(false);
   const dropdownTodayRef = useRef(null);
   const dropdownTomorrowRef = useState(null);
+
+  const handleEditSessionInfo = (row) => {
+    setShowFlyout(true);
+    setActiveData({ ...row, req_id: row.thrpy_req_id });
+  };
 
   // fun to get session data
   async function getCurrentSessionData(counselorId) {
     setLoading(true);
     let response;
     try {
-      if (counselorId && counselorId !== "allCounselors") {
+      if (counselorId && counselorId !== "allCounselors")
         response = await api.get(`/session/today?counselor_id=${counselorId}`);
-      } else {
-        response = await api.get(
-          `/session/today?counselor_id=${userObj?.user_profile_id}`
-        );
-      }
+      // } else {
+      //   console.log(counselors, "counselors");
+      //   response = await api.get(
+      //     `/session/today?counselor_id=${counselorId}`
+      //   );
+      // }
       if (response?.status === 200) {
         setTodaySession(response?.data?.session_today);
         setTodaySessionToBeDisplayed(response?.data?.session_today);
@@ -351,6 +363,7 @@ function CurrentSession() {
 
   const fetchCounsellor = async () => {
     try {
+      setLoading(true);
       const response = await CommonServices.getClients();
       if (response.status === 200) {
         const { data } = response;
@@ -363,15 +376,20 @@ function CurrentSession() {
             value: item?.user_profile_id,
           };
         });
-        setCounselors([...counselors, ...counselorOptions]);
+        setSelectedCounselor(counselorOptions?.at(0));
+        await getCurrentSessionData(counselorOptions?.at(0)?.value);
+        setCounselors(counselorOptions);
       }
     } catch (error) {
       console.log("Error fetching clients", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
+    setSelectedCounselor(data);
     getCurrentSessionData(counselorId);
   };
 
@@ -386,43 +404,57 @@ function CurrentSession() {
   useEffect(() => {
     const userData = Cookies.get("user");
     setUserData(JSON.parse(userData));
-
-    getCurrentSessionData();
     fetchCounsellor();
+    // getCurrentSessionData();
   }, []);
 
   return (
-    <CurrentSessionHeadingWrapper>
-      <div className="header-wrapper">
-        <h2>Current Session</h2>
-        <p>
-          Page tracking active client sessions, displaying service names, start
-          times, and real-time updates for seamless session management.
-        </p>
-      </div>
-      <div className="today-header">
-        <div className={"today"}>Today Session</div>
-        <div style={{ display: "flex", gap: "20px" }}>
-          {todaySession?.length > 0 && (
+    <>
+      <CreateSessionLayout
+        isOpen={showFlyout}
+        setIsOpen={setShowFlyout}
+        initialData={activeData}
+        setConfirmationModal={setConfirmationModal}
+      >
+        <CreateSessionForm
+          isOpen={showFlyout}
+          setIsOpen={setShowFlyout}
+          initialData={activeData}
+          setInitialData={setActiveData}
+          confirmationModal={confirmationModal}
+          setConfirmationModal={setConfirmationModal}
+          setSessions={setSessions}
+        />
+      </CreateSessionLayout>
+      <CurrentSessionHeadingWrapper>
+        <div className="header-wrapper">
+          <h2>Current Session</h2>
+          <p>
+            Page tracking active client sessions, displaying service names,
+            start times, and real-time updates for seamless session management.
+          </p>
+        </div>
+        <div className="today-header">
+          <div className={"today"}>Today Session</div>
+          <div style={{ display: "flex", gap: "20px" }}>
             <CustomSearch
               filterText={todaySessionFilterText}
               onFilter={(e) => setTodaySessionFilterText(e.target.value)}
               placeholder="Search in today session"
             />
-          )}
-          <div>
-            {userData?.role_id == 4 ? (
-              <div key="counselor-select" className="custom-select-container">
-                <CustomMultiSelect
-                  options={counselors}
-                  onChange={handleSelectCounselor}
-                  isMulti={false}
-                  placeholder="Select a counselor"
-                />
-              </div>
-            ) : null}
-          </div>
-          {todaySession?.length > 0 && (
+            <div>
+              {userData?.role_id == 4 ? (
+                <div key="counselor-select" className="custom-select-container">
+                  <CustomMultiSelect
+                    options={counselors}
+                    onChange={handleSelectCounselor}
+                    value={selectedCounselor}
+                    isMulti={false}
+                    placeholder="Select a counselor"
+                  />
+                </div>
+              ) : null}
+            </div>
             <div style={{ position: "relative" }}>
               <CustomButton
                 icon={<SettingsIcon />}
@@ -431,49 +463,53 @@ function CurrentSession() {
                 renderFooter={renderTodaySessionFooter}
               />
             </div>
-          )}
-        </div>
-      </div>
-
-      <CustomTable
-        columns={todaySessionVisibleColumns}
-        data={todaySessionToBeDisplayed}
-        loading={loading}
-        pagination
-        paginationRowsPerPageOptions={[5, 10, 15, 20, 25]}
-        paginationPerPage={5}
-      />
-      <div className={"tomorrow-header"}>
-        <div className={"tomorrow"}>Tomorrow Session</div>
-        {tomorrowSession?.length > 0 && (
-          <div style={{ display: "flex", gap: "30px" }}>
-            <CustomSearch
-              filterText={tomorrowSessionFilterText}
-              onFilter={(e) => setTomorrowSessionFilterText(e.target.value)}
-              placeholder="Search in tomorrow session"
-            />
-            <div style={{ position: "relative" }}>
-              <CustomButton
-                icon={<SettingsIcon />}
-                title={"Columns"}
-                dropdownOptions={tomorrowSessionOptions}
-                renderFooter={renderTomorrowSessionFooter}
-              />
-            </div>
           </div>
-        )}
-      </div>
+        </div>
 
-      {!loading && (
         <CustomTable
-          columns={tomorrowSessionVisibleColumns}
-          data={tomorrowSessionToBeDisplayed}
+          columns={todaySessionVisibleColumns}
+          data={todaySessionToBeDisplayed}
+          loading={loading}
+          selectableRows={false}
           pagination
           paginationRowsPerPageOptions={[5, 10, 15, 20, 25]}
           paginationPerPage={5}
+          onRowclick={handleEditSessionInfo}
         />
-      )}
-    </CurrentSessionHeadingWrapper>
+        <div className={"tomorrow-header"}>
+          <div className={"tomorrow"}>Tomorrow Session</div>
+          {tomorrowSession?.length > 0 && (
+            <div style={{ display: "flex", gap: "30px" }}>
+              <CustomSearch
+                filterText={tomorrowSessionFilterText}
+                onFilter={(e) => setTomorrowSessionFilterText(e.target.value)}
+                placeholder="Search in tomorrow session"
+              />
+              <div style={{ position: "relative" }}>
+                <CustomButton
+                  icon={<SettingsIcon />}
+                  title={"Columns"}
+                  dropdownOptions={tomorrowSessionOptions}
+                  renderFooter={renderTomorrowSessionFooter}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!loading && (
+          <CustomTable
+            columns={tomorrowSessionVisibleColumns}
+            data={tomorrowSessionToBeDisplayed}
+            pagination
+            paginationRowsPerPageOptions={[5, 10, 15, 20, 25]}
+            paginationPerPage={5}
+            onRowclick={handleEditSessionInfo}
+            selectableRows={false}
+          />
+        )}
+      </CurrentSessionHeadingWrapper>
+    </>
   );
 }
 

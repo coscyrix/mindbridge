@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import CommonServices from "../services/CommonServices";
-import { logout } from "../utils/auth";
 import Cookies from "js-cookie";
 import { useRouter } from "next/router";
 
@@ -14,6 +13,7 @@ export const ReferenceContextProvider = ({ children }) => {
   const [servicesData, setServicesData] = useState();
   const [forms, setForms] = useState();
   const [allCounselors, setAllCounselors] = useState();
+  const [tokenExpired, setTokenExpired] = useState(true);
   const user = Cookies.get("user");
   const userObj = user && JSON.parse(user);
   const router = useRouter();
@@ -22,6 +22,7 @@ export const ReferenceContextProvider = ({ children }) => {
     try {
       const response = await CommonServices.getReferences();
       if (response.status === 200) {
+        setTokenExpired(false);
         const { data } = response;
         setServicesData(data?.service);
         setRoles(data?.roles);
@@ -30,10 +31,7 @@ export const ReferenceContextProvider = ({ children }) => {
         getAllCounselors();
       }
     } catch (err) {
-      // if (err.status === 403) {
-      //   logout();
-      //   return;
-      // }
+      setTokenExpired(true);
       console.error("Error fetching references:", err);
     }
   };
@@ -44,7 +42,6 @@ export const ReferenceContextProvider = ({ children }) => {
       if (response.status === 200) {
         const { data } = response;
         setAllCounselors(data?.rec);
-        console.log(data, "data");
       }
     } catch (error) {
       console.error("Error while fetching all the users", error);
@@ -68,6 +65,7 @@ export const ReferenceContextProvider = ({ children }) => {
         userObj,
         forms,
         allCounselors,
+        tokenExpired,
       }}
     >
       {children}

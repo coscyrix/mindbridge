@@ -10,6 +10,7 @@ import Spinner from "../../common/Spinner";
 
 const EditSessionScheduleForm = ({
   activeData,
+  setActiveData,
   setScheduledSessions,
   setEditSessionModal,
   sessionRange = { min: false, max: false },
@@ -37,10 +38,11 @@ const EditSessionScheduleForm = ({
 
   const handleDiscard = () => {
     reset();
+    setActiveData("");
+    setEditSessionModal(false);
   };
 
   const handleUpdateSessionSchedule = async (formData) => {
-    console.log(formData, "formdata");
     try {
       setLoading(true);
       const intakeDate = moment
@@ -80,12 +82,13 @@ const EditSessionScheduleForm = ({
         );
         toast?.success("Session updated successfuly!");
       }
-      setEditSessionModal(false);
     } catch (error) {
       console.error("Error updating session schedule:", error.message || error);
       toast.error("Error updating session schedule");
     } finally {
+      setActiveData("");
       setLoading(false);
+      setEditSessionModal(false);
     }
   };
 

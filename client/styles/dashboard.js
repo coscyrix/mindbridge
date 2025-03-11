@@ -15,7 +15,7 @@ export const DashboardContainer = styled.div`
 `;
 
 export const DashboardTableContainer = styled.div`
-  padding: 0 10px 20px 30px;
+  padding: 20px 30px;
   display: flex;
   flex-direction: column;
   gap: 20px;

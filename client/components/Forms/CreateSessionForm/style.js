@@ -104,6 +104,18 @@ export const CreateSessionFormWrapper = styled.div`
       &:hover {
         color: var(--error-hover-color);
       }
+      &_disabled {
+        opacity: 0.5;
+        color: var(--error-color);
+        padding: 0px;
+        border: none;
+        box-shadow: none;
+        cursor: auto;
+        font-size: 15px;
+        &:hover {
+          color: var(--error-color);
+        }
+      }
     }
 
     .date-time-wrapper {
@@ -146,6 +158,11 @@ export const CreateSessionFormWrapper = styled.div`
 
     .select-wrapper {
       width: 100%;
+      label {
+        svg {
+          color: #2196f3;
+        }
+      }
     }
 
     .custom-select__selected {

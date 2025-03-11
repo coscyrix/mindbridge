@@ -8,28 +8,25 @@ import { useReferenceContext } from "../../../context/ReferenceContext";
 
 const NoShowReasonForm = ({
   activeData,
+  setActiveData,
   setSessionStatusModal,
-  scheduledSession,
-  setScheduledSession,
+  getAllSessionsOfClient,
 }) => {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const { userObj } = useReferenceContext();
   const handleDiscardReason = () => {
     setReason("");
+    setActiveData("");
+    setSessionStatusModal(false);
   };
   const handleUpdateReason = async () => {
-    console.log("handleUpdateReason entered");
     try {
-      console.log("handleUpdateReason entered");
       setLoading(true);
       const payload = {
         session_status: 3,
         notes: reason,
       };
-      const updateIndex = scheduledSession?.findIndex(
-        (session) => session.session_id == activeData?.session_id
-      );
       let response;
       if (userObj?.role_id == 4) {
         response = await api.put(
@@ -44,19 +41,14 @@ const NoShowReasonForm = ({
       }
       if (response?.status === 200) {
         toast.success("Session status updated successfully!");
-        setScheduledSession((prev) =>
-          prev.map((session, index) =>
-            index === updateIndex
-              ? { ...session, session_status: "NO-SHOW" }
-              : session
-          )
-        );
+        getAllSessionsOfClient();
         setSessionStatusModal(false);
       }
     } catch (error) {
-      toast.error("Error while updating the session status!");
+      toast.error(error?.message || "Error while updating the session status!");
     } finally {
       setLoading(false);
+      setActiveData("");
     }
   };
   return (

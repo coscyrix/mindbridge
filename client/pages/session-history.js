@@ -98,34 +98,6 @@ function SessionHistory() {
     fetchSessions(counselorId);
   };
 
-  // const fetchCounsellor = async () => {
-  //   try {
-  //     const response = await CommonServices.getClients();
-  //     if (response.status === 200) {
-  //       const { data } = response;
-  //       const allCounselors = data?.rec?.filter(
-  //         (client) => client?.role_id === 2
-  //       );
-  //       const counselorOptions = allCounselors?.map((item) => {
-  //         return {
-  //           label: item?.user_first_name + " " + item?.user_last_name,
-  //           value: item?.user_profile_id,
-  //         };
-  //       });
-  //       setCounselors([
-  //         { label: "All user", value: "User" },
-  //         ...counselorOptions,
-  //       ]);
-  //     }
-  //   } catch (error) {
-  //     console.log("Error fetching clients", error);
-  //   }
-  // };
-
-  // const handleSelectUser = (user) => {
-  //   setSelectUser(user?.value);
-  // };
-
   const updateUserDataToDisplay = () => {
     let filteredData = sessions;
 
@@ -206,6 +178,7 @@ function SessionHistory() {
           }),
           data: sessionToBeDisplayed,
         }}
+        selectableRows={false}
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
         loading={sessionLoading}

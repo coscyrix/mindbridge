@@ -143,7 +143,7 @@ function Services() {
       handleCellClick(row);
     } catch (err) {
       console.error(err);
-      toast.error("Error, Whiile deleting the Client", {
+      toast.error("Error, While deleting the Client", {
         position: "top-right",
       });
     }
@@ -157,6 +157,7 @@ function Services() {
       >
         <CreateServiceForm
           isOpen={showCreateFlyout}
+          setIsOpen={setShowCreateFlyout}
           initialData={activeData}
           setInitialData={setActiveData}
           handleCreateService={handleCreateService}

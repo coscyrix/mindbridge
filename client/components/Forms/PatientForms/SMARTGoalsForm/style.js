@@ -1,30 +1,32 @@
 import styled from "styled-components";
 
 export const SMARTGoalsContainer = styled.div`
-padding: 20px 30px;
-h1 {
+  padding: 20px 30px;
+  h1 {
     margin: 0px;
   }
   p {
     font-size: 14px;
   }
 
-  .smart-goals{
+  .smart-goals {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 0px 50px;
-  }
-
-
-  .client-info{
-    &_input-question{
-      display:grid;
-      grid-template-columns:repeat(2, 1fr);
+    @media only screen and (max-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0px 20px;
     }
   }
 
+  .client-info {
+    &_input-question {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
 
-  .SmartGoalClientTable{
+  .SmartGoalClientTable {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
@@ -42,20 +44,20 @@ h1 {
       min-width: 100px;
     }
 
-    // td:first-child {
-    //   text-align: left;
-    // }
-
     input[type="radio"] {
       cursor: pointer;
     }
-
   }
-  .alignLeft{
-    text-align:left !important;
-    width:800px;
-}
-
+  .alignLeft {
+    text-align: left !important;
+    width: 800px;
+  }
+  .select-container {
+    .multi-select {
+      z-index: unset !important;
+      padding-bottom: 0 !important;
+    }
+  }
 
   .primary {
     background: var(--primary-button-color);
@@ -66,4 +68,4 @@ h1 {
       background: var(--primary-button-hover-color);
     }
   }
-`
+`;

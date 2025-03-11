@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import PCL5Form from "../../components/Forms/PatientForms/PCLForm";
+"use client";
+
+import SMARTGoalForms from "../../components/Forms/PatientForms/SMARTGoalsForm";
 import { api } from "../../utils/auth";
 import { toast } from "react-toastify";
 import FormSubmission from "./form-submission";
 import Spinner from "../../components/common/Spinner";
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 import CommonServices from "../../services/CommonServices";
 
-const PCL5Page = () => {
+const SMARTGoals = () => {
   const router = useRouter();
   const { form_id, session_id } = router.query;
 
   const [formAlreadySubmitted, setFormAlreadySubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState(null);
 
   useEffect(() => {
     if (!session_id) return;
@@ -26,6 +29,7 @@ const PCL5Page = () => {
         if (response.status === 200) {
           const { data } = response;
           const formObj = data[0];
+          setFormData(formObj);
           if (formObj?.form_submit == 1 || formObj?.form_submit == true) {
             setFormAlreadySubmitted(true);
           }
@@ -48,12 +52,10 @@ const PCL5Page = () => {
       </div>
     );
   }
-
   return formAlreadySubmitted ? (
     <FormSubmission alreadySubmitted />
   ) : (
-    <PCL5Form />
+    <SMARTGoalForms formData={formData} />
   );
 };
-
-export default PCL5Page;
+export default SMARTGoals;

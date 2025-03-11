@@ -23,6 +23,21 @@ const CommonServices = {
   getSessionsByCounselor(params) {
     return api.get(ApiConfig.sessions.getSessions, { params });
   },
+  getFormSubmissionDetails(params) {
+    return api.get(ApiConfig.forms.submissionDetails, { params });
+  },
+  getOverallSessionsData(params) {
+    return api.get(ApiConfig.dashboard.overallSessions, { params });
+  },
+  getReportsTableData(params) {
+    return api.get(ApiConfig.dashboard.reportsData, { params });
+  },
+  getAssessmentResults(params) {
+    return api.get(ApiConfig.dashboard.assessmentResultsData, { params });
+  },
+  getFeedbackFormDetails(params) {
+    return api.get(ApiConfig.feedback.getFeedbackFormDetails, { params });
+  },
 };
 
 export default CommonServices;

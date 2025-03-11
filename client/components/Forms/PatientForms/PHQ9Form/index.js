@@ -69,12 +69,13 @@ const PHQ9Form = () => {
       };
       const response = await api.post("/feedback/phq9", payload);
       if (response.status === 200) {
-        toast.success("Form submitted successfully!");
+        toast.success(data?.message || "Form submitted successfully!");
+        router.push("/patient-forms/form-submission");
         reset();
       }
     } catch (error) {
       console.error("Error:", error);
-      toast.error("Error submitting the form");
+      toast.error(error?.message || "Error submitting the form");
     } finally {
       setTimeout(() => setLoading(false), 3000);
     }

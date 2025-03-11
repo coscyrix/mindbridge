@@ -29,3 +29,5 @@ export * from "./EditIcon";
 export * from "./LogoutIcon";
 export * from "./ServiceIcon";
 export * from "./InvoiceIcon";
+export * from "./CheckIcon";
+export * from "./InfoIcon";

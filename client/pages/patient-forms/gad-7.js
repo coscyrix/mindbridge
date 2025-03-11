@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import PCL5Form from "../../components/Forms/PatientForms/PCLForm";
+"use client";
+import React, { useEffect, useState } from "react";
+import AnxietyDisorderForm from "../../components/Forms/PatientForms/AnxietyDisorderForm";
 import { api } from "../../utils/auth";
 import { toast } from "react-toastify";
 import FormSubmission from "./form-submission";
 import Spinner from "../../components/common/Spinner";
+import { useRouter } from "next/router";
 import CommonServices from "../../services/CommonServices";
 
-const PCL5Page = () => {
+const AnxietyDisorderFormPage = () => {
   const router = useRouter();
   const { form_id, session_id } = router.query;
 
@@ -48,12 +49,11 @@ const PCL5Page = () => {
       </div>
     );
   }
-
   return formAlreadySubmitted ? (
     <FormSubmission alreadySubmitted />
   ) : (
-    <PCL5Form />
+    <AnxietyDisorderForm />
   );
 };
 
-export default PCL5Page;
+export default AnxietyDisorderFormPage;

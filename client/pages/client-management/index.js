@@ -12,6 +12,7 @@ import CommonServices from "../../services/CommonServices";
 import CreateSessionForm from "../../components/Forms/CreateSessionForm";
 import Spinner from "../../components/common/Spinner";
 import { useReferenceContext } from "../../context/ReferenceContext";
+import SmartTab from "../../components/SmartTab";
 const CreateClientForm = dynamic(
   () => import("../../components/Forms/CreateClientForm"),
   { ssr: false }
@@ -24,7 +25,7 @@ const CreateSessionLayout = dynamic(
   { ssr: false }
 );
 function ClientManagement() {
-  const [clients, setClients] = useState();
+  const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState();
   const [showCreateSessionLayout, setShowCreateSessionLayout] = useState(false);
   const [activeData, setActiveData] = useState();
@@ -34,8 +35,27 @@ function ClientManagement() {
   const [confirmationModal, setConfirmationModal] = useState(false);
   const [userProfileId, setUserProfileId] = useState(null);
   const [selectCounselor, setSelectCounselor] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
+
   const actionDropdownRef = useRef(null);
   const { userObj } = useReferenceContext();
+
+  const tabLabels = [
+    { id: 0, label: "Clients", value: "clients" },
+    { id: 1, label: "Counselors", value: "counselors" },
+    { id: 2, label: "Managers", value: "managers" },
+    { id: 3, label: "Admins", value: "admins" },
+  ];
+
+  const handleFilterData = (tab) => {
+    if (!clients || clients.length === 0) return; // Ensure clients exist
+
+    const filteredData = clients.filter((client) => {
+      return client.role_id === tab.id + 1 && client.status_yn === "y"; // Adjusted logic
+    });
+
+    setClientData(filteredData);
+  };
 
   const fetchClients = async (counselorId) => {
     try {
@@ -50,6 +70,7 @@ function ClientManagement() {
         // in case of admin
         if (counselorId && counselorId !== "allCounselors") {
           response = await CommonServices.getClientsByCounselor({
+            role_id: 2,
             counselor_id: counselorId,
           });
         } else {
@@ -58,7 +79,8 @@ function ClientManagement() {
       }
       if (response.status === 200) {
         const { data } = response;
-        setClients(data?.rec);
+
+        setClients(data?.rec?.length > 0 ? data?.rec : []);
       }
     } catch (error) {
       console.log("Error fetching clients", error);
@@ -70,33 +92,38 @@ function ClientManagement() {
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
     setSelectCounselor(counselorId);
+    setActiveTab(0);
     fetchClients(counselorId);
   };
 
   const handleEditSessionInfo = async (row) => {
-    try {
-      setInitialDataLoading(true);
-      setUserProfileId({
-        label:row?.user_first_name + " " + row?.user_last_name,
-        serialNumber:row?.clam_num,
-        value:row?.user_profile_id
-      });
-      setShowFlyout(true);
-      if (row?.has_schedule) {
-        const { req_id } = row?.has_schedule;
-        const response = await api.get(`/thrpyReq/?req_id=${req_id}`);
-        if (response?.status === 200) {
-          const { data } = response;
-          Array.isArray(data) && data.length > 0
-            ? setActiveData(data[0])
-            : setActiveData(data);
+    if (userObj?.role_id != 4 || (userObj?.role_id == 4 && row.has_schedule)) {
+      try {
+        setInitialDataLoading(true);
+        setUserProfileId({
+          label: row?.user_first_name + " " + row?.user_last_name,
+          serialNumber: row?.clam_num,
+          value: row?.user_profile_id,
+          has_schedule: row?.has_schedule,
+          user_target_outcome: row?.user_target_outcome,
+        });
+        setShowFlyout(true);
+        if (row?.has_schedule) {
+          const { req_id } = row?.has_schedule;
+          const response = await api.get(`/thrpyReq/?req_id=${req_id}`);
+          if (response?.status === 200) {
+            const { data } = response;
+            Array.isArray(data) && data.length > 0
+              ? setActiveData(data[0])
+              : setActiveData({ req_id });
+          }
         }
+      } catch (error) {
+        console.log("Error while fetching the current user data", error);
+        toast.error(`Error while fetching current user data. ${error}`);
+      } finally {
+        setInitialDataLoading(false);
       }
-    } catch (error) {
-      console.log("Error while fetching the current user data", error);
-      toast.error(`Error while fetching current user data. ${error}`);
-    } finally {
-      setInitialDataLoading(false);
     }
   };
 
@@ -187,10 +214,9 @@ function ClientManagement() {
 
   useEffect(() => {
     if (clients?.length > 0) {
-      const filteredData = clients.filter(
-        (client) => client.status_yn === "y" && client.role_id == 1
-      );
-      setClientData(filteredData);
+      handleFilterData({ id: 0 });
+    } else {
+      setClientData([]);
     }
   }, [clients]);
 
@@ -199,7 +225,18 @@ function ClientManagement() {
   }, []);
 
   return (
-    <ClientManagementContainer>
+    <ClientManagementContainer role={userObj?.role_id}>
+      {userObj?.role_id === 4 && (
+        <div className="client-session-heading">
+          <div className="heading-wrapper">
+            <h2 className="heading">Client List</h2>
+          </div>
+          <p className="sub-heading">
+            Your Clients at a Glance: Explore, Manage, and Stay Connected with
+            Your Entire Client List in One Place!
+          </p>
+        </div>
+      )}
       <CreateSessionLayout
         isOpen={showCreateSessionLayout}
         setIsOpen={setShowCreateSessionLayout}
@@ -212,6 +249,8 @@ function ClientManagement() {
           tableData={clientData}
           setTableData={setClientData}
           fetchClients={fetchClients}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
         />
       </CreateSessionLayout>
       <CreateSessionLayout
@@ -248,7 +287,19 @@ function ClientManagement() {
         fixedHeaderScrollHeight="700px"
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
-      />
+      >
+        {userObj?.role_id === 4 && (
+          <div className="custom-client-children">
+            <SmartTab
+              tabLabels={tabLabels}
+              handleFilterData={handleFilterData}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              selectCounselor={selectCounselor}
+            />
+          </div>
+        )}
+      </CustomClientDetails>
     </ClientManagementContainer>
   );
 }

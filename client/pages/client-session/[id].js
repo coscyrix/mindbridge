@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import CustomSearch from "../../components/CustomSearch";
 import CustomButton from "../../components/CustomButton";
 import {
-  AddIcon,
   DownloadIcon,
   MenuIcon,
   OpenEyeIcon,
@@ -20,6 +19,7 @@ import HomeworkModal from "../../components/HomeworkModalContent";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import NotesModalContent from "../../components/NotesModalContent";
 import { api } from "../../utils/auth";
+import { useReferenceContext } from "../../context/ReferenceContext";
 const tabLabels = ["Primary", "Additional"];
 
 function ClientDetails() {
@@ -37,6 +37,8 @@ function ClientDetails() {
   const router = useRouter();
   const { id } = router.query;
   const actionDropdownRef = useRef(null);
+  const { userObj } = useReferenceContext();
+  const admin = userObj?.role_id == 4;
 
   const handleCellClick = (row) => {
     setActiveData((prev) =>
@@ -153,10 +155,6 @@ function ClientDetails() {
     setShowConfirmationModal(false);
   };
 
-  const handleOpenAddNoteModal = () => {
-    setShowAddNoteModal(true);
-  };
-
   const handleCloseAddNoteModal = () => {
     setShowAddNoteModal(false);
     setNote("");
@@ -235,9 +233,9 @@ function ClientDetails() {
               Client Session List for :&quot;{clientDetails?.service_name}&quot;
             </h2>
             <p style={{ textTransform: "capitalize" }}>
-              {`#${clientDetails?.client_clam_num || ""}${
-                clientDetails?.client_first_name || ""
-              } ${clientDetails?.client_last_name || ""}`}
+              {`# ${clientDetails?.client_clam_num || ""} ${
+                clientDetails?.client_first_name.toLowerCase() || ""
+              } ${clientDetails?.client_last_name.toLowerCase() || ""}`}
             </p>
           </div>
           <div className="search-container">
@@ -255,12 +253,6 @@ function ClientDetails() {
                   renderFooter={renderFooter}
                 />
               </div>
-              <CustomButton
-                icon={<AddIcon />}
-                title="Add/View Notes"
-                customClass="add-view-notes"
-                onClick={handleOpenAddNoteModal}
-              />
             </div>
           </div>
         </div>
@@ -306,16 +298,20 @@ function ClientDetails() {
                   dropdownOptions={columnOptions}
                   renderFooter={renderFooter}
                 />
-                <CustomButton
-                  onClick={handleOpenWorkModal}
-                  icon={<SettingsIcon />}
-                  title="Upload and Send Homework"
-                />
-                <CustomButton
-                  onClick={handleOpenConfirmationModal}
-                  icon={<SettingsIcon />}
-                  title="Send Consent Form"
-                />
+                {!admin && (
+                  <CustomButton
+                    onClick={handleOpenWorkModal}
+                    icon={<SettingsIcon />}
+                    title="Upload and Send Homework"
+                  />
+                )}
+                {!admin && (
+                  <CustomButton
+                    onClick={handleOpenConfirmationModal}
+                    icon={<SettingsIcon />}
+                    title="Send Consent Form"
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -350,22 +346,20 @@ function ClientDetails() {
             />
           </div>
           <div className="button-group-right">
-            <CustomButton
-              onClick={handleOpenWorkModal}
-              icon={<SettingsIcon />}
-              title="Upload and Send Homework"
-            />
-            <CustomButton
-              onClick={handleOpenConfirmationModal}
-              icon={<SettingsIcon />}
-              title="Send Consent Form"
-            />
-            <CustomButton
-              icon={<AddIcon />}
-              title="Add/View Notes"
-              customClass="add-view-notes"
-              onClick={handleOpenAddNoteModal}
-            />
+            {!admin && (
+              <CustomButton
+                onClick={handleOpenWorkModal}
+                icon={<SettingsIcon />}
+                title="Upload and Send Homework"
+              />
+            )}
+            {!admin && (
+              <CustomButton
+                onClick={handleOpenConfirmationModal}
+                icon={<SettingsIcon />}
+                title="Send Consent Form"
+              />
+            )}
           </div>
         </div>
         <CustomTable

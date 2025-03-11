@@ -8,7 +8,6 @@ import {
   EditIcon,
   ExcelIcon,
   InvoiceIcon,
-  MailIcon,
   MenuIcon,
   PdfIcon,
   PrintIcon,
@@ -47,14 +46,54 @@ function exportToCSV(columns, data, tableCaption) {
   link.click();
 }
 
+function capitalizeName(name) {
+  return name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : "";
+}
+
+function formatTime(time) {
+  return time ? moment.utc(time, "HH:mm:ss.SSSZ").format("h:mm A") : "N/A";
+}
+
+//For the pdfFunction proper functioning, give selectorId to each column
 function exportToPDF(columns, data, tableCaption) {
   const doc = new jsPDF();
+
   const headings = columns
     .filter((column) => column.name)
     .map((column) => column.name);
-  const rows = data.map((item) => Object.values(item));
+
+  const rows = data.map((item) => {
+    return columns
+      .filter((column) => column.name)
+      .map((column) => {
+        if (column.name === "Client Name") {
+          const firstName = capitalizeName(
+            item.client_first_name || item.user_first_name
+          );
+          const lastName = capitalizeName(
+            item.client_last_name || item.user_last_name
+          );
+          return `${firstName} ${lastName}`.trim();
+        }
+
+        if (column.name === "Session Time") {
+          return formatTime(item.req_time);
+        }
+
+        if (column.selector) {
+          return column.selector(item);
+        }
+
+        if (column.selectorId) {
+          return item[column.selectorId] || "N/A";
+        }
+
+        return "N/A";
+      });
+  });
 
   doc.text(tableCaption, 20, 10);
+
   doc.autoTable({
     head: [headings],
     body: rows,
@@ -83,6 +122,14 @@ function exportToExcel(columns, data, tableCaption) {
 
   XLSX.writeFile(workbook, `${tableCaption}.xlsx`);
 }
+
+export const isWithin24Hours = (intake_date, scheduled_time) => {
+  if (!intake_date || !scheduled_time) return false;
+  const scheduledDateTime = moment.utc(`${intake_date}T${scheduled_time}`);
+  const twentyFourHoursLater = scheduledDateTime.clone().add(24, "hours");
+  const currentDateTime = moment.utc();
+  return currentDateTime.isBefore(twentyFourHoursLater);
+};
 
 export const SIDEBAR_HEADINGS = [
   {
@@ -200,7 +247,6 @@ export const TABLE_DATA = (handleCellClick, handleEdit, handleDelete) => {
           </div>
         ),
         width: "50px",
-        // ignoreRowClick: true,
         allowOverflow: true,
         button: true,
       },
@@ -401,15 +447,14 @@ export const CLIENT_SESSION_LIST_DATA = (
       name: "Serial Number",
       selector: (row) => row.client_clam_num || "NA",
       sortable: true,
-      selectorId: "serialNumber",
+      selectorId: "client_clam_num",
       ...(showCell && {
         cell: (row, handleClick) => (
           <div
             style={{ color: "var(--link-color)", cursor: "pointer" }}
-            onClick={() =>
-              {
-              handleClick(row.req_id)}
-            }
+            onClick={() => {
+              handleClick(row.req_id);
+            }}
           >
             {row?.client_clam_num || "N/A"}
           </div>
@@ -432,34 +477,10 @@ export const CLIENT_SESSION_LIST_DATA = (
         moment.utc(row.req_time, "HH:mm:ss.SSSZ").format("h:mm A"),
       selectorId: "req_time",
     },
-
-    {
-      name: "",
-      cell: (row, index) => (
-        <Dropdown
-          ref={dropdownRef}
-          row={row}
-          index={index}
-          handleCellClick={handleCellClick}
-          handleEdit={handleEdit}
-          handleDelete={handleDelete}
-        />
-      ),
-      width: "50px",
-      allowOverflow: true,
-      button: true,
-    },
   ];
 };
 export const SESSION_TABLE_COLUMNS = (args) => {
-  const {
-    // handleNoteOpen,
-    // handleSendMail,
-    handleCellClick,
-    handleEdit,
-    handleDelete,
-    dropdownRef,
-  } = args || {};
+  const { handleCellClick, handleEdit, handleDelete, dropdownRef } = args || {};
   return [
     {
       name: "Date",
@@ -493,7 +514,10 @@ export const SESSION_TABLE_COLUMNS = (args) => {
     },
     {
       name: "Start Time",
-      selector: (row) => row.scheduled_time,
+      selector: (row) =>
+        row.scheduled_time
+          ? moment.utc(row.scheduled_time, "HH:mm:ss.SSS[Z]").format("hh:mm A")
+          : "N/A",
       sortable: true,
       selectorId: "scheduled_time",
     },
@@ -502,74 +526,6 @@ export const SESSION_TABLE_COLUMNS = (args) => {
       selector: (row) => row.session_format,
       sortable: true,
       selectorId: "session_format",
-    },
-    // {
-    //   name: "Notes",
-    //   selector: (row) => row.notes,
-    //   sortable: true,
-    //   cell: (row) =>
-    //     !row.notes ? (
-    //       <CustomButton
-    //         icon={<AddIcon />}
-    //         customClass="add-notes"
-    //         title="Add Notes"
-    //         onClick={() => handleNoteOpen(row, "add")}
-    //       />
-    //     ) : (
-    //       <span
-    //         onClick={() => handleNoteOpen(row, "edit")}
-    //         style={{
-    //           display: "flex",
-    //           alignItems: "center",
-    //           cursor: "pointer",
-    //           gap: "4px",
-    //           maxWidth: "150px",
-    //         }}
-    //       >
-    //         <span
-    //           style={{
-    //             overflow: "hidden",
-    //             textOverflow: "ellipsis",
-    //             whiteSpace: "nowrap",
-    //             flex: 1,
-    //           }}
-    //         >
-    //           {row.notes}
-    //         </span>
-    //         <EditIcon />
-    //       </span>
-    //     ),
-    //   selectorId: "notes",
-    // },
-    // {
-    //   name: "Email Send Notification",
-    //   selector: (row) => row.emailSendNotification,
-    //   sortable: true,
-    //   cell: (row) => (
-    //     <CustomButton
-    //       icon={<MailIcon />}
-    //       customClass="send-mail"
-    //       title="Send Email"
-    //       onClick={() => handleSendMail(row)}
-    //     />
-    //   ),
-    //   selectorId: "emailSendNotification",
-    // },
-    {
-      name: "",
-      cell: (row) => (
-        <Dropdown
-          ref={dropdownRef} // Pass the ref to the Dropdown component
-          row={row}
-          handleCellClick={handleCellClick}
-          handleEdit={handleEdit}
-          handleDelete={handleDelete}
-        />
-      ),
-      width: "50px",
-      allowOverflow: true,
-      ignoreRowClick: true,
-      button: true,
     },
   ];
 };
@@ -598,28 +554,6 @@ export const CLIENT_ALLSESSION_LIST_DATA = (args) => {
       selector: (row) => row.session_status,
       selectorId: "session_status",
     },
-    // {
-    //   name: "Attached Forms",
-    //   cell: (row) => {
-    //     console.log(row, "row");
-    //     const attachedFormIds = Array.isArray(row?.forms_array)
-    //       ? row?.forms_array
-    //       : [];
-    //     const attachedFormCodes = attachedFormIds
-    //       .map((id) => {
-    //         const form = forms.find((form) => form.form_id === Number(id));
-    //         return form?.form_cde || null;
-    //       })
-    //       .filter((code) => code)
-    //       .join(", ");
-
-    //     return (
-    //       <span style={{ textAlign: "center" }}>
-    //         {attachedFormCodes || "--"}
-    //       </span>
-    //     );
-    //   },
-    // },
     {
       name: "Notes",
       selector: (row) => row.notes,
@@ -659,360 +593,8 @@ export const CLIENT_ALLSESSION_LIST_DATA = (args) => {
         ),
       selectorId: "notes",
     },
-    // {
-    //   name: "Email Send Notification",
-    //   selector: (row) => row.emailSendNotification,
-    //   sortable: true,
-    //   cell: (row) => (
-    //     <CustomButton
-    //       icon={<MailIcon />}
-    //       customClass="send-mail"
-    //       title="Send Email"
-    //       onClick={() => handleSendMail(row)}
-    //     />
-    //   ),
-    //   selectorId: "emailSendNotification",
-    // },
-    // {
-    //   name: "",
-    //   minWidth: "220px",
-    //   cell: (row, rowIndex) => {
-    //     const scheduledTime = moment.utc(
-    //       `${row.intake_date} ${row.scheduled_time}`,
-    //       "YYYY-MM-DD HH:mm:ssZ"
-    //     );
-    //     const sessionStatus = row?.session_status.toLowerCase();
-    //     const showNoShowButtonDisplay =
-    //       initialData &&
-    //       scheduledTime.isAfter(currentTime) &&
-    //       sessionStatus != "show" &&
-    //       sessionStatus != "no-show";
-    //     return (
-    //       <div style={{ cursor: "pointer" }}>
-    //         {showNoShowButtonDisplay && (
-    //           <div
-    //             className="action-buttons-container"
-    //             style={{ display: "flex" }}
-    //           >
-    //             <CustomButton
-    //               type="button"
-    //               title="Show"
-    //               customClass="show-button"
-    //               onClick={() => {
-    //                 setActiveRow(row);
-    //                 setShowStatusConfirmationModal(true);
-    //               }}
-    //             />
-    //             <CustomButton
-    //               type="button"
-    //               title="No Show"
-    //               customClass="no-show-button"
-    //               onClick={() => handleNoShowStatus(row)}
-    //             />
-    //             <CustomButton
-    //               type="button"
-    //               title="Edit"
-    //               customClass="edit-button"
-    //               onClick={() => {
-    //                 setEditSessionModal(true);
-    //                 setActiveRow({ ...row, rowIndex });
-    //                 const tempData = initialData
-    //                   ? scheduledSession
-    //                   : sessionTableData?.filter((data) => {
-    //                       return data?.is_additional === 0;
-    //                     });
-
-    //                 if (rowIndex < tempData.length - 1) {
-    //                   let minDate = new Date(row.intake_date);
-    //                   let maxDate = new Date(
-    //                     tempData[rowIndex + 1].intake_date
-    //                   );
-    //                   setSessionRange((prev) => ({
-    //                     ...prev,
-    //                     min: formatDate(minDate),
-    //                     max: formatDate(maxDate),
-    //                   }));
-    //                 } else {
-    //                   setSessionRange((prev) => ({
-    //                     min: false,
-    //                     max: false,
-    //                   }));
-    //                 }
-    //               }}
-    //             />
-    //           </div>
-    //         )}
-    //         {!initialData && (
-    //           <CustomButton
-    //             type="button"
-    //             title="Edit"
-    //             customClass="edit-button"
-    //             onClick={() => {
-    //               setEditSessionModal(true);
-    //               setActiveRow({
-    //                 ...row,
-    //                 rowIndex,
-    //                 sessionFormType: initialData
-    //                   ? "UpdateSessionForm"
-    //                   : "CreateSessionForm",
-    //               });
-    //               const tempData = initialData
-    //                 ? scheduledSession
-    //                 : sessionTableData?.filter((data) => {
-    //                     return data?.is_additional === 0;
-    //                   });
-
-    //               if (rowIndex < tempData.length - 1) {
-    //                 let minDate = new Date(row.intake_date);
-    //                 let maxDate = new Date(tempData[rowIndex + 1].intake_date);
-    //                 maxDate.setDate(maxDate.getDate() - 1);
-    //                 setSessionRange((prev) => ({
-    //                   ...prev,
-    //                   min: formatDate(minDate),
-    //                   max: formatDate(maxDate),
-    //                 }));
-    //               }
-    //             }}
-    //           />
-    //         )}
-    //       </div>
-    //     );
-    //   },
-    // },
   ];
 };
-
-// export const SESSION_LIST_DATA = (
-//   handleNoteOpen,
-//   handleSendMail,
-//   handleCellClick,
-//   handleEdit,
-//   handleDelete,
-//   dropdownRef
-// ) => ({
-//   today: {
-//     columns: [
-//       {
-//         name: "Date",
-//         selector: (row) => row.date,
-//         sortable: true,
-//         selectorId: "date",
-//       },
-//       {
-//         name: "Serial Number",
-//         selector: (row) => row.serialNumber,
-//         sortable: true,
-//         selectorId: "serialNumber",
-//       },
-//       {
-//         name: "Client Name",
-//         selector: (row) => row.clientName,
-//         sortable: true,
-//         selectorId: "clientName",
-//       },
-//       {
-//         name: "Service Type",
-//         selector: (row) => row.serviceType,
-//         sortable: true,
-//         selectorId: "serviceType",
-//       },
-//       {
-//         name: "Start Time",
-//         selector: (row) => row.startTime,
-//         sortable: true,
-//         selectorId: "startTime",
-//       },
-//       {
-//         name: "Online/In Person",
-//         selector: (row) => row.onlineInPerson,
-//         sortable: true,
-//         selectorId: "onlineInPerson",
-//       },
-//       {
-//         name: "Notes",
-//         selector: (row) => row.notes,
-//         sortable: true,
-//         cell: (row) =>
-//           !row.notes ? (
-//             <CustomButton
-//               icon={<AddIcon />}
-//               customClass="add-notes"
-//               title="Add Notes"
-//               onClick={() => handleNoteOpen(row)}
-//             />
-//           ) : (
-//             <span
-//               onClick={() => handleNoteOpen(row)}
-//               style={{
-//                 display: "flex",
-//                 alignItems: "center",
-//                 cursor: "pointer",
-//                 gap: "4px",
-//               }}
-//             >
-//               {row.notes}
-//               <EditIcon />
-//             </span>
-//           ),
-//         selectorId: "notes",
-//       },
-//       {
-//         name: "Email Send Notification",
-//         selector: (row) => row.emailSendNotification,
-//         sortable: true,
-//         cell: (row) => (
-//           <CustomButton
-//             icon={<MailIcon />}
-//             customClass="send-mail"
-//             title="Send Email"
-//             onClick={() => handleSendMail(row)}
-//           />
-//         ),
-//         selectorId: "emailSendNotification",
-//       },
-//       {
-//         name: "",
-//         cell: (row) => (
-//           <Dropdown
-//             ref={dropdownRef} // Pass the ref to the Dropdown component
-//             row={row}
-//             handleCellClick={handleCellClick}
-//             handleEdit={handleEdit}
-//             handleDelete={handleDelete}
-//           />
-//         ),
-//         width: "50px",
-//         allowOverflow: true,
-//         ignoreRowClick: true,
-//         button: true,
-//       },
-//     ],
-
-//     data: [
-//       {
-//         id: 1,
-//         date: 2024 - 11 - 21,
-//         serialNumber: "857565757",
-//         clientName: "New Client",
-//         serviceType: "RTW_TR",
-//         startTime: "14:00:00",
-//         onlineInPerson: "OFFLINE",
-//         notes: "",
-//         emailSendNotification: "",
-//       },
-//     ],
-//   },
-//   tomorrow: {
-//     columns: [
-//       {
-//         name: "Date",
-//         selector: (row) => row.date,
-//         sortable: true,
-//         selectorId: "date",
-//       },
-//       {
-//         name: "Serial Number",
-//         selector: (row) => row.serialNumber,
-//         sortable: true,
-//         selectorId: "serialNumber",
-//       },
-//       {
-//         name: "Client Name",
-//         selector: (row) => row.clientName,
-//         sortable: true,
-//         selectorId: "clientName",
-//       },
-//       {
-//         name: "Service Type",
-//         selector: (row) => row.serviceType,
-//         sortable: true,
-//         selectorId: "serviceType",
-//       },
-//       {
-//         name: "Start Time",
-//         selector: (row) => row.startTime,
-//         sortable: true,
-//         selectorId: "startTime",
-//       },
-//       {
-//         name: "Online/In Person",
-//         selector: (row) => row.onlineInPerson,
-//         sortable: true,
-//         selectorId: "onlineInPerson",
-//       },
-//       {
-//         name: "Notes",
-//         selector: (row) => row.notes,
-//         sortable: true,
-//         cell: (row) =>
-//           !row.notes ? (
-//             <CustomButton
-//               icon={<AddIcon />}
-//               customClass="add-notes"
-//               title="Add Notes"
-//               onClick={() => handleNoteOpen(row)}
-//             />
-//           ) : (
-//             row.notes
-//           ),
-//         selectorId: "notes",
-//       },
-//       {
-//         name: "Email Send Notification",
-//         selector: (row) => row.emailSendNotification,
-//         sortable: true,
-//         cell: (row) => (
-//           <CustomButton
-//             icon={<MailIcon />}
-//             customClass="send-mail"
-//             title="Send Email"
-//             onClick={() => handleSendMail(row)}
-//           />
-//         ),
-//         selectorId: "emailSendNotification",
-//       },
-//       {
-//         name: "",
-//         cell: (row) => (
-//           <Dropdown
-//             ref={dropdownRef} // Pass the ref to the Dropdown component
-//             row={row}
-//             handleCellClick={handleCellClick}
-//             handleEdit={handleEdit}
-//             handleDelete={handleDelete}
-//           />
-//         ),
-//         width: "50px",
-//         allowOverflow: true,
-//         ignoreRowClick: true,
-//         button: true,
-//       },
-//     ],
-
-//     data: [
-//       {
-//         id: 1,
-//         date: 2024 - 11 - 21,
-//         serialNumber: "857565757",
-//         clientName: "New Client",
-//         serviceType: "RTW_TR",
-//         startTime: "14:00:00",
-//         onlineInPerson: "OFFLINE",
-//         notes: "",
-//       },
-//       {
-//         id: 2,
-//         date: 2024 - 11 - 21,
-//         serialNumber: "857565757",
-//         clientName: "New Client",
-//         serviceType: "RTW_TR",
-//         startTime: "14:00:00",
-//         onlineInPerson: "OFFLINE",
-//         notes: "",
-//       },
-//     ],
-//   },
-// });
 
 export const GRAPH_DATA = {
   X_AXIS_DATA: [
@@ -1117,19 +699,20 @@ export const SERVICES_TABLE_COLUMNS = (
   },
   {
     name: "Total Invoice",
-    selector: (row) => Number(row.total_invoice).toFixed(2),
+    selector: (row) => `$${Number(row.total_invoice).toFixed(2)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
   {
     name: "Tax",
-    selector: (row) => Number(row.gst).toFixed(2),
+    selector: (row) => `$${Number(row.gst).toFixed(2)}`,
     sortable: true,
     selectorId: "gst",
   },
   {
     name: "Total Invoice + Tax",
-    selector: (row) => Number(row.total_invoice) + Number(row.gst),
+    selector: (row) =>
+      `$${(Number(row.total_invoice) + Number(row.gst)).toFixed(2)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
@@ -1419,20 +1002,21 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
     minWidth: "220px",
   },
   {
-    name: "Session Amount",
-    selector: (row) => `$${row.session_price}`,
+    name: "Total Amount",
+    selector: (row) =>
+      `$${Number(row.session_price + row.session_gst).toFixed(2)}`,
   },
   {
-    name: "GST",
-    selector: (row) => `${row.session_gst}%`,
+    name: "Tax",
+    selector: (row) => `$${Number(row.session_gst).toFixed(2)}`,
   },
   {
-    name: "T. Amount",
-    selector: (row) => `$${row.session_counselor_amt + row.session_price}`,
+    name: "Amt. to Counselor",
+    selector: (row) => `$${Number(row.session_counselor_amt).toFixed(2)}`,
   },
   {
-    name: "Amount to Associate",
-    selector: (row) => `$${row.session_counselor_amt}`,
+    name: "Amt. to Admin",
+    selector: (row) => `$${Number(row.session_system_amt).toFixed(2)}`,
   },
   {
     name: "",
@@ -1452,7 +1036,7 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
             lineHeight: "14.1px",
             letterSpacing: "-0.02em",
             textAlign: "left",
-            width: "56px",
+            minWidth: "max-content",
             height: "18px",
             textTransform: "capitalize",
           }}
@@ -1473,22 +1057,22 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
     allowOverflow: true,
     button: true,
   },
-  {
-    name: "",
-    cell: (row, index) => (
-      <Dropdown
-        ref={dropdownRef}
-        row={row}
-        index={index}
-        handleCellClick={handleCellClick}
-        handleEdit={handleEdit}
-        handleDelete={handleDelete}
-      />
-    ),
-    width: "50px",
-    allowOverflow: true,
-    button: true,
-  },
+  // {
+  //   name: "",
+  //   cell: (row, index) => (
+  //     <Dropdown
+  //       ref={dropdownRef}
+  //       row={row}
+  //       index={index}
+  //       handleCellClick={handleCellClick}
+  //       handleEdit={handleEdit}
+  //       handleDelete={handleDelete}
+  //     />
+  //   ),
+  //   width: "50px",
+  //   allowOverflow: true,
+  //   button: true,
+  // },
 ];
 
 export const DOWNLOAD_OPTIONS = (columns, data, tableCaption) => [
@@ -1522,114 +1106,105 @@ export const DOWNLOAD_OPTIONS = (columns, data, tableCaption) => [
   },
 ];
 
-export const REPORTS_TABLE_DATA = {
-  columns: [
-    {
-      name: "Client Name",
-      selector: (row) => row.clientName,
-      sortable: true,
-      selectorId: "clientName",
+export const REPORTS_TABLE_DATA_COLUMNS = [
+  {
+    name: "Client Name",
+    selector: (row) => `${row.client_first_name} ${row.client_last_name}`,
+    sortable: true,
+    selectorId: "client_first_name",
+    style: {
+      textTransform: "capitalize",
     },
-    {
-      name: "Report Name",
-      selector: (row) => row.reportName,
-      sortable: true,
-      selectorId: "reportName",
-    },
-    {
-      name: "Report Status",
-      selector: (row) => row.reportStatus,
-      sortable: true,
-      selectorId: "reportStatus",
-    },
-    {
-      name: "Due Date",
-      selector: (row) => row.dueDate,
-      sortable: true,
-      format: (row) => new Date(row.dueDate).toLocaleDateString("en-US"), // Format date
-      selectorId: "dueDate",
-    },
-  ],
-  data: [
-    {
-      id: 1,
-      clientName: "Client A",
-      reportName: "Quarterly Report Q1",
-      reportStatus: "Completed",
-      dueDate: "2024-12-15",
-    },
-    {
-      id: 2,
-      clientName: "Client B",
-      reportName: "Annual Report 2024",
-      reportStatus: "Pending",
-      dueDate: "2024-12-20",
-    },
-    {
-      id: 3,
-      clientName: "Client C",
-      reportName: "Sales Report Q4",
-      reportStatus: "In Progress",
-      dueDate: "2024-12-10",
-    },
-    {
-      id: 4,
-      clientName: "Client D",
-      reportName: "Financial Statement Q3",
-      reportStatus: "Completed",
-      dueDate: "2024-12-05",
-    },
-  ],
-};
+  },
+  {
+    name: "Report Name",
+    selector: (row) => row.report_name,
+    sortable: true,
+    selectorId: "report_name",
+  },
+  {
+    name: "Report Status",
+    selector: (row) => row.report_status,
+    sortable: true,
+    cell: (row) => (
+      <div style={{ display: "flex", gap: "2px", alignItems: "center" }}>
+        <div
+          style={{
+            height: "15px",
+            width: "15px",
+            borderRadius: "50%",
+            border: "1px solid #000",
+            backgroundColor: row.report_status.includes("Past")
+              ? "#fe000a"
+              : row.report_status.includes("Future")
+              ? "#00ca00"
+              : "#fff000",
+          }}
+        />
+        <span>{row.report_status}</span>
+      </div>
+    ),
+    selectorId: "report_status",
+  },
+  {
+    name: "Due Date",
+    selector: (row) => row.due_date || "NA",
+    sortable: true,
+    selectorId: "due_date",
+  },
+];
 
-export const ASSESSMENT_DATA = {
-  columns: [
-    {
-      name: "Client Name",
-      selector: (row) => row.clientName,
-      sortable: true,
-      selectorId: "clientName",
+export const ASSESSMENT_DATA_COLUMNS = (handleTreatmentTools) => [
+  {
+    name: "Client Name",
+    selector: (row) => `${row.client_first_name} ${row.client_last_name}`,
+    sortable: true,
+    selectorId: "client_first_name",
+    style: {
+      textTransform: "capitalize",
     },
-    {
-      name: "Serial Number",
-      selector: (row) => row.serialNumber,
-      sortable: true,
-      selectorId: "serialNumber",
-    },
-    {
-      name: "Report Type",
-      selector: (row) => row.reportType,
-      sortable: true,
-      selectorId: "reportType",
-    },
-  ],
-  data: [
-    {
-      id: 1,
-      clientName: "Client A",
-      serialNumber: "SN12345",
-      reportType: "Monthly",
-    },
-    {
-      id: 2,
-      clientName: "Client B",
-      serialNumber: "SN67890",
-      reportType: "Quarterly",
-    },
-    {
-      id: 3,
-      clientName: "Client C",
-      serialNumber: "SN11223",
-      reportType: "Annual",
-    },
-    {
-      id: 4,
-      clientName: "Client D",
-      serialNumber: "SN44556",
-      reportType: "Monthly",
-    },
-  ],
-};
+  },
+  {
+    name: "Serial Number",
+    selector: (row) => row.client_clam_num || "NA",
+    sortable: true,
+    selectorId: "client_first_name",
+  },
+  {
+    name: "Treatment Tool",
+    selector: (row) => row.form_cde,
+    sortable: true,
+    selectorId: "form_cde",
+    cell: (row) => (
+      <div
+        style={{ color: "var(--link-color)", cursor: "pointer" }}
+        onClick={() => {
+          handleTreatmentTools(row);
+        }}
+      >
+        {row?.form_cde || "N/A"}
+      </div>
+    ),
+  },
+  {
+    name: "Date Sent",
+    selector: (row) => row.sent_date || "NA",
+    sortable: true,
+    selectorId: "sent_date",
+  },
+  {
+    name: "Due Date",
+    selector: (row) => row.due_date || "NA",
+    sortable: true,
+    selectorId: "due_date",
+  },
+  {
+    name: "Review Status",
+    selector: (row) => row.review_status || "NA",
+    sortable: true,
+    selectorId: "review_status",
+  },
+];
 
 export const CLIENT_MANAGEMENT_DATA = (
   handleCellClick,
@@ -1644,6 +1219,7 @@ export const CLIENT_MANAGEMENT_DATA = (
       selector: (row) => row.user_profile_id,
       sortable: true,
       selectorId: "user_profile_id",
+      maxWidth: "20px",
     },
     {
       name: "Client Name",

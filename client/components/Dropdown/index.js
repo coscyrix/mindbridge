@@ -25,17 +25,19 @@ const Dropdown = forwardRef(
               >
                 <TooltipButton color="#000" title="Edit" icon={<EditIcon />} />
               </div>
-              <div
-                onClick={(e) => {
-                  handleDelete(row, index);
-                }}
-              >
-                <TooltipButton
-                  title="Delete"
-                  icon={<DeleteIcon />}
-                  color="#d30028"
-                />
-              </div>
+              {!row?.has_schedule && (
+                <div
+                  onClick={(e) => {
+                    handleDelete(row, index);
+                  }}
+                >
+                  <TooltipButton
+                    title="Delete"
+                    icon={<DeleteIcon />}
+                    color="#d30028"
+                  />
+                </div>
+              )}
             </TooltipContainer>
           </div>
         )}

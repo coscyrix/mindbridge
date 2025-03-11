@@ -9,12 +9,15 @@ import { login, signUp } from "../../../utils/auth";
 import { toast } from "react-toastify";
 import Spinner from "../../common/Spinner";
 import { ClosedEyeIcon, OpenEyeIcon } from "../../../public/assets/icons";
+import OtpVerificationForm from "../OtpVerificationForm";
 
 const AuthForm = () => {
   const router = useRouter();
   const { pathname } = router;
   const isSignUp = pathname === "/sign-up";
   const isResetPassword = pathname === "/reset-password";
+  const [isOtpStep, setIsOtpStep] = useState(false);
+  const [email, setEmail] = useState("");
 
   const methods = useForm();
   const [loading, setLoading] = useState(false);
@@ -25,8 +28,10 @@ const AuthForm = () => {
     try {
       if (!isSignUp) {
         await login(formData);
-        router.push("/dashboard");
-        toast.success("Login successful", { position: "top-right" });
+        setEmail(formData.email);
+        setIsOtpStep(true);
+        // router.push("/dashboard");
+        toast.success("OTP sent to your email", { position: "top-right" });
       } else {
         await signUp(formData);
         toast.success("User created", { position: "top-right" });
@@ -34,7 +39,8 @@ const AuthForm = () => {
       }
     } catch (error) {
       toast.error(
-        "Something unexpected happened. Kindly check your connection.",
+        error?.message ||
+          "Something unexpected happened. Kindly check your connection.",
         { position: "top-right" }
       );
       setLoading(false);
@@ -82,6 +88,8 @@ const AuthForm = () => {
       <RightPanel>
         {isResetPassword ? (
           <ForgotPasswordForm />
+        ) : isOtpStep ? (
+          <OtpVerificationForm email={email} />
         ) : (
           <FormContainer>
             <h2>{isSignUp ? "Create an Account" : "Welcome Back!"}</h2>

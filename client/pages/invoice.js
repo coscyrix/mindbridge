@@ -115,27 +115,27 @@ const Invoice = () => {
       sortable: true,
     },
     {
-      name: "Total Amount (Monthly)",
+      name: "Total Amount",
       selector: (row) =>
-        `$${Number(row.session_price || 0).toFixed(2)}` || "N/A",
-      sortable: true,
-      center: true,
+        // `$${Number(row.session_price + row.session_gst).toFixed(2)}`
+        `$${Number(row.session_price).toFixed(2)}`,
       selectorId: "session_price",
     },
     {
-      name: "Associate Amount (Monthly)",
+      name: "Tax",
       selector: (row) =>
-        `$${Number(row.session_counselor_amt || 0).toFixed(2)}` || "N/A",
-      sortable: true,
-      center: true,
-      selectorId: "session_counselor_amt",
+        row.session_gst ? `$${Number(row.session_gst).toFixed(2)}` : "NA",
+      selectorId: "session_gst",
     },
     {
-      name: "Vapendama Amount (Monthly)",
-      selector: (row) =>
-        `$${Number(row.session_system_amt || 0).toFixed(2)}` || "N/A",
-      sortable: true,
-      center: true,
+      name: "Amt. to Counselor",
+      selector: (row) => `$${Number(row.session_counselor_amt).toFixed(2)}`,
+      selectorId: "session_counselor_amt",
+      minWidth: "150px",
+    },
+    {
+      name: "Amt. to Admin",
+      selector: (row) => `$${Number(row.session_system_amt).toFixed(2)}`,
       selectorId: "session_system_amt",
     },
   ];
@@ -182,11 +182,8 @@ const Invoice = () => {
         );
       }
     } catch (error) {
-      const errorMessage = invoiceData?.invoice_nbr
-        ? "Error while updating invoice."
-        : "Error while creating invoice.";
       console.error("Error while creating invoice: ", error);
-      toast.error(errorMessage);
+      toast.error(error?.message);
     } finally {
       setLoading(null);
       setOpen(false);

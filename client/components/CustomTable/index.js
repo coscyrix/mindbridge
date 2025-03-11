@@ -29,7 +29,6 @@ function CustomTable({
         <DataTable
           columns={columns}
           data={data}
-          selectableRows
           sortIcon={<TableDownArrowIcon />}
           defaultSortFieldId={defaultSortFieldId ? defaultSortFieldId : 1}
           customStyles={customStyles}
