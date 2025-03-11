@@ -56,7 +56,6 @@ export default class Report {
 
       return rec;
     } catch (error) {
-      console.error(error);
       logger.error(error);
       return { message: 'Error getting reports', error: -1 };
     }
@@ -77,16 +76,17 @@ export default class Report {
           db.raw('intake_date as due_date'),
           db.raw('service_name as report_name'),
           db.raw(`
-          CASE 
-            WHEN intake_date < CURRENT_DATE() THEN 'Past Due Date'
-            WHEN intake_date > CURRENT_DATE() THEN 'Future Due Date'
-            ELSE 'Current Due Date'
-          END as report_status
-        `),
+            CASE 
+              WHEN intake_date < CURRENT_DATE() THEN 'Past Due Date'
+              WHEN intake_date > CURRENT_DATE() THEN 'Future Due Date'
+              ELSE 'Current Due Date'
+            END as report_status
+          `),
         )
         .where('is_report', 1)
         .where('status_yn', 'y')
         .andWhere('thrpy_status', 'ONGOING');
+
       if (data.counselor_id) {
         query.andWhere('counselor_id', data.counselor_id);
       }
@@ -98,12 +98,25 @@ export default class Report {
       if (data.session_id) {
         query.andWhere('session_id', data.session_id);
       }
+
       if (data.start_date) {
         query.andWhere('intake_date', '>=', data.start_date);
       }
+
       if (data.end_date) {
         query.andWhere('intake_date', '<=', data.end_date);
       }
+
+      // Order results: Past Due Date, then Current Due Date, then Future Due Date
+      query.orderBy(
+        db.raw(`
+          CASE 
+            WHEN intake_date < CURRENT_DATE() THEN 1
+            WHEN intake_date = CURRENT_DATE() THEN 2
+            ELSE 3
+          END
+        `),
+      );
 
       const rec = await query;
 
