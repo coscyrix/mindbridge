@@ -20,7 +20,8 @@ export default class Report {
           'form_id',
           'form_cde',
           'thrpy_req_id',
-          db.raw('MAX(updated_at) as updated_at'), // Added MAX aggregation
+          db.raw('MAX(updated_at) as date_sent'), // Added MAX aggregation
+          db.raw('MAX(due_date) as due_date'), // Added MAX aggregation
         )
         .where(function () {
           this.where('thrpy_status', 'ONGOING').orWhere(function () {
