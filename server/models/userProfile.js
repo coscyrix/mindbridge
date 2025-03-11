@@ -225,7 +225,7 @@ export default class UserProfile {
         });
       }
 
-      if (!data.role_id == 1) {
+      if (data.role_id !== 1) {
         const emailSentWithPassword =
           this.emailTmplt.sendClientWelcomeWithPasswordEmail({
             email: data.email,
