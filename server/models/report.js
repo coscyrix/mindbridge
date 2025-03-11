@@ -20,8 +20,8 @@ export default class Report {
           'form_id',
           'form_cde',
           'thrpy_req_id',
-          db.raw('MAX(updated_at) as date_sent'), // Added MAX aggregation
-          db.raw('MAX(due_date) as due_date'), // Added MAX aggregation
+          db.raw('MAX(updated_at) as date_sent'),
+          db.raw('MAX(due_date) as due_date'),
         )
         .where(function () {
           this.where('thrpy_status', 'ONGOING').orWhere(function () {
@@ -38,7 +38,7 @@ export default class Report {
           'counselor_id',
           'thrpy_req_id',
         ])
-        .orderBy('updated_at', 'desc'); // Added ORDER BY clause
+        .orderBy('date_sent', 'desc'); // Changed to order by aliased column
 
       if (data.counselor_id) {
         query.where('counselor_id', data.counselor_id);
@@ -51,17 +51,12 @@ export default class Report {
       if (data.form_id) {
         query.where('form_id', data.form_id);
       }
-      // if (data.is_sent) {
-      //   query.where('is_sent', data.is_sent);
-      // }
-      // if (data.form_submit) {
-      //   query.where('form_submit', data.form_submit);
-      // }
 
       const rec = await query;
 
       return rec;
     } catch (error) {
+      console.error(error);
       logger.error(error);
       return { message: 'Error getting reports', error: -1 };
     }
