@@ -1190,19 +1190,13 @@ export const ASSESSMENT_DATA_COLUMNS = (handleTreatmentTools) => [
     name: "Date Sent",
     selector: (row) => row.sent_date || "NA",
     sortable: true,
-    selectorId: "sent_date",
+    selectorId: "date_sent",
   },
   {
     name: "Due Date",
     selector: (row) => row.due_date || "NA",
     sortable: true,
     selectorId: "due_date",
-  },
-  {
-    name: "Review Status",
-    selector: (row) => row.review_status || "NA",
-    sortable: true,
-    selectorId: "review_status",
   },
 ];
 
