@@ -116,6 +116,7 @@ export default class Report {
             ELSE 3
           END
         `),
+        db.raw('intake_date'),
       );
 
       const rec = await query;
