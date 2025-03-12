@@ -108,21 +108,20 @@ export default class Report {
       }
 
       // Order results: Past Due Date, then Current Due Date, then Future Due Date
-      query.orderBy(
-        db.raw(`
-          CASE 
-            WHEN intake_date < CURRENT_DATE() THEN 1
-            WHEN intake_date = CURRENT_DATE() THEN 2
-            ELSE 3
-          END
-        `),
-        db.raw('intake_date'),
-      );
+      query.orderByRaw(`
+        CASE 
+          WHEN intake_date < CURRENT_DATE() THEN 1
+          WHEN intake_date = CURRENT_DATE() THEN 2
+          ELSE 3
+        END
+      `);
+      query.orderBy('intake_date');
 
       const rec = await query;
 
       return rec;
     } catch (error) {
+      console.error(error);
       logger.error(error);
       return { message: 'Error getting reports', error: -1 };
     }
