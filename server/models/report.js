@@ -23,11 +23,8 @@ export default class Report {
           db.raw('MAX(updated_at) as date_sent'),
           db.raw('MAX(due_date) as due_date'),
         )
-        .where(function () {
-          this.where('thrpy_status', 'ONGOING').orWhere(function () {
-            this.where('is_sent', 1).andWhere('form_submit', 0);
-          });
-        })
+        .where('is_sent', 1)
+        // .andWhere('form_submit', 0)
         .groupBy([
           'client_first_name',
           'client_last_name',
@@ -38,7 +35,7 @@ export default class Report {
           'counselor_id',
           'thrpy_req_id',
         ])
-        .orderBy('date_sent', 'desc'); // Changed to order by aliased column
+        .orderBy('date_sent', 'desc');
 
       if (data.counselor_id) {
         query.where('counselor_id', data.counselor_id);
