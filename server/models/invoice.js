@@ -148,7 +148,13 @@ export default class Invoice {
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_invoice')
-        .where('status_yn', 'y');
+        .where('status_yn', 'y')
+        .where(function () {
+          this.where('session_status', 'SHOW').orWhere(
+            'session_status',
+            'DISCHARGED',
+          );
+        });
 
       if (data.counselor_id) {
         query.andWhere('counselor_id', data.counselor_id);
@@ -184,6 +190,8 @@ export default class Invoice {
       let totalPrice = 0;
       let totalCounselor = 0;
       let totalSystem = 0;
+
+      const filteredRec = rec.filter((item) => item.thrpy_status !== 'SCH');
 
       rec.forEach((item) => {
         totalPrice += parseFloat(item.session_price) || 0;
