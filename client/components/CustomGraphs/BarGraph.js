@@ -8,7 +8,6 @@ const BarGraph = ({
   xAxisLabels,
   seriesData,
   loading,
-  targetScore,
 }) => {
   const chartRef = useRef(null);
 
@@ -23,6 +22,9 @@ const BarGraph = ({
   }, [loading]);
 
   const options = {
+    legend: {
+      show: true,
+    },
     toolbox: {
       feature: {
         magicType: { show: true, type: ["line", "bar"] },
@@ -60,33 +62,10 @@ const BarGraph = ({
     series: [
       ...seriesData.map((data) => ({
         ...data,
-        type: "bar",
-        label: {
-          show: true,
-          position: "top",
-          fontSize: 12,
-          color: "#333",
-          formatter: "{c}",
-        },
+        barGap: "0%",
+        barCategoryGap: "40%",
       })),
-      targetScore !== undefined
-        ? {
-            type: "line",
-            lineStyle: {
-              type: "dashed",
-              color: "#008e00",
-            },
-            markLine: {
-              silent: true,
-              lineStyle: {
-                type: "dashed",
-                color: "#008e00",
-              },
-              data: [{ yAxis: targetScore }],
-            },
-          }
-        : null,
-    ].filter(Boolean),
+    ],
   };
 
   return (

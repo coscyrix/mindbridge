@@ -33,8 +33,8 @@ function OverallSession({ overallSessionsData }) {
       setTotalCancelledData(
         overallSessionsData.map((s) => s.no_show_session_count)
       );
-      setLoading(false);
     }
+    setLoading(false);
   }, [overallSessionsData]);
 
   const options = [

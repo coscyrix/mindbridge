@@ -1188,7 +1188,7 @@ export const ASSESSMENT_DATA_COLUMNS = (handleTreatmentTools) => [
   },
   {
     name: "Date Sent",
-    selector: (row) => row.sent_date || "NA",
+    selector: (row) => formatTime(row.date_sent) || "NA",
     sortable: true,
     selectorId: "date_sent",
   },

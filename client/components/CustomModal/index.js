@@ -4,13 +4,21 @@ import styles from "./Modal.module.css";
 
 Modal.setAppElement("#__next");
 
-const CustomModal = ({ isOpen, onRequestClose, title, children, ...rest }) => {
+const CustomModal = ({
+  isOpen,
+  onRequestClose,
+  title,
+  children,
+  customStyles = {},
+  ...rest
+}) => {
   return (
     <Modal
       isOpen={isOpen}
       onRequestClose={onRequestClose}
-      className={styles.modal_content}
+      className={`${styles.modal_content} ${customStyles.className || ""}`}
       overlayClassName={styles.modal_overlay}
+      style={{ content: { maxWidth: customStyles.maxWidth } }}
       {...rest}
     >
       <div className={styles.modal_header}>
