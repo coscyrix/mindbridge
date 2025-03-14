@@ -213,89 +213,86 @@ export const welcomeAccountDetailsEmail = (
       'Welcome to MindBridge - Account Details for Your Therapy Sessions',
     html: `
     <style>
-    .branded-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      margin: 20px 0;
-      font-size: 16px;
-      color: #333;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .branded-table thead {
-      background: linear-gradient(90deg, #4CAF50, #2A9D8F);
-      color: white;
-    }
-    .branded-table th,
-    .branded-table td {
-      padding: 14px 18px;
-      text-align: left;
-    }
-    .branded-table th {
-      font-weight: bold;
-      text-align: left;
-      padding-right: 10px; /* Add right padding for gap */
-    }
-    .branded-table td:first-child {
-      padding-right: 10px; /* Add gap between columns */
-    }
-    .branded-table tbody tr:nth-child(odd) {
-      background-color: #f9f9f9;
-    }
-    .branded-table tbody tr:nth-child(even) {
-      background-color: #ffffff;
-    }
-    .branded-table tbody tr:hover {
-      background-color: #f1f1f1;
-    }
-    .branded-table td {
-      border-top: 1px solid #ddd;
-    }
-  </style>
-  <p>Dear ${capitalizeFirstLetter(clientName)},</p>
-  <p>Welcome to ${process.env.PROJECT_NAME}! We are pleased to inform you that your account has been successfully created. Below are the details for your reference:</p>
-  <table class="branded-table">
-    <thead>
-      <tr>
-        <th>Account Information</th>
-        <th>Details</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Name</td>
-        <td>${capitalizeFirstLetter(clientName)}</td>
-      </tr>
-      <tr>
-        <td>Email</td>
-        <td>${email}</td>
-      </tr>
-      <tr>
-        <td>Phone Number</td>
-        <td>${clientPhoneNumber || 'N/A'}</td>
-      </tr>
-      <tr>
-        <td>Target Outcome</td>
-        <td>${targetOutcome}</td>
-      </tr>
-    </tbody>
-  </table>
-  <p>Your designated counselor for these sessions will be <b>${capitalizeFirstLetter(counselorName)}</b>, who will guide and support you throughout your journey. We look forward to working with you to help achieve your goals.</p><br/>
-  <p>Throughout our therapy sessions, you'll receive a comprehensive package, including:</p>
-  <ul>
-    <li><b>Smart Goals:</b> Tailored objectives to guide our progress</li>
-    <li><b>Treatment Tools:</b> Evidence-based resources to support your growth</li>
-    <li><b>Homework Assignments:</b> Targeted exercises to reinforce new skills</li>
-  </ul>
-  <p>Together, we'll work collaboratively to achieve these goals, using these tools to facilitate a transformative healing process.</p>
-  <p>If you have any questions or need assistance accessing your account, please do not hesitate to contact us at ${counselorEmail} or ${counselorPhoneNumber}.</p>
-  <p>We’re here to support you every step of the way.</p>
-  <p>Thank you,</p>
-  <p>The Counselling Team Member</p>
-`,
+      .branded-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin: 20px 0;
+        font-size: 16px;
+        color: #333;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .branded-table thead {
+        background: linear-gradient(90deg, #4CAF50, #2A9D8F);
+        color: white;
+      }
+      .branded-table th,
+      .branded-table td {
+        padding: 14px 18px;
+        text-align: left;
+      }
+      .branded-table th:first-child,
+      .branded-table td:first-child {
+        width: 35%;
+        font-weight: bold;
+      }
+      .branded-table tbody tr:nth-child(odd) {
+        background-color: #f9f9f9;
+      }
+      .branded-table tbody tr:nth-child(even) {
+        background-color: #ffffff;
+      }
+      .branded-table tbody tr:hover {
+        background-color: #f1f1f1;
+      }
+      .branded-table td {
+        border-top: 1px solid #ddd;
+      }
+    </style>
+    <p>Dear ${capitalizeFirstLetter(clientName)},</p>
+    <p>Welcome to ${process.env.PROJECT_NAME}! We are pleased to inform you that your account has been successfully created. Below are the details for your reference:</p>
+    <table class="branded-table">
+      <thead>
+        <tr>
+          <th>Account Information</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Name</td>
+          <td>${capitalizeFirstLetter(clientName)}</td>
+        </tr>
+        <tr>
+          <td>Email</td>
+          <td>${email}</td>
+        </tr>
+        <tr>
+          <td>Phone Number</td>
+          <td>${clientPhoneNumber || 'N/A'}</td>
+        </tr>
+        <tr>
+          <td>Target Outcome</td>
+          <td>${targetOutcome}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Your designated counselor for these sessions will be <b>${capitalizeFirstLetter(counselorName)}</b>, who will guide and support you throughout your journey. We look forward to working with you to help achieve your goals.</p><br/>
+    <p>Throughout our therapy sessions, you'll receive a comprehensive package, including:</p>
+    <ul>
+      <li><b>Smart Goals:</b> Tailored objectives to guide our progress</li>
+      <li><b>Treatment Tools:</b> Evidence-based resources to support your growth</li>
+      <li><b>Homework Assignments:</b> Targeted exercises to reinforce new skills</li>
+    </ul>
+    <p>Together, we'll work collaboratively to achieve these goals, using these tools to facilitate a transformative healing process.</p>
+    <p>If you have any questions or need assistance accessing your account, please do not hesitate to contact us at ${counselorEmail} or ${counselorPhoneNumber}.</p>
+    <p>We’re here to support you every step of the way.</p>
+    <p>Thank you,</p>
+    <p>The Counselling Team Member</p>
+    `,
   };
 };
 
