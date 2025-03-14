@@ -191,8 +191,6 @@ export default class Invoice {
       let totalCounselor = 0;
       let totalSystem = 0;
 
-      const filteredRec = rec.filter((item) => item.thrpy_status !== 'SCH');
-
       rec.forEach((item) => {
         totalPrice += parseFloat(item.session_price) || 0;
         totalCounselor += parseFloat(item.session_counselor_amt) || 0;

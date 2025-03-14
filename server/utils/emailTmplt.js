@@ -207,7 +207,7 @@ export const welcomeAccountDetailsEmail = (
     subject:
       'Welcome to MindBridge - Account Details for Your Therapy Sessions',
     html: `
-  <style>
+    <style>
     .branded-table {
       width: 100%;
       border-collapse: separate;
@@ -231,7 +231,11 @@ export const welcomeAccountDetailsEmail = (
     }
     .branded-table th {
       font-weight: bold;
-      text-align: center;
+      text-align: left;
+      padding-right: 10px; /* Add right padding for gap */
+    }
+    .branded-table td:first-child {
+      padding-right: 10px; /* Add gap between columns */
     }
     .branded-table tbody tr:nth-child(odd) {
       background-color: #f9f9f9;
