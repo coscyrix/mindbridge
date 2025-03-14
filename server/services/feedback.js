@@ -360,4 +360,26 @@ export default class FeedbackService {
     const feedback = new Feedback();
     return feedback.postCONSENTFeedback(data);
   }
+
+  //////////////////////////////////////////
+
+  async postATTENDANCEFeedback(data) {
+    console.log('data', data);
+    const schema = joi.object({
+      session_id: joi.number().required(),
+      client_id: joi.number().required(),
+      total_sessions: joi.number().required(),
+      total_attended_sessions: joi.number().required(),
+      total_cancelled_sessions: joi.number().required(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const feedback = new Feedback();
+    return feedback.postATTENDANCEFeedback(data);
+  }
 }

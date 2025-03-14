@@ -222,6 +222,8 @@ export default class UserProfile {
           user_phone_nbr: data.user_phone_nbr,
           target_name: recTargetOutcome[0].target_name,
           counselor_name: `${recConselor.rec[0].user_first_name} ${recConselor.rec[0].user_last_name}`,
+          counselor_email: recConselor.rec[0].email,
+          counselor_phone_nbr: recConselor.rec[0].user_phone_nbr,
         });
       }
 

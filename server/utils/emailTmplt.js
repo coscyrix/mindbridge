@@ -1,6 +1,9 @@
 // utils/emailTmplt.js
 import dotenv from 'dotenv';
-import { capitalizeFirstLetter } from './common.js';
+import {
+  capitalizeFirstLetter,
+  capitalizeFirstLetterOfEachWord,
+} from './common.js';
 
 dotenv.config();
 
@@ -165,7 +168,7 @@ export const attendanceSummaryEmail = (
     to: email,
     subject: 'Attendance Summary',
     html: `
-      <p>Hi ${client_full_name},</p>
+      <p>Hi ${capitalizeFirstLetterOfEachWord(client_full_name)},</p>
       <p>Please find attached your attendance record summary.</p>
       <p>Let us know if you have any questions.</p>
       <p>Thank you,</p>
@@ -201,6 +204,8 @@ export const welcomeAccountDetailsEmail = (
   clientPhoneNumber,
   targetOutcome,
   counselorName,
+  counselorEmail,
+  counselorPhoneNumber,
 ) => {
   return {
     to: email,
@@ -286,10 +291,10 @@ export const welcomeAccountDetailsEmail = (
     <li><b>Homework Assignments:</b> Targeted exercises to reinforce new skills</li>
   </ul>
   <p>Together, we'll work collaboratively to achieve these goals, using these tools to facilitate a transformative healing process.</p>
-  <p>If you have any questions or need assistance accessing your account, please do not hesitate to contact us at ${process.env.SUPPORT_EMAIL} or ${process.env.SUPPORT_PHONE}.</p>
+  <p>If you have any questions or need assistance accessing your account, please do not hesitate to contact us at ${counselorEmail} or ${counselorPhoneNumber}.</p>
   <p>We’re here to support you every step of the way.</p>
   <p>Thank you,</p>
-  <p>The MindBridge Team</p>
+  <p>The Counselling Team Member</p>
 `,
   };
 };

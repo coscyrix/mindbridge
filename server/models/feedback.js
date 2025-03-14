@@ -744,6 +744,57 @@ export default class Feedback {
 
   //////////////////////////////////////////
 
+  async postATTENDANCEFeedback(data) {
+    try {
+      const checkSession = await this.session.getSessionById({
+        session_id: data.session_id,
+      });
+      if (checkSession.length === 0) {
+        return { message: 'Session not found', error: -1 };
+      }
+      const checkFeedBackSessionId = await this.getFeedbackById({
+        session_id: data.session_id,
+        form_id: 24,
+      });
+      if (checkFeedBackSessionId.length > 0) {
+        return {
+          message: 'Feedback already exists for this session',
+          error: -1,
+        };
+      }
+      const recFeedback = await this.postFeedback({
+        session_id: data.session_id,
+        client_id: data.client_id,
+        feedback_json: data,
+        form_id: 24,
+      });
+      if (recFeedback.error) {
+        return recFeedback;
+      }
+      const tmpATTENDANCEFeedback = {
+        feedback_id: recFeedback.rec[0],
+        total_sessions: data.total_sessions,
+        total_attended_sessions: data.total_attended_sessions,
+        total_cancelled_sessions: data.total_cancelled_sessions,
+      };
+      const postATTENDANCEFeedback = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('feedback_attendance')
+        .insert(tmpATTENDANCEFeedback);
+      if (!postATTENDANCEFeedback) {
+        logger.error('Error creating feedback');
+        return { message: 'Error creating feedback', error: -1 };
+      }
+      return { message: 'Feedback created successfully' };
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error creating feedback', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
   async postSMARTGOALFeedback(data) {
     try {
       const checkSession = await this.session.getSessionById({

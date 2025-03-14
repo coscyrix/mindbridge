@@ -2,6 +2,7 @@ import DBconn from '../config/db.config.js';
 import knex from 'knex';
 import logger from '../config/winston.js';
 import Common from './common.js';
+import Feedback from '../services/feedback.js';
 import Form from './form.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import {
@@ -30,6 +31,7 @@ export default class EmailTmplt {
     this.common = new Common();
     this.form = new Form();
     this.sendEmail = new SendEmail();
+    this.feedback = new Feedback();
   }
 
   //////////////////////////////////////////
@@ -77,7 +79,9 @@ export default class EmailTmplt {
       for (const session of recSession) {
         if (isNaN(session.forms_array) || session.forms_array.length > 0) {
           for (const arry of session.forms_array) {
-            const [form] = await this.form.getFormByFormId({ form_id: arry });
+            const [form] = await this.form.getFormByFormId({
+              form_id: arry,
+            });
             const form_name = form.form_cde;
             const form_id = form.form_id;
             const client_full_name =
@@ -92,13 +96,9 @@ export default class EmailTmplt {
               data.session_id,
             );
 
-            if (arry !== 24) {
-              const email = await this.sendEmail.sendMail(toolsEmail);
-              if (email.error) {
-                logger.error('Error sending email');
-                return { message: 'Error sending email', error: -1 };
-              }
-            } else {
+            let attendanceEmail;
+            if (arry === 24) {
+              // 24 is the form_id for attendance
               const sessions = recThrpy[0].session_obj;
               const sortedSessions = sessions.sort(
                 (a, b) => a.session_id - b.session_id,
@@ -133,17 +133,45 @@ export default class EmailTmplt {
 
               const attendancePDF = await PDFGenerator(attendancePDFTemplt);
 
-              const attendanceEmail = attendanceSummaryEmail(
+              attendanceEmail = attendanceSummaryEmail(
                 recUser[0].email,
                 client_full_name,
                 attendancePDF,
               );
 
-              const email = await this.sendEmail.sendMail(attendanceEmail);
-              if (email.error) {
-                logger.error('Error sending email');
-                return { message: 'Error sending email', error: -1 };
+              console.log('data.session_id', data.session_id);
+              console.log('removeReportsSessions', removeReportsSessions);
+              console.log('attendedSessions', attendedSessions);
+              console.log('cancelledSessions', cancelledSessions);
+
+              const postATTENDANCEFeedback =
+                await this.feedback.postATTENDANCEFeedback({
+                  client_id: recUser[0].user_profile_id,
+                  session_id: data.session_id,
+                  total_sessions: removeReportsSessions.length,
+                  total_attended_sessions: attendedSessions,
+                  total_cancelled_sessions: cancelledSessions,
+                });
+
+              if (postATTENDANCEFeedback.error) {
+                logger.error(postATTENDANCEFeedback.message);
+                return {
+                  message: postATTENDANCEFeedback.message,
+                  error: -1,
+                };
               }
+            }
+
+            const email = await this.sendEmail.sendMail(
+              arry === 24 ? attendanceEmail : toolsEmail,
+            );
+
+            if (email.error) {
+              logger.error('Error sending email');
+              return {
+                message: 'Error sending email',
+                error: -1,
+              };
             }
           }
         }
@@ -188,7 +216,10 @@ export default class EmailTmplt {
 
       if (!sendThrpyReqEmlTmpltEmail) {
         logger.error('Error sending therapy request email');
-        return { message: 'Error sending therapy request email', error: -1 };
+        return {
+          message: 'Error sending therapy request email',
+          error: -1,
+        };
       }
     } catch (error) {
       console.log(error);
@@ -207,6 +238,8 @@ export default class EmailTmplt {
         data.user_phone_nbr ? data.user_phone_nbr : 'N/A',
         data.target_name,
         data.counselor_name,
+        data.counselor_email,
+        data.counselor_phone_nbr ? data.counselor_phone_nbr : 'N/A',
       );
 
       const sendWelcomeEmail = this.sendEmail.sendMail(welcomeClientEmail);
