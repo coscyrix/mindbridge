@@ -153,7 +153,7 @@ export const treatmentToolsEmail = (
       <p><a href="${process.env.BASE_URL}${process.env.FORMS}${tools_name.toLowerCase()}?form_id=${form_id}&client_id=${client_id}&session_id=${session_id}">Complete ${tools_name} Assessment</a></p>
       <p>If you have any questions or concerns, feel free to reach out. We’re here to support you.</p>
       <p>Thank you,</p>
-      <p>The MindBridge Team</p>
+      <p>The Counselling Team Member</p>
     `,
   };
 };
@@ -172,7 +172,7 @@ export const attendanceSummaryEmail = (
       <p>Please find attached your attendance record summary.</p>
       <p>Let us know if you have any questions.</p>
       <p>Thank you,</p>
-      <p>The MindBridge Team</p>
+      <p>The Counselling Team Member</p>
     `,
     attachments: [
       { filename: 'attendance-record.pdf', content: pdfAttachment },
@@ -193,7 +193,7 @@ export const consentFormEmail = (email, clientName, consentFormLink) => {
       <p><a href="${consentFormLink}">Click here to access the Consent Form</a></p>
       <p>If you have any concerns or need assistance, don’t hesitate to reach out.</p>
       <p>Thank you,</p>
-      <p>The MindBridge Team</p>
+      <p>The Counselling Team Member</p>
     `,
   };
 };
@@ -215,8 +215,7 @@ export const welcomeAccountDetailsEmail = (
     <style>
       .branded-table {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
+        border-collapse: collapse;
         margin: 20px 0;
         font-size: 16px;
         color: #333;
@@ -238,9 +237,10 @@ export const welcomeAccountDetailsEmail = (
       .branded-table td:first-child {
         width: 35%;
         font-weight: bold;
+        padding-right: 30px; /* Added extra padding to create gap between columns */
       }
       .branded-table tbody tr:nth-child(odd) {
-        background-color: #f9f9f9;
+        background-color: #e0e0e0; /* Changed to a light gray */
       }
       .branded-table tbody tr:nth-child(even) {
         background-color: #ffffff;
@@ -289,7 +289,7 @@ export const welcomeAccountDetailsEmail = (
     </ul>
     <p>Together, we'll work collaboratively to achieve these goals, using these tools to facilitate a transformative healing process.</p>
     <p>If you have any questions or need assistance accessing your account, please do not hesitate to contact us at ${counselorEmail} or ${counselorPhoneNumber}.</p>
-    <p>We’re here to support you every step of the way.</p>
+    <p>We're here to support you every step of the way.</p>
     <p>Thank you,</p>
     <p>The Counselling Team Member</p>
     `,
@@ -381,7 +381,7 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
         </table>
         
         <p style="text-align: left;">Thank you,</p>
-        <p style="text-align: left;"><strong>The MindBridge Team</strong></p>
+        <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>
       </div>
     `,
   };
@@ -398,7 +398,7 @@ export const dischargeEmail = (email, clientName) => {
         <p>It has been a privilege to work alongside you and witness your growth, resilience, and commitment to your well-being. I am confident that the tools and insights you’ve developed during our sessions will continue to support you in navigating life’s challenges.</p>
         <p>Thank you for trusting me to be part of your journey. I wish you continued strength, growth, and fulfillment in the path ahead.</p>
         <p style="text-align: left;">Thank you,</p>
-        <p style="text-align: left;"><strong>The MindBridge Team</strong></p>
+        <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>
       </div>
     `,
   };
@@ -455,7 +455,7 @@ export const homeworkEmailAttachment = (
         <p>Hello,</p>
         <p>Please find attached the homework assignment for your review and completion.</p>
         <p>Thank you,</p>
-        <p>The MindBridge Team</p>
+        <p>The Counselling Team Member</p>
       `,
     attachments: [{ filename: fileName, content: fileBuffer }],
   };
