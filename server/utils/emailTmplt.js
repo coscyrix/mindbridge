@@ -227,6 +227,7 @@ export const welcomeAccountDetailsEmail = (
       .branded-table thead {
         background: linear-gradient(90deg, #4CAF50, #2A9D8F);
         color: white;
+        text-align: left;
       }
       .branded-table th,
       .branded-table td {
@@ -257,7 +258,7 @@ export const welcomeAccountDetailsEmail = (
     <table class="branded-table">
       <thead>
         <tr>
-          <th>Account Information</th>
+          <th>${'Account Information\t'}</th>
           <th>Details</th>
         </tr>
       </thead>
