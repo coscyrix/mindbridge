@@ -82,8 +82,8 @@ export default class Report {
         )
         .where('is_report', 1)
         .where('status_yn', 'y')
-        .andWhere('thrpy_status', 'ONGOING');
-
+        .andWhere('thrpy_status', 'ONGOING')
+        .whereNot('session_status', 'SHOW');
       if (data.counselor_id) {
         query.andWhere('counselor_id', data.counselor_id);
       }
