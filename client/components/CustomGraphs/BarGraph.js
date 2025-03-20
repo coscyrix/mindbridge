@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import Spinner from "../common/Spinner";
+import { DIFFICULT_DAYS_OBJ, DIFFICULY_SCORE_ARR } from "../../utils/constants";
 
 const BarGraph = ({
   xAxisTitle,
@@ -8,8 +9,61 @@ const BarGraph = ({
   xAxisLabels,
   seriesData,
   loading,
+  formName,
 }) => {
   const chartRef = useRef(null);
+  const getTooltipConfig = (formName) => {
+    if (formName == "PHQ-9") {
+      return {
+        trigger: "item",
+        axisPointer: { type: "shadow" },
+        formatter: (params) => {
+          const { data } = params;
+          const difficultyValue = DIFFICULY_SCORE_ARR?.find(
+            (diff) => diff.value == data?.additionalInfo?.difficultyScore
+          );
+          return `
+            <div style="display: flex; align-items: start; max-width: 310px;">
+              ${
+                difficultyValue?.icon || ""
+              }<span style="white-space:pre-wrap;"> <b>${
+            difficultyValue?.label || "N/A"
+          }</b> to do work, take care of things at home, or get along with other people?</span>
+            </div>
+          `;
+        },
+      };
+    } else if (formName == "WHODAS") {
+      return {
+        trigger: "item",
+        axisPointer: { type: "shadow" },
+        formatter: (params) => {
+          const { data } = params;
+          const daysObj = DIFFICULT_DAYS_OBJ;
+          return `
+            <div style="display: flex; flex-direction:column; gap:5px; max-width:500px; width:100%;">
+              <div>${
+                daysObj?.h1Icon
+              }<span style="white-space:pre-wrap;">H1: Overall, in the past 30 days, how many days were these difficulties present? =</span> <b>${
+            data?.additionalInfo.h1 || "N/A"
+          }</b></div>
+              <div>${
+                daysObj?.h2Icon
+              }<span style="white-space:pre-wrap;">H2: In the past 30 days, for how many days were you totally unable to carry out your usual activities or work because of any health condition? =</span> <b>${
+            data?.additionalInfo.h2 || "N/A"
+          }</b></div>
+              <div>${
+                daysObj?.h3Icon
+              }<span style="white-space:pre-wrap;">H3: In the past 30 days, not counting the days that you were totally unable, for how many days did you cut back or reduce your usual activities or work because of any health condition? =</span> <b>${
+            data?.additionalInfo.h3 || "N/A"
+          }</b></div>
+            </div>
+          `;
+        },
+      };
+    }
+    return { show: false };
+  };
 
   useEffect(() => {
     if (chartRef.current) {
@@ -22,6 +76,7 @@ const BarGraph = ({
   }, [loading]);
 
   const options = {
+    tooltip: getTooltipConfig(formName),
     legend: {
       show: true,
     },
@@ -41,7 +96,7 @@ const BarGraph = ({
       name: xAxisTitle,
       nameLocation: "middle",
       nameTextStyle: {
-        padding: 35,
+        padding: xAxisLabels.length > 5 ? 70 : 35,
       },
       type: "category",
       data: xAxisLabels,
@@ -59,13 +114,16 @@ const BarGraph = ({
       nameGap: 40,
       nameRotate: 90,
     },
-    series: [
-      ...seriesData.map((data) => ({
+    series: seriesData.map((data) => {
+      return {
         ...data,
         barGap: "0%",
         barCategoryGap: "40%",
-      })),
-    ],
+        data: data.data.map((item, index) => ({
+          ...item,
+        })),
+      };
+    }),
   };
 
   return (

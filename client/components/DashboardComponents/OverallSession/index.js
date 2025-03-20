@@ -25,13 +25,19 @@ function OverallSession({ overallSessionsData }) {
       setInitialAxisX(X_AXIS_DATA);
       setAxisX(X_AXIS_DATA);
       setTotalSessionsData(
-        overallSessionsData.map((s) => s.total_session_count)
+        overallSessionsData.map((s) => {
+          return { value: s.total_session_count };
+        })
       );
       setTotalAttendanceData(
-        overallSessionsData.map((s) => s.show_session_count)
+        overallSessionsData.map((s) => {
+          return { value: s.show_session_count };
+        })
       );
       setTotalCancelledData(
-        overallSessionsData.map((s) => s.no_show_session_count)
+        overallSessionsData.map((s) => {
+          return { value: s.no_show_session_count };
+        })
       );
     }
     setLoading(false);
@@ -48,11 +54,12 @@ function OverallSession({ overallSessionsData }) {
       const clientData = overallSessionsData.find(
         (item) => item.client_id === client.value
       );
+      console.log(clientData, "clientData");
       if (clientData) {
         setAxisX([client]);
-        setTotalSessionsData([clientData.total_session_count]);
-        setTotalAttendanceData([clientData.show_session_count]);
-        setTotalCancelledData([clientData.no_show_session_count]);
+        setTotalSessionsData([{ value: clientData.total_session_count }]);
+        setTotalAttendanceData([{ value: clientData.show_session_count }]);
+        setTotalCancelledData([{ value: clientData.no_show_session_count }]);
       }
     } else {
       setAxisX(
@@ -62,13 +69,19 @@ function OverallSession({ overallSessionsData }) {
         }))
       );
       setTotalSessionsData(
-        overallSessionsData.map((s) => s.total_session_count)
+        overallSessionsData.map((s) => {
+          return { value: s.total_session_count };
+        })
       );
       setTotalAttendanceData(
-        overallSessionsData.map((s) => s.show_session_count)
+        overallSessionsData.map((s) => {
+          return { value: s.show_session_count };
+        })
       );
       setTotalCancelledData(
-        overallSessionsData.map((s) => s.no_show_session_count)
+        overallSessionsData.map((s) => {
+          return { value: s.no_show_session_count };
+        })
       );
     }
   };

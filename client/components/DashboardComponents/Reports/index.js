@@ -17,6 +17,7 @@ function Reports({ reportsData }) {
             columns: REPORTS_TABLE_DATA_COLUMNS,
             data: reportsData,
           }}
+          defaultSortFieldId={false}
           fixedHeaderScrollHeight="230px"
           loading={loading}
           loaderBackground="transparent"

@@ -2,13 +2,17 @@ import React, { useEffect, useState } from "react";
 import CustomCard from "../../CustomCard";
 import CustomClientDetails from "../../CustomClientDetails";
 import { AssessmentResultsContainer } from "./style";
-import { ASSESSMENT_DATA_COLUMNS } from "../../../utils/constants";
+import {
+  ASSESSMENT_DATA_COLUMNS,
+  DIFFICULY_SCORE_ARR,
+} from "../../../utils/constants";
 import CustomModal from "../../CustomModal";
 import BarGraph from "../../CustomGraphs/BarGraph";
 import CommonServices from "../../../services/CommonServices";
 import SmartGoals from "./SmartGoals";
 import IpfGraph from "./IpfGraph";
 import ConsentForm from "../../Forms/PatientForms/ConsentForm";
+import AttendanceGraph from "./AttendanceGraph";
 function AssessmentResults({ assessmentResultsData }) {
   const [loading, setLoading] = useState("assessmentResultsData");
   const [showReportDetails, setShowReportDetails] = useState(false);
@@ -19,6 +23,7 @@ function AssessmentResults({ assessmentResultsData }) {
   const [ipfData, setIpfData] = useState([]);
   const [consentFormData, setConsentFormData] = useState([]);
   const [graphDataHeading, setGraphDataHeading] = useState("");
+  const [attendanceData, setAttendanceData] = useState([]);
 
   const keyNameArr = [
     {
@@ -27,6 +32,11 @@ function AssessmentResults({ assessmentResultsData }) {
       barColor: { default: "#6fd0ef" },
       heading: "GAD-7 Assessment Scores with Interpretation",
       targetMarkLines: [
+        {
+          yAxis: 4,
+          name: "Minimal Anxiety (0 - 4)",
+          lineStyle: { type: "dashed" },
+        },
         {
           yAxis: 5,
           name: "Mild Anxiety (5 - 9)",
@@ -50,12 +60,12 @@ function AssessmentResults({ assessmentResultsData }) {
       heading:
         "WHODAS Overall Scores Across Assessments with Disability Interpretation",
       barColor: { mild: "", moderate: "", severe: "" },
-      labelFormatter: (value) => {
-        return value < 0.2
-          ? `${value}\nMild Disability`
-          : value < 0.5
-          ? `${value}\nModerate Disability`
-          : `${value}\nSevere Disability`;
+      labelFormatter: (data) => {
+        return data?.value < 0.2
+          ? `${data?.value}\nMild Disability`
+          : data?.value < 0.5
+          ? `${data?.value}\nModerate Disability`
+          : `${data?.value}\nSevere Disability`;
       },
     },
     {
@@ -90,11 +100,20 @@ function AssessmentResults({ assessmentResultsData }) {
       formName: "phq9",
       keyName: "total_score",
       heading: "PHQ-9 Assessment Scores Over Time for",
-      labelFormatter: (value) => {
-        if (value < 10) return "Mild";
-        if (value < 15) return "Moderate";
-        if (value < 20) return "Moderately Severe";
-        return "Severe";
+      labelFormatter: (data) => {
+        const difficultyValue = DIFFICULY_SCORE_ARR?.find(
+          (diff) => diff.value == data?.additionalInfo?.difficultyScore
+        );
+        const labels = [
+          "Minimal Depression",
+          "Mild Depression",
+          "Moderate Depression",
+          "Moderately Severe Depression",
+          "Severe Depression",
+        ];
+
+        const index = Math.min(Math.floor(data?.value / 5), labels.length - 1);
+        return `${labels[index]}`;
       },
     },
   ];
@@ -108,6 +127,8 @@ function AssessmentResults({ assessmentResultsData }) {
         ? setLoading("ipfData")
         : row?.form_cde == "CONSENT"
         ? setLoading("consentData")
+        : row?.form_cde == "ATTENDENCE"
+        ? setLoading("attendanceData")
         : setLoading("graphData");
       setShowReportDetails(true);
       setSmartGoalsData([]);
@@ -132,6 +153,11 @@ function AssessmentResults({ assessmentResultsData }) {
             clientName: `${row.client_first_name} ${row.client_last_name}`,
             ...data?.[0].feedback_consent[0],
           });
+        } else if (row.form_cde == "ATTENDENCE") {
+          setAttendanceData(data);
+          setGraphDataHeading(
+            `Attendence Details of ${row.client_first_name} ${row.client_last_name}`
+          );
         } else {
           setXAxisLabels(data.map((item) => item.session_dte));
           const formattedFormName =
@@ -149,13 +175,26 @@ function AssessmentResults({ assessmentResultsData }) {
           const mainSeries = {
             name: "Scores",
             data: data.map((item) => {
-              const score =
-                formattedFormName == "whodas"
-                  ? item[`feedback_${formattedFormName}`][0]?.[
-                      keyName.keyName
-                    ] / 100
-                  : item[`feedback_${formattedFormName}`][0]?.[keyName.keyName];
-              return score;
+              const feedbackKey = `feedback_${formattedFormName}`;
+              const feedbackData = item[feedbackKey]?.at(0);
+              const value =
+                formattedFormName === "whodas"
+                  ? Number(feedbackData?.[keyName.keyName] / 100).toFixed(4)
+                  : feedbackData?.[keyName.keyName];
+              const additionalInfo =
+                formattedFormName == "phq9"
+                  ? { difficultyScore: feedbackData?.difficulty_score || "NA" }
+                  : formattedFormName == "whodas"
+                  ? {
+                      h1: feedbackData?.difficulty_days,
+                      h2: feedbackData?.unable_days,
+                      h3: feedbackData?.health_condition_days,
+                    }
+                  : undefined;
+              return {
+                ...(additionalInfo && { additionalInfo }),
+                value,
+              };
             }),
             type: "bar",
             itemStyle: {
@@ -166,11 +205,10 @@ function AssessmentResults({ assessmentResultsData }) {
               position: "top",
               fontSize: 12,
               color: "#333",
-              formatter: ({ value }) => {
-                return keyName.labelFormatter
-                  ? keyName.labelFormatter(value)
-                  : value;
-              },
+              formatter: ({ data }) =>
+                keyName?.labelFormatter
+                  ? keyName?.labelFormatter(data)
+                  : data?.value,
             },
           };
 
@@ -192,7 +230,7 @@ function AssessmentResults({ assessmentResultsData }) {
         }
       }
     } catch (error) {
-      console.log(error, "error");
+      console.error(error, "error");
     } finally {
       setLoading(null);
     }
@@ -217,7 +255,7 @@ function AssessmentResults({ assessmentResultsData }) {
         />
       </CustomCard>
       <CustomModal
-        title={"Report Details"}
+        title={formName == "CONSENT" ? "Consent Form" : "Report Details"}
         isOpen={showReportDetails}
         onRequestClose={() => setShowReportDetails(false)}
         customStyles={{ maxWidth: "unset" }}
@@ -236,6 +274,11 @@ function AssessmentResults({ assessmentResultsData }) {
               initialData={consentFormData}
               loader={loading == "consentData"}
             />
+          ) : formName == "ATTENDENCE" ? (
+            <AttendanceGraph
+              attendanceData={attendanceData}
+              loading={loading == "attendanceData"}
+            />
           ) : (
             <BarGraph
               xAxisTitle="Date of Assessment"
@@ -243,6 +286,7 @@ function AssessmentResults({ assessmentResultsData }) {
               xAxisLabels={xAxisLabels}
               seriesData={seriesData}
               loading={loading === "graphData"}
+              formName={formName}
             />
           )}
         </div>

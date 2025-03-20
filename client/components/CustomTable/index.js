@@ -30,7 +30,7 @@ function CustomTable({
           columns={columns}
           data={data}
           sortIcon={<TableDownArrowIcon />}
-          defaultSortFieldId={defaultSortFieldId ? defaultSortFieldId : 1}
+          defaultSortFieldId={defaultSortFieldId ? defaultSortFieldId : null}
           customStyles={customStyles}
           progressComponent={
             <div

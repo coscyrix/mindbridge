@@ -22,6 +22,7 @@ import * as XLSX from "xlsx";
 import Dropdown from "../components/Dropdown";
 import moment from "moment";
 import { TooltipButton, TooltipContainer } from "../components/Tooltip";
+import { convertUTCToLocalTime } from "./helper";
 
 function exportToCSV(columns, data, tableCaption) {
   const headings = columns
@@ -463,18 +464,17 @@ export const CLIENT_SESSION_LIST_DATA = (
     },
     {
       name: "Session Date",
-      selector: (row) => row.req_dte,
+      selector: (row) => row.req_dte_not_formatted,
       sortable: true,
-      format: (row) =>
-        moment(row.req_dte, "dddd, MMMM D, YYYY").format("D MMMM YY"),
-      selectorId: "req_dte",
+      format: (row) => convertUTCToLocalTime(row.req_dte_not_formatted).date,
+      selectorId: "req_dte_not_formatted",
     },
     {
       name: "Session Time",
       selector: (row) => row.req_time || "NA",
       sortable: true,
-      format: (row) =>
-        moment.utc(row.req_time, "HH:mm:ss.SSSZ").format("h:mm A"),
+      format: (row) => convertUTCToLocalTime(row.req_time).time,
+      // moment.utc(row.req_time, "HH:mm:ss.SSSZ").format("h:mm A"),
       selectorId: "req_time",
     },
   ];
@@ -484,7 +484,7 @@ export const SESSION_TABLE_COLUMNS = (args) => {
   return [
     {
       name: "Date",
-      selector: (row) => row.intake_date,
+      selector: (row) => convertUTCToLocalTime(row.intake_date).date,
       sortable: true,
       selectorId: "intake_date",
     },
@@ -514,10 +514,10 @@ export const SESSION_TABLE_COLUMNS = (args) => {
     },
     {
       name: "Start Time",
-      selector: (row) =>
-        row.scheduled_time
-          ? moment.utc(row.scheduled_time, "HH:mm:ss.SSS[Z]").format("hh:mm A")
-          : "N/A",
+      selector: (row) => convertUTCToLocalTime(row.scheduled_time).time,
+      // row.scheduled_time
+      //   ? moment.utc(row.scheduled_time, "HH:mm:ss.SSS[Z]").format("hh:mm A")
+      //   : "N/A",
       sortable: true,
       selectorId: "scheduled_time",
     },
@@ -1148,7 +1148,7 @@ export const REPORTS_TABLE_DATA_COLUMNS = [
   },
   {
     name: "Due Date",
-    selector: (row) => row.due_date || "NA",
+    selector: (row) => convertUTCToLocalTime(row.due_date).date,
     sortable: true,
     selectorId: "due_date",
   },
@@ -1186,15 +1186,15 @@ export const ASSESSMENT_DATA_COLUMNS = (handleTreatmentTools) => [
       </div>
     ),
   },
-  {
-    name: "Date Sent",
-    selector: (row) => formatTime(row.date_sent) || "NA",
-    sortable: true,
-    selectorId: "date_sent",
-  },
+  // {
+  //   name: "Date Sent",
+  //   selector: (row) => convertUTCToLocalTime(row.date_sent).date,
+  //   sortable: true,
+  //   selectorId: "date_sent",
+  // },
   {
     name: "Due Date",
-    selector: (row) => row.due_date || "NA",
+    selector: (row) => convertUTCToLocalTime(row.due_date).date,
     sortable: true,
     selectorId: "due_date",
   },
@@ -1790,3 +1790,57 @@ export const INVOICE_DUMMY_DATA = [
     status: "Pending",
   },
 ];
+
+export const DIFFICULY_SCORE_ARR = [
+  { icon: "✅", label: "Not difficult at all", value: 0 },
+  {
+    icon: `
+      <svg xmlns="http://www.w3.org/2000/svg" width="25" height="20" viewBox="0 0 460 460" style="
+">
+  <!-- Yellow Triangle Background -->
+  <path fill="#ffc800" stroke="#ffc800" d="M449.07 399.08 278.64 82.58c-12.08-22.44-44.26-22.44-56.35 0L51.87 399.08A32 32 0 0 0 80 446.25h340.89a32 32 0 0 0 28.18-47.17z"></path>
+  
+  <!-- Black Exclamation Mark -->
+  <circle cx="255" cy="340" r="22" fill="#000"></circle>
+  <rect x="245" y="140" width="20" height="140" fill="#000"></rect>
+</svg>
+      `,
+    label: "Somewhat difficult",
+    value: 1,
+  },
+  { icon: "🔴", label: "Very difficult", value: 2 },
+  {
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="25" height="22" fill="#fc2800" stroke="#fc2800" stroke-width="0" viewBox="0 0 24 24">
+  <!-- Background Circle -->
+  <circle cx="12" cy="10" r="12" fill="#fc2800"></circle>
+
+  <!-- White Horizontal Line -->
+  <rect x="5" y="8" width="14" height="4" fill="#fff"></rect>
+</svg>`,
+    label: "Extremely difficult",
+    value: 3,
+  },
+];
+
+export const DIFFICULT_DAYS_OBJ = {
+  h1Icon: "📅",
+  h2Icon: "🚫",
+  h3Icon: `
+       <svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="16"
+  height="16"
+  viewBox="0 0 512 512"
+>
+  <!-- Yellow Triangle Background -->
+  <path
+    fill="#ffc800"
+    stroke="#ffc800"
+    d="M449.07 399.08 278.64 82.58c-12.08-22.44-44.26-22.44-56.35 0L51.87 399.08A32 32 0 0 0 80 446.25h340.89a32 32 0 0 0 28.18-47.17z"
+  />
+  
+  <!-- Black Exclamation Mark -->
+  <circle cx="256" cy="368" r="16" fill="#000" />
+  <rect x="246" y="170" width="16" height="120" fill="#000" />
+</svg>`,
+};

@@ -26,6 +26,10 @@ import Spinner from "../../common/Spinner";
 import Cookies from "js-cookie";
 import CustomMultiSelect from "../../CustomMultiSelect";
 import { Tooltip } from "react-tooltip";
+import {
+  convertLocalToUTCTime,
+  convertUTCToLocalTime,
+} from "../../../utils/helper";
 
 function CreateSessionForm({
   isOpen,
@@ -233,16 +237,13 @@ function CreateSessionForm({
     },
     {
       name: "Session Date",
-      selector: (row) => row.intake_date,
+      selector: (row) => convertUTCToLocalTime(row.intake_date).date,
       selectorId: "intake_date",
       maxWidth: "120px",
     },
     {
       name: "Session Time",
-      selector: (row) =>
-        row.scheduled_time
-          ? moment.utc(row.scheduled_time, "HH:mm:ss.SSS[Z]").format("hh:mm A")
-          : "N/A",
+      selector: (row) => convertUTCToLocalTime(row.scheduled_time).time,
       selectorId: "session_time",
       maxWidth: "120px",
     },
@@ -667,19 +668,23 @@ function CreateSessionForm({
   const handleGenerateSchedule = async () => {
     const formData = methods.getValues();
     const { client_first_name } = formData;
-    if (client_first_name?.has_schedule) {
+    const hasOngoingSession =
+      (!initialData && client_first_name?.has_schedule) ||
+      (initialData && !allSessionsStatusScheduled);
+
+    if (hasOngoingSession) {
       toast.error(
-        "Cannot generate new session for the client having ongoing session!"
+        "Cannot generate new session for the client having an ongoing session!"
       );
       return;
     }
     try {
       setLoader("generateSessionSchedule");
       if (formData) {
-        const payloadDate = moment
-          .utc(`${formData?.req_dte} ${formData?.req_time}`, "YYYY-MM-DD HH:mm")
-          .format();
-
+        const payloadDate = convertLocalToUTCTime(
+          formData?.req_dte,
+          formData?.req_time
+        );
         const payload = {
           counselor_id: userObj?.user_profile_id,
           client_id: Number(formData?.client_first_name?.value),
@@ -775,13 +780,17 @@ function CreateSessionForm({
     if (initialData) {
       const formattedData = {
         ...initialData,
-        req_dte: initialData.req_dte
-          ? moment(initialData.req_dte, "dddd, MMMM D, YYYY").format(
-              "YYYY-MM-DD"
-            )
+        req_dte: initialData.req_dte_not_formatted
+          ? moment(
+              convertUTCToLocalTime(initialData.req_dte_not_formatted).date,
+              "DD MMM YYYY"
+            ).format("YYYY-MM-DD")
           : "",
         req_time: initialData.req_time
-          ? moment(initialData.req_time, "HH:mm:ss.SSS[Z]").format("HH:mm")
+          ? moment(
+              convertUTCToLocalTime(initialData.req_time).time,
+              "hh:mm a"
+            ).format("HH:mm")
           : "",
         session_format_id:
           initialData.session_format_id === "ONLINE"

@@ -74,12 +74,11 @@ const SmartGoals = ({ smartGoalsData, loading }) => {
           <h4
             style={{
               display: "flex",
-              margin: 0,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            Session Date:
+            <span>Session Date:</span>
             <CustomMultiSelect
               options={dateOptions}
               value={selectedDate}

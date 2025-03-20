@@ -19,17 +19,9 @@ const options = [
 ];
 
 const IPFForm = () => {
-  const { control, handleSubmit, watch, register, reset } = useForm();
+  const { control, handleSubmit, watch, register, reset, setValue } = useForm();
   const [loading, setLoading] = useState();
   const router = useRouter();
-
-  const relationshipStatus = watch("relationship");
-  const familyStatus = watch("family");
-  const workStatus = watch("work");
-  const friendshipsAndSocializingStatus = watch("friendshipsAndSocializing");
-  const parentingStatus = watch("parenting");
-  const educationStatus = watch("education");
-  const selfCareStatus = watch("selfCare");
 
   const onSubmit = async (data) => {
     const { client_id, session_id } = router.query;
@@ -43,6 +35,7 @@ const IPFForm = () => {
       selfCare,
       ...payloadData
     } = data;
+    console.log(data, "formData");
     try {
       setLoading(true);
       if (!client_id || !session_id) {
@@ -90,6 +83,7 @@ const IPFForm = () => {
           fieldNamePrefix="relationshipWithSpouse"
           register={register}
           control={control}
+          setValue={setValue}
         />
         {/* Family */}
         <Section
@@ -105,6 +99,7 @@ const IPFForm = () => {
                 Otherwise, please answer the following questions."
           register={register}
           control={control}
+          setValue={setValue}
         >
           <label>
             In this section, family refers to all relatives other than your
@@ -127,6 +122,7 @@ const IPFForm = () => {
           fieldNamePrefix="workObject"
           register={register}
           control={control}
+          setValue={setValue}
         />
         {/* Friendships and Socializing */}
         <Section
@@ -141,6 +137,7 @@ const IPFForm = () => {
           fieldNamePrefix="friendshipsAndSocializingObject"
           register={register}
           control={control}
+          setValue={setValue}
         />
         {/* Parenting */}
         <Section
@@ -157,6 +154,7 @@ const IPFForm = () => {
           fieldNamePrefix="parentingObject"
           register={register}
           control={control}
+          setValue={setValue}
         />
         {/* Education (including distance learning) */}
         <Section
@@ -173,6 +171,7 @@ const IPFForm = () => {
           fieldNamePrefix="educationObject"
           register={register}
           control={control}
+          setValue={setValue}
         />
         {/* Self Care */}
         <Section
@@ -183,6 +182,7 @@ const IPFForm = () => {
           fieldNamePrefix="selfCareObject"
           register={register}
           control={control}
+          setValue={setValue}
         />
         <CustomButton title="Submit" className="primary" type="submit" />
       </form>

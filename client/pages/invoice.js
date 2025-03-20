@@ -53,9 +53,9 @@ const Invoice = () => {
   const columns = [
     {
       name: "Service Date",
-      selector: (row) => row.req_dte || "N/A",
+      selector: (row) => row.intake_date || "N/A",
       sortable: true,
-      selectorId: "req_dte",
+      selectorId: "intake_date",
     },
     {
       name: "Invoice Number",
@@ -86,9 +86,9 @@ const Invoice = () => {
     },
     {
       name: "Serial Number",
-      selector: (row) => row.serial_number || "N/A",
+      selector: (row) => row.client_clam_num || "N/A",
       sortable: true,
-      selectorId: "serial_number",
+      selectorId: "client_clam_num",
     },
     {
       name: "Service Type",

@@ -21,5 +21,9 @@ export const ReportsContainer = styled.div`
     .pagination-controls {
       display: none;
     }
+
+    .pagination {
+      display: none;
+    }
   }
 `;

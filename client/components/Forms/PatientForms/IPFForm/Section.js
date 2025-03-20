@@ -1,5 +1,5 @@
-import React from "react";
-import { Controller } from "react-hook-form";
+import React, { useEffect } from "react";
+import { Controller, useWatch } from "react-hook-form";
 import { RadioWrapper, Table } from "./style";
 
 const Section = ({
@@ -13,8 +13,18 @@ const Section = ({
   register,
   control,
   tableEnablingQuestion,
+  setValue,
   name,
 }) => {
+  const nameValue = useWatch({ control, name });
+  useEffect(() => {
+    if (nameValue === "No") {
+      questions.forEach((question) => {
+        setValue(question.id, "0");
+      });
+    }
+  }, [nameValue, questions, setValue]);
+
   return (
     <section className="section">
       <Table>
@@ -38,11 +48,11 @@ const Section = ({
             <label>{sectionDescription}</label>
             <div className="relationship-question-enabler">
               <label>
-                <input {...register(name)} type="radio" value="Yes" />
+                <input {...register(name)} type="radio" value="Yes" required />
                 Yes
               </label>
               <label>
-                <input {...register(name)} type="radio" value="No" />
+                <input {...register(name)} type="radio" value="No" required />
                 No
               </label>
             </div>
@@ -50,7 +60,7 @@ const Section = ({
           <div className="enabled-table-text">{tableEnablingQuestion}</div>
           <div className="over-past-30-days">Over the past 30 days...</div>
         </caption>
-        <thead style={{ pointerEvents: condition === "Yes" && "none" }}>
+        <thead style={{ pointerEvents: nameValue === "No" ? "none" : "auto" }}>
           <tr>
             <th className="questions">Question</th>
             <th key="never">Never</th>
@@ -62,7 +72,7 @@ const Section = ({
             </th>
           </tr>
         </thead>
-        <tbody style={{ pointerEvents: condition === "Yes" && "none" }}>
+        <tbody style={{ pointerEvents: nameValue === "No" ? "none" : "auto" }}>
           {questions.map((question) => (
             <tr key={question.id}>
               <td>{question.text}</td>
@@ -70,14 +80,22 @@ const Section = ({
                 <td key={option.value}>
                   <Controller
                     name={question.id}
+                    rules={{ required: "This field is required" }}
                     control={control}
                     render={({ field }) => (
                       <RadioWrapper>
                         <input
                           {...field}
+                          required
                           type="radio"
-                          value={option.value}
+                          value={nameValue == "No" ? "0" : option.value}
                           checked={field.value === option.value.toString()}
+                          disabled={nameValue === "No"}
+                          onChange={(e) => {
+                            field.onChange(
+                              nameValue == "No" ? 0 : e.target.value
+                            );
+                          }}
                         />
                         <label>{option?.label}</label>
                       </RadioWrapper>

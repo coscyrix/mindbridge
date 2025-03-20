@@ -222,7 +222,7 @@ function ClientSession() {
               heading={"Total Amount For A Month"}
               value={`$${
                 summaryData
-                  ? Number(summaryData?.sum_session_price).toFixed(2) || 0
+                  ? Math.round(Number(summaryData?.sum_session_price)) || 0
                   : 0
               }`}
             />
@@ -230,8 +230,8 @@ function ClientSession() {
               heading={"Total Amount to Associate for a Month: "}
               value={`$${
                 summaryData
-                  ? Number(summaryData?.sum_session_counselor_amt)?.toFixed(
-                      2
+                  ? Math.round(
+                      Number(summaryData?.sum_session_counselor_amt)
                     ) || 0
                   : 0
               }`}
@@ -240,7 +240,7 @@ function ClientSession() {
               heading={"Total Amount to Vapendama for a Month:"}
               value={`$${
                 summaryData
-                  ? Number(summaryData?.sum_session_system_amt)?.toFixed(2) || 0
+                  ? Math.round(Number(summaryData?.sum_session_system_amt)) || 0
                   : 0
               }`}
             />

@@ -7,9 +7,9 @@ function IpfGraph({ ipfData, loading }) {
   const [axisX, setAxisX] = useState([]);
 
   useEffect(() => {
-    if (ipfData?.length >= 2) {
+    if (ipfData?.length > 0) {
       const firstAssessment = ipfData[0]?.feedback_ipf?.[0] || {};
-      const secondAssessment = ipfData[1]?.feedback_ipf?.[0] || {};
+      const secondAssessment = ipfData[1]?.feedback_ipf?.[0] || {}; // Handle cases where second assessment might not exist
 
       const scaleMapping = [
         { key: "romantic_scale_score", label: "Romantic Scale" },
@@ -25,12 +25,12 @@ function IpfGraph({ ipfData, loading }) {
       ];
 
       const xLabels = scaleMapping.map((scale) => scale.label);
-      const firstData = scaleMapping.map(
-        (scale) => firstAssessment[scale.key] ?? 0
-      );
-      const secondData = scaleMapping.map(
-        (scale) => secondAssessment[scale.key] ?? 0
-      );
+      const firstData = scaleMapping.map((scale) => ({
+        value: firstAssessment[scale.key] || 0,
+      }));
+      const secondData = scaleMapping.map((scale) => ({
+        value: secondAssessment[scale.key] || 0,
+      }));
 
       setAxisX(xLabels);
       setFirstIpfAssessment(firstData);
@@ -57,19 +57,25 @@ function IpfGraph({ ipfData, loading }) {
             formatter: "{c}",
           },
         },
-        {
-          name: `2nd IPF Assessment (${ipfData[1]?.session_dte || "N/A"})`,
-          type: "bar",
-          data: secondIpfAssessment,
-          itemStyle: { color: "#FF4500" },
-          label: {
-            show: true,
-            position: "top",
-            fontSize: 12,
-            color: "#333",
-            formatter: "{c}",
-          },
-        },
+        ...(ipfData.length > 1
+          ? [
+              {
+                name: `2nd IPF Assessment (${
+                  ipfData[1]?.session_dte || "N/A"
+                })`,
+                type: "bar",
+                data: secondIpfAssessment,
+                itemStyle: { color: "#FF4500" },
+                label: {
+                  show: true,
+                  position: "top",
+                  fontSize: 12,
+                  color: "#333",
+                  formatter: "{c}",
+                },
+              },
+            ]
+          : []),
       ]}
       loading={loading}
     />
