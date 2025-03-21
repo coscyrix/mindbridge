@@ -21,10 +21,14 @@ export default class Report {
           'form_cde',
           'thrpy_req_id',
           db.raw('MAX(updated_at) as date_sent'),
-          db.raw('MAX(due_date) as due_date'),
+          db.raw(`
+              COALESCE(
+                MAX(due_date), 
+                DATE_ADD(MAX(updated_at), INTERVAL 7 DAY)
+              ) as due_date
+            `),
         )
         .where('is_sent', 1)
-        // .andWhere('form_submit', 0)
         .groupBy([
           'client_first_name',
           'client_last_name',
@@ -53,6 +57,7 @@ export default class Report {
 
       return rec;
     } catch (error) {
+      console.error(error);
       logger.error(error);
       return { message: 'Error getting reports', error: -1 };
     }
