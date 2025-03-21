@@ -298,7 +298,9 @@ export const welcomeAccountDetailsEmail = (
 };
 
 const timeZoneConfig =
-  process.env.TIMEZONE === process.env.TIMEZONE ? process.env.TIMEZONE : 'UTC';
+  process.env.TIMEZONE === process.env.TIMEZONE
+    ? process.env.TIMEZONE
+    : 'America/Los_Angeles';
 
 export const therapyRequestDetailsEmail = (email, therapyRequest) => {
   const {
@@ -312,8 +314,24 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
   } = therapyRequest;
 
   const sessionDetails = session_obj
-    .map(
-      (session, index) => `
+    .map((session, index) => {
+      // Combine intake_date and scheduled_time into one ISO datetime string
+      const localDateTime = new Date(
+        `${session.intake_date}T${session.scheduled_time}`,
+      );
+
+      // Convert the full datetime to the desired timezone for both date and time
+      const localDate = localDateTime.toLocaleDateString('en-US', {
+        timeZone: timeZoneConfig,
+      });
+      const localTime = localDateTime.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: timeZoneConfig,
+      });
+
+      return `
         <tr style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px; ${
           session.is_report ? 'font-weight: bold;' : ''
         } background-color: ${
@@ -324,20 +342,13 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
               : '#ffffff'
         };">
           <td style="padding: 8px;">${session.service_name}</td>
-          <td style="padding: 8px;">${session.intake_date}</td>
-          <td style="padding: 8px;">${new Date(
-            `1970-01-01T${session.scheduled_time}`,
-          ).toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-            timeZone: timeZoneConfig,
-          })}</td>
+          <td style="padding: 8px;">${localDate}</td>
+          <td style="padding: 8px;">${localTime}</td>
           <td style="padding: 8px;">${session.session_format}</td>
           <td style="padding: 8px;">${session.session_status}</td>
         </tr>
-      `,
-    )
+      `;
+    })
     .join('');
 
   return {
