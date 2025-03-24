@@ -134,6 +134,8 @@ export default class Session {
         data.session_id,
       );
 
+      data.scheduled_time = data.scheduled_time.split(' ')[1]; // Extract time part 'HH:mm:ssZ'
+
       if (!data.invoice_nbr) {
         if (data.role_id != 4) {
           if (checkSessionIfOngoing.rec.length > 0) {
@@ -247,6 +249,13 @@ export default class Session {
           // ...data.session_description && {session_description: data.session_description},
           // ...data.is_additional && {is_additional: data.is_additional},
           // ...data.is_report && {is_report: data.is_report},
+        };
+      }
+
+      if (data.scheduled_time || data.intake_date) {
+        tmpSession = {
+          ...(data.scheduled_time && { scheduled_time: data.scheduled_time }),
+          ...(data.intake_date && { intake_date: data.intake_date }),
         };
       }
 
