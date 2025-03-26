@@ -7,6 +7,10 @@ import { useReferenceContext } from "../../../context/ReferenceContext";
 import { api } from "../../../utils/auth";
 import { toast } from "react-toastify";
 import Spinner from "../../common/Spinner";
+import {
+  convertLocalToUTCTime,
+  convertUTCToLocalTime,
+} from "../../../utils/helper";
 
 const EditSessionScheduleForm = ({
   activeData,
@@ -28,9 +32,17 @@ const EditSessionScheduleForm = ({
     if (activeData) {
       const formattedData = {
         ...activeData,
-        scheduled_time: moment
-          .utc(activeData?.scheduled_time, "HH:mm:ss.SSSZ")
-          .format("HH:mm"),
+        intake_date: moment(
+          convertUTCToLocalTime(
+            `${activeData.intake_date}T${activeData.scheduled_time}`
+          ).date
+        ).format("YYYY-MM-DD"),
+        scheduled_time: moment(
+          convertUTCToLocalTime(
+            `${activeData.intake_date}T${activeData.scheduled_time}`
+          ).time,
+          "hh:mm a"
+        ).format("HH:mm"),
       };
       reset(formattedData);
     }
@@ -43,16 +55,15 @@ const EditSessionScheduleForm = ({
   };
 
   const handleUpdateSessionSchedule = async (formData) => {
+    const utcDateTime = convertLocalToUTCTime(
+      formData?.intake_date,
+      formData?.scheduled_time
+    );
     try {
       setLoading(true);
-      const intakeDate = moment
-        .utc(formData?.intake_date, "YYYY-MM-DD")
-        .format("YYYY-MM-DD");
+      const intakeDate = moment.utc(utcDateTime).format("YYYY-MM-DD");
       const scheduledTime = moment
-        .utc(
-          `${formData?.intake_date} ${formData?.scheduled_time}`,
-          "YYYY-MM-DD HH:mm"
-        )
+        .utc(utcDateTime)
         .format("YYYY-MM-DD HH:mm:ss[Z]");
 
       const payload = {
@@ -66,15 +77,18 @@ const EditSessionScheduleForm = ({
       );
 
       if (response?.status === 200) {
-        const sessionTableFormattedTime = moment
-          .utc(formData?.scheduled_time, "HH:mm")
-          .format("HH:mm:ss.SSSZ");
+        const inputTime = moment.utc(utcDateTime).format("HH:mm");
+        const inputDate = moment.utc(utcDateTime).format("YYYY-MM-DD");
+        const sessionTableFormattedTime = moment(inputTime, "HH:mm").format(
+          "HH:mm:ss.SSS[Z]"
+        );
+
         setScheduledSessions((prevData) =>
           prevData.map((item, index) =>
             index === activeData?.rowIndex
               ? {
                   ...item,
-                  intake_date: formData?.intake_date,
+                  intake_date: inputDate,
                   scheduled_time: sessionTableFormattedTime,
                 }
               : item

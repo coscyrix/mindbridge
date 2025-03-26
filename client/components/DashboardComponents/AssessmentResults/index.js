@@ -2,10 +2,7 @@ import React, { useEffect, useState } from "react";
 import CustomCard from "../../CustomCard";
 import CustomClientDetails from "../../CustomClientDetails";
 import { AssessmentResultsContainer } from "./style";
-import {
-  ASSESSMENT_DATA_COLUMNS,
-  DIFFICULY_SCORE_ARR,
-} from "../../../utils/constants";
+import { ASSESSMENT_DATA_COLUMNS } from "../../../utils/constants";
 import CustomModal from "../../CustomModal";
 import BarGraph from "../../CustomGraphs/BarGraph";
 import CommonServices from "../../../services/CommonServices";
@@ -101,9 +98,6 @@ function AssessmentResults({ assessmentResultsData }) {
       keyName: "total_score",
       heading: "PHQ-9 Assessment Scores Over Time for",
       labelFormatter: (data) => {
-        const difficultyValue = DIFFICULY_SCORE_ARR?.find(
-          (diff) => diff.value == data?.additionalInfo?.difficultyScore
-        );
         const labels = [
           "Minimal Depression",
           "Mild Depression",
@@ -183,7 +177,7 @@ function AssessmentResults({ assessmentResultsData }) {
                   : feedbackData?.[keyName.keyName];
               const additionalInfo =
                 formattedFormName == "phq9"
-                  ? { difficultyScore: feedbackData?.difficulty_score || "NA" }
+                  ? { difficultyScore: feedbackData?.difficulty_score ?? "NA" }
                   : formattedFormName == "whodas"
                   ? {
                       h1: feedbackData?.difficulty_days,
@@ -196,6 +190,16 @@ function AssessmentResults({ assessmentResultsData }) {
                 value,
               };
             }),
+            markLineSeries: {
+              data: [
+                { type: "average", name: "Average" }, // Horizontal line at the average value
+                { yAxis: 100, name: "Threshold" }, // Custom threshold line at y = 100
+              ],
+              lineStyle: {
+                color: "red",
+                type: "dashed",
+              },
+            },
             type: "bar",
             itemStyle: {
               color: keyName.barColor?.default || "#6fd0ef",

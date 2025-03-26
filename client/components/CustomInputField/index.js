@@ -36,6 +36,7 @@ const CustomInputField = ({
         <input
           id={name}
           type={type}
+          lang="en-GB"
           {...register(name, {
             required: "This field is required",
             ...validationRules,

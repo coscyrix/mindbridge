@@ -30,6 +30,7 @@ import {
   convertLocalToUTCTime,
   convertUTCToLocalTime,
 } from "../../../utils/helper";
+import { useRouter } from "next/router";
 
 function CreateSessionForm({
   isOpen,
@@ -83,6 +84,7 @@ function CreateSessionForm({
   const [showResetConfirmationModal, setShowResetConfirmationModal] =
     useState(false);
   const [clientSerialNum, setClientSerialNum] = useState(null);
+  const router = useRouter();
   const { forms } = useReferenceContext();
 
   const clientsDropdown = clients?.map((client) => ({
@@ -105,7 +107,6 @@ function CreateSessionForm({
       String(date.getDate()).padStart(2, "0");
     return formattedDate;
   };
-
   const servicesDropdown = servicesData
     ?.filter((service) => service.is_report == 0)
     .map((service) => ({
@@ -237,7 +238,8 @@ function CreateSessionForm({
     },
     {
       name: "Session Date",
-      selector: (row) => convertUTCToLocalTime(row.intake_date).date,
+      selector: (row) =>
+        convertUTCToLocalTime(`${row.intake_date}T${row.scheduled_time}`).date,
       selectorId: "intake_date",
       maxWidth: "120px",
     },
@@ -678,6 +680,10 @@ function CreateSessionForm({
       );
       return;
     }
+    const payloadDate = convertLocalToUTCTime(
+      formData?.req_dte,
+      formData?.req_time
+    );
     try {
       setLoader("generateSessionSchedule");
       if (formData) {
@@ -701,6 +707,7 @@ function CreateSessionForm({
           setThrpyReqId(data?.rec[0]?.req_id);
           if (initialData) {
             setScheduledSession(data?.rec[0]?.session_obj);
+            fetchCounselorClient();
           } else {
             setSessionTableData(data?.rec[0]?.session_obj);
           }
@@ -782,13 +789,17 @@ function CreateSessionForm({
         ...initialData,
         req_dte: initialData.req_dte_not_formatted
           ? moment(
-              convertUTCToLocalTime(initialData.req_dte_not_formatted).date,
+              convertUTCToLocalTime(
+                `${initialData.req_dte_not_formatted}T${initialData.req_time}`
+              ).date,
               "DD MMM YYYY"
             ).format("YYYY-MM-DD")
           : "",
         req_time: initialData.req_time
           ? moment(
-              convertUTCToLocalTime(initialData.req_time).time,
+              convertUTCToLocalTime(
+                `${initialData.req_dte_not_formatted}T${initialData.req_time}`
+              ).time,
               "hh:mm a"
             ).format("HH:mm")
           : "",
@@ -829,7 +840,7 @@ function CreateSessionForm({
       methods.setValue("client_first_name", userProfileId);
     }
     handleGetScheduledSession();
-    if (initialData?.req_id) {
+    if (initialData?.req_id && router.pathname != "/client-management") {
       getAllSessionOfClients();
     }
   }, [isOpen]);
@@ -896,6 +907,7 @@ function CreateSessionForm({
                         <strong>Session Format : </strong>
                         <span style={{ textTransform: "capitalize" }}>
                           {initialData?.session_format_id?.toLowerCase() ||
+                            initialData?.session_format?.toLowerCase() ||
                             "N/A"}
                         </span>
                       </label>
@@ -905,14 +917,30 @@ function CreateSessionForm({
                         <>
                           <label>
                             <strong>Intake Date : </strong>
-                            <span>{initialData?.req_dte || "N/A"}</span>
+                            <span>
+                              {convertUTCToLocalTime(
+                                `${
+                                  initialData.req_dte_not_formatted ||
+                                  initialData?.intake_date
+                                }T${
+                                  initialData.req_time ||
+                                  initialData?.scheduled_time
+                                }`
+                              ).date || "N/A"}
+                            </span>
                           </label>
                           <label>
                             <strong>Session Time : </strong>
                             <span>
-                              {moment
-                                .utc(initialData?.req_time, "HH:mm:ssZ")
-                                .format("hh:mm A") || "N/A"}
+                              {convertUTCToLocalTime(
+                                `${
+                                  initialData.req_dte_not_formatted ||
+                                  initialData?.intake_date
+                                }T${
+                                  initialData.req_time ||
+                                  initialData?.scheduled_time
+                                }`
+                              ).time || "N/A"}
                             </span>
                           </label>
                         </>

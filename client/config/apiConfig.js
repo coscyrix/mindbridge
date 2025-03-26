@@ -16,6 +16,9 @@ const ApiConfig = {
     updateSessions: "/",
     deleteSessions: "/",
   },
+  currentSessions: {
+    getTodayAndTomorrowSessions: "/session/today",
+  },
   services: { getServices: "/service", updateService: "/", deleteService: "/" },
   forms: {
     submissionDetails: "/userForm",

@@ -82,7 +82,13 @@ const BarGraph = ({
     },
     toolbox: {
       feature: {
-        magicType: { show: true, type: ["line", "bar"] },
+        magicType: {
+          show: true,
+          type: ["line", "bar"],
+          option: {
+            bar: { series: seriesData.filter((s) => s.type === "bar") },
+          },
+        },
         saveAsImage: { show: true },
       },
     },

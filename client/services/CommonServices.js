@@ -23,6 +23,11 @@ const CommonServices = {
   getSessionsByCounselor(params) {
     return api.get(ApiConfig.sessions.getSessions, { params });
   },
+  getCurrentSessions(params) {
+    return api.get(ApiConfig.currentSessions.getTodayAndTomorrowSessions, {
+      params,
+    });
+  },
   getFormSubmissionDetails(params) {
     return api.get(ApiConfig.forms.submissionDetails, { params });
   },

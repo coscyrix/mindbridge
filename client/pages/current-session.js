@@ -44,13 +44,14 @@ function CurrentSession() {
     setActiveData({ ...row, req_id: row.thrpy_req_id });
   };
 
-  // fun to get session data
   async function getCurrentSessionData(counselorId) {
     setLoading(true);
     let response;
     try {
       if (counselorId && counselorId !== "allCounselors")
-        response = await api.get(`/session/today?counselor_id=${counselorId}`);
+        response = await CommonServices.getCurrentSessions({
+          counselor_id: counselorId,
+        });
       // } else {
       //   console.log(counselors, "counselors");
       //   response = await api.get(
@@ -403,9 +404,11 @@ function CurrentSession() {
 
   useEffect(() => {
     const userData = Cookies.get("user");
-    setUserData(JSON.parse(userData));
-    fetchCounsellor();
-    // getCurrentSessionData();
+    const userObj = JSON.parse(userData);
+    setUserData(userObj);
+    userObj?.role_id == 1
+      ? fetchCounsellor()
+      : getCurrentSessionData(userObj?.user_profile_id);
   }, []);
 
   return (

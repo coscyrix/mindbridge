@@ -2,11 +2,11 @@ import React from "react";
 import BarGraph from "../../CustomGraphs/BarGraph";
 
 const AttendanceGraph = ({ attendanceData, loading }) => {
-  // Extract data for each client
-  const xAxisLabels = attendanceData.map(
-    (item) =>
-      `Session ${item.session_id} - Session ${Number(item.session_id) + 4}`
-  );
+  const xAxisLabels = attendanceData.map((_, index) => {
+    const startSession = index * 5 + 1;
+    const endSession = startSession + 4;
+    return `Session ${startSession} - Session ${endSession}`;
+  });
 
   const totalSessionsData = attendanceData.map((item) => {
     return { value: item.feedback_attendance?.[0]?.total_sessions || 0 };
