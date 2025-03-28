@@ -21,6 +21,7 @@ import {
   capitalizeFirstLetter,
   convertTimeToReadableFormat,
 } from '../utils/common.js';
+import { warn } from 'console';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -50,6 +51,14 @@ export default class EmailTmplt {
         await this.common.checkTreatmentToolsSentStatus({
           session_id: data.session_id,
         });
+
+      if (checkSessionTreatmentToolsSentStatus?.warn === -1) {
+        return {
+          message: checkSessionTreatmentToolsSentStatus?.message,
+          warn: -1,
+        };
+      }
+
       if (checkSessionTreatmentToolsSentStatus?.error) {
         logger.error(checkSessionTreatmentToolsSentStatus?.message);
         return {
@@ -77,7 +86,11 @@ export default class EmailTmplt {
       }
 
       for (const session of recSession) {
-        if (isNaN(session.forms_array) || session.forms_array.length > 0) {
+        if (
+          session.forms_array &&
+          Array.isArray(session.forms_array) &&
+          session.forms_array.length > 0
+        ) {
           for (const arry of session.forms_array) {
             const [form] = await this.form.getFormByFormId({
               form_id: arry,

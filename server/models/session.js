@@ -336,6 +336,8 @@ export default class Session {
           .where('session_id', data.session_id)
           .update(tmpSession);
 
+        console.log('////////////////3/////////////////');
+
         if (data.session_status) {
           if (recSession[0].is_additional != 1) {
             if (recSession[0].is_report != 1) {
@@ -343,18 +345,25 @@ export default class Session {
                 session_id: data.session_id,
               });
 
-              if (sendTools?.error) {
-                logger.error(sendTools?.message);
-              }
+              if (sendTools?.warn !== -1) {
+                if (sendTools?.error) {
+                  logger.error(sendTools?.message);
+                  console.log(
+                    'Error sending treatment tools email',
+                    sendTools.error,
+                  );
+                }
 
-              const uptUserForm = await this.userForm.putUserFormBySessionId({
-                session_id: data.session_id,
-                is_sent: 1,
-              });
+                const uptUserForm = await this.userForm.putUserFormBySessionId({
+                  session_id: data.session_id,
+                  is_sent: 1,
+                });
 
-              if (uptUserForm.error) {
-                logger.error('Error updating user form');
-                return { message: 'Error updating user form', error: -1 };
+                if (uptUserForm.error) {
+                  console.log('error updating user form', uptUserForm.error);
+                  logger.error('Error updating user form');
+                  return { message: 'Error updating user form', error: -1 };
+                }
               }
             }
           }

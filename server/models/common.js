@@ -415,10 +415,24 @@ export default class Common {
 
   async checkTreatmentToolsSentStatus(data) {
     try {
-      const checkSession = await this.getSessionById(data.session_id);
+      const checkSession = await this.getSessionById({
+        session_id: data.session_id,
+      });
       if (checkSession.error) {
         logger.error('Error getting session');
         return { message: 'Error getting session', error: -1 };
+      }
+
+      // Check if session has forms associated with it
+      const hasAssociatedForms =
+        checkSession[0].forms_array && checkSession[0].forms_array.length > 0;
+
+      if (!hasAssociatedForms) {
+        logger.warn('No treatment tools associated with this session');
+        return {
+          message: 'No treatment tools associated with this session',
+          warn: -1,
+        };
       }
 
       const getAllSessionUserForm = await this.userForm.getUserFormById({
