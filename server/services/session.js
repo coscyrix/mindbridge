@@ -102,6 +102,7 @@ export default class SessionService {
   async getSessionTodayAndTomorrow(data) {
     const schema = joi.object({
       counselor_id: joi.number().optional(),
+      user_timezone: joi.string().optional(),
       tenant_id: joi.number().optional(),
     });
 

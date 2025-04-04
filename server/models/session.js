@@ -535,17 +535,20 @@ export default class Session {
 
   async getSessionTodayAndTomorrow(data) {
     try {
+      // Get current date in user's timezone
+      const user_timezone = data.user_timezone || 'UTC'; // Default to UTC if not provided
       const currentDate = new Date();
       const tomorrowDate = new Date();
       tomorrowDate.setDate(currentDate.getDate() + 1);
 
       const formatDate = (date) => {
-        return date.toLocaleDateString('en-US', {
+        return new Intl.DateTimeFormat('en-US', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
           day: 'numeric',
-        });
+          timeZone: user_timezone,
+        }).format(date);
       };
 
       const formattedCurrentDate = formatDate(currentDate);
