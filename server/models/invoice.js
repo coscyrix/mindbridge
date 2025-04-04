@@ -178,11 +178,11 @@ export default class Invoice {
       }
 
       if (data.start_dte) {
-        query.andWhere('req_dte', '>=', data.start_dte);
+        query.andWhere('intake_date', '>=', data.start_dte);
       }
 
       if (data.end_dte) {
-        query.andWhere('req_dte', '<=', data.end_dte);
+        query.andWhere('intake_date', '<=', data.end_dte);
       }
 
       if (data.thrpy_status) {
