@@ -1,6 +1,9 @@
 //controllers/user.js
 
 import UserService from '../services/user.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 //////////////////////////////////////////
 
@@ -8,6 +11,7 @@ export default class UserController {
   //////////////////////////////////////////
   async signUp(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     if (
       !data.email ||

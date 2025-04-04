@@ -38,6 +38,7 @@ export default class Session {
         session_description: data.session_description,
         is_additional: data.is_additional,
         is_report: data.is_report,
+        tenant_id: data.tenant_id,
       };
 
       const postSession = await db
@@ -100,6 +101,7 @@ export default class Session {
         session_description: svc.service_code,
         is_additional: svc.is_additional && svc.is_additional === 1 ? 1 : 0,
         is_report: svc.is_report && svc.is_report === 1 ? 1 : 0,
+        tenant_id: data.tenant_id,
       };
 
       const postSession = await db
@@ -491,6 +493,10 @@ export default class Session {
 
       if (data.session_status) {
         query = query.andWhere('session_status', data.session_status);
+      }
+
+      if (data.tenant_id) {
+        query = query.andWhere('tenant_id', data.tenant_id);
       }
 
       const rec = await query;

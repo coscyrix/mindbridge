@@ -10,6 +10,7 @@ export default class FeedbackService {
       session_id: joi.number().required(),
       form_id: joi.number().required(),
       status_yn: joi.string().valid('y', 'n').optional(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -52,6 +53,7 @@ export default class FeedbackService {
       form_id: joi.number().optional(),
       client_id: joi.number().optional(),
       is_submitted: joi.string().valid('y', 'n').optional(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);
@@ -77,6 +79,7 @@ export default class FeedbackService {
       item7: joi.number().min(0).max(3).required(),
       session_id: joi.number().required(),
       client_id: joi.number().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -105,6 +108,7 @@ export default class FeedbackService {
       difficulty_score: joi.number().min(0).max(3).required(),
       session_id: joi.number().required(),
       client_id: joi.number().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -143,6 +147,7 @@ export default class FeedbackService {
       item20: joi.number().min(0).max(4).required(),
       session_id: joi.number().required(),
       client_id: joi.number().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -200,6 +205,7 @@ export default class FeedbackService {
       healthConditionDays: joi.number().min(0).max(30).required(),
       session_id: joi.number().required(),
       client_id: joi.number().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -298,6 +304,7 @@ export default class FeedbackService {
       item78: joi.number().min(0).max(6).required(),
       item79: joi.number().min(0).max(6).required(),
       item80: joi.number().min(0).max(6).required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -331,6 +338,7 @@ export default class FeedbackService {
       time_bound_1st_phase: joi.string().optional(),
       time_bound_2nd_phase: joi.string().optional(),
       time_bound_3rd_phase: joi.string().optional(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -349,6 +357,7 @@ export default class FeedbackService {
     const schema = joi.object({
       client_id: joi.number().required(),
       imgBase64: joi.string().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -371,6 +380,7 @@ export default class FeedbackService {
       total_sessions: joi.number().required(),
       total_attended_sessions: joi.number().required(),
       total_cancelled_sessions: joi.number().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);

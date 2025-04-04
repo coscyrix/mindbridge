@@ -134,6 +134,7 @@ export default class Service {
           service_id: data.service_id,
         }),
         gst: data.gst || 0,
+        tenant_id: data.tenant_id,
       };
 
       const postSvc = await db
@@ -321,6 +322,10 @@ export default class Service {
 
       if (data.service_code) {
         query = query.andWhere('service_code', data.service_code);
+      }
+
+      if (data.tenant_id) {
+        query = query.andWhere('tenant_id', data.tenant_id);
       }
 
       const rec = await query;

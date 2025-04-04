@@ -2,6 +2,9 @@
 
 import e from 'express';
 import UserProfileService from '../services/userProfile.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 //////////////////////////////////////////
 
@@ -10,6 +13,7 @@ export default class UserProfileController {
 
   async postUserProfile(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     const userProfile = new UserProfileService();
     const rec = await userProfile.postUserProfile(data);
@@ -26,6 +30,7 @@ export default class UserProfileController {
 
   async userPostClientProfile(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     if (!data.role_id) {
       res.status(400).json({ message: 'Mandatory fields missing', error: -1 });

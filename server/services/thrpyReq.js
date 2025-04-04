@@ -23,6 +23,7 @@ export default class ThrpyReqService {
         .try(joi.string(), joi.number())
         .required(),
       intake_dte: joi.date().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -207,6 +208,7 @@ export default class ThrpyReqService {
       client_id: joi.number().optional(),
       thrpy_id: joi.number().optional(),
       thrpy_status: joi.string().optional(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

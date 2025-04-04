@@ -19,6 +19,7 @@ export default class ServiceService {
       position: joi.array().items(joi.any()).optional(),
       service_id: joi.array().items(joi.any()).optional(),
       gst: joi.number().precision(4).required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -79,6 +80,7 @@ export default class ServiceService {
     const schema = joi.object({
       service_id: joi.number().optional(),
       //   role_id: joi.number().required(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

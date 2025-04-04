@@ -1,11 +1,15 @@
 //controllers/feedback.js
 
 import FeedbackService from '../services/feedback.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export default class FeedbackController {
   //////////////////////////////////////////
   async postFeedback(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     if (!data.session_id || !data.form_id) {
       res.status(400).json({ message: 'Missing mandatory fields' });

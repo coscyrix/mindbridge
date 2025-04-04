@@ -12,6 +12,7 @@ export default class Homework {
       const tmpHomework = {
         homework_title: data.homework_title,
         homework_filename: data.homework_filename, // change: assign filename from data
+        tenant_id: data.tenant_id,
       };
 
       const postHomework = await db

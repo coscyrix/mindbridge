@@ -13,6 +13,7 @@ export default class UserService {
       email: joi.string().email().required(),
       password: joi.string().min(8).required(),
       user_typ_id: joi.number().optional(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);

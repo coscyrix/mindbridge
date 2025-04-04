@@ -90,6 +90,7 @@ export default class Form {
           frequency_typ: data.frequency_typ,
           session_position: JSON.stringify(data.session_position),
           svc_ids: JSON.stringify(serviceIDs),
+          tenant_id: data.tenant_id,
         };
       }
 
@@ -137,6 +138,7 @@ export default class Form {
           frequency_typ: data.frequency_typ,
           form_sequence_id: data.form_sequence_id,
           svc_ids: JSON.stringify(serviceIDs),
+          tenant_id: data.tenant_id,
         };
       }
 
@@ -198,6 +200,10 @@ export default class Form {
         query = query.andWhere('form_id', data.form_id);
       }
 
+      if (data.tenant_id) {
+        query = query.andWhere('tenant_id', data.tenant_id);
+      }
+
       const rec = await query;
       if (!rec) {
         logger.error('Error getting form');
@@ -225,6 +231,10 @@ export default class Form {
 
       if (data.form_id) {
         query = query.andWhere('form_id', data.form_id);
+      }
+
+      if (data.tenant_id) {
+        query = query.andWhere('tenant_id', data.tenant_id);
       }
 
       const rec = await query;

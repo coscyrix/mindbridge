@@ -40,6 +40,7 @@ export default class Invoice {
       const tmpInvoice = {
         session_id: data.session_id,
         invoice_nbr: data.invoice_nbr,
+        tenant_id: data.tenant_id,
       };
 
       const postInvoice = await db
@@ -73,6 +74,10 @@ export default class Invoice {
 
       if (data.invoice_nbr) {
         query.andWhere('invoice_nbr', data.invoice_nbr);
+      }
+
+      if (data.tenant_id) {
+        query.andWhere('tenant_id', data.tenant_id);
       }
 
       const rec = await query;
@@ -127,6 +132,10 @@ export default class Invoice {
         query.orWhere('invoice_nbr', data.invoice_nbr);
       }
 
+      if (data.tenant_id) {
+        query.andWhere('tenant_id', data.tenant_id);
+      }
+
       query.andWhere('status_yn', 'y');
 
       const rec = await query;
@@ -178,6 +187,10 @@ export default class Invoice {
 
       if (data.thrpy_status) {
         query.andWhere('thrpy_status', data.thrpy_status);
+      }
+
+      if (data.tenant_id) {
+        query.andWhere('tenant_id', data.tenant_id);
       }
 
       const rec = await query;

@@ -1,11 +1,15 @@
 //controller/session.js
 
 import SessionService from '../services/session.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export default class SessionController {
   //////////////////////////////////////////
   async postSession(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     if (
       !data.thrpy_req_id ||
@@ -50,9 +54,9 @@ export default class SessionController {
       return;
     }
 
-    // This is to check the role of the user 
-    if (data.user_profile_id){
-      if (!data.role_id){
+    // This is to check the role of the user
+    if (data.user_profile_id) {
+      if (!data.role_id) {
         res.status(400).json({ message: 'Missing mandatory fields' });
         return;
       }

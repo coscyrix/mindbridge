@@ -12,6 +12,7 @@ export default class Notes {
       const tmpNote = {
         message: data.message,
         session_id: data.session_id,
+        tenant_id: data.tenant_id,
       };
 
       const postNote = await db
@@ -71,6 +72,10 @@ export default class Notes {
 
       if (data.session_id) {
         query = query.andWhere('session_id', data.session_id);
+      }
+
+      if (data.tenant_id) {
+        query = query.andWhere('tenant_id', data.tenant_id);
       }
 
       const rec = await query;

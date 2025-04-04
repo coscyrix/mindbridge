@@ -1,11 +1,15 @@
 //controllers/thrpyReq.js
 
 import ThrpyReqService from '../services/thrpyReq.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export default class ThrpyReqController {
   //////////////////////////////////////////
   async postThrpyReq(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     if (
       !data.counselor_id ||

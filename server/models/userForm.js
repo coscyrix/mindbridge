@@ -16,6 +16,7 @@ export default class UserForm {
           form_id: data.form_id,
           session_id: data.session_id,
           is_sent: data.is_sent,
+          tenant_id: data.tenant_id,
         };
 
         const postUserForm = await db
@@ -182,6 +183,10 @@ export default class UserForm {
 
       if (data.form_submit) {
         query = query.andWhere('form_submit', data.form_submit);
+      }
+
+      if (data.tenant_id) {
+        query = query.andWhere('tenant_id', data.tenant_id);
       }
 
       const rec = await query;

@@ -8,6 +8,7 @@ export default class UserTargetOutcomeService {
       user_profile_id: joi.number().required(),
       target_outcome_id: joi.number().required(),
       counselor_id: joi.number().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -47,6 +48,7 @@ export default class UserTargetOutcomeService {
       user_profile_id: joi.number().optional(),
       target_outcome_id: joi.number().optional(),
       counselor_id: joi.number().optional(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

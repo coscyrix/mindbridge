@@ -12,6 +12,7 @@ export default class UserTargetOutcome {
         user_profile_id: data.user_profile_id,
         target_outcome_id: data.target_outcome_id,
         counselor_id: data.counselor_id,
+        tenant_id: data.tenant_id,
       };
 
       const result = await db
@@ -94,6 +95,10 @@ export default class UserTargetOutcome {
 
       if (data.counselor_id) {
         query.where('counselor_id', data.counselor_id);
+      }
+
+      if (data.tenant_id) {
+        query.where('tenant_id', data.tenant_id);
       }
 
       const rec = await query;

@@ -1,11 +1,15 @@
 //controllers/service.js
 
 import ServiceService from '../services/service.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export default class ServiceController {
   //////////////////////////////////////////
   async postService(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     if (
       !data.service_name ||

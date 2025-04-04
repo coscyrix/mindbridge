@@ -160,6 +160,7 @@ export default class ThrpyReq {
         req_dte: req_dte,
         req_time: req_time,
         session_desc: svc.service_code,
+        tenant_id: data.tenant_id,
       };
 
       // Insert the therapy request into the database
@@ -220,6 +221,7 @@ export default class ThrpyReq {
             session_format: data.session_format_id,
             session_code: svc.service_code,
             session_description: svc.service_code,
+            tenant_id: data.tenant_id,
           };
 
           // Handle reports based on svc_report_formula
@@ -280,6 +282,7 @@ export default class ThrpyReq {
           session_code: `${svc.service_code}_${drSvc.service_code}`,
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
+          tenant_id: data.tenant_id,
         };
 
         // Insert the discharge session into the database
@@ -356,6 +359,7 @@ export default class ThrpyReq {
             session_format: data.session_format_id,
             session_code: svc.service_code,
             session_description: svc.service_code,
+            tenant_id: data.tenant_id,
           };
 
           // Handle reports based on svc_report_formula
@@ -412,7 +416,8 @@ export default class ThrpyReq {
           session_format: data.session_format_id,
           session_code: `${svc.service_code}_${drSvc.service_code}`,
           session_description: `${svc.service_code} ${drSvc.service_name}`,
-          is_report: 1, // Use if appropriate
+          is_report: 1,
+          tenant_id: data.tenant_id,
         };
 
         // Insert the discharge session into the database
@@ -858,6 +863,10 @@ export default class ThrpyReq {
 
       if (data.thrpy_status) {
         query.andWhere('thrpy_status', data.thrpy_status);
+      }
+
+      if (data.tenant_id) {
+        query.andWhere('tenant_id', data.tenant_id);
       }
 
       const rec = await query;

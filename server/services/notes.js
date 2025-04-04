@@ -8,6 +8,7 @@ export default class NotesService {
     const schema = joi.object({
       message: joi.string().required(),
       session_id: joi.number().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -47,6 +48,7 @@ export default class NotesService {
     const schema = joi.object({
       note_id: joi.number().optional(),
       session_id: joi.number().optional(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

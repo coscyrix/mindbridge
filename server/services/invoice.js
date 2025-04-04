@@ -10,6 +10,7 @@ export default class InvoiceService {
     const schema = joi.object({
       session_id: joi.number().required(),
       invoice_nbr: joi.string().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -28,6 +29,7 @@ export default class InvoiceService {
     const schema = joi.object({
       session_id: joi.number().optional(),
       invoice_nbr: joi.string().optional(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);
@@ -69,6 +71,7 @@ export default class InvoiceService {
       end_dte: joi.date().optional(),
       thrpy_status: joi.string().optional(),
       role_id: joi.number().optional(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

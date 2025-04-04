@@ -13,6 +13,7 @@ export default class SessionService {
       session_format: joi.number().required(),
       intake_date: joi.date().required(),
       session_description: joi.string().optional(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -83,6 +84,7 @@ export default class SessionService {
         .alternatives()
         .try(joi.string(), joi.number())
         .optional(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);
@@ -100,6 +102,7 @@ export default class SessionService {
   async getSessionTodayAndTomorrow(data) {
     const schema = joi.object({
       counselor_id: joi.number().optional(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

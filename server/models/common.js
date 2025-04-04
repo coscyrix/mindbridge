@@ -145,6 +145,7 @@ export default class Common {
         email: data.email.toLowerCase(),
         password: await this.authCommon.hashPassword(data.password),
         role_id: data.role_id || 1,
+        tenant_id: data.tenant_id,
       };
 
       const postUsr = await db
@@ -333,6 +334,7 @@ export default class Common {
       const tmpNotes = {
         session_id: data.session_id,
         message: data.message,
+        tenant_id: data.tenant_id,
       };
 
       const postNote = await db

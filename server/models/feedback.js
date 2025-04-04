@@ -22,6 +22,7 @@ export default class Feedback {
         client_id: data.client_id,
         feedback_json: data.feedback_json,
         is_discharged: data.is_discharged ? data.is_discharged : 'n',
+        tenant_id: data.tenant_id,
       };
 
       const postFeedback = await db
@@ -129,6 +130,10 @@ export default class Feedback {
         query = query.andWhere('client_id', data.client_id);
       }
 
+      if (data.tenant_id) {
+        query = query.andWhere('tenant_id', data.tenant_id);
+      }
+
       const rec = await query;
       if (!rec) {
         logger.error('Error getting feedback');
@@ -186,6 +191,7 @@ export default class Feedback {
         client_id: data.client_id,
         feedback_json: data,
         form_id: 21,
+        tenant_id: data.tenant_id,
       });
 
       console.log('recFeedback');
@@ -198,6 +204,7 @@ export default class Feedback {
       const tmpGAD7Feedback = {
         total_points: total,
         feedback_id: recFeedback.rec[0],
+        tenant_id: data.tenant_id,
       };
 
       const postGAD7Feedback = await db
@@ -265,10 +272,8 @@ export default class Feedback {
         client_id: data.client_id,
         feedback_json: data,
         form_id: 20,
+        tenant_id: data.tenant_id,
       });
-
-      console.log('recFeedback');
-      console.log(recFeedback);
 
       if (recFeedback.error) {
         return recFeedback;
@@ -278,6 +283,7 @@ export default class Feedback {
         total_score: total,
         difficulty_score: data.difficulty_score,
         feedback_id: recFeedback.rec[0],
+        tenant_id: data.tenant_id,
       };
 
       const postGAD7Feedback = await db
@@ -356,10 +362,8 @@ export default class Feedback {
         client_id: data.client_id,
         feedback_json: data,
         form_id: 22,
+        tenant_id: data.tenant_id,
       });
-
-      console.log('recFeedback');
-      console.log(recFeedback);
 
       if (recFeedback.error) {
         return recFeedback;
@@ -368,6 +372,7 @@ export default class Feedback {
       const tmpPCL5Feedback = {
         total_score: total,
         feedback_id: recFeedback.rec[0],
+        tenant_id: data.tenant_id,
       };
 
       const postPCL5Feedback = await db
@@ -515,10 +520,8 @@ export default class Feedback {
         client_id: data.client_id,
         feedback_json: data,
         form_id: 17,
+        tenant_id: data.tenant_id,
       });
-
-      console.log('recFeedback');
-      console.log(recFeedback);
 
       if (recFeedback.error) {
         return recFeedback;
@@ -536,6 +539,7 @@ export default class Feedback {
         unableDays: data.unableDays,
         healthConditionDays: data.healthConditionDays,
         feedback_id: recFeedback.rec[0],
+        tenant_id: data.tenant_id,
       };
 
       const postWHODASFeedback = await db
@@ -704,6 +708,7 @@ export default class Feedback {
         client_id: data.client_id,
         feedback_json: data,
         form_id: 19,
+        tenant_id: data.tenant_id,
       });
 
       if (recFeedback.error) {
@@ -720,6 +725,7 @@ export default class Feedback {
         education_scale_score: d6_avg,
         self_care_scale: d7_avg,
         feedback_id: recFeedback.rec[0],
+        tenant_id: data.tenant_id,
       };
 
       console.log('tmpIPFSFeedback', tmpIPFSFeedback);
@@ -767,6 +773,7 @@ export default class Feedback {
         client_id: data.client_id,
         feedback_json: data,
         form_id: 24,
+        tenant_id: data.tenant_id,
       });
       if (recFeedback.error) {
         return recFeedback;
@@ -776,6 +783,7 @@ export default class Feedback {
         total_sessions: data.total_sessions,
         total_attended_sessions: data.total_attended_sessions,
         total_cancelled_sessions: data.total_cancelled_sessions,
+        tenant_id: data.tenant_id,
       };
       const postATTENDANCEFeedback = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -822,6 +830,7 @@ export default class Feedback {
         client_id: data.client_id,
         feedback_json: data,
         form_id: 16,
+        tenant_id: data.tenant_id,
       });
 
       if (recFeedback.error) {
@@ -875,6 +884,7 @@ export default class Feedback {
         ...(data.time_bound_3rd_phase && {
           time_bound_3rd_phase: data.time_bound_3rd_phase,
         }),
+        ...(data.tenant_id && { tenant_id: data.tenant_id }),
       };
 
       const postSMARTGOALFeedback = await db
@@ -915,6 +925,7 @@ export default class Feedback {
         client_id: data.client_id,
         feedback_json: data,
         form_id: 23,
+        tenant_id: data.tenant_id,
       });
 
       if (recFeedback.error) {
@@ -924,6 +935,7 @@ export default class Feedback {
       const tmpCONSENTFeedback = {
         feedback_id: recFeedback.rec[0],
         imgBase64: data.imgBase64,
+        tenant_id: data.tenant_id,
       };
 
       const postCONSENTFeedback = await db

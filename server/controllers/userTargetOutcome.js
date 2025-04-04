@@ -1,9 +1,14 @@
 import UserTargetOutcomeService from '../services/userTargetOutcome.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export default class UserTargetOutcomeController {
   //////////////////////////////////////////
   async postUserTargetOutcome(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
+
     const userTargetOutcomeService = new UserTargetOutcomeService();
     const result = await userTargetOutcomeService.postUserTargetOutcome(data);
 

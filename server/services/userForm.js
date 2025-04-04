@@ -10,6 +10,7 @@ export default class UserFormService {
       counselor_id: joi.number().required(),
       form_id: joi.number().required(),
       session_id: joi.number().required(),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -65,6 +66,7 @@ export default class UserFormService {
         .alternatives()
         .try(joi.boolean(), joi.number().valid(0, 1))
         .optional(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

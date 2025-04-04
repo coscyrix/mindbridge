@@ -217,6 +217,7 @@ export default class User {
 
       return rec;
     } catch (error) {
+      console.log('error', error);
       logger.error(error);
       return { message: 'Something went wrong', error: -1 };
     }

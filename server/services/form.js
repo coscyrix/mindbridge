@@ -27,6 +27,7 @@ export default class FormService {
         is: joi.valid(2, 'dynamic'),
         then: joi.required(),
       }),
+      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);
@@ -66,6 +67,7 @@ export default class FormService {
   async getFormById(data) {
     const schema = joi.object({
       form_id: joi.number().optional(),
+      tenant_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

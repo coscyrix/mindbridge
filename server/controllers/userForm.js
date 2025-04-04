@@ -1,9 +1,11 @@
 import UserFormService from '../services/userForm.js';
+import dotenv from 'dotenv';
 
 export default class UserFormController {
   //////////////////////////////////////////
   async postUserForm(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     if (!data.client_id || !data.form_id || !data.session_id) {
       res.status(400).json({ message: 'Missing mandatory fields' });
