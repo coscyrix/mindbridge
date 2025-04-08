@@ -19,6 +19,7 @@ import {
 } from '../utils/emailTmplt.js';
 import SendEmail from '../middlewares/sendEmail.js';
 
+dotenv.config();
 const db = knex(DBconn.dbConn.development);
 
 export default class ThrpyReq {
@@ -37,6 +38,8 @@ export default class ThrpyReq {
 
   async postThrpyReq(data) {
     try {
+      const tmpSessionObj = [];
+
       // Parse the intake date and time from the ISO string
       const req_dte = data.intake_dte.split('T')[0]; // 'YYYY-MM-DD'
       const req_time = data.intake_dte.split('T')[1]; // 'HH:mm:ss.sssZ'
@@ -49,7 +52,10 @@ export default class ThrpyReq {
 
       if (!recCounselor) {
         logger.error('Error getting counselor profile');
-        return { message: 'Error getting counselor profile', error: -1 };
+        return {
+          message: 'Error getting counselor profile',
+          error: -1,
+        };
       }
 
       if (recCounselor.rec[0].role_id !== 2) {
@@ -101,7 +107,10 @@ export default class ThrpyReq {
 
       if (svc.is_report === 1) {
         logger.error('Report services cannot be requested');
-        return { message: 'Report services cannot be requested', error: -1 };
+        return {
+          message: 'Report services cannot be requested',
+          error: -1,
+        };
       }
 
       const drSvc = drService.rec[0];
@@ -115,7 +124,19 @@ export default class ThrpyReq {
         logger.error(
           `Error getting discharge report service with service_code: DR`,
         );
-        return { message: 'Error getting discharge report service', error: -1 };
+        return {
+          message: 'Error getting discharge report service',
+          error: -1,
+        };
+      }
+
+      const ref_fees = await this.common.getRefFeesByTenantId(
+        process.env.TENANT_ID,
+      );
+
+      if (!ref_fees) {
+        logger.error('Error getting reference fees');
+        return { message: 'Error getting reference fees', error: -1 };
       }
 
       // Check if the intake date is in the past
@@ -146,7 +167,10 @@ export default class ThrpyReq {
             svc.svc_report_formula = JSON.parse(svc.svc_report_formula);
           } catch (e) {
             logger.error('Failed to parse svc_report_formula');
-            return { message: 'Unexpected report formula format', error: -1 };
+            return {
+              message: 'Unexpected report formula format',
+              error: -1,
+            };
           }
         }
       }
@@ -222,6 +246,17 @@ export default class ThrpyReq {
             session_code: svc.service_code,
             session_description: svc.service_code,
             tenant_id: data.tenant_id,
+            session_price: Number(svc.total_invoice),
+            session_taxes:
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
+            session_counselor_amt:
+              (Number(svc.total_invoice) +
+                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+              Number(ref_fees[0].counselor_pcnt),
+            session_system_amt:
+              (Number(svc.total_invoice) +
+                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+              Number(ref_fees[0].system_pcnt),
           };
 
           // Handle reports based on svc_report_formula
@@ -251,12 +286,8 @@ export default class ThrpyReq {
             }
           }
 
-          // Insert the session into the database
-          const postSession = await this.session.postSession(tmpSession);
-          if (!postSession) {
-            logger.error('Error creating session');
-            return { message: 'Error creating session', error: -1 };
-          }
+          // Add the session to the array
+          tmpSessionObj.push(tmpSession);
         }
 
         // Add the discharge report session after the last interval
@@ -283,15 +314,21 @@ export default class ThrpyReq {
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
           tenant_id: data.tenant_id,
+          session_price: Number(svc.total_invoice),
+          session_taxes:
+            Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
+          session_counselor_amt:
+            (Number(svc.total_invoice) +
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+            Number(ref_fees[0].counselor_pcnt),
+          session_system_amt:
+            (Number(svc.total_invoice) +
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+            Number(ref_fees[0].system_pcnt),
         };
 
-        // Insert the discharge session into the database
-        const postDischargeSession =
-          await this.session.postSession(dischargeSession);
-        if (!postDischargeSession) {
-          logger.error('Error creating discharge session');
-          return { message: 'Error creating discharge session', error: -1 };
-        }
+        // Add the discharge session to the array
+        tmpSessionObj.push(dischargeSession);
       } else if (svc.svc_formula_typ === 'd') {
         // Handle days apart formula
         let svcFormula;
@@ -302,7 +339,10 @@ export default class ThrpyReq {
             svcFormula = JSON.parse(svc.svc_formula);
           } catch (e) {
             logger.error('Failed to parse svc_formula');
-            return { message: 'Unexpected formula format', error: -1 };
+            return {
+              message: 'Unexpected formula format',
+              error: -1,
+            };
           }
         } else if (Array.isArray(svc.svc_formula)) {
           svcFormula = svc.svc_formula; // Already an array
@@ -360,6 +400,17 @@ export default class ThrpyReq {
             session_code: svc.service_code,
             session_description: svc.service_code,
             tenant_id: data.tenant_id,
+            session_price: Number(svc.total_invoice),
+            session_taxes:
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
+            session_counselor_amt:
+              (Number(svc.total_invoice) +
+                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+              Number(ref_fees[0].counselor_pcnt),
+            session_system_amt:
+              (Number(svc.total_invoice) +
+                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+              Number(ref_fees[0].system_pcnt),
           };
 
           // Handle reports based on svc_report_formula
@@ -386,12 +437,8 @@ export default class ThrpyReq {
             }
           }
 
-          // Insert the session into the database
-          const postSession = await this.session.postSession(tmpSession);
-          if (!postSession) {
-            logger.error('Error creating session');
-            return { message: 'Error creating session', error: -1 };
-          }
+          // Add the session to the array
+          tmpSessionObj.push(tmpSession);
         }
 
         // Add the discharge report session a week after the last session
@@ -418,19 +465,36 @@ export default class ThrpyReq {
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
           tenant_id: data.tenant_id,
+          session_price: Number(svc.total_invoice),
+          session_taxes:
+            Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
+          session_counselor_amt:
+            (Number(svc.total_invoice) +
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+            Number(ref_fees[0].counselor_pcnt),
+          session_system_amt:
+            (Number(svc.total_invoice) +
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+            Number(ref_fees[0].system_pcnt),
         };
 
-        // Insert the discharge session into the database
-        const postDischargeSession =
-          await this.session.postSession(dischargeSession);
-        if (!postDischargeSession) {
-          logger.error('Error creating discharge session');
-          return { message: 'Error creating discharge session', error: -1 };
-        }
+        // Add the discharge session to the array
+        tmpSessionObj.push(dischargeSession);
       } else {
         // Handle unexpected svc_formula_typ values
         logger.error(`Unsupported svc_formula_typ: ${svc.svc_formula_typ}`);
         return { message: 'Unsupported formula type', error: -1 };
+      }
+
+      // Insert the session array into the database
+
+      const postSessionArr = await this.session.postSession(tmpSessionObj);
+      if (!postSessionArr) {
+        logger.error('Error posting session arr');
+        return {
+          message: 'Error posting session arr',
+          error: -1,
+        };
       }
 
       const loadForms = this.loadSessionForms(postThrpyReq[0]);
@@ -505,7 +569,10 @@ export default class ThrpyReq {
 
         if (checkIfThrpyReqIsDischarged.error) {
           logger.warn(checkIfThrpyReqIsDischarged.message);
-          return { message: checkIfThrpyReqIsDischarged.message, error: -1 };
+          return {
+            message: checkIfThrpyReqIsDischarged.message,
+            error: -1,
+          };
         }
       }
 
@@ -582,7 +649,10 @@ export default class ThrpyReq {
 
           if (thrpySessions.error) {
             logger.error('Error getting therapy sessions');
-            return { message: 'Error getting therapy sessions', error: -1 };
+            return {
+              message: 'Error getting therapy sessions',
+              error: -1,
+            };
           }
 
           if (thrpySessions && thrpySessions.length > 0) {
@@ -609,7 +679,10 @@ export default class ThrpyReq {
 
           if (!updatedSessions) {
             logger.error('Error deleting therapy sessions');
-            return { message: 'Error deleting therapy sessions', error: -1 };
+            return {
+              message: 'Error deleting therapy sessions',
+              error: -1,
+            };
           }
         }
       }
@@ -624,7 +697,10 @@ export default class ThrpyReq {
 
         if (checkDischargeReport.error) {
           logger.error('Error getting discharge report');
-          return { message: 'Error getting discharge report', error: -1 };
+          return {
+            message: 'Error getting discharge report',
+            error: -1,
+          };
         }
 
         if (![2, 3].includes(checkDischargeReport[0].session_status)) {
@@ -750,7 +826,10 @@ export default class ThrpyReq {
 
         if (!updatedSessions) {
           logger.error('Error deleting therapy sessions');
-          return { message: 'Error deleting therapy sessions', error: -1 };
+          return {
+            message: 'Error deleting therapy sessions',
+            error: -1,
+          };
         }
       }
 
@@ -776,7 +855,10 @@ export default class ThrpyReq {
 
       if (!deletedSessions) {
         logger.error('Error deleting therapy sessions');
-        return { message: 'Error deleting therapy sessions', error: -1 };
+        return {
+          message: 'Error deleting therapy sessions',
+          error: -1,
+        };
       }
 
       const delThrpyReq = await db
@@ -789,7 +871,9 @@ export default class ThrpyReq {
         return { message: 'Error deleting therapy request', error: -1 };
       }
 
-      return { message: 'Therapy request and sessions deleted successfully' };
+      return {
+        message: 'Therapy request and sessions deleted successfully',
+      };
     } catch (error) {
       console.error(error);
       logger.error(error);
@@ -1173,19 +1257,26 @@ export default class ThrpyReq {
 
           if (activeSessions.error) {
             logger.error('Error getting active sessions');
-            return { message: 'Error getting active sessions', error: -1 };
+            return {
+              message: 'Error getting active sessions',
+              error: -1,
+            };
           }
 
           // Check if the client has an active session for the same therapy request
-          if (activeThrpyReq[0].session_obj.length !== activeSessions.length) {
-            logger.warn(
-              'Client already has an active therapy request with some sessions updated',
-            );
-            return {
-              message:
+          if (activeThrpyReq[0]?.session_obj && activeSessions) {
+            if (
+              activeThrpyReq[0].session_obj.length !== activeSessions.length
+            ) {
+              logger.warn(
                 'Client already has an active therapy request with some sessions updated',
-              error: -1,
-            };
+              );
+              return {
+                message:
+                  'Client already has an active therapy request with some sessions updated',
+                error: -1,
+              };
+            }
           }
 
           // Check if the client doesn't have an active session for the same therapy request
@@ -1198,7 +1289,10 @@ export default class ThrpyReq {
 
             if (!hardDelThrpyReq) {
               logger.error('Error deleting therapy request');
-              return { message: 'Error deleting therapy request', error: -1 };
+              return {
+                message: 'Error deleting therapy request',
+                error: -1,
+              };
             }
 
             logger.warn(
@@ -1208,7 +1302,9 @@ export default class ThrpyReq {
         }
       }
 
-      return { message: 'Client does not have an active therapy request' };
+      return {
+        message: 'Client does not have an active therapy request',
+      };
     } catch (error) {
       console.error(error);
       logger.error(error);
@@ -1229,7 +1325,10 @@ export default class ThrpyReq {
 
       if (!Array.isArray(checkSessions)) {
         logger.error('Error checking therapy request status');
-        return { message: 'Error checking therapy request status', error: -1 };
+        return {
+          message: 'Error checking therapy request status',
+          error: -1,
+        };
       }
 
       for (const session of checkSessions) {
@@ -1246,7 +1345,10 @@ export default class ThrpyReq {
     } catch (error) {
       console.error(error);
       logger.error(error);
-      return { message: 'Error checking therapy request status', error: -1 };
+      return {
+        message: 'Error checking therapy request status',
+        error: -1,
+      };
     }
   }
 }

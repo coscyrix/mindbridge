@@ -280,6 +280,28 @@ export default class Common {
 
   //////////////////////////////////////////
 
+  async getRefFeesByTenantId(tenant_id) {
+    try {
+      console.log('////////////////////////////1//////////////////////');
+      console.log('tenant_id:', tenant_id);
+
+      let query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('ref_fees')
+        .where('tenant_id', tenant_id);
+      const rec = await query;
+      if (!rec || rec.length === 0) {
+        return { message: 'Ref fees not found', error: -1 };
+      }
+      return rec;
+    } catch (error) {
+      console.error('Error getting ref fees:', error);
+      return { message: 'Error getting ref fees', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
   async getThrpyReqById(id) {
     try {
       let query = db

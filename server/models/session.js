@@ -28,23 +28,29 @@ export default class Session {
 
   async postSession(data) {
     try {
-      const tmpSession = {
-        thrpy_req_id: data.thrpy_req_id,
-        service_id: data.service_id,
-        session_format: data.session_format,
-        intake_date: data.intake_date,
-        scheduled_time: data.scheduled_time,
-        session_code: data.session_code,
-        session_description: data.session_description,
-        is_additional: data.is_additional,
-        is_report: data.is_report,
-        tenant_id: data.tenant_id,
-      };
+      // const tmpSession = {
+      //   thrpy_req_id: data.thrpy_req_id,
+      //   service_id: data.service_id,
+      //   session_format: data.session_format,
+      //   intake_date: data.intake_date,
+      //   scheduled_time: data.scheduled_time,
+      //   session_code: data.session_code,
+      //   session_description: data.session_description,
+      //   is_additional: data.is_additional,
+      //   is_report: data.is_report,
+      //   tenant_id: data.tenant_id,
+      //   session_price: data.session_price,
+      //   session_taxes: data.session_taxes,
+      //   session_counselor_amt: data.session_counselor_amt,
+      //   session_system_amt: data.session_system_amt,
+      // };
+      // console.log('data', data);
+      // console.log('tmpSession', tmpSession);
 
       const postSession = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('session')
-        .insert(tmpSession);
+        .insert(data);
 
       if (!postSession) {
         logger.error('Error creating session');
