@@ -69,6 +69,7 @@ export default class FeedbackController {
 
   async postGAD7Feedback(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     const feedback = new FeedbackService();
     const rec = await feedback.postGAD7Feedback(data);
@@ -85,6 +86,7 @@ export default class FeedbackController {
 
   async postPHQ9Feedback(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     const feedback = new FeedbackService();
     const rec = await feedback.postPHQ9Feedback(data);
@@ -101,6 +103,7 @@ export default class FeedbackController {
 
   async postPCL5Feedback(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     const feedback = new FeedbackService();
     const rec = await feedback.postPCL5Feedback(data);
@@ -117,6 +120,7 @@ export default class FeedbackController {
 
   async postWHODASFeedback(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     const feedback = new FeedbackService();
     const rec = await feedback.postWHODASFeedback(data);
@@ -133,6 +137,7 @@ export default class FeedbackController {
 
   async postIPFSFeedback(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     const feedback = new FeedbackService();
     const rec = await feedback.postIPFFeedback(data);
@@ -149,6 +154,7 @@ export default class FeedbackController {
 
   async postSMARTGOALFeedback(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     const feedback = new FeedbackService();
     const rec = await feedback.postSMARTGOALFeedback(data);
@@ -165,6 +171,7 @@ export default class FeedbackController {
 
   async postCONSENTFeedback(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     const feedback = new FeedbackService();
     const rec = await feedback.postCONSENTFeedback(data);
@@ -181,6 +188,7 @@ export default class FeedbackController {
 
   async postATTENDANCEFeedback(req, res) {
     const data = req.body;
+    data.tenant_id = process.env.TENANT_ID;
 
     const feedback = new FeedbackService();
     const rec = await feedback.postATTENDANCEFeedback(data);
