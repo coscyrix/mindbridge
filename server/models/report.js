@@ -29,6 +29,7 @@ export default class Report {
             `),
         )
         .where('is_sent', 1)
+        .andWhere('client_status_yn', 'y')
         .groupBy([
           'client_first_name',
           'client_last_name',
