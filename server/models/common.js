@@ -5,6 +5,9 @@ import knex from 'knex';
 import logger from '../config/winston.js';
 import AuthCommon from './auth/authCommon.js';
 import UserForm from './userForm.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const db = knex(DBconn.dbConn.development);
 
@@ -145,7 +148,7 @@ export default class Common {
         email: data.email.toLowerCase(),
         password: await this.authCommon.hashPassword(data.password),
         role_id: data.role_id || 1,
-        tenant_id: data.tenant_id,
+        tenant_id: process.env.TENANT_ID,
       };
 
       const postUsr = await db

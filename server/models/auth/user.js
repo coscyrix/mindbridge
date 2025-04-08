@@ -14,7 +14,9 @@ import {
   accountRestoredEmail,
 } from '../../utils/emailTmplt.js';
 import UserProfile from '../userProfile.js';
-import e from 'express';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const db = knex(DBconn.dbConn.development);
 
@@ -87,6 +89,7 @@ export default class User {
         email: data.email.toLowerCase(),
         password: await this.authCommon.hashPassword(data.password),
         role_id: 2,
+        tenant_id: process.env.TENANT_ID,
       };
 
       const postUsr = await db
