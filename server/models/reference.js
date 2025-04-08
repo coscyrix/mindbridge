@@ -62,7 +62,7 @@ export default class Reference {
       const ref_fees = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('ref_fees')
-        .select('fee_id', 'fee_name', 'fee_percent');
+        .select('fee_id', 'tax_pcnt', 'counselor_pcnt', 'system_pcnt');
 
       return {
         ref_target_outcomes,
