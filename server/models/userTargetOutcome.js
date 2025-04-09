@@ -35,19 +35,12 @@ export default class UserTargetOutcome {
   //////////////////////////////////////////
   async putUserTargetOutcome(data) {
     try {
-      // if (data.user_profile_id) {
-      //   const deleteTargetOutcome =
-      //     await this.delAllDisabledUserTargetOutcomeByUserProfileId({
-      //       user_profile_id: data.user_profile_id,
-      //     });
-
-      //   console.log(deleteTargetOutcome);
-
-      //   if (deleteTargetOutcome.error) {
-      //     logger.error('Error deleting user target outcome');
-      //     return { message: 'Error deleting user target outcome', error: -1 };
-      //   }
-      // }
+      if (data.user_profile_id) {
+        const deleteTargetOutcome =
+          await this.delAllDisabledUserTargetOutcomeByUserProfileId({
+            user_profile_id: data.user_profile_id,
+          });
+      }
 
       const tmpUserTargetOutcome = {
         user_profile_id: data.user_profile_id,
