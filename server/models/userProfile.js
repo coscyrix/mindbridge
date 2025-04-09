@@ -333,7 +333,7 @@ export default class UserProfile {
           await this.userTargetOutcome.postUserTargetOutcome({
             user_profile_id: user_profile_id,
             target_outcome_id: data.target_outcome_id,
-            counselor_id: data.counselor_id,
+            counselor_id: getLatestUserTargetOutcome[0].counselor_id,
           });
 
         if (postUserTargetOutcome.error) {

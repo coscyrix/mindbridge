@@ -35,22 +35,23 @@ export default class UserTargetOutcome {
   //////////////////////////////////////////
   async putUserTargetOutcome(data) {
     try {
-      if (data.user_profile_id) {
-        const deleteTargetOutcome =
-          await this.delAllDisabledUserTargetOutcomeByUserProfileId({
-            user_profile_id: data.user_profile_id,
-          });
+      // if (data.user_profile_id) {
+      //   const deleteTargetOutcome =
+      //     await this.delAllDisabledUserTargetOutcomeByUserProfileId({
+      //       user_profile_id: data.user_profile_id,
+      //     });
 
-        if (deleteTargetOutcome.error) {
-          logger.error('Error deleting user target outcome');
-          return { message: 'Error deleting user target outcome', error: -1 };
-        }
-      }
+      //   console.log(deleteTargetOutcome);
+
+      //   if (deleteTargetOutcome.error) {
+      //     logger.error('Error deleting user target outcome');
+      //     return { message: 'Error deleting user target outcome', error: -1 };
+      //   }
+      // }
 
       const tmpUserTargetOutcome = {
         user_profile_id: data.user_profile_id,
         target_outcome_id: data.target_outcome_id,
-        counselor_id: data.counselor_id,
         status_enum: data.status_enum,
       };
 
@@ -103,6 +104,9 @@ export default class UserTargetOutcome {
 
       const rec = await query;
 
+      console.log('////////////////////////1//////////////////////');
+      console.log('rec', rec);
+
       if (!rec.length) {
         logger.error('Error fetching user target outcome');
         return { message: 'Error fetching user target outcome', error: -1 };
@@ -143,6 +147,9 @@ export default class UserTargetOutcome {
 
       const rec = await query;
 
+      console.log('////////////////////////2//////////////////////');
+      console.log('rec', rec);
+
       if (!rec.length) {
         logger.error('Error fetching user target outcome');
         return { message: 'Error fetching user target outcome', error: -1 };
@@ -166,6 +173,8 @@ export default class UserTargetOutcome {
         .where('status_enum', 'n')
         .andWhere('user_profile_id', data.user_profile_id)
         .del();
+
+      console.log('result', result);
 
       if (!result) {
         logger.error('Error deleting user target outcome');
