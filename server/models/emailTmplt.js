@@ -21,8 +21,9 @@ import {
   capitalizeFirstLetter,
   convertTimeToReadableFormat,
 } from '../utils/common.js';
-import { warn } from 'console';
+import dotenv from 'dotenv';
 
+dotenv.config();
 const db = knex(DBconn.dbConn.development);
 
 export default class EmailTmplt {
@@ -164,6 +165,7 @@ export default class EmailTmplt {
                   total_sessions: removeReportsSessions.length,
                   total_attended_sessions: attendedSessions,
                   total_cancelled_sessions: cancelledSessions,
+                  tenant_id: process.env.TENANT_ID,
                 });
 
               if (postATTENDANCEFeedback.error) {
