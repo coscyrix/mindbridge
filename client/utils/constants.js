@@ -1006,11 +1006,11 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
   {
     name: "Total Amount",
     selector: (row) =>
-      `$${Number(row.session_price + row.session_gst).toFixed(2)}`,
+      `$${Number(row.session_price + row.session_taxes).toFixed(2)}`,
   },
   {
     name: "Tax",
-    selector: (row) => `$${Number(row.session_gst).toFixed(2)}`,
+    selector: (row) => `$${Number(row.session_taxes).toFixed(2)}`,
   },
   {
     name: "Amt. to Counselor",

@@ -407,13 +407,13 @@ function CreateSessionForm({
     {
       name: "Total Amt.",
       selector: (row) =>
-        `$${Number(row.session_price + row.session_gst).toFixed(2)}`,
+        `$${Number(row.session_price + row.session_taxes).toFixed(2)}`,
       selectorId: "session_price",
       maxWidth: "100px",
     },
     {
       name: "Tax",
-      selector: (row) => `$${Number(row.session_gst).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_taxes).toFixed(2)}`,
       selectorId: "session_gst",
       maxWidth: "70px",
     },
@@ -554,7 +554,7 @@ function CreateSessionForm({
           status_yn: "n",
         });
         if (response.status === 200) {
-          await fetchCounselorClient();
+          await fetchCounselorClient(userProfileId);
           toast.success("Client session data deleted!");
         }
       }
@@ -707,7 +707,7 @@ function CreateSessionForm({
           setThrpyReqId(data?.rec[0]?.req_id);
           if (initialData) {
             setScheduledSession(data?.rec[0]?.session_obj);
-            fetchCounselorClient();
+            await fetchCounselorClient();
           } else {
             setSessionTableData(data?.rec[0]?.session_obj);
           }

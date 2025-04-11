@@ -209,6 +209,7 @@ function ClientSession() {
           setConfirmationModal={setConfirmationModal}
           setSessions={setSessions}
           fetchSessions={fetchSessions}
+          fetchCounselorClient={fetchSessions}
         />
       </CreateSessionLayout>
       <CustomClientDetails

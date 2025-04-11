@@ -23,6 +23,7 @@ import { toast } from "react-toastify";
 import Spinner from "../components/common/Spinner";
 import CustomPagination from "../components/CustomPagination";
 import { DOWNLOAD_OPTIONS } from "../utils/constants";
+import moment from "moment";
 
 const Invoice = () => {
   const [invoices, setInvoices] = useState(null);
@@ -51,6 +52,24 @@ const Invoice = () => {
   };
 
   const columns = [
+    {
+      name: "Start Date",
+      selector: (row) =>
+        row?.intake_date
+          ? moment(row.intake_date).startOf("month").format("YYYY-MM-DD")
+          : "N/A",
+      sortable: true,
+      selectorId: "start date",
+    },
+    {
+      name: "End Date",
+      selector: (row) =>
+        row?.intake_date
+          ? moment(row.intake_date).endOf("month").format("YYYY-MM-DD")
+          : "N/A",
+      sortable: true,
+      selectorId: "end date",
+    },
     {
       name: "Service Date",
       selector: (row) => row.intake_date || "N/A",
