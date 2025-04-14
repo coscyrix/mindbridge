@@ -9,7 +9,6 @@ export default class SessionController {
   //////////////////////////////////////////
   async postSession(req, res) {
     const data = req.body;
-    data.tenant_id = process.env.TENANT_ID;
 
     if (
       !data.thrpy_req_id ||

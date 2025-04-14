@@ -13,7 +13,6 @@ export default class SessionService {
       session_format: joi.number().required(),
       intake_date: joi.date().required(),
       session_description: joi.string().optional(),
-      tenant_id: joi.number().required(),
     });
 
     const { error } = schema.validate(data);

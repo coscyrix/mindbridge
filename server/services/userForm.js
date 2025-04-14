@@ -1,10 +1,16 @@
 import UserForm from '../models/userForm.js';
 import joi from 'joi';
+import Common from '../models/common.js';
 
 export default class UserFormService {
   //////////////////////////////////////////
 
   async postUserForm(data) {
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: data.counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
+
     const schema = joi.object({
       client_id: joi.number().required(),
       counselor_id: joi.number().required(),

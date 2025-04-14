@@ -7,7 +7,6 @@ export default class NotesController {
   //////////////////////////////////////////
   async postNote(req, res) {
     const data = req.body;
-    data.tenant_id = process.env.TENANT_ID;
 
     if (!data.message || !data.session_id) {
       res.status(400).json({ message: 'Missing mandatory fields' });

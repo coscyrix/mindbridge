@@ -39,6 +39,9 @@ export default class ThrpyReq {
   async postThrpyReq(data) {
     try {
       const tmpSessionObj = [];
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
 
       // Parse the intake date and time from the ISO string
       const req_dte = data.intake_dte.split('T')[0]; // 'YYYY-MM-DD'
@@ -130,9 +133,7 @@ export default class ThrpyReq {
         };
       }
 
-      const ref_fees = await this.common.getRefFeesByTenantId(
-        process.env.TENANT_ID,
-      );
+      const ref_fees = await this.common.getRefFeesByTenantId(tenantId);
 
       if (!ref_fees) {
         logger.error('Error getting reference fees');

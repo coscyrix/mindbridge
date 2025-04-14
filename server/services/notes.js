@@ -1,10 +1,25 @@
 import Notes from '../models/notes.js';
 import joi from 'joi';
+import Common from '../models/common.js';
 
 export default class NotesService {
   //////////////////////////////////////////
 
+  constructor() {
+    this.common = new Common();
+  }
+
+  //////////////////////////////////////////
+
   async postNote(data) {
+    const sessionId = await this.common.getServiceById({
+      session_id: data.session_id,
+    });
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
+
     const schema = joi.object({
       message: joi.string().required(),
       session_id: joi.number().required(),

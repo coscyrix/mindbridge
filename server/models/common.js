@@ -148,7 +148,7 @@ export default class Common {
         email: data.email.toLowerCase(),
         password: await this.authCommon.hashPassword(data.password),
         role_id: data.role_id || 1,
-        tenant_id: process.env.TENANT_ID,
+        tenant_id: data.tenant_id,
       };
 
       const postUsr = await db
@@ -493,6 +493,37 @@ export default class Common {
         message: 'Error checking treatment tools sent status',
         error: -1,
       };
+    }
+  }
+
+  ///////////////////////////////////////////
+
+  async getUserTenantId(data) {
+    try {
+      console.log('data:', data);
+      const query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select()
+        .from('v_user_profile');
+
+      if (data.user_profile_id) {
+        query.where('user_profile_id', data.user_profile_id);
+      }
+
+      if (data.email) {
+        query.where('email', data.email);
+      }
+
+      const rec = await query;
+
+      if (!rec || rec.length === 0) {
+        return { message: 'User not found', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error getting user tenant id', error: -1 };
     }
   }
 }

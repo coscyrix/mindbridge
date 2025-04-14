@@ -1,12 +1,18 @@
 //services/form.js
 
 import Form from '../models/form.js';
+import Common from '../models/common.js';
 import joi from 'joi';
 
 export default class FormService {
   //////////////////////////////////////////
 
   async postForm(data) {
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: data.counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
+
     const schema = joi.object({
       form_cde: joi.string().required(),
       frequency_desc: joi.string().required(),

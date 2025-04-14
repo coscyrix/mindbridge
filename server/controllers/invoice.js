@@ -10,7 +10,7 @@ export default class InvoiceController {
 
   async postInvoice(req, res) {
     const data = req.body;
-    data.tenant_id = process.env.TENANT_ID;
+
     if (!data.session_id || !data.invoice_nbr) {
       return res.status(400).send({ message: 'Missing required fields' });
     }

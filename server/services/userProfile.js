@@ -2,13 +2,22 @@
 
 import UserProfile from '../models/userProfile.js';
 import joi from 'joi';
+import Common from '../models/common.js';
 
 //////////////////////////////////////////
 
 export default class UserProfileService {
+  constructor() {
+    this.common = new Common();
+  }
+
   //////////////////////////////////////////
 
   async postUserProfile(data) {
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: data.counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
     const userProfileSchema = joi.object({
       user_id: joi.number().required(),
       user_first_name: joi.string().min(2).required(),
@@ -33,6 +42,10 @@ export default class UserProfileService {
   //////////////////////////////////////////
 
   async userPostClientProfile(data) {
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: data.user_profile_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
     const userProfileSchema = joi.object({
       user_profile_id: joi.number().required(),
       user_first_name: joi.string().min(2).required(),

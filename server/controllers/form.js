@@ -9,7 +9,6 @@ export default class FormController {
   //////////////////////////////////////////
   async postForm(req, res) {
     const data = req.body;
-    data.tenant_id = process.env.TENANT_ID;
 
     if (!data.form_cde) {
       res.status(400).json({ message: 'Missing mandatory fields' });

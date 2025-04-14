@@ -9,7 +9,6 @@ export default class ThrpyReqController {
   //////////////////////////////////////////
   async postThrpyReq(req, res) {
     const data = req.body;
-    data.tenant_id = process.env.TENANT_ID;
 
     if (
       !data.counselor_id ||

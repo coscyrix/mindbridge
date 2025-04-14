@@ -1,11 +1,17 @@
-import { cli } from 'winston/lib/winston/config/index.js';
 import Feedback from '../models/feedback.js';
+import Common from '../models/common.js';
 import joi from 'joi';
 
 export default class FeedbackService {
   //////////////////////////////////////////
 
   async postFeedback(data) {
+    const sessionId = await this.common.getSessionId(data.session_id);
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
+
     const schema = joi.object({
       session_id: joi.number().required(),
       form_id: joi.number().required(),
@@ -69,6 +75,11 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postGAD7Feedback(data) {
+    const sessionId = await this.common.getSessionId(data.session_id);
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
     const schema = joi.object({
       item1: joi.number().min(0).max(3).required(),
       item2: joi.number().min(0).max(3).required(),
@@ -95,6 +106,11 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postPHQ9Feedback(data) {
+    const sessionId = await this.common.getSessionId(data.session_id);
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
     const schema = joi.object({
       item1: joi.number().min(0).max(3).required(),
       item2: joi.number().min(0).max(3).required(),
@@ -124,6 +140,11 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postPCL5Feedback(data) {
+    const sessionId = await this.common.getSessionId(data.session_id);
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
     const schema = joi.object({
       item1: joi.number().min(0).max(4).required(),
       item2: joi.number().min(0).max(4).required(),
@@ -163,6 +184,11 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postWHODASFeedback(data) {
+    const sessionId = await this.common.getSessionId(data.session_id);
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
     const schema = joi.object({
       item1: joi.number().min(0).max(4).required(),
       item2: joi.number().min(0).max(4).required(),
@@ -221,6 +247,11 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postIPFFeedback(data) {
+    const sessionId = await this.common.getSessionId(data.session_id);
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
     const schema = joi.object({
       session_id: joi.number().required(),
       client_id: joi.number().required(),
@@ -320,6 +351,11 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postSMARTGOALFeedback(data) {
+    const sessionId = await this.common.getSessionId(data.session_id);
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
     const schema = joi.object({
       session_id: joi.number().required(),
       client_id: joi.number().required(),
@@ -373,7 +409,11 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postATTENDANCEFeedback(data) {
-    console.log('data', data);
+    const sessionId = await this.common.getSessionId(data.session_id);
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
     const schema = joi.object({
       session_id: joi.number().required(),
       client_id: joi.number().required(),

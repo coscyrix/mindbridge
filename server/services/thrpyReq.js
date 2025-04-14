@@ -14,6 +14,11 @@ export default class ThrpyReqService {
   //////////////////////////////////////////
 
   async postThrpyReq(data) {
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: data.counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
+
     const schema = joi.object({
       counselor_id: joi.number().required(),
       client_id: joi.number().required(),

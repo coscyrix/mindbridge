@@ -1,13 +1,18 @@
 import UserTargetOutcomeService from '../services/userTargetOutcome.js';
+import Common from '../models/common.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 export default class UserTargetOutcomeController {
+  constructor() {
+    this.common = new Common();
+  }
+
   //////////////////////////////////////////
   async postUserTargetOutcome(req, res) {
     const data = req.body;
-    data.tenant_id = process.env.TENANT_ID;
+    data.tenant_id = this.common.getUserTenantId(data.counselor_id);
 
     const userTargetOutcomeService = new UserTargetOutcomeService();
     const result = await userTargetOutcomeService.postUserTargetOutcome(data);

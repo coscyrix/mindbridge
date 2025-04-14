@@ -43,6 +43,10 @@ export default class EmailTmplt {
       const recSession = await this.common.getSessionById({
         session_id: data.session_id,
       });
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: recSession[0].counselor_id,
+      });
+
       if (!recSession || !Array.isArray(recSession)) {
         logger.error('Session not found');
         return { message: 'Session not found', error: -1 };
@@ -165,7 +169,7 @@ export default class EmailTmplt {
                   total_sessions: removeReportsSessions.length,
                   total_attended_sessions: attendedSessions,
                   total_cancelled_sessions: cancelledSessions,
-                  tenant_id: process.env.TENANT_ID,
+                  tenant_id: tenantId,
                 });
 
               if (postATTENDANCEFeedback.error) {

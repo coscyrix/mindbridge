@@ -70,6 +70,11 @@ export default class Session {
   async postAdditionalSession(data) {
     try {
       let tmpSession;
+      const counselorId = await this.common.getThrpyReqById(data.thrpy_req_id);
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: counselorId[0].counselor_id,
+      });
+      data.tenant_id = tenantId[0].tenant_id;
 
       // Function to split the date and time from the intake date
       const { date: req_dte, time: req_time } = splitIsoDatetime(

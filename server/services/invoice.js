@@ -2,11 +2,23 @@
 
 import Invoice from '../models/invoice.js';
 import joi from 'joi';
+import Common from '../models/common.js';
 
 export default class InvoiceService {
   //////////////////////////////////////////
 
+  constructor() {
+    this.common = new Common();
+  }
+
   async postInvoice(data) {
+    const sessionId = await this.common.getSessionById({
+      session_id: data.session_id,
+    });
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = tenantId[0].tenant_id;
     const schema = joi.object({
       session_id: joi.number().required(),
       invoice_nbr: joi.string().required(),
