@@ -152,7 +152,8 @@ export default class UserProfile {
         email: data.email,
         password: clientPassword,
         role_id: data.role_id,
-        tenant_id: tenantId,
+        tenant_id: tenantId[0].tenant_id,
+        x,
       });
 
       if (postUser.error) {
@@ -167,7 +168,7 @@ export default class UserProfile {
         user_typ_id: data.user_typ_id || 1,
         user_phone_nbr: data.user_phone_nbr,
         clam_num: data.clam_num,
-        tenant_id: tenantId,
+        tenant_id: tenantId[0].tenant_id,
       };
 
       const postUsrProfile = await db
@@ -186,7 +187,7 @@ export default class UserProfile {
             user_profile_id: postUsrProfile[0],
             target_outcome_id: data.target_outcome_id,
             counselor_id: data.user_profile_id,
-            tenant_id: tenantId,
+            tenant_id: tenantId[0].tenant_id,
           });
 
         if (postUserTargetOutcome.error) {
@@ -198,7 +199,7 @@ export default class UserProfile {
       const postClientEnrollment = this.common.postClientEnrollment({
         user_id: data.user_profile_id, // This is the ID of the Counselor who is enrolling the client
         client_id: postUsrProfile[0], // i dont want this to be passed as an array but as a single value
-        tenant_id: tenantId,
+        tenant_id: tenantId[0].tenant_id,
       });
 
       if (postClientEnrollment.error) {

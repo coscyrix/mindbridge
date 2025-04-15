@@ -163,6 +163,7 @@ export default class Common {
 
       return postUsr;
     } catch (error) {
+      console.error('Error creating user:', error);
       logger.error(error);
 
       return { message: 'Error creating user', error: -1 };

@@ -11,7 +11,7 @@ export default class FormService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: data.counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
 
     const schema = joi.object({
       form_cde: joi.string().required(),

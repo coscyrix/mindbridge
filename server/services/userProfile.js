@@ -17,7 +17,7 @@ export default class UserProfileService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: data.counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
     const userProfileSchema = joi.object({
       user_id: joi.number().required(),
       user_first_name: joi.string().min(2).required(),
@@ -45,7 +45,7 @@ export default class UserProfileService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: data.user_profile_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
     const userProfileSchema = joi.object({
       user_profile_id: joi.number().required(),
       user_first_name: joi.string().min(2).required(),

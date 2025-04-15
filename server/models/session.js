@@ -74,7 +74,7 @@ export default class Session {
       const tenantId = await this.common.getUserTenantId({
         user_profile_id: counselorId[0].counselor_id,
       });
-      data.tenant_id = tenantId[0].tenant_id;
+      data.tenant_id = Number(tenantId[0].tenant_id);
 
       // Function to split the date and time from the intake date
       const { date: req_dte, time: req_time } = splitIsoDatetime(

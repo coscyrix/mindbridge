@@ -18,7 +18,7 @@ export default class InvoiceService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
     const schema = joi.object({
       session_id: joi.number().required(),
       invoice_nbr: joi.string().required(),

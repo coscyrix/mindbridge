@@ -10,7 +10,7 @@ export default class FeedbackService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
 
     const schema = joi.object({
       session_id: joi.number().required(),
@@ -79,7 +79,7 @@ export default class FeedbackService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
     const schema = joi.object({
       item1: joi.number().min(0).max(3).required(),
       item2: joi.number().min(0).max(3).required(),
@@ -110,7 +110,7 @@ export default class FeedbackService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
     const schema = joi.object({
       item1: joi.number().min(0).max(3).required(),
       item2: joi.number().min(0).max(3).required(),
@@ -144,7 +144,7 @@ export default class FeedbackService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
     const schema = joi.object({
       item1: joi.number().min(0).max(4).required(),
       item2: joi.number().min(0).max(4).required(),
@@ -188,7 +188,7 @@ export default class FeedbackService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
     const schema = joi.object({
       item1: joi.number().min(0).max(4).required(),
       item2: joi.number().min(0).max(4).required(),
@@ -251,7 +251,7 @@ export default class FeedbackService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
     const schema = joi.object({
       session_id: joi.number().required(),
       client_id: joi.number().required(),
@@ -355,7 +355,7 @@ export default class FeedbackService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
     const schema = joi.object({
       session_id: joi.number().required(),
       client_id: joi.number().required(),
@@ -413,7 +413,7 @@ export default class FeedbackService {
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
-    data.tenant_id = tenantId[0].tenant_id;
+    data.tenant_id = Number(tenantId[0].tenant_id);
     const schema = joi.object({
       session_id: joi.number().required(),
       client_id: joi.number().required(),
