@@ -153,7 +153,6 @@ export default class UserProfile {
         password: clientPassword,
         role_id: data.role_id,
         tenant_id: tenantId[0].tenant_id,
-        x,
       });
 
       if (postUser.error) {
