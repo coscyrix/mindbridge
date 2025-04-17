@@ -171,7 +171,7 @@ export default class Session {
       }
 
       // Check if user has access to update session. Can make an update even if a session is ongoing
-      if (data.role_id == 4) {
+      if (data.role_id == 4 || data.role_id == 3) {
         const checkUserAccess = await this.common.checkUserRole({
           user_profile_id: data.user_profile_id,
           role_id: data.role_id,

@@ -11,6 +11,8 @@ export default class InvoiceService {
     this.common = new Common();
   }
 
+  //////////////////////////////////////////
+
   async postInvoice(data) {
     const sessionId = await this.common.getSessionById({
       session_id: data.session_id,

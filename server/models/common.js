@@ -332,6 +332,12 @@ export default class Common {
 
   //////////////////////////////////////////
 
+  async generateTenantId() {
+    return Math.floor(1000000 + Math.random() * 9000000).toString();
+  }
+
+  //////////////////////////////////////////
+
   async getTargetOutcomeById(target_id) {
     try {
       console.log('target_id:', target_id);
@@ -392,7 +398,10 @@ export default class Common {
         return { message: 'User not found', error: -1 };
       }
 
-      if (data.role_id == 4 && rec[0].role_id != 4) {
+      if (
+        (data.role_id == 4 && rec[0].role_id != 4) ||
+        (data.role_id == 3 && rec[0].role_id != 3)
+      ) {
         return {
           message:
             'User does not have the necessary permissions to perform this task',
@@ -525,6 +534,33 @@ export default class Common {
     } catch (error) {
       console.error(error);
       return { message: 'Error getting user tenant id', error: -1 };
+    }
+  }
+
+  ///////////////////////////////////////////
+
+  async postTenant(data) {
+    try {
+      generated_id = await this.generateTenantId();
+
+      const tmpTenant = {
+        tenant_name: data.tenant_name,
+        tenant_generated_id: generated_id,
+      };
+
+      const postTenant = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('tenant')
+        .insert(tmpTenant);
+
+      if (!postTenant) {
+        return { message: 'Error creating tenant', error: -1 };
+      }
+
+      return { message: 'Tenant created successfully' };
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error creating tenant', error: -1 };
     }
   }
 }

@@ -42,10 +42,22 @@ export default class UserProfileService {
   //////////////////////////////////////////
 
   async userPostClientProfile(data) {
-    const tenantId = await this.common.getUserTenantId({
-      user_profile_id: data.user_profile_id,
-    });
-    data.tenant_id = Number(tenantId[0].tenant_id);
+    if (data.role_id === 2 || data.role_id === 1) {
+      // if the user is a client or counselor
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.user_profile_id,
+      });
+      data.tenant_id = Number(tenantId[0].tenant_id);
+    }
+
+    if (data.role_id === 3) {
+      // if the user is manager create tenant
+      const postTenantName = await this.common.postTenant({
+        tenant_name: data.tenant_name,
+      });
+      data.tenant_id = postTenantName[0].tenant_id;
+    }
+
     const userProfileSchema = joi.object({
       user_profile_id: joi.number().required(),
       user_first_name: joi.string().min(2).required(),
@@ -123,6 +135,13 @@ export default class UserProfileService {
   //////////////////////////////////////////
 
   async getUserProfileById(data) {
+    if (data.role_id === 3) {
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+      data.tenant_id = Number(tenantId[0].tenant_id);
+    }
+
     const userProfileSchema = joi.object({
       user_profile_id: joi.number().optional(),
       user_id: joi.number().optional(),

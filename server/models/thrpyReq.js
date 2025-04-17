@@ -640,6 +640,13 @@ export default class ThrpyReq {
             error: -1,
           };
         }
+        if (data.role_id == 3) {
+          logger.warn('Manager cannot delete a therapy request');
+          return {
+            message: 'Manager cannot delete a therapy request',
+            error: -1,
+          };
+        }
 
         if (
           checkThrpyReq[0].session_obj.slice(-1)[0].session_status ==

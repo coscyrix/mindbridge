@@ -417,6 +417,10 @@ export default class UserProfile {
         query.where('email', data.email);
       }
 
+      if (data.tenant_id) {
+        query.where('tenant_id', data.tenant_id);
+      }
+
       if (Object.keys(data).length === 1 && data.hasOwnProperty('role_id')) {
         if (data.role_id) {
           query.where('role_id', data.role_id);

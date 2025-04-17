@@ -54,6 +54,21 @@ export default class UserProfileController {
       }
     }
 
+    if (data.role_id === 3) {
+      if (!data.tenant_name) {
+        res.status(400).json({ message: 'tenant_name is required', error: -1 });
+        return;
+      }
+      if (data.target_outcome_id) {
+        res.status(400).json({
+          message: 'target_outcome_id is not required on tenant creation',
+          error: -1,
+        });
+        return;
+      }
+      return;
+    }
+
     const userProfile = new UserProfileService();
     const rec = await userProfile.userPostClientProfile(data);
 
@@ -110,6 +125,27 @@ export default class UserProfileController {
 
   async getUserProfileById(req, res) {
     const data = req.query;
+
+    if (data.role_id === 2) {
+      if (!data.counselor_id) {
+        res.status(400).json({ message: 'Mandatory fields are missing' });
+        return;
+      }
+    }
+
+    if (data.role_id === 3) {
+      if (!data.counselor_id) {
+        res.status(400).json({ message: 'Mandatory fields are missing' });
+        return;
+      }
+    }
+
+    if (data.role_id === 4) {
+      if (!data.user_profile_id) {
+        res.status(400).json({ message: 'Mandatory fields are missing' });
+        return;
+      }
+    }
 
     // if (!data.user_profile_id && !data.email && !data.role_id) {
     //   res

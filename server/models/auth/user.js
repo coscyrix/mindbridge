@@ -206,6 +206,8 @@ export default class User {
           user_typ_cde: usrPro[0].user_typ_cde,
           role_id: usrPro[0].role_id,
           role_cde: usrPro[0].role_cde,
+          tenant_id: usrPro[0].tenant_id,
+          tenant_name: usrPro[0].tenant_name,
         };
       }
 
