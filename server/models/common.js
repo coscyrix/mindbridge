@@ -541,7 +541,7 @@ export default class Common {
 
   async postTenant(data) {
     try {
-      generated_id = await this.generateTenantId();
+      const generated_id = await this.generateTenantId();
 
       const tmpTenant = {
         tenant_name: data.tenant_name,
@@ -557,10 +557,31 @@ export default class Common {
         return { message: 'Error creating tenant', error: -1 };
       }
 
-      return { message: 'Tenant created successfully' };
+      return postTenant[0];
     } catch (error) {
       console.error(error);
       return { message: 'Error creating tenant', error: -1 };
+    }
+  }
+
+  ///////////////////////////////////////////
+
+  async getTenantByTenantId(tenant_id) {
+    try {
+      const rec = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select()
+        .where('tenant_id', tenant_id)
+        .from('tenant');
+
+      if (!rec || rec.length === 0) {
+        return { message: 'Tenant not found', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error getting tenant', error: -1 };
     }
   }
 }

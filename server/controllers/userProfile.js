@@ -59,6 +59,7 @@ export default class UserProfileController {
         res.status(400).json({ message: 'tenant_name is required', error: -1 });
         return;
       }
+
       if (data.target_outcome_id) {
         res.status(400).json({
           message: 'target_outcome_id is not required on tenant creation',
@@ -66,7 +67,6 @@ export default class UserProfileController {
         });
         return;
       }
-      return;
     }
 
     const userProfile = new UserProfileService();

@@ -55,8 +55,19 @@ export default class UserProfileService {
       const postTenantName = await this.common.postTenant({
         tenant_name: data.tenant_name,
       });
-      data.tenant_id = postTenantName[0].tenant_id;
+      if (postTenantName.error) {
+        return { message: postTenantName.message, error: -1 };
+      }
+      const checkTenantId =
+        await this.common.getTenantByTenantId(postTenantName);
+
+      if (checkTenantId.error) {
+        return { message: checkTenantId.message, error: -1 };
+      }
+      data.tenant_id = Number(checkTenantId[0].tenant_generated_id);
     }
+
+    delete data.tenant_name;
 
     const userProfileSchema = joi.object({
       user_profile_id: joi.number().required(),
