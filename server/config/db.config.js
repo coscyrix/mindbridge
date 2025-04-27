@@ -21,7 +21,7 @@ const dbConn = {
       idleTimeoutMillis: 10000, // Supported Tarn.js option
       acquireTimeoutMillis: 20000, // Supported Tarn.js option
     },
-    acquireConnectionTimeout: 30000, // Wait up to 30 seconds to establish a connection
+    acquireConnectionTimeout: 50000, // Wait up to 30 seconds to establish a connection
     debug: true,
   },
   production: {
