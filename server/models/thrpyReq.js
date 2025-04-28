@@ -939,28 +939,38 @@ export default class ThrpyReq {
         .where('status_yn', 1)
         .orderBy('created_at', 'desc');
 
-      if (data.req_id) {
-        query.andWhere('req_id', data.req_id);
+      if (data.role_id === 2) {
+        if (data.req_id) {
+          query.andWhere('req_id', data.req_id);
+        }
+
+        if (data.counselor_id) {
+          query.andWhere('counselor_id', data.counselor_id);
+        }
+
+        if (data.client_id) {
+          query.andWhere('client_id', data.client_id);
+        }
+
+        if (data.service_id) {
+          query.andWhere('service_id', data.service_id);
+        }
+
+        if (data.thrpy_status) {
+          query.andWhere('thrpy_status', data.thrpy_status);
+        }
+
+        if (data.tenant_id) {
+          query.andWhere('tenant_id', data.tenant_id);
+        }
       }
 
-      if (data.counselor_id) {
-        query.andWhere('counselor_id', data.counselor_id);
-      }
-
-      if (data.client_id) {
-        query.andWhere('client_id', data.client_id);
-      }
-
-      if (data.service_id) {
-        query.andWhere('service_id', data.service_id);
-      }
-
-      if (data.thrpy_status) {
-        query.andWhere('thrpy_status', data.thrpy_status);
-      }
-
-      if (data.tenant_id) {
-        query.andWhere('tenant_id', data.tenant_id);
+      if (data.role_id === 3) {
+        // If the user is a manager, filter by tenant_id
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        query.where('tenant_id', Number(tenantId[0].tenant_id));
       }
 
       const rec = await query;

@@ -66,8 +66,6 @@ export default class Report {
         const tenantId = await this.common.getUserTenantId({
           user_profile_id: data.counselor_id,
         });
-        console.log('////////////////////////');
-        console.log(tenantId);
         query.where('tenant_id', Number(tenantId[0].tenant_id));
       }
 

@@ -138,19 +138,14 @@ export default class ThrpyReqController {
   //////////////////////////////////////////
 
   async getThrpyReqById(req, res) {
-    const req_id = req.query.req_id;
-    const counselor_id = req.query.counselor_id;
-    const client_id = req.query.client_id;
-    const thrpy_id = req.query.thrpy_id;
-    const thrpy_status = req.query.thrpy_status;
+    const data = req.query;
 
-    const data = {
-      req_id: req_id,
-      counselor_id: counselor_id,
-      client_id: client_id,
-      thrpy_id: thrpy_id,
-      thrpy_status: thrpy_status,
-    };
+    if (data.role_id) {
+      data.role_id = Number(data.role_id);
+    } else {
+      res.status(400).json({ message: 'Missing mandatory fields' });
+      return;
+    }
 
     const thrpyReq = new ThrpyReqService();
     const rec = await thrpyReq.getThrpyReqById(data);
