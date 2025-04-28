@@ -1,10 +1,15 @@
 import DBconn from '../config/db.config.js';
 import knex from 'knex';
 import logger from '../config/winston.js';
+import Common from './common.js';
 
 const db = knex(DBconn.dbConn.development);
 
 export default class Report {
+  ///////////////////////////////////////////
+  constructor() {
+    this.common = new Common();
+  }
   //////////////////////////////////////////
   async getUserForm(data) {
     try {
@@ -42,16 +47,28 @@ export default class Report {
         ])
         .orderBy('date_sent', 'desc');
 
-      if (data.counselor_id) {
-        query.where('counselor_id', data.counselor_id);
+      if (data.role_id === 2) {
+        if (data.counselor_id) {
+          query.where('counselor_id', data.counselor_id);
+        }
+
+        if (data.client_id) {
+          query.where('client_id', data.client_id);
+        }
+
+        if (data.form_id) {
+          query.where('form_id', data.form_id);
+        }
       }
 
-      if (data.client_id) {
-        query.where('client_id', data.client_id);
-      }
-
-      if (data.form_id) {
-        query.where('form_id', data.form_id);
+      if (data.role_id === 3) {
+        // If the user is a manager, filter by tenant_id
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        console.log('////////////////////////');
+        console.log(tenantId);
+        query.where('tenant_id', Number(tenantId[0].tenant_id));
       }
 
       const rec = await query;
@@ -90,24 +107,42 @@ export default class Report {
         .where('status_yn', 'y')
         .andWhere('thrpy_status', 'ONGOING')
         .whereNot('session_status', 'SHOW');
-      if (data.counselor_id) {
-        query.andWhere('counselor_id', data.counselor_id);
+
+      if (data.role_id === 2) {
+        if (data.counselor_id) {
+          query.andWhere('counselor_id', data.counselor_id);
+        }
+
+        if (data.client_id) {
+          query.andWhere('client_id', data.client_id);
+        }
+
+        if (data.session_id) {
+          query.andWhere('session_id', data.session_id);
+        }
+
+        if (data.start_date) {
+          query.andWhere('intake_date', '>=', data.start_date);
+        }
+
+        if (data.end_date) {
+          query.andWhere('intake_date', '<=', data.end_date);
+        }
       }
 
-      if (data.client_id) {
-        query.andWhere('client_id', data.client_id);
-      }
+      if (data.role_id === 3) {
+        // If the user is a manager, filter by tenant_id
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        query.where('tenant_id', Number(tenantId[0].tenant_id));
+        if (data.start_date) {
+          query.andWhere('intake_date', '>=', data.start_date);
+        }
 
-      if (data.session_id) {
-        query.andWhere('session_id', data.session_id);
-      }
-
-      if (data.start_date) {
-        query.andWhere('intake_date', '>=', data.start_date);
-      }
-
-      if (data.end_date) {
-        query.andWhere('intake_date', '<=', data.end_date);
+        if (data.end_date) {
+          query.andWhere('intake_date', '<=', data.end_date);
+        }
       }
 
       // Order results: Past Due Date, then Current Due Date, then Future Due Date
@@ -186,22 +221,39 @@ export default class Report {
         .where('thrpy_status', 'ONGOING')
         .andWhere('status_yn', 'y');
 
-      if (data.counselor_id) {
-        query.where('counselor_id', data.counselor_id);
+      if (data.role_id === 2) {
+        if (data.counselor_id) {
+          query.where('counselor_id', data.counselor_id);
+        }
+
+        if (data.client_id) {
+          query.where('client_id', data.client_id);
+        }
+
+        if (data.session_id) {
+          query.where('session_id', data.session_id);
+        }
+        if (data.start_date) {
+          query.where('intake_date', '>=', data.start_date);
+        }
+        if (data.end_date) {
+          query.where('intake_date', '<=', data.end_date);
+        }
       }
 
-      if (data.client_id) {
-        query.where('client_id', data.client_id);
-      }
+      if (data.role_id === 3) {
+        // If the user is a manager, filter by tenant_id
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        query.where('tenant_id', Number(tenantId[0].tenant_id));
+        if (data.start_date) {
+          query.andWhere('intake_date', '>=', data.start_date);
+        }
 
-      if (data.session_id) {
-        query.where('session_id', data.session_id);
-      }
-      if (data.start_date) {
-        query.where('intake_date', '>=', data.start_date);
-      }
-      if (data.end_date) {
-        query.where('intake_date', '<=', data.end_date);
+        if (data.end_date) {
+          query.andWhere('intake_date', '<=', data.end_date);
+        }
       }
 
       const rec = await query;
