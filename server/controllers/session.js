@@ -123,6 +123,11 @@ export default class SessionController {
   async getSessionTodayAndTomorrow(req, res) {
     const data = req.query;
 
+    if (!data.role_id || !data.counselor_id) {
+      res.status(400).json({ message: 'Missing mandatory fields' });
+      return;
+    }
+
     const session = new SessionService();
     const rec = await session.getSessionTodayAndTomorrow(data);
 
