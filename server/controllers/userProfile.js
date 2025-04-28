@@ -125,6 +125,7 @@ export default class UserProfileController {
 
   async getUserProfileById(req, res) {
     const data = req.query;
+    data.role_id = parseInt(data.role_id);
 
     if (data.role_id === 2) {
       if (!data.counselor_id) {
