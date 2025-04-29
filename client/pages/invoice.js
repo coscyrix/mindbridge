@@ -218,7 +218,9 @@ const Invoice = () => {
           `/invoice/multi?counselor_id=${user?.user_profile_id}&role_id=${roleId}`
         );
       } else {
-        response = await api.get(`/invoice/multi?role_id=${roleId}`);
+        response = await api.get(
+          `/invoice/multi?role_id=${roleId}&counselor_id=${user?.user_profile_id}`
+        );
       }
       if (response.status === 200) {
         setInvoices(response?.data?.rec);

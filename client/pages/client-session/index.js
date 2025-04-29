@@ -154,7 +154,9 @@ function ClientSession() {
           `/invoice/multi?counselor_id=${userObj?.user_profile_id}&role_id=${userObj?.role_id}`
         );
       } else {
-        response = await api.get(`/invoice/multi?role_id=${userObj?.role_id}`);
+        response = await api.get(
+          `/invoice/multi?role_id=${userObj?.role_id}&counselor_id=${userObj?.user_profile_id}`
+        );
       }
       if (response.status === 200) {
         setSummaryData(response?.data?.rec?.summary);

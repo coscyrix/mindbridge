@@ -114,6 +114,11 @@ function Sidebar({ showSideBar, setShowSideBar }) {
                 userData?.user_first_name[0]?.toUpperCase()}
             </div>
             <div className="profile-details">
+              <h4>[
+                {userData && (
+                  userData?.tenant_name.slice(0, 20).toUpperCase()
+                )}]
+              </h4>
               <h5>
                 {userData &&
                   `${formatName(

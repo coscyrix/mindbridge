@@ -44,13 +44,14 @@ function CurrentSession() {
     setActiveData({ ...row, req_id: row.thrpy_req_id });
   };
 
-  async function getCurrentSessionData(counselorId) {
+  async function getCurrentSessionData(counselorId, role_id) {
     setLoading(true);
     let response;
     try {
       if (counselorId && counselorId !== "allCounselors")
         response = await CommonServices.getCurrentSessions({
           counselor_id: counselorId,
+          role_id: role_id,
         });
       // } else {
       //   console.log(counselors, "counselors");
@@ -372,6 +373,7 @@ function CurrentSession() {
           (counselor) => counselor?.role_id == 2
         );
         const counselorOptions = allCounselors?.map((item) => {
+          console.log(item);
           return {
             label: item?.user_first_name + " " + item?.user_last_name,
             value: item?.user_profile_id,
@@ -405,10 +407,11 @@ function CurrentSession() {
   useEffect(() => {
     const userData = Cookies.get("user");
     const userObj = JSON.parse(userData);
+    console.log(userObj);
     setUserData(userObj);
     userObj?.role_id == 1
       ? fetchCounsellor()
-      : getCurrentSessionData(userObj?.user_profile_id);
+      : getCurrentSessionData(userObj?.user_profile_id, userObj?.role_id);
   }, []);
 
   return (
