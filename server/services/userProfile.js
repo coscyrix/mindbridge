@@ -58,13 +58,14 @@ export default class UserProfileService {
       if (postTenantName.error) {
         return { message: postTenantName.message, error: -1 };
       }
-      const checkTenantId =
-        await this.common.getTenantByTenantId(postTenantName);
+      //returning generated tenant_id in postTenantName
+      // const checkTenantId =
+      //   await this.common.getTenantByTenantId(postTenantName);
 
-      if (checkTenantId.error) {
-        return { message: checkTenantId.message, error: -1 };
-      }
-      data.tenant_id = Number(checkTenantId[0].tenant_generated_id);
+      // if (checkTenantId.error) {
+      //   return { message: checkTenantId.message, error: -1 };
+      // }
+      data.tenant_id = Number(postTenantName);
     }
 
     delete data.tenant_name;
@@ -85,6 +86,9 @@ export default class UserProfileService {
       role_id: joi.number().optional(),
       tenant_id: joi.number().required(),
     });
+
+    console.log('//////////////////////////////////////////');
+    console.log(data);
 
     // Validate the entire data object against the schema
     const { error } = userProfileSchema.validate(data);

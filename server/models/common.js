@@ -557,7 +557,7 @@ export default class Common {
         return { message: 'Error creating tenant', error: -1 };
       }
 
-      return postTenant[0];
+      return generated_id;
     } catch (error) {
       console.error(error);
       return { message: 'Error creating tenant', error: -1 };
