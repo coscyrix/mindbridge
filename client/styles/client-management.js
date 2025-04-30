@@ -13,11 +13,11 @@ export const ClientManagementContainer = styled.div`
     .heading-container
     .heading
     .heading-wrapper {
-    display: ${(props) => props.role === 4 && "none"} !important;
+    display: ${(props) => [3, 4].includes(props.role) && "none"} !important;
   }
 
   .content .tab-and-heading-container {
-    top: ${(props) => props.role === 4 && "128px"};
+    top: ${(props) => [3, 4].includes(props.role) && "128px"};
   }
   .client-session-heading {
     position: sticky;
