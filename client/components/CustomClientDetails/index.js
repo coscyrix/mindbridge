@@ -246,7 +246,7 @@ function CustomClientDetails({
                 {children && <div className="children-wrapper">{children}</div>}
               </div>
               <div>
-                {user?.role_id == 4 && handleSelectCounselor ? (
+                {[3, 4].includes(user?.role_id) && handleSelectCounselor ? (
                   <div
                     key="counselor-select"
                     className="custom-select-container"
@@ -299,7 +299,7 @@ function CustomClientDetails({
                   />
                 </div>
                 <div className="function-button">
-                  {user?.role_id == 4 && handleSelectCounselor ? (
+                  {[3, 4].includes(user?.role_id) && handleSelectCounselor ? (
                     <div
                       key="counselor-select"
                       className="custom-select-container"

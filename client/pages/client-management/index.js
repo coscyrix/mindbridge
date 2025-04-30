@@ -61,7 +61,7 @@ function ClientManagement() {
     try {
       setClientsLoading(true);
       let response;
-      if (userObj?.role_id !== 4) {
+      if (![3, 4].includes(userObj?.role_id)) {
         response = await CommonServices.getClientsByCounselor({
           role_id: userObj?.role_id,
           counselor_id: userObj?.user_profile_id,
@@ -97,7 +97,10 @@ function ClientManagement() {
   };
 
   const handleEditSessionInfo = async (row) => {
-    if (userObj?.role_id != 4 || (userObj?.role_id == 4 && row.has_schedule)) {
+    if (
+      ![3, 4].includes(userObj?.role_id) ||
+      ([3, 4].includes(userObj?.role_id) && row.has_schedule)
+    ) {
       try {
         setInitialDataLoading(true);
         setUserProfileId({
@@ -223,10 +226,9 @@ function ClientManagement() {
   useEffect(() => {
     fetchClients();
   }, []);
-
   return (
     <ClientManagementContainer role={userObj?.role_id}>
-      {userObj?.role_id === 4 && (
+      {[3, 4].includes(userObj?.role_id) && (
         <div className="client-session-heading">
           <div className="heading-wrapper">
             <h2 className="heading">Client List</h2>
@@ -288,7 +290,7 @@ function ClientManagement() {
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
       >
-        {userObj?.role_id === 4 && (
+        {[3, 4].includes(userObj?.role_id) && (
           <div className="custom-client-children">
             <SmartTab
               tabLabels={tabLabels}

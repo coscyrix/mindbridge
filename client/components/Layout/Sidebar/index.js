@@ -91,7 +91,7 @@ function Sidebar({ showSideBar, setShowSideBar }) {
                   route == heading.url ? "active-item" : "heading-item"
                 }
               >
-                {getRole(userData?.role_id) == "Admin" ? (
+                {["Manager", "Admin"].includes(getRole(userData?.role_id)) ? (
                   <>
                     {heading.icon} <span>{heading.title}</span>
                   </>
@@ -114,10 +114,8 @@ function Sidebar({ showSideBar, setShowSideBar }) {
                 userData?.user_first_name[0]?.toUpperCase()}
             </div>
             <div className="profile-details">
-              <h4>[
-                {userData && (
-                  userData?.tenant_name.slice(0, 20).toUpperCase()
-                )}]
+              <h4>
+                [{userData && userData?.tenant_name.slice(0, 20).toUpperCase()}]
               </h4>
               <h5>
                 {userData &&
