@@ -53,14 +53,13 @@ function CreateClientForm({
     label: service?.service_name,
     value: service?.service_code,
   }));
-
   const defaultValues = {
     user_first_name: "",
     user_last_name: "",
     email: "",
     role_id: managerOrCounselor ? 1 : "",
     clam_num: "",
-    // service: "",
+    tenant_name: "",
     target_outcome_id: initialData
       ? {
           label: initialData?.user_target_outcome?.at(0).target_name,
@@ -87,6 +86,7 @@ function CreateClientForm({
         target_outcome_id: data?.target_outcome_id?.value,
         role_id: data?.role_id,
         user_phone_nbr: data?.user_phone_nbr,
+        tenant_name: data?.tenant_name,
       };
     } else {
       processedData = {
@@ -96,6 +96,7 @@ function CreateClientForm({
         email: data?.email,
         role_id: data?.role_id,
         user_phone_nbr: data?.user_phone_nbr,
+        tenant_name: data?.tenant_name,
       };
     }
 
@@ -123,7 +124,6 @@ function CreateClientForm({
   };
 
   const handleUpdateClient = async (data) => {
-    console.log(data, "data");
     const {
       user_first_name,
       user_last_name,
@@ -131,6 +131,7 @@ function CreateClientForm({
       role_id,
       user_phone_nbr,
       target_outcome_id,
+      tenant_name,
     } = data;
 
     const processedData = {
@@ -140,6 +141,7 @@ function CreateClientForm({
       role_id,
       user_phone_nbr,
       target_outcome_id: target_outcome_id?.value,
+      tenant_name: tenant_name,
     };
 
     try {
@@ -250,6 +252,16 @@ function CreateClientForm({
                 </p>
               )}
             </div>
+            {role == 3 && (
+              <div className="fields">
+                <CustomInputField
+                  name="tenant_name"
+                  label="Practice Name"
+                  placeholder="Enter name of your practice"
+                  type="text"
+                />
+              </div>
+            )}
             {role == 1 && (
               <div className="fields">
                 <CustomInputField

@@ -8,6 +8,10 @@ export const ClientValidationSchema = z
         z.number().min(1, { message: "Serial Number is required" })
       )
       .optional(),
+    tenant_name: z
+      .string()
+      .min(2, { message: "At least 2 characters required" })
+      .optional(),
     user_first_name: z
       .string()
       .min(2, { message: "At least 2 characters required" }),
