@@ -510,7 +510,6 @@ export default class Common {
 
   async getUserTenantId(data) {
     try {
-      console.log('data:', data);
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select()

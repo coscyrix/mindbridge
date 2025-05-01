@@ -1,9 +1,13 @@
 //services/session.js
 
 import Session from '../models/session.js';
+import Common from '../models/common.js';
 import joi from 'joi';
 
 export default class SessionService {
+  constructor() {
+    this.common = new Common();
+  }
   //////////////////////////////////////////
 
   async postSession(data) {
@@ -99,10 +103,18 @@ export default class SessionService {
   //////////////////////////////////////////
 
   async getSessionTodayAndTomorrow(data) {
+    if (Number(data.role_id) === 3) {
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+      data.tenant_id = Number(tenantId[0].tenant_id);
+    }
+
     const schema = joi.object({
       counselor_id: joi.number().optional(),
       user_timezone: joi.string().optional(),
       tenant_id: joi.number().optional(),
+      role_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

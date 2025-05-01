@@ -565,24 +565,42 @@ export default class Session {
       const formattedCurrentDate = formatDate(currentDate);
       const formattedTomorrowDate = formatDate(tomorrowDate);
 
-      const recToday = await db
+      const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
         .where('intake_date_formatted', formattedCurrentDate)
         .andWhere('counselor_id', data.counselor_id)
         .andWhere('thrpy_status', 'ONGOING');
 
+      if (data.counselor_id && data.role_id === 2) {
+        query.andWhere('counselor_id', data.counselor_id);
+      } else if (data.counselor_id && data.role_id === 3 && data.tenant_id) {
+        query.andWhere('tenant_id', data.tenant_id);
+      } else if (data.counselor_id && data.role_id === 4) {
+        // No additional filtering needed for admin role
+      }
+      const recToday = await query;
+
       if (!recToday) {
         logger.error('Error getting session');
         return { message: 'Error getting session', error: -1 };
       }
 
-      const recTomorrow = await db
+      const query2 = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
         .where('intake_date_formatted', formattedTomorrowDate)
         .andWhere('counselor_id', data.counselor_id)
         .andWhere('thrpy_status', 'ONGOING');
+
+      if (data.counselor_id && data.role_id === 2) {
+        query.andWhere('counselor_id', data.counselor_id);
+      } else if (data.counselor_id && data.role_id === 3 && data.tenant_id) {
+        query.andWhere('tenant_id', data.tenant_id);
+      } else if (data.counselor_id && data.role_id === 4) {
+        // No additional filtering needed for admin role
+      }
+      const recTomorrow = await query2;
 
       if (!recTomorrow) {
         logger.error('Error getting session');
