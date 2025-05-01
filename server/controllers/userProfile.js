@@ -137,7 +137,7 @@ export default class UserProfileController {
     // }
 
     if (data.role_id === 3) {
-      if (!data.counselor_id) {
+      if (!data.counselor_id && !data.user_profile_id) {
         res.status(400).json({ message: 'Mandatory fields are missing' });
         return;
       }
