@@ -104,6 +104,10 @@ export default class UserProfileService {
   //////////////////////////////////////////
 
   async putUserProfile(data, user_profile_id) {
+    if (data.tenant_name) {
+      delete data.tenant_name;
+    }
+
     const userProfileSchema = joi.object({
       user_first_name: joi.string().min(2).optional(),
       user_last_name: joi.string().min(2).optional(),
