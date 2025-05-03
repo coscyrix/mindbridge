@@ -102,7 +102,7 @@ function CurrentSession() {
 
   // handleDelete in action Buttons
   const handleDelete = (row) => {
-    console.log(":: handleDelete", row);
+    console.log(":: handleDelete");
   };
 
   // getting today Session Columns
