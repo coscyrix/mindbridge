@@ -289,7 +289,8 @@ export default class Common {
         // limit the query to only one record
         // change this for the next release
         .limit(1);
-      if (data.tenant_id) {
+
+      if (tenant_id) {
         query = query.where('tenant_id', tenant_id);
       }
 
