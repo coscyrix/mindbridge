@@ -412,53 +412,55 @@ export default class UserProfile {
         .select()
         .from('v_user_profile');
 
-      if (data.user_profile_id) {
-        query.where('user_profile_id', data.user_profile_id);
-      }
-
-      if (data.email) {
-        query.where('email', data.email);
-      }
-
-      if (data.tenant_id) {
-        query.where('tenant_id', data.tenant_id);
-      }
-
-      if (Object.keys(data).length === 1 && data.hasOwnProperty('role_id')) {
-        if (data.role_id) {
-          query.where('role_id', data.role_id);
+      if (!data.role_id === 4) {
+        if (data.user_profile_id) {
+          query.where('user_profile_id', data.user_profile_id);
         }
-      }
 
-      if (data.clam_num) {
-        query.where('clam_num', data.clam_num);
-      }
+        if (data.email) {
+          query.where('email', data.email);
+        }
 
-      if (data.counselor_id && data.role_id == 2) {
-        const clientListFromEnrollment = await db
-          .withSchema(`${process.env.MYSQL_DATABASE}`)
-          .distinct('client_id')
-          .from('client_enrollments')
-          .where('user_id', data.counselor_id);
+        if (data.tenant_id) {
+          query.where('tenant_id', data.tenant_id);
+        }
 
-        const clientListFromThrpyReq = await db
-          .withSchema(`${process.env.MYSQL_DATABASE}`)
-          .distinct('client_id')
-          .from('thrpy_req')
-          .where('counselor_id', data.counselor_id);
+        if (Object.keys(data).length === 1 && data.hasOwnProperty('role_id')) {
+          if (data.role_id) {
+            query.where('role_id', data.role_id);
+          }
+        }
 
-        // Merge the two arrays and remove duplicate elements
-        const clientList = [
-          ...new Map(
-            [...clientListFromEnrollment, ...clientListFromThrpyReq].map(
-              (client) => [client.client_id, client],
-            ),
-          ).values(),
-        ];
+        if (data.clam_num) {
+          query.where('clam_num', data.clam_num);
+        }
 
-        const clientIds = clientList.map((client) => client.client_id);
+        if (data.counselor_id && data.role_id == 2) {
+          const clientListFromEnrollment = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .distinct('client_id')
+            .from('client_enrollments')
+            .where('user_id', data.counselor_id);
 
-        query.whereIn('user_profile_id', clientIds);
+          const clientListFromThrpyReq = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .distinct('client_id')
+            .from('thrpy_req')
+            .where('counselor_id', data.counselor_id);
+
+          // Merge the two arrays and remove duplicate elements
+          const clientList = [
+            ...new Map(
+              [...clientListFromEnrollment, ...clientListFromThrpyReq].map(
+                (client) => [client.client_id, client],
+              ),
+            ).values(),
+          ];
+
+          const clientIds = clientList.map((client) => client.client_id);
+
+          query.whereIn('user_profile_id', clientIds);
+        }
       }
 
       const rec = await query;
