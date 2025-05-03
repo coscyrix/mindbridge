@@ -19,7 +19,7 @@ function Dashboard() {
   const fetchOverallSessionData = async () => {
     try {
       let response;
-      if (role_id == 4)
+      if ([3, 4].includes(role_id))
         response = await CommonServices.getOverallSessionsData({
           role_id,
           counselor_id: user_profile_id,
@@ -41,10 +41,11 @@ function Dashboard() {
   const fetchReportsTableData = async () => {
     try {
       let response;
-      if (role_id == 4) response = await CommonServices.getReportsTableData({
-        role_id,
-        counselor_id: user_profile_id,
-      });
+      if ([3, 4].includes(role_id))
+        response = await CommonServices.getReportsTableData({
+          role_id,
+          counselor_id: user_profile_id,
+        });
       else
         response = await CommonServices.getReportsTableData({
           role_id,
@@ -62,10 +63,11 @@ function Dashboard() {
   const fetchAssessmentResults = async () => {
     try {
       let response;
-      if (role_id == 4) response = await CommonServices.getAssessmentResults({
-        role_id,
-        counselor_id: user_profile_id,
-      });
+      if ([3, 4].includes(role_id))
+        response = await CommonServices.getAssessmentResults({
+          role_id,
+          counselor_id: user_profile_id,
+        });
       else
         response = await CommonServices.getAssessmentResults({
           role_id,

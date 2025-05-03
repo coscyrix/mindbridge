@@ -260,27 +260,7 @@ function ClientManagement() {
           setActiveTab={setActiveTab}
         />
       </CreateSessionLayout>
-      <CreateSessionLayout
-        isOpen={showFlyout}
-        setIsOpen={setShowFlyout}
-        initialData={activeData}
-        setConfirmationModal={setConfirmationModal}
-      >
-        {initialDataLoading ? (
-          <Spinner color="#525252" />
-        ) : (
-          <CreateSessionForm
-            isOpen={showFlyout}
-            setIsOpen={setShowFlyout}
-            initialData={activeData}
-            setInitialData={setActiveData}
-            confirmationModal={confirmationModal}
-            setConfirmationModal={setConfirmationModal}
-            userProfileId={userProfileId}
-            fetchCounselorClient={fetchClients} // after creating session =>when user click on submit => we update client // => to make green
-          />
-        )}
-      </CreateSessionLayout>
+
       <CustomClientDetails
         title="Client List"
         overview="Your Clients at a Glance: Explore, Manage, and Stay Connected with Your Entire Client List in One Place!"

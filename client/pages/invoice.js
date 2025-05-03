@@ -481,7 +481,7 @@ const Invoice = () => {
                 />
               </div>
               <div className="custom-select-container">
-                {roleId == 4 ? (
+                {[3, 4].includes(roleId) ? (
                   <div key="counselor-select">
                     <label>Counselor</label>
                     {/* <CustomSelect
