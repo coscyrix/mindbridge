@@ -74,7 +74,10 @@ function ClientManagement() {
             counselor_id: counselorId,
           });
         } else {
-          response = await CommonServices.getClients();
+          response = await CommonServices.getClients({
+            role_id: userObj?.role_id,
+            counselor_id: userObj?.user_profile_id,
+          });
         }
       }
       if (response.status === 200) {
@@ -113,7 +116,9 @@ function ClientManagement() {
         setShowFlyout(true);
         if (row?.has_schedule) {
           const { req_id } = row?.has_schedule;
-          const response = await api.get(`/thrpyReq/?req_id=${req_id}`);
+          const response = await api.get(
+            `/thrpyReq/?req_id=${req_id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`
+          );
           if (response?.status === 200) {
             const { data } = response;
             Array.isArray(data) && data.length > 0

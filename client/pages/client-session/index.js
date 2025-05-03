@@ -112,9 +112,12 @@ function ClientSession() {
 
   const handleDelete = async (row) => {
     try {
-      const res = await api.put(`/thrpyReq/?req_id=${row?.req_id}`, {
-        status_yn: "n",
-      });
+      const res = await api.put(
+        `/thrpyReq/?req_id=${row?.req_id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
+        {
+          status_yn: "n",
+        }
+      );
       if (res.status === 200) {
         setSessions((prev) => {
           const updatedData = prev?.filter(
