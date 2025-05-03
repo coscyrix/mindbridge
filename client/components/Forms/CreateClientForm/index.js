@@ -29,8 +29,8 @@ function CreateClientForm({
 
   const userData = Cookies.get("user");
   const user = userData ? JSON.parse(userData) : null;
-  const managerOrCounselor = user?.role_id == 3 || user?.role_id == 2;
-  const admin = user?.role_id == 4;
+  const Counselor = user?.role_id == 2;
+  const adminOrManager = user?.role_id == 4;
 
   const Target = targetOutcomes?.map((target) => ({
     label: target?.target_name,
@@ -40,8 +40,8 @@ function CreateClientForm({
   const RoleIds = roles
     ?.filter((roledetail) => {
       if (initialData) return true;
-      if (managerOrCounselor) return roledetail?.role_id === 1;
-      if (admin) return roledetail?.role_id !== 1;
+      if (Counselor) return roledetail?.role_id === 1;
+      if (adminOrManager) return roledetail?.role_id !== 1;
       return true;
     })
     .map((roledetail) => ({
@@ -57,7 +57,7 @@ function CreateClientForm({
     user_first_name: "",
     user_last_name: "",
     email: "",
-    role_id: managerOrCounselor ? 1 : "",
+    role_id: Counselor ? 1 : "",
     clam_num: "",
     tenant_name: "",
     target_outcome_id: initialData
@@ -75,6 +75,7 @@ function CreateClientForm({
   });
 
   const handleCreateClient = async (data) => {
+    console.log("data", data);
     let processedData;
     if (role == 1) {
       processedData = {
@@ -141,7 +142,7 @@ function CreateClientForm({
       role_id,
       user_phone_nbr,
       target_outcome_id: target_outcome_id?.value,
-      tenant_name: tenant_name,
+      tenant_name: tenant_name || "",
     };
 
     try {
@@ -235,7 +236,7 @@ function CreateClientForm({
                   <CustomSelect
                     {...field}
                     options={RoleIds}
-                    disable={managerOrCounselor || initialData}
+                    disable={Counselor || initialData}
                     dropdownIcon={
                       <ArrowIcon style={{ transform: "rotate(90deg)" }} />
                     }

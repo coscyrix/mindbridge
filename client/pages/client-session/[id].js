@@ -168,7 +168,9 @@ function ClientDetails() {
   const fetchClientSessions = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/thrpyReq/?req_id=${id}`);
+      const response = await api.get(
+        `/thrpyReq/?req_id=${id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`
+      );
       if (response.status === 200) {
         setClientDetails(response?.data?.at(0));
         setServices({

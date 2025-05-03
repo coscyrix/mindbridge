@@ -141,7 +141,7 @@ function CreateSessionForm({
     setLoader("scheduledSessionLoading");
     try {
       const response = await api.get(
-        `/thrpyReq/?req_id=${initialData?.req_id}`
+        `/thrpyReq/?req_id=${initialData?.req_id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`
       );
       if (response?.status === 200) {
         const scheduledSession = response?.data[0]?.session_obj;
@@ -185,7 +185,10 @@ function CreateSessionForm({
         session_id: noteData?.sessionId,
         message: updatedNotes,
       };
-      const response = await api.post("/notes", payload);
+      const response = await api.post(
+        `/notes/?role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
+        payload
+      );
       if (response?.status === 200) {
         setScheduledSession((prev) => {
           return prev?.map((session) => {
@@ -287,7 +290,7 @@ function CreateSessionForm({
           sessionStatus != "discharged";
         return (
           <div style={{ cursor: "pointer" }}>
-            {userObj?.role_id !== 4 &&
+            {![3, 4].includes(userObj?.role_id) &&
               showNoShowButtonDisplay &&
               isWithin24Hours(row.intake_date, row.scheduled_time) && (
                 <div
@@ -351,7 +354,7 @@ function CreateSessionForm({
                 </div>
               )}
             {initialData &&
-              userObj?.role_id == 4 &&
+              [3, 4].includes(userObj?.role_id) &&
               isWithin24Hours(row.intake_date, row.scheduled_time) && (
                 <CustomButton
                   type="button"
@@ -430,7 +433,7 @@ function CreateSessionForm({
       maxWidth: "120px",
     },
     {
-      ...(user?.role_id != 4 && {
+      ...(![3, 4].includes(userObj?.role_id) && {
         name: "Notes",
         selector: (row) => row.notes,
         sortable: true,
@@ -521,13 +524,17 @@ function CreateSessionForm({
 
   const fetchClients = async () => {
     try {
+      console.log("userObj", userObj);
       let response;
       if (userObj?.role_id == 2) {
         response = await api.get(
           `/user-profile/?role_id=2&counselor_id=${userObj?.user_profile_id}`
         );
       } else {
-        response = await CommonServices.getClients();
+        response = await CommonServices.getClients({
+          role_id: `${userObj?.role_id}`,
+          counselor_id: `${userObj?.user_profile_id}`,
+        });
       }
       if (response.status === 200) {
         const { data } = response;
@@ -543,16 +550,22 @@ function CreateSessionForm({
       setLoader("dischargeOrDelete");
       let response;
       if (dischargeOrDelete == "Discharge") {
-        response = await api.put(`thrpyReq/?req_id=${id}`, {
-          thrpy_status: "DISCHARGED",
-        });
+        response = await api.put(
+          `thrpyReq/?req_id=${id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
+          {
+            thrpy_status: "DISCHARGED",
+          }
+        );
         if (response.status === 200) {
           toast.success("Client Discharged!");
         }
       } else {
-        response = await api.put(`thrpyReq/?req_id=${id}`, {
-          status_yn: "n",
-        });
+        response = await api.put(
+          `thrpyReq/?req_id=${id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
+          {
+            status_yn: "n",
+          }
+        );
         if (response.status === 200) {
           await fetchCounselorClient(userProfileId);
           toast.success("Client session data deleted!");
@@ -584,9 +597,9 @@ function CreateSessionForm({
         session_status: 2,
       };
       let response;
-      if (userObj?.role_id == 4) {
+      if ([3, 4].includes(userObj?.role_id)) {
         response = await api.put(
-          `/session/?session_id=${row?.session_id}&role_id=4&user_profile_id=${userObj?.user_profile_id}`,
+          `/session/?session_id=${row?.session_id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
           payload
         );
       } else {
@@ -618,9 +631,9 @@ function CreateSessionForm({
         session_status: 1,
       };
       let response;
-      if (userObj?.role_id == 4) {
+      if ([3, 4].includes(userObj?.role_id)) {
         response = await api.put(
-          `/session/?session_id=${row?.session_id}&role_id=4&user_profile_id=${userObj?.user_profile_id}`,
+          `/session/?session_id=${row?.session_id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
           payload
         );
       } else {
@@ -647,9 +660,12 @@ function CreateSessionForm({
     try {
       setLoader("discardChanges");
       if (thrpyReqId) {
-        const response = await api.put(`/thrpyReq/?req_id=${thrpyReqId}`, {
-          status_yn: "n",
-        });
+        const response = await api.put(
+          `/thrpyReq/?req_id=${thrpyReqId}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
+          {
+            status_yn: "n",
+          }
+        );
         if (response.status === 200) {
           toast.success("Therapy request discarded!");
         }
@@ -912,7 +928,7 @@ function CreateSessionForm({
                         </span>
                       </label>
 
-                      {(userObj?.role_id === 4 ||
+                      {([3, 4].includes(userObj?.role_id) ||
                         (!loader && !allSessionsStatusScheduled)) && (
                         <>
                           <label>
@@ -954,8 +970,8 @@ function CreateSessionForm({
                       <span>
                         Update session schedule as per your convenience.
                       </span>
-                      {(userObj?.role_id !== 4 ||
-                        (userObj?.role_id === 4 &&
+                      {(![3, 4].includes(userObj?.role_id) ||
+                        ([3, 4].includes(userObj?.role_id) &&
                           dischargeOrDelete === "Delete")) && (
                         <CustomButton
                           type="button"
@@ -1075,41 +1091,43 @@ function CreateSessionForm({
                 </div>
               )}
               {/* Create Session Schedule Date and Time Fields */}
-              {allSessionsStatusScheduled && userObj?.role_id != 4 && (
-                <div className="date-time-wrapper">
-                  <CustomInputField
-                    name="req_dte"
-                    label="Intake Date*"
-                    type="date"
-                    placeholder="Select Date"
-                    customClass="date-input"
-                    onChange={(e) => handleIntakeDate(e)}
-                  />
-                  <CustomInputField
-                    name="req_time"
-                    label="Session Time*"
-                    type="time"
-                    placeholder="Select Time"
-                    customClass="time-input"
-                    onChange={(e) => handleSessionTime(e)}
-                  />
-                </div>
-              )}
+              {allSessionsStatusScheduled &&
+                ![3, 4].includes(userObj?.role_id) && (
+                  <div className="date-time-wrapper">
+                    <CustomInputField
+                      name="req_dte"
+                      label="Intake Date*"
+                      type="date"
+                      placeholder="Select Date"
+                      customClass="date-input"
+                      onChange={(e) => handleIntakeDate(e)}
+                    />
+                    <CustomInputField
+                      name="req_time"
+                      label="Session Time*"
+                      type="time"
+                      placeholder="Select Time"
+                      customClass="time-input"
+                      onChange={(e) => handleSessionTime(e)}
+                    />
+                  </div>
+                )}
               {/* Create Session Schedule ->  Generate Seesion Schedule button  */}
-              {user?.role_id != 4 && allSessionsStatusScheduled && (
-                <button
-                  type="button"
-                  onClick={handleGenerateSchedule}
-                  className={`generate-session-button ${
-                    loader == "generateSessionSchedule" && "disabled"
-                  }`}
-                  disabled={loader == "generateSessionSchedule"}
-                >
-                  {loader == "generateSessionSchedule"
-                    ? "Generating Session Schedule..."
-                    : "Generate Session Schedule"}
-                </button>
-              )}
+              {![3, 4].includes(userObj?.role_id) &&
+                allSessionsStatusScheduled && (
+                  <button
+                    type="button"
+                    onClick={handleGenerateSchedule}
+                    className={`generate-session-button ${
+                      loader == "generateSessionSchedule" && "disabled"
+                    }`}
+                    disabled={loader == "generateSessionSchedule"}
+                  >
+                    {loader == "generateSessionSchedule"
+                      ? "Generating Session Schedule..."
+                      : "Generate Session Schedule"}
+                  </button>
+                )}
               {/* session Table  */}
               {(initialData || sessionTableData) && (
                 <CustomTable
@@ -1149,7 +1167,7 @@ function CreateSessionForm({
                   <div style={{ fontWeight: 400, margin: "20px 0px" }}>
                     Additional Service
                   </div>
-                  {userObj?.role_id !== 4 && (
+                  {![3, 4].includes(userObj?.role_id) && (
                     <div
                       style={{
                         display: "flex",

@@ -11,8 +11,8 @@ const CommonServices = {
   getServices() {
     return api.get(ApiConfig.services.getServices);
   },
-  getClients() {
-    return api.get(ApiConfig.clients.getClients);
+  getClients(params) {
+    return api.get(ApiConfig.clients.getClients, { params });
   },
   getClientsByCounselor(params) {
     return api.get(ApiConfig.clients.getClients, { params });

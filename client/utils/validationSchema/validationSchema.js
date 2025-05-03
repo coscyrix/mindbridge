@@ -10,7 +10,7 @@ export const ClientValidationSchema = z
       .optional(),
     tenant_name: z
       .string()
-      .min(2, { message: "At least 2 characters required" })
+      //.min(2, { message: "At least 2 characters required" })
       .optional(),
     user_first_name: z
       .string()
