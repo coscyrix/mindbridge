@@ -36,7 +36,6 @@ function CreateClientForm({
     label: target?.target_name,
     value: target?.target_id,
   }));
-  console.log("initialData", initialData);
   const RoleIds = roles
     ?.filter((roledetail) => {
       if (initialData) return true;
@@ -75,7 +74,6 @@ function CreateClientForm({
   });
 
   const handleCreateClient = async (data) => {
-    console.log("data", data);
     let processedData;
     if (role == 1) {
       processedData = {

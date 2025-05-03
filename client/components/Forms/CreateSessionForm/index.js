@@ -79,7 +79,6 @@ function CreateSessionForm({
     sessionId: null,
     notes: "",
   });
-  console.log("initialDataSess", initialData);
   const [showStatusConfirmationModal, setShowStatusConfirmationModal] =
     useState(false);
   const [showResetConfirmationModal, setShowResetConfirmationModal] =
