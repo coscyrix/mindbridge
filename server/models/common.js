@@ -283,13 +283,16 @@ export default class Common {
 
   async getRefFeesByTenantId(tenant_id) {
     try {
-      console.log('////////////////////////////1//////////////////////');
-      console.log('tenant_id:', tenant_id);
-
       let query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('ref_fees')
-        .where('tenant_id', tenant_id);
+        // limit the query to only one record
+        // change this for the next release
+        .limit(1);
+      if (data.tenant_id) {
+        query = query.where('tenant_id', tenant_id);
+      }
+
       const rec = await query;
       if (!rec || rec.length === 0) {
         return { message: 'Ref fees not found', error: -1 };

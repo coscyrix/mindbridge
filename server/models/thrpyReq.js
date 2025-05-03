@@ -133,9 +133,9 @@ export default class ThrpyReq {
         };
       }
 
-      const ref_fees = await this.common.getRefFeesByTenantId(
-        tenantId[0].tenant_id,
-      );
+      // Use the tenant ID for the next phase
+
+      const ref_fees = await this.common.getRefFeesByTenantId();
 
       if (!ref_fees) {
         logger.error('Error getting reference fees');
