@@ -973,6 +973,10 @@ export default class ThrpyReq {
           query.andWhere('counselor_id', data.counselor_id);
         }
 
+        if (data.user_profile_id) {
+          query.andWhere('counselor_id', data.user_profile_id);
+        }
+
         if (data.client_id) {
           query.andWhere('client_id', data.client_id);
         }

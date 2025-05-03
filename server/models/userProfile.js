@@ -412,7 +412,9 @@ export default class UserProfile {
         .select()
         .from('v_user_profile');
 
-      if (!data.role_id === 4) {
+      console.log('data', data);
+
+      if (!data.role_id === 4 || !data.role_id) {
         if (data.user_profile_id) {
           query.where('user_profile_id', data.user_profile_id);
         }

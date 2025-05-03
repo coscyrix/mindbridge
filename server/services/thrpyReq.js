@@ -210,6 +210,7 @@ export default class ThrpyReqService {
     const schema = joi.object({
       req_id: joi.number().optional(),
       counselor_id: joi.number().optional(),
+      user_profile_id: joi.number().optional(),
       client_id: joi.number().optional(),
       thrpy_id: joi.number().optional(),
       thrpy_status: joi.string().optional(),
