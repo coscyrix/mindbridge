@@ -215,7 +215,7 @@ export default class ThrpyReqService {
       thrpy_id: joi.number().optional(),
       thrpy_status: joi.string().optional(),
       tenant_id: joi.number().optional(),
-      role_id: joi.number().required(),
+      role_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);
