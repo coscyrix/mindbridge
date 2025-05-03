@@ -142,10 +142,11 @@ export default class ThrpyReqController {
 
     if (data.role_id) {
       data.role_id = Number(data.role_id);
-    } else {
-      res.status(400).json({ message: 'Missing mandatory fields' });
-      return;
     }
+    // else {
+    //   res.status(400).json({ message: 'Missing mandatory fields' });
+    //   return;
+    // }
 
     const thrpyReq = new ThrpyReqService();
     const rec = await thrpyReq.getThrpyReqById(data);
