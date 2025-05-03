@@ -7,7 +7,7 @@ export function middleware(request) {
   const user = request.cookies.get("user")?.value;
   const accountVerified = request.cookies.get("accountVerified")?.value;
   const userObj = user && JSON.parse(user);
-  const admin = userObj?.role_id == 4;
+  const admin = [3, 4].includes(userObj?.role_id);
   const protectedRoutes = [
     "/dashboard",
     "/current-session",

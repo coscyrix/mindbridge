@@ -79,6 +79,7 @@ function CreateSessionForm({
     sessionId: null,
     notes: "",
   });
+  console.log("initialDataSess", initialData);
   const [showStatusConfirmationModal, setShowStatusConfirmationModal] =
     useState(false);
   const [showResetConfirmationModal, setShowResetConfirmationModal] =
@@ -524,7 +525,6 @@ function CreateSessionForm({
 
   const fetchClients = async () => {
     try {
-      console.log("userObj", userObj);
       let response;
       if (userObj?.role_id == 2) {
         response = await api.get(
