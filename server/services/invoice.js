@@ -77,6 +77,13 @@ export default class InvoiceService {
   //////////////////////////////////////////
 
   async getInvoiceByMulti(data) {
+    if (data.role_id === 4) {
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+      data.tenant_id = Number(tenantId[0].tenant_id);
+    }
+
     const schema = joi.object({
       counselor_id: joi.number().optional(),
       client_id: joi.number().optional(),

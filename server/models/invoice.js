@@ -165,28 +165,30 @@ export default class Invoice {
           );
         });
 
-      if (data.counselor_id) {
-        query.andWhere('counselor_id', data.counselor_id);
-      }
+      if (!(data.role_id === 4)) {
+        if (data.counselor_id) {
+          query.andWhere('counselor_id', data.counselor_id);
+        }
 
-      if (data.client_id) {
-        query.andWhere('client_id', data.client_id);
-      }
+        if (data.client_id) {
+          query.andWhere('client_id', data.client_id);
+        }
 
-      if (data.req_id) {
-        query.andWhere('req_id', data.req_id);
-      }
+        if (data.req_id) {
+          query.andWhere('req_id', data.req_id);
+        }
 
-      if (data.start_dte) {
-        query.andWhere('intake_date', '>=', data.start_dte);
-      }
+        if (data.start_dte) {
+          query.andWhere('intake_date', '>=', data.start_dte);
+        }
 
-      if (data.end_dte) {
-        query.andWhere('intake_date', '<=', data.end_dte);
-      }
+        if (data.end_dte) {
+          query.andWhere('intake_date', '<=', data.end_dte);
+        }
 
-      if (data.thrpy_status) {
-        query.andWhere('thrpy_status', data.thrpy_status);
+        if (data.thrpy_status) {
+          query.andWhere('thrpy_status', data.thrpy_status);
+        }
       }
 
       if (data.tenant_id) {
