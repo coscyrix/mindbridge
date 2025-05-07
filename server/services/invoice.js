@@ -77,12 +77,24 @@ export default class InvoiceService {
   //////////////////////////////////////////
 
   async getInvoiceByMulti(data) {
+    data.role_id = Number(data.role_id);
+
     if (data.role_id === 4) {
+      delete data.counselor_id;
+    }
+
+    if (data.role_id === 3) {
       const tenantId = await this.common.getUserTenantId({
         user_profile_id: data.counselor_id,
       });
+      delete data.counselor_id;
       data.tenant_id = Number(tenantId[0].tenant_id);
     }
+
+    console.log(
+      '////////////////////////////////////////////////////////////////////////////////',
+    );
+    console.log('getInvoiceByMulti data', data);
 
     const schema = joi.object({
       counselor_id: joi.number().optional(),

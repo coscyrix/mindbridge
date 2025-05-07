@@ -157,11 +157,6 @@ export default class EmailTmplt {
                 attendancePDF,
               );
 
-              console.log('data.session_id', data.session_id);
-              console.log('removeReportsSessions', removeReportsSessions);
-              console.log('attendedSessions', attendedSessions);
-              console.log('cancelledSessions', cancelledSessions);
-
               const postATTENDANCEFeedback =
                 await this.feedback.postATTENDANCEFeedback({
                   client_id: recUser[0].user_profile_id,

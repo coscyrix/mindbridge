@@ -3,10 +3,15 @@ import Common from '../models/common.js';
 import joi from 'joi';
 
 export default class FeedbackService {
+  ///////////////////////////////////////////
+  constructor() {
+    this.common = new Common();
+  }
+
   //////////////////////////////////////////
 
   async postFeedback(data) {
-    const sessionId = await this.common.getSessionId(data.session_id);
+    const sessionId = await this.common.getSessionById(data.session_id);
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
@@ -75,7 +80,7 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postGAD7Feedback(data) {
-    const sessionId = await this.common.getSessionId(data.session_id);
+    const sessionId = await this.common.getSessionById(data.session_id);
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
@@ -106,7 +111,7 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postPHQ9Feedback(data) {
-    const sessionId = await this.common.getSessionId(data.session_id);
+    const sessionId = await this.common.getSessionById(data.session_id);
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
@@ -140,7 +145,7 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postPCL5Feedback(data) {
-    const sessionId = await this.common.getSessionId(data.session_id);
+    const sessionId = await this.common.getSessionById(data.session_id);
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
@@ -184,7 +189,7 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postWHODASFeedback(data) {
-    const sessionId = await this.common.getSessionId(data.session_id);
+    const sessionId = await this.common.getSessionById(data.session_id);
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
@@ -247,7 +252,7 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postIPFFeedback(data) {
-    const sessionId = await this.common.getSessionId(data.session_id);
+    const sessionId = await this.common.getSessionById(data.session_id);
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
@@ -351,7 +356,7 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postSMARTGOALFeedback(data) {
-    const sessionId = await this.common.getSessionId(data.session_id);
+    const sessionId = await this.common.getSessionById(data.session_id);
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
@@ -409,7 +414,7 @@ export default class FeedbackService {
   //////////////////////////////////////////
 
   async postATTENDANCEFeedback(data) {
-    const sessionId = await this.common.getSessionId(data.session_id);
+    const sessionId = await this.common.getSessionById(data.session_id);
     const tenantId = await this.common.getUserTenantId({
       user_profile_id: sessionId[0].counselor_id,
     });
