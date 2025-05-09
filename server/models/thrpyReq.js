@@ -994,13 +994,13 @@ export default class ThrpyReq {
         }
       }
 
-      if (data.role_id === 3) {
-        // If the user is a manager, filter by tenant_id
-        const tenantId = await this.common.getUserTenantId({
-          user_profile_id: data.counselor_id,
-        });
-        query.where('tenant_id', Number(tenantId[0].tenant_id));
-      }
+      // if (data.role_id === 3) {
+      //   // If the user is a manager, filter by tenant_id
+      //   const tenantId = await this.common.getUserTenantId({
+      //     user_profile_id: data.counselor_id,
+      //   });
+      //   query.where('tenant_id', Number(tenantId[0].tenant_id));
+      // }
 
       const rec = await query;
 

@@ -207,6 +207,7 @@ export default class ThrpyReqService {
   //////////////////////////////////////////
 
   async getThrpyReqById(data) {
+    console.log('/////////////////////////////////////////');
     data.role_id = Number(data.role_id);
     if (data.role_id === 4) {
       delete data.counselor_id;
@@ -218,6 +219,7 @@ export default class ThrpyReqService {
       delete data.counselor_id;
       data.tenant_id = Number(tenantId[0].tenant_id);
     }
+    console.log('data', data);
 
     const schema = joi.object({
       req_id: joi.number().optional(),
