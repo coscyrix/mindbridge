@@ -33,7 +33,7 @@ const Invoice = () => {
   const [open, setOpen] = useState(false);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  const [selectCounselor, setSelectCounselor] = useState(null);
+  const [selectCounselor, setSelectCounselor] = useState("allCounselors");
   const [filterText, setFilterText] = useState(null);
   const [loading, setLoading] = useState("tableData");
   const [counselors, setCounselors] = useState([
@@ -143,8 +143,8 @@ const Invoice = () => {
     {
       name: "Tax",
       selector: (row) =>
-        row.session_gst ? `$${Number(row.session_gst).toFixed(2)}` : "NA",
-      selectorId: "session_gst",
+        row.session_taxes ? `$${Number(row.session_taxes).toFixed(2)}` : "NA",
+      selectorId: "session_taxes",
     },
     {
       name: "Amt. to Counselor",
@@ -416,6 +416,9 @@ const Invoice = () => {
     if (roleId !== null) {
       getInvoice();
       fetchCounsellor();
+      if ([3, 4].includes(roleId)) {
+        fetchFilteredInvoices({ counselorId: "allCounselors", startDate, endDate });
+      }
     }
   }, [roleId]);
 
@@ -499,6 +502,7 @@ const Invoice = () => {
                       placeholder="Select a counselor"
                       isMulti={false}
                       onChange={handleSelectCounselor}
+                      value={counselors.find(option => option.value === selectCounselor)}
                     />
                   </div>
                 ) : null}
