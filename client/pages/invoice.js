@@ -239,7 +239,8 @@ const Invoice = () => {
       if (response.status === 200) {
         const { data } = response;
         const allCounselors = data?.rec?.filter(
-          (client) => client?.role_id === 2
+          (client) =>
+            client?.role_id === 2 && client?.tenant_id === user?.tenant_id
         );
         const counselorOptions = allCounselors?.map((item) => {
           return {
@@ -263,9 +264,10 @@ const Invoice = () => {
         params.append("counselor_id", counselorId);
       if (startDate) params.append("start_dte", startDate);
       if (endDate) params.append("end_dte", endDate);
-
       const response = await api.get(
-        `/invoice/multi?role_id=${roleId}&${params.toString()}`
+        `/invoice/multi?role_id=${roleId}&counselor_id=${
+          user?.user_profile_id
+        }&${params.toString()}`
       );
       if (response?.status === 200) {
         setInvoices(response?.data?.rec);
@@ -417,7 +419,11 @@ const Invoice = () => {
       getInvoice();
       fetchCounsellor();
       if ([3, 4].includes(roleId)) {
-        fetchFilteredInvoices({ counselorId: "allCounselors", startDate, endDate });
+        fetchFilteredInvoices({
+          counselorId: "allCounselors",
+          startDate,
+          endDate,
+        });
       }
     }
   }, [roleId]);
@@ -502,7 +508,9 @@ const Invoice = () => {
                       placeholder="Select a counselor"
                       isMulti={false}
                       onChange={handleSelectCounselor}
-                      value={counselors.find(option => option.value === selectCounselor)}
+                      value={counselors.find(
+                        (option) => option.value === selectCounselor
+                      )}
                     />
                   </div>
                 ) : null}
