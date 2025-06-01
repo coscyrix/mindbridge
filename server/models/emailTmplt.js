@@ -284,7 +284,7 @@ export default class EmailTmplt {
       const sendClientConsentForm = consentFormEmail(
         data.email,
         data.client_name,
-        `${process.env.BASE_URL}${process.env.FORMS}consent?client_id=${data.client_id}&form_id=23`,
+        `${process.env.BASE_URL}${process.env.FORMS}consent?client_id=${data.client_id}&form_id=23&tenant_id=${data.tenant_id}`,
       );
 
       const sendConsentForm = this.sendEmail.sendMail(sendClientConsentForm);
