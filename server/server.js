@@ -19,6 +19,8 @@ import {
   userFormRouter,
   homeWorkRouter,
   reportRouter,
+  counselorProfileRouter,
+  counselorDocumentsRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -41,6 +43,8 @@ async function main() {
         userFormRouter,
         homeWorkRouter,
         reportRouter,
+        counselorProfileRouter,
+        counselorDocumentsRouter,
       ],
     });
 

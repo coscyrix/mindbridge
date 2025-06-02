@@ -21,7 +21,12 @@ export default class ServerConfig {
 
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
+    
+    // Serve static files from public directory
     this.app.use('/', Express.static(path.join(__dirname, 'public')));
+    
+    // Serve static files from uploads directory
+    this.app.use('/uploads', Express.static(path.join(__dirname, '../../uploads')));
 
     this.app.use(cors({
       origin: 'http://localhost:3000',
