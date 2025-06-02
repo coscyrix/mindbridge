@@ -47,9 +47,12 @@ function ClientSession() {
         if (counselorId && counselorId !== "allCounselors") {
           response = await CommonServices.getSessionsByCounselor({
             counselor_id: counselorId,
+            role_id: userObj?.role_id,
           });
         } else {
-          response = await CommonServices.getSessions();
+          response = await CommonServices.getSessions({
+            role_id: userObj?.role_id,
+          });
         }
       }
       if (response.status === 200) {
@@ -226,29 +229,15 @@ function ClientSession() {
             /> */}
             <CustomTab
               heading={"Total Amount For A Month"}
-              value={`$${
-                summaryData
-                  ? Math.round(Number(summaryData?.sum_session_price)) || 0
-                  : 0
-              }`}
+              value={`$${summaryData ? (Number(summaryData?.sum_session_price) || 0).toFixed(2) : "0.00"}`}
             />
             <CustomTab
               heading={"Total Amount to Associate for a Month: "}
-              value={`$${
-                summaryData
-                  ? Math.round(
-                      Number(summaryData?.sum_session_counselor_amt)
-                    ) || 0
-                  : 0
-              }`}
+              value={`$${summaryData ? (Number(summaryData?.sum_session_counselor_amt) || 0).toFixed(2) : "0.00"}`}
             />
             <CustomTab
               heading={"Total Amount to Vapendama for a Month:"}
-              value={`$${
-                summaryData
-                  ? Math.round(Number(summaryData?.sum_session_system_amt)) || 0
-                  : 0
-              }`}
+              value={`$${summaryData ? (Number(summaryData?.sum_session_system_amt) || 0).toFixed(2) : "0.00"}`}
             />
             <CustomTab
               heading={"Total Amount of Units:"}

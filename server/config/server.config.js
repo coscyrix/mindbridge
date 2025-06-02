@@ -23,7 +23,10 @@ export default class ServerConfig {
     const __dirname = path.dirname(__filename);
     this.app.use('/', Express.static(path.join(__dirname, 'public')));
 
-    this.app.use(cors());
+    this.app.use(cors({
+      origin: 'http://localhost:3000',
+      credentials: true, // if you use cookies or authorization headers
+    }));
 
     middlewares?.forEach((mdlw) => {
       this.registerMiddleware(mdlw);
@@ -92,23 +95,58 @@ export default class ServerConfig {
     this.app.use((err, req, res, next) => {
       const statusCode = err.statusCode || 500;
       const message = err.message || 'Internal Server Error';
-      res.status(statusCode).json({ statusCode, message });
+      
+      // Ensure consistent error response format
+      const errorResponse = {
+        statusCode,
+        message,
+        error: true,
+        timestamp: new Date().toISOString()
+      };
 
-      this.console.error(
-        `${statusCode} - ${message} - ${req.originalUrl} - ${req.method} - ${req.ip}`,
-      );
+      // Log the error with more details
+      this.console.error({
+        statusCode,
+        message,
+        url: req.originalUrl,
+        method: req.method,
+        ip: req.ip,
+        stack: err.stack,
+        body: req.body,
+        query: req.query,
+        params: req.params
+      });
+
+      // Send the error response
+      res.status(statusCode).json(errorResponse);
     });
   }
 
   async listen() {
     try {
       const options = {
-        key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
-        cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
+        // key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
+        // cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
       };
 
       const { default: knex } = await import('knex');
       const db = knex(DbConfig.dbConn.development);
+      
+      // Test database connection
+      try {
+        await db.raw('SELECT 1');
+        this.console.info('✅ Database connection successful');
+      } catch (error) {
+        this.console.error('❌ Database connection failed:', {
+          message: error.message,
+          code: error.code,
+          errno: error.errno,
+          sqlState: error.sqlState,
+          sqlMessage: error.sqlMessage
+        });
+        throw error;
+      }
+      
       this.app.locals.knex = db;
 
       // Create an HTTP/HTTPS server
