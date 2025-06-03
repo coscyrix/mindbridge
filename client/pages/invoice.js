@@ -260,15 +260,21 @@ const Invoice = () => {
     try {
       setLoading("tableData");
       const params = new URLSearchParams();
-      if (counselorId !== "allCounselors" && counselorId)
+      params.append("role_id", roleId);
+      
+      // Only append counselor_id if it's not "allCounselors"
+      if (counselorId && counselorId !== "allCounselors") {
         params.append("counselor_id", counselorId);
+      } else if (roleId === 2) {
+        // If role is counselor (2), always send their own ID
+        params.append("counselor_id", user?.user_profile_id);
+      }
+      
       if (startDate) params.append("start_dte", startDate);
       if (endDate) params.append("end_dte", endDate);
-      const response = await api.get(
-        `/invoice/multi?role_id=${roleId}&counselor_id=${
-          user?.user_profile_id
-        }&${params.toString()}`
-      );
+      
+      const response = await api.get(`/invoice/multi?${params.toString()}`);
+      
       if (response?.status === 200) {
         setInvoices(response?.data?.rec);
         setInvoiceTableData(response?.data?.rec?.rec_list);

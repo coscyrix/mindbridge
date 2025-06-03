@@ -70,11 +70,11 @@ export default class InvoiceController {
         .send({ message: 'Counselor ID is required for that specific role' });
     }
 
-    if (data.role_id == 3 && !data.counselor_id) {
-      return res
-        .status(400)
-        .send({ message: 'Counselor ID is required for that specific role' });
-    }
+    // if (data.role_id == 3 && !data.counselor_id) {
+    //   return res
+    //     .status(400)
+    //     .send({ message: 'Counselor ID is required for that specific role' });
+    // }
 
     if (data.role_id === 4 && !data.counselor_id) {
       return res
