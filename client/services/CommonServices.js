@@ -17,8 +17,8 @@ const CommonServices = {
   getClientsByCounselor(params) {
     return api.get(ApiConfig.clients.getClients, { params });
   },
-  getSessions(params) {
-    return api.get(ApiConfig.sessions.getSessions, { params });
+  getSessions() {
+    return api.get(ApiConfig.sessions.getSessions);
   },
   getSessionsByCounselor(params) {
     return api.get(ApiConfig.sessions.getSessions, { params });

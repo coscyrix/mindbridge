@@ -14,3 +14,5 @@ export { notesRouter } from './notes.js';
 export { userFormRouter } from './userForm.js';
 export { homeWorkRouter } from './homework.js';
 export { reportRouter } from './report.js';
+export { counselorProfileRouter } from './counselorProfile.js';
+export { counselorDocumentsRouter } from './counselorDocuments.js';

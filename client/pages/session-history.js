@@ -14,7 +14,7 @@ function SessionHistory() {
   const [sessionToBeDisplayed, setSessionToBeDisplayed] = useState([]);
   const [sessionLoading, setSessionLoading] = useState([]);
   // const [counselors, setCounselors] = useState([]);
-  const [selectCounselor, setSelectCounselor] = useState(null);
+  const [selectCounselor, setSelectCounselor] = useState("allCounselors");
   // const [selectUser, setSelectUser] = useState("User");
   const [filterText, setFilterText] = useState("");
   const [selectDate, setSelectDate] = useState(null);
@@ -65,28 +65,31 @@ function SessionHistory() {
     try {
       setSessionLoading(true);
       let response;
-      if (userObj?.role_id !== 4) {
+
+      const isAdmin = userObj?.role_id === 4;
+      const isSpecificCounselor =
+        counselorId && counselorId !== "allCounselors";
+
+      if (!isAdmin && counselorId !== "allCounselors") {
         response = await CommonServices.getSessionsByCounselor({
-          role_id: userObj?.role_id,
-          counselor_id: userObj?.user_profile_id,
+          role_id: 2,
+          counselor_id: counselorId || userObj?.user_profile_id,
+        });
+      } else if (isAdmin && isSpecificCounselor) {
+        response = await CommonServices.getSessionsByCounselor({
+          counselor_id: counselorId,
         });
       } else {
-        // in case of Admin
-        if (counselorId && counselorId !== "allCounselors") {
-          response = await CommonServices.getSessionsByCounselor({
-            counselor_id: counselorId,
-          });
-        } else {
-          response = await CommonServices.getSessions();
-        }
+        response = await CommonServices.getSessionsByCounselor({role_id:4});
       }
+
       if (response.status === 200) {
         const { data } = response;
         setSessios(data);
         setSessionToBeDisplayed(data);
       }
     } catch (error) {
-      console.log("Error fetching sessions", error);
+      console.error("Error fetching sessions", error);
     } finally {
       setSessionLoading(false);
     }
@@ -139,10 +142,12 @@ function SessionHistory() {
     router.push(`/client-session/${id}`);
   };
 
-  useEffect(() => {
-    fetchSessions();
-    // fetchCounsellor();
-  }, []);
+ useEffect(() => {
+   // Ensure the initial value is set correctly
+   const initialCounselor = 'allCounselors';
+   setSelectCounselor(initialCounselor);
+   fetchSessions(initialCounselor);
+ }, []);
 
   useEffect(() => {
     updateUserDataToDisplay();
