@@ -164,7 +164,7 @@ export default class FeedbackController {
 
   async postCONSENTFeedback(req, res) {
     const data = req.body;
-    data.tenant_id = process.env.TENANT_ID;
+    data.tenant_id = req.query.tenant_id;
 
     const feedback = new FeedbackService();
     const rec = await feedback.postCONSENTFeedback(data);
