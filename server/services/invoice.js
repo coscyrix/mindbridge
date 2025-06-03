@@ -84,11 +84,12 @@ export default class InvoiceService {
     }
 
     if (data.role_id === 3) {
-      const tenantId = await this.common.getUserTenantId({
-        user_profile_id: data.counselor_id,
-      });
-      delete data.counselor_id;
-      data.tenant_id = Number(tenantId[0].tenant_id);
+      if (data.counselor_id) {
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        data.tenant_id = Number(tenantId[0].tenant_id);
+      }
     }
 
     console.log(
