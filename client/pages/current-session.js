@@ -51,11 +51,11 @@ function CurrentSession() {
       if (counselorId && counselorId !== "allCounselors")
         response = await CommonServices.getCurrentSessions({
           counselor_id: counselorId,
-          role_id: role_id,
+          role_id: role_id===3?4:role_id,
         });
       // } else {
       //   console.log(counselors, "counselors");
-      //   response = await api.get(
+      //   response = await api.get
       //     `/session/today?counselor_id=${counselorId}`
       //   );
       // }
@@ -373,14 +373,13 @@ function CurrentSession() {
           (counselor) => counselor?.role_id == 2
         );
         const counselorOptions = allCounselors?.map((item) => {
-          console.log(item);
           return {
             label: item?.user_first_name + " " + item?.user_last_name,
             value: item?.user_profile_id,
           };
         });
         setSelectedCounselor(counselorOptions?.at(0));
-        await getCurrentSessionData(counselorOptions?.at(0)?.value);
+        await getCurrentSessionData(counselorOptions?.at(0)?.value,4);
         setCounselors(counselorOptions);
       }
     } catch (error) {
@@ -393,7 +392,11 @@ function CurrentSession() {
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
     setSelectedCounselor(data);
-    getCurrentSessionData(counselorId);
+    if(userObj.role_id===4 || userObj.role_id===3){
+      getCurrentSessionData(counselorId, 4);
+    }else{
+      getCurrentSessionData(counselorId);
+    }
   };
 
   useEffect(() => {
@@ -409,7 +412,7 @@ function CurrentSession() {
     const userObj = JSON.parse(userData);
     console.log(userObj);
     setUserData(userObj);
-    userObj?.role_id == 1
+    userObj?.role_id == 4 || userObj?.role_id == 3
       ? fetchCounsellor()
       : getCurrentSessionData(userObj?.user_profile_id, userObj?.role_id);
   }, []);
@@ -449,7 +452,7 @@ function CurrentSession() {
               placeholder="Search in today session"
             />
             <div>
-              {userData?.role_id == 4 ? (
+              {userData?.role_id == 4 || userData?.role_id == 3 ? (
                 <div key="counselor-select" className="custom-select-container">
                   <CustomMultiSelect
                     options={counselors}

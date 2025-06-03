@@ -117,7 +117,7 @@ function ClientManagement() {
         if (row?.has_schedule) {
           const { req_id } = row?.has_schedule;
           const response = await api.get(
-            `/thrpyReq/?req_id=${req_id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`
+            `/thrpyReq/?req_id=${req_id}&role_id=${userObj?.role_id==3?2:userObj?.role_id}&user_profile_id=${row?.user_target_outcome?.at(0).counselor_id}` // Adjusted to use user_target_outcome
           );
           if (response?.status === 200) {
             const { data } = response;
