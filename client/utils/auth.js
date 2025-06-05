@@ -64,6 +64,19 @@ export const signUp = async (credentials) => {
   }
 };
 
+export const onBoarding = async (onBoardingData) => {
+  try {
+    const response = await api.post("/counselor-profile", onBoardingData);
+    if (response.status === 200) {
+      return response.data;
+    } else {
+      throw new Error("User cannot be created !!");
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const logout = () => {
   if (isLoggedOut) return;
   isLoggedOut = true;

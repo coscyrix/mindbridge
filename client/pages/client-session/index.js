@@ -231,7 +231,7 @@ function ClientSession() {
               heading={"Total Amount For A Month"}
               value={`$${
                 summaryData
-                  ? Number(summaryData?.sum_session_price).toFixed(2) || 0
+                  ? (Number(summaryData?.sum_session_system_amt) + Number(summaryData?.sum_session_counselor_amt)).toFixed(2) || 0
                   : 0
               }`}
             />
