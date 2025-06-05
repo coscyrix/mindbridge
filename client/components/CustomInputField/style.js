@@ -5,16 +5,15 @@ export const CustomInputContainer = styled.div`
   input {
     width: 100%;
     height: 45px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
+    border: 1px solid #e7e7e9;
     background: #ffffff;
     color: #000000;
     padding: 11px 16px;
     font-size: 14px;
     font-weight: 400;
     line-height: 24px;
-    margin: 0px;
-
+    margin: 0p;
+    border-radius: 6px;
     &::placeholder {
       color: #000000;
       opacity: 0.2;

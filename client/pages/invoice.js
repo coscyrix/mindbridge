@@ -137,7 +137,7 @@ const Invoice = () => {
       name: "Total Amount",
       selector: (row) =>
         // `$${Number(row.session_price + row.session_gst).toFixed(2)}`
-        `$${Number(row.session_price).toFixed(2)}`,
+        `$${(Number(row.session_counselor_amt)+Number(row.session_system_amt)).toFixed(2)}`,
       selectorId: "session_price",
     },
     {
@@ -460,7 +460,7 @@ const Invoice = () => {
               heading={"Total Amount For A Month"}
               value={`$${
                 invoices
-                  ? Number(invoices?.summary?.sum_session_price).toFixed(2) || 0
+                  ? (Number(invoices?.summary?.sum_session_counselor_amt)+Number(invoices?.summary?.sum_session_system_amt)).toFixed(2) || 0
                   : 0
               }`}
             />

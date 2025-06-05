@@ -32,9 +32,11 @@
     "react-paginate": "^8.2.0",
     "react-select": "^5.9.0",
     "react-signature-canvas": "^1.0.7",
+    "react-swiper": "^0.1.5",
     "react-toastify": "^10.0.6",
     "react-tooltip": "^5.28.0",
     "styled-components": "^6.1.13",
+    "swiper": "^11.2.8",
     "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   },

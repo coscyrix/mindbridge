@@ -11,16 +11,17 @@ function MyApp({ Component, pageProps }) {
   const isAbsolutePage =
     allowedPaths.includes(router.pathname) ||
     router.pathname.startsWith("/patient-forms");
+  const isLandingPage = router.pathname === "/";
 
   return (
     <>
-      {isAbsolutePage ? (
+      {isAbsolutePage || isLandingPage ? (
         <Component {...pageProps} />
       ) : (
         <ReferenceContextProvider>
-          <Layout>
-            <Component {...pageProps} />
-          </Layout>
+            <Layout>
+              <Component {...pageProps} />
+            </Layout>
         </ReferenceContextProvider>
       )}
       <ToastContainer />
