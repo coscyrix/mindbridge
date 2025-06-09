@@ -85,7 +85,7 @@ const WorkFlowSection = () => {
           <br />
           With MindBridge
         </h2>
-        <CustomSwiper
+        {/* <CustomSwiper
           spaceBetween={30}
           slidesPerView={2.5}
           breakpoints={{
@@ -109,14 +109,14 @@ const WorkFlowSection = () => {
         >
           {workflowFeatures.map((feature, index) => (
             <SwiperSlide key={index} style={{ width: "256px" }}>
-              {/* <WorkflowFeatureCard
+              <WorkflowFeatureCard
                 key={`${index}-${feature.title}`}
                 title={feature.title}
                 description={feature.description}
-              /> */}
+              />
             </SwiperSlide>
           ))}
-        </CustomSwiper>
+        </CustomSwiper> */}
       </div>
     </WorkFlowSectionWrapper>
   );
