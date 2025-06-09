@@ -5,7 +5,7 @@ import workflowLeftImage2 from "../assets/images/workflow-left-image-2.png";
 import workflowLeftImage3 from "../assets/images/workflow-left-image-3.png";
 import workflowLeftImage4 from "../assets/images/workflow-left-image-4.png";
 import workFlowMainImage from "../assets/images/workflow-main-image.png";
-import WorkflowFeatureCard from "./WorkflowFeatureCard";
+import WorkflowFeatureCard from "./WorkflowFeatureCardNew";
 import CustomSwiper from "../../Swiper";
 import { SwiperSlide } from "swiper/react";
 
@@ -85,7 +85,7 @@ const WorkFlowSection = () => {
           <br />
           With MindBridge
         </h2>
-        {/* <CustomSwiper
+        <CustomSwiper
           spaceBetween={30}
           slidesPerView={2.5}
           breakpoints={{
@@ -116,7 +116,7 @@ const WorkFlowSection = () => {
               />
             </SwiperSlide>
           ))}
-        </CustomSwiper> */}
+        </CustomSwiper>
       </div>
     </WorkFlowSectionWrapper>
   );
