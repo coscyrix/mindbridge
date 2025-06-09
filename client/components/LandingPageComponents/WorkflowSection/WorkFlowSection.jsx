@@ -109,11 +109,11 @@ const WorkFlowSection = () => {
         >
           {workflowFeatures.map((feature, index) => (
             <SwiperSlide key={index} style={{ width: "256px" }}>
-              <WorkflowFeatureCard
-                key={index}
+              {/* <WorkflowFeatureCard
+                key={`${index}-${feature.title}`}
                 title={feature.title}
                 description={feature.description}
-              />
+              /> */}
             </SwiperSlide>
           ))}
         </CustomSwiper>
