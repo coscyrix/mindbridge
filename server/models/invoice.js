@@ -163,11 +163,10 @@ export default class Invoice {
             'session_status',
             'DISCHARGED',
           );
-        });
-
+        });        
       // if (!(data.role_id === 4)) {
         if (data.counselor_id) {
-          query.andWhere('counselor_id', data.counselor_id);
+          query.andWhere('counselor_id', Number(data.counselor_id));
         }
 
         if (data.client_id) {
@@ -193,7 +192,7 @@ export default class Invoice {
 
       if (data.tenant_id) {
         query.andWhere('tenant_id', data.tenant_id);
-      }
+      }      
 
       const rec = await query;
 
