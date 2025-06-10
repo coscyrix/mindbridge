@@ -421,7 +421,7 @@ const Invoice = () => {
   }, []);
 
   useEffect(() => {
-    if (roleId !== null) {
+    if (roleId !== null && user) {
       getInvoice();
       fetchCounsellor();
       if ([3, 4].includes(roleId)) {
@@ -432,7 +432,7 @@ const Invoice = () => {
         });
       }
     }
-  }, [roleId]);
+  }, [roleId, user]);
 
   const paginatedData = invoiceTableData?.slice(
     currentPage * itemsPerPage,
