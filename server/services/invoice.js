@@ -80,7 +80,7 @@ export default class InvoiceService {
     data.role_id = Number(data.role_id);
 
     if (data.role_id === 4) {
-      delete data.counselor_id;
+      // delete data.counselor_id;
     }
 
     if (data.role_id === 3) {
