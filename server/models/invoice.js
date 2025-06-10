@@ -165,7 +165,7 @@ export default class Invoice {
           );
         });
 
-      if (!(data.role_id === 4)) {
+      // if (!(data.role_id === 4)) {
         if (data.counselor_id) {
           query.andWhere('counselor_id', data.counselor_id);
         }
@@ -189,7 +189,7 @@ export default class Invoice {
         if (data.thrpy_status) {
           query.andWhere('thrpy_status', data.thrpy_status);
         }
-      }
+      // }
 
       if (data.tenant_id) {
         query.andWhere('tenant_id', data.tenant_id);
