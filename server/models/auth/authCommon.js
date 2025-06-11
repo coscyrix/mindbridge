@@ -41,6 +41,7 @@ export default class AuthCommon {
 
     const payload = {
       username: data.email,
+      tenant_id: data.tenant_id,
       isAdmin: true,
     };
     //const secret = 's3cr3t';

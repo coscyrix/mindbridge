@@ -80,7 +80,7 @@ function SessionHistory() {
           counselor_id: counselorId,
         });
       } else {
-        response = await CommonServices.getSessionsByCounselor({role_id:4});
+        response = await CommonServices.getSessionsByCounselor({role_id:userObj?.role_id});
       }
 
       if (response.status === 200) {

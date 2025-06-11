@@ -17,6 +17,8 @@ export async function authenticate(req, res, next) {
           message: 'Authentication failed!',
         });
       } else {
+        console.log('decodedToken',decodedToken);
+        
         req.decoded = decodedToken;
         next();
       }
@@ -29,9 +31,12 @@ export async function authenticate(req, res, next) {
 export function generateAccessToken(user) {
   if (!user) throw new Error('Invalid user for token generation');
 
+  console.log('user----->',user);
+
   const payload = {
     username: user.user_email,
     isAdmin: true, // Ensure isAdmin value is accurately sourced
+    tenant_id: user.tenant_id, // Add tenant_id to the payload
   };
   const secret = process.env.JWT_TOKEN_SECRET;
   const expiresIn = '1h';

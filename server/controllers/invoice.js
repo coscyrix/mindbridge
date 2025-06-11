@@ -58,6 +58,8 @@ export default class InvoiceController {
   //////////////////////////////////////////
 
   async getInvoiceByMulti(req, res) {
+    console.log('decoded----->',req.decoded);
+
     const data = req.query;
 
     if (!data.role_id) {
@@ -70,11 +72,9 @@ export default class InvoiceController {
         .send({ message: 'Counselor ID is required for that specific role' });
     }
 
-    // if (data.role_id == 3 && !data.counselor_id) {
-    //   return res
-    //     .status(400)
-    //     .send({ message: 'Counselor ID is required for that specific role' });
-    // }
+    if (data.role_id == 3 && !data.counselor_id) {
+      data.tenant_id = req.decoded.tenant_id;
+    }
 
     if (data.role_id === 4 && !data.counselor_id) {
       return res
@@ -82,6 +82,10 @@ export default class InvoiceController {
         .send({ message: 'Counselor ID is required for that specific role' });
     }
 
+
+    console.log('data----->',data);
+  
+  
     const invoice = new InvoiceService();
     const response = await invoice.getInvoiceByMulti(data);
 
