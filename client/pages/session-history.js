@@ -162,7 +162,7 @@ function SessionHistory() {
     if ([3, 4].includes(userObj?.role_id) && userObj?.tenant_id) {
       fetchCounsellor();
     }
-    fetchSessions("allCounselors");
+    fetchSessions(selectCounselor);
   }, [userObj]);
 
   useEffect(() => {
