@@ -33,6 +33,7 @@ function CustomClientDetails({
   tableCaption = "",
   loading,
   customTab,
+  counselors: propCounselors,
   ...props
 }) {
   const [currentPage, setCurrentPage] = useState(0);
@@ -44,7 +45,7 @@ function CustomClientDetails({
       value: counselor.user_profile_id,
     })) || [];
 
-  const counselors = [
+  const counselors = propCounselors || [
     { label: "All counselors", value: "allCounselors" },
     ...dropdownAdjustedCounselors,
   ];

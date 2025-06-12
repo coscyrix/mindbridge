@@ -463,6 +463,8 @@ export default class UserProfile {
           query.whereIn('user_profile_id', clientIds);
         }
       }
+      console.log('query', query.toQuery());
+      
 
       const rec = await query;
 

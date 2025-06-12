@@ -41,7 +41,12 @@ function ClientSession() {
     try {
       setSessionsLoading(true);
       let response;
-      if (userObj?.role_id !== 4) {
+      if (userObj?.role_id === 3) {
+        // Always fetch with role_id: 3 for role 3 users
+        response = await CommonServices.getSessionsByCounselor({
+          role_id: 3,
+        });
+      } else if (userObj?.role_id !== 4) {
         response = await CommonServices.getSessionsByCounselor({
           role_id: userObj?.role_id,
           counselor_id: userObj?.user_profile_id,
@@ -72,21 +77,23 @@ function ClientSession() {
   };
 
   const fetchCounsellor = async () => {
+    if (!userObj?.tenant_id) return;
     try {
       const response = await CommonServices.getClients();
       if (response.status === 200) {
+        console.log("response", userObj?.tenant_id);
         const { data } = response;
         const allCounselors = data?.rec?.filter(
           (client) =>
             client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
         );
-        const counselorOptions = allCounselors?.map((item) => {
-          return {
-            label: item?.user_first_name + " " + item?.user_last_name,
-            value: item?.user_profile_id,
-          };
-        });
-        setCounselors([...counselors, ...counselorOptions]);
+        console.log('allCounselors', allCounselors);
+        
+        const counselorOptions = allCounselors?.map((item) => ({
+          label: item?.user_first_name + " " + item?.user_last_name,
+          value: item?.user_profile_id,
+        }));
+        setCounselors([{ label: "All counselors", value: "allCounselors" }, ...counselorOptions]);
       }
     } catch (error) {
       console.log("Error fetching clients", error);
@@ -97,6 +104,7 @@ function ClientSession() {
     const counselorId = data?.value;
     setSelectCounselor(counselorId);
     fetchSessions(counselorId);
+    getInvoice();
   };
 
   const handleClickOutside = (e) => {
@@ -186,7 +194,7 @@ function ClientSession() {
         );
       } else {
         let url = `/invoice/multi?role_id=${userObj?.role_id}`;
-        if (selectCounselor) {
+        if (selectCounselor && selectCounselor !== "allCounselors") {
           url += `&counselor_id=${selectCounselor}`;
         }
         response = await api.get(url);
@@ -208,12 +216,14 @@ function ClientSession() {
   }, []);
 
   useEffect(() => {
-    fetchSessions();
-    getInvoice();
-    if ([3, 4].includes(userObj?.role_id)) {
+    if ([3, 4].includes(userObj?.role_id) && userObj?.tenant_id) {
       fetchCounsellor();
     }
+    fetchSessions(selectCounselor);
+    getInvoice();
   }, [userObj]);
+
+  console.log('counselors', counselors);
 
   return (
     <ClientSessionWrapper>
@@ -289,11 +299,13 @@ function ClientSession() {
             />
           </div>
         }
+        
         tableCaption="Client Session List"
         tableData={{
           columns: sessionsDataColumns,
           data: sessions,
         }}
+        
         primaryButton={userObj?.role_id !== 4 && "Add Client Session"}
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}

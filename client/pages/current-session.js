@@ -30,11 +30,11 @@ function CurrentSession() {
     useState("");
   const [tomorrowSessionToBeDisplayed, setTomorrowSessionToBeDisplayed] =
     useState([]);
-  const [counselors, setCounselors] = useState([]);
+  const [counselors, setCounselors] = useState([{ label: "All counselors", value: "allCounselors" }]);
   const { userObj } = useReferenceContext();
 
   const [activeRow, setActiveRow] = useState({});
-  const [selectedCounselor, setSelectedCounselor] = useState(null);
+  const [selectedCounselor, setSelectedCounselor] = useState({ label: "All counselors", value: "allCounselors" });
   const [loading, setLoading] = useState(false);
   const dropdownTodayRef = useRef(null);
   const dropdownTomorrowRef = useState(null);
@@ -364,23 +364,21 @@ function CurrentSession() {
   };
 
   const fetchCounsellor = async () => {
+    if (!userData?.tenant_id) return;
     try {
       setLoading(true);
       const response = await CommonServices.getClients();
       if (response.status === 200) {
         const { data } = response;
         const allCounselors = data?.rec?.filter(
-          (counselor) => counselor?.role_id == 2
+          (counselor) => counselor?.role_id == 2 && counselor?.tenant_id === userData?.tenant_id
         );
-        const counselorOptions = allCounselors?.map((item) => {
-          return {
-            label: item?.user_first_name + " " + item?.user_last_name,
-            value: item?.user_profile_id,
-          };
-        });
-        setSelectedCounselor(counselorOptions?.at(0));
-        await getCurrentSessionData(counselorOptions?.at(0)?.value,4);
-        setCounselors(counselorOptions);
+        const counselorOptions = allCounselors?.map((item) => ({
+          label: item?.user_first_name + " " + item?.user_last_name,
+          value: item?.user_profile_id,
+        }));
+        setCounselors([{ label: "All counselors", value: "allCounselors" }, ...counselorOptions]);
+        setSelectedCounselor({ label: "All counselors", value: "allCounselors" });
       }
     } catch (error) {
       console.log("Error fetching clients", error);
@@ -390,14 +388,22 @@ function CurrentSession() {
   };
 
   const handleSelectCounselor = (data) => {
-    const counselorId = data?.value;
     setSelectedCounselor(data);
-    if(userObj.role_id===4 || userObj.role_id===3){
+    const counselorId = data?.value;
+    if(userData.role_id===4 || userData.role_id===3){
       getCurrentSessionData(counselorId, 4);
     }else{
       getCurrentSessionData(counselorId);
     }
   };
+
+  useEffect(() => {
+    if (userData?.role_id == 4 || userData?.role_id == 3) {
+      fetchCounsellor();
+    } else {
+      getCurrentSessionData(userData?.user_profile_id, userData?.role_id);
+    }
+  }, [userData]);
 
   useEffect(() => {
     updateTodaySessionToDisplay();
