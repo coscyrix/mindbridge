@@ -21,7 +21,10 @@ function ClientSession() {
   const [sessions, setSessions] = useState();
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
-  const [selectCounselor, setSelectCounselor] = useState(null);
+  const [counselors, setCounselors] = useState([
+    { label: "All counselors", value: "allCounselors" },
+  ]);
+  const [selectCounselor, setSelectCounselor] = useState("allCounselors");
   const [activeTab, setActiveTab] = useState(0);
   const { userObj } = useReferenceContext();
 
@@ -68,11 +71,32 @@ function ClientSession() {
     }
   };
 
+  const fetchCounsellor = async () => {
+    try {
+      const response = await CommonServices.getClients();
+      if (response.status === 200) {
+        const { data } = response;
+        const allCounselors = data?.rec?.filter(
+          (client) =>
+            client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
+        );
+        const counselorOptions = allCounselors?.map((item) => {
+          return {
+            label: item?.user_first_name + " " + item?.user_last_name,
+            value: item?.user_profile_id,
+          };
+        });
+        setCounselors([...counselors, ...counselorOptions]);
+      }
+    } catch (error) {
+      console.log("Error fetching clients", error);
+    }
+  };
+
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
     setSelectCounselor(counselorId);
     fetchSessions(counselorId);
-    getInvoice();
   };
 
   const handleClickOutside = (e) => {
@@ -186,7 +210,10 @@ function ClientSession() {
   useEffect(() => {
     fetchSessions();
     getInvoice();
-  }, []);
+    if ([3, 4].includes(userObj?.role_id)) {
+      fetchCounsellor();
+    }
+  }, [userObj]);
 
   return (
     <ClientSessionWrapper>
@@ -270,6 +297,7 @@ function ClientSession() {
         primaryButton={userObj?.role_id !== 4 && "Add Client Session"}
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
+        counselors={counselors}
         handleCreate={handleShowAddClientSession}
         onRowClicked={handleEdit}
         loading={sessionsLoading}
