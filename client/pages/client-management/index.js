@@ -34,7 +34,10 @@ function ClientManagement() {
   const [initialDataLoading, setInitialDataLoading] = useState(false);
   const [confirmationModal, setConfirmationModal] = useState(false);
   const [userProfileId, setUserProfileId] = useState(null);
-  const [selectCounselor, setSelectCounselor] = useState(null);
+  const [counselors, setCounselors] = useState([
+    { label: "All counselors", value: "allCounselors" },
+  ]);
+  const [selectCounselor, setSelectCounselor] = useState("allCounselors");
   const [activeTab, setActiveTab] = useState(0);
 
   const actionDropdownRef = useRef(null);
@@ -89,6 +92,28 @@ function ClientManagement() {
       console.log("Error fetching clients", error);
     } finally {
       setClientsLoading(false);
+    }
+  };
+
+  const fetchCounsellor = async () => {
+    try {
+      const response = await CommonServices.getClients();
+      if (response.status === 200) {
+        const { data } = response;
+        const allCounselors = data?.rec?.filter(
+          (client) =>
+            client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
+        );
+        const counselorOptions = allCounselors?.map((item) => {
+          return {
+            label: item?.user_first_name + " " + item?.user_last_name,
+            value: item?.user_profile_id,
+          };
+        });
+        setCounselors([...counselors, ...counselorOptions]);
+      }
+    } catch (error) {
+      console.log("Error fetching clients", error);
     }
   };
 
@@ -230,7 +255,10 @@ function ClientManagement() {
 
   useEffect(() => {
     fetchClients();
-  }, []);
+    if ([3, 4].includes(userObj?.role_id)) {
+      fetchCounsellor();
+    }
+  }, [userObj]);
   return (
     <ClientManagementContainer role={userObj?.role_id}>
       {[3, 4].includes(userObj?.role_id) && (
@@ -274,6 +302,7 @@ function ClientManagement() {
         fixedHeaderScrollHeight="700px"
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
+        counselors={counselors}
       >
         {[3, 4].includes(userObj?.role_id) && (
           <div className="custom-client-children">

@@ -143,6 +143,9 @@ export default class ThrpyReqController {
     if (data.role_id) {
       data.role_id = Number(data.role_id);
     }
+    if(data.role_id === 3){
+      data.tenant_id = Number(req.decoded.tenant_id);
+    }
     // else {
     //   res.status(400).json({ message: 'Missing mandatory fields' });
     //   return;

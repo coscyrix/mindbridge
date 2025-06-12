@@ -20,10 +20,10 @@ router.get('/search', AsyncWrapper(counselorProfileController.searchCounselors.b
 router.get('/search/filters', AsyncWrapper(counselorProfileController.getSearchFilters.bind(counselorProfileController)));
 
 // Protected routes
-router.post('/', authenticate, AsyncWrapper(counselorProfileController.createCounselorProfile.bind(counselorProfileController)));
-router.put('/:counselor_profile_id', authenticate, AsyncWrapper(counselorProfileController.updateCounselorProfile.bind(counselorProfileController)));
-router.get('/', authenticate, AsyncWrapper(counselorProfileController.getCounselorProfile.bind(counselorProfileController)));
-router.get('/:counselor_profile_id', authenticate, AsyncWrapper(counselorProfileController.getCounselorProfile.bind(counselorProfileController)));
+router.post('/', AsyncWrapper(counselorProfileController.createCounselorProfile.bind(counselorProfileController)));
+router.put('/:counselor_profile_id', AsyncWrapper(counselorProfileController.updateCounselorProfile.bind(counselorProfileController)));
+router.get('/', AsyncWrapper(counselorProfileController.getCounselorProfile.bind(counselorProfileController)));
+router.get('/:counselor_profile_id', AsyncWrapper(counselorProfileController.getCounselorProfile.bind(counselorProfileController)));
 router.post('/:counselor_profile_id/reviews', authenticate, AsyncWrapper(counselorProfileController.addReview.bind(counselorProfileController)));
 router.get('/:counselor_profile_id/reviews', authenticate, AsyncWrapper(counselorProfileController.getReviews.bind(counselorProfileController)));
 

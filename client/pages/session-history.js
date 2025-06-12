@@ -13,9 +13,10 @@ function SessionHistory() {
   const [sessions, setSessios] = useState([]);
   const [sessionToBeDisplayed, setSessionToBeDisplayed] = useState([]);
   const [sessionLoading, setSessionLoading] = useState([]);
-  // const [counselors, setCounselors] = useState([]);
+  const [counselors, setCounselors] = useState([
+    { label: "All counselors", value: "allCounselors" },
+  ]);
   const [selectCounselor, setSelectCounselor] = useState("allCounselors");
-  // const [selectUser, setSelectUser] = useState("User");
   const [filterText, setFilterText] = useState("");
   const [selectDate, setSelectDate] = useState(null);
   const { userObj } = useReferenceContext();
@@ -95,6 +96,28 @@ function SessionHistory() {
     }
   };
 
+  const fetchCounsellor = async () => {
+    try {
+      const response = await CommonServices.getClients();
+      if (response.status === 200) {
+        const { data } = response;
+        const allCounselors = data?.rec?.filter(
+          (client) =>
+            client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
+        );
+        const counselorOptions = allCounselors?.map((item) => {
+          return {
+            label: item?.user_first_name + " " + item?.user_last_name,
+            value: item?.user_profile_id,
+          };
+        });
+        setCounselors([...counselors, ...counselorOptions]);
+      }
+    } catch (error) {
+      console.log("Error fetching clients", error);
+    }
+  };
+
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
     setSelectCounselor(counselorId);
@@ -103,12 +126,6 @@ function SessionHistory() {
 
   const updateUserDataToDisplay = () => {
     let filteredData = sessions;
-
-    // if (selectUser !== "User" && selectUser !== "All Users") {
-    //   filteredData = filteredData.filter(
-    //     (data) => data.client_id === selectUser
-    //   );
-    // }
 
     if (selectDate) {
       filteredData = filteredData.filter(
@@ -142,12 +159,12 @@ function SessionHistory() {
     router.push(`/client-session/${id}`);
   };
 
- useEffect(() => {
-   // Ensure the initial value is set correctly
-   const initialCounselor = 'allCounselors';
-   setSelectCounselor(initialCounselor);
-   fetchSessions(initialCounselor);
- }, []);
+  useEffect(() => {
+    if ([3, 4].includes(userObj?.role_id)) {
+      fetchCounsellor();
+    }
+    fetchSessions("allCounselors");
+  }, [userObj]);
 
   useEffect(() => {
     updateUserDataToDisplay();
@@ -186,6 +203,7 @@ function SessionHistory() {
         selectableRows={false}
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
+        counselors={counselors}
         loading={sessionLoading}
         tableCaption="Session History"
       >
@@ -196,13 +214,6 @@ function SessionHistory() {
               filterText={filterText}
             />
           </div>
-          {/* <CustomSelect
-            options={counselors}
-            value={selectUser}
-            onChange={handleSelectUser}
-            dropdownIcon={<ArrowIcon style={{ transform: "rotate(90deg)" }} />}
-            placeholder="Select a user"
-          /> */}
           <div>
             <input
               type="date"
