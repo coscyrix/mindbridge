@@ -72,6 +72,7 @@ function ClientSession() {
     const counselorId = data?.value;
     setSelectCounselor(counselorId);
     fetchSessions(counselorId);
+    getInvoice();
   };
 
   const handleClickOutside = (e) => {

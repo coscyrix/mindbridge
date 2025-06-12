@@ -1002,6 +1002,8 @@ export default class ThrpyReq {
       //   query.where('tenant_id', Number(tenantId[0].tenant_id));
       // }
 
+      console.log('query----->',query.toQuery());
+
       const rec = await query;
 
       if (!data.req_id && !data.counselor_id && !data.client_id) {
