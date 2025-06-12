@@ -422,15 +422,16 @@ const Invoice = () => {
 
   useEffect(() => {
     if (roleId !== null && user) {
-      getInvoice();
-      fetchCounsellor();
       if ([3, 4].includes(roleId)) {
         fetchFilteredInvoices({
           counselorId: "allCounselors",
           startDate,
           endDate,
         });
+      } else {
+        getInvoice();
       }
+      fetchCounsellor();
     }
   }, [roleId, user]);
 

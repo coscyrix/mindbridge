@@ -155,10 +155,14 @@ export default class UserProfileService {
 
   async getUserProfileById(data) {
     if (data.role_id === 3) {
-      const tenantId = await this.common.getUserTenantId({
-        user_profile_id: data.counselor_id,
-      });
-      data.tenant_id = Number(tenantId[0].tenant_id);
+      if (data.counselor_id) {
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        data.tenant_id = Number(tenantId[0].tenant_id);
+      } else {
+        data.tenant_id = Number(data.tenant_id);
+      }
     }
 
     const userProfileSchema = joi.object({

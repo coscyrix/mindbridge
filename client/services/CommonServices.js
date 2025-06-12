@@ -5,8 +5,8 @@ const CommonServices = {
   getReferences() {
     return api.get(ApiConfig.getReferences);
   },
-  getAllCounselors() {
-    return api.get(ApiConfig.getAllCounselors);
+  getAllCounselors(roleId = 2) {
+    return api.get(ApiConfig.getAllCounselors(roleId));
   },
   getServices() {
     return api.get(ApiConfig.services.getServices);

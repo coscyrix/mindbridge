@@ -1,6 +1,6 @@
 const ApiConfig = {
   getReferences: "/references",
-  getAllCounselors: "/user-profile/?role_id=2",
+  getAllCounselors: (roleId) => `/user-profile/?role_id=${roleId}`,
   dashboard: {
     overallSessions: "/reports/session-stats",
     reportsData: "/reports/session",
