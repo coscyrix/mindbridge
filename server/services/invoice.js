@@ -84,7 +84,7 @@ export default class InvoiceService {
     }
 
     if (data.role_id === 3) {
-      if (data.counselor_id) {
+      if (data.counselor_id && data.counselor_id !== 'allCounselors') {
         const tenantId = await this.common.getUserTenantId({
           user_profile_id: data.counselor_id,
         });

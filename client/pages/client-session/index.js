@@ -41,7 +41,7 @@ function ClientSession() {
     try {
       setSessionsLoading(true);
       let response;
-      if (userObj?.role_id !== 4) {
+      if (userObj?.role_id !== 4 && userObj?.role_id !== 3) {
         response = await CommonServices.getSessionsByCounselor({
           role_id: userObj?.role_id,
           counselor_id: userObj?.user_profile_id,
@@ -72,6 +72,7 @@ function ClientSession() {
   };
 
   const fetchCounsellor = async () => {
+    if (!userObj?.tenant_id) return;
     try {
       const response = await CommonServices.getClients();
       if (response.status === 200) {
@@ -80,13 +81,11 @@ function ClientSession() {
           (client) =>
             client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
         );
-        const counselorOptions = allCounselors?.map((item) => {
-          return {
-            label: item?.user_first_name + " " + item?.user_last_name,
-            value: item?.user_profile_id,
-          };
-        });
-        setCounselors([...counselors, ...counselorOptions]);
+        const counselorOptions = allCounselors?.map((item) => ({
+          label: item?.user_first_name + " " + item?.user_last_name,
+          value: item?.user_profile_id,
+        }));
+        setCounselors([{ label: "All counselors", value: "allCounselors" }, ...counselorOptions]);
       }
     } catch (error) {
       console.log("Error fetching clients", error);
@@ -208,11 +207,11 @@ function ClientSession() {
   }, []);
 
   useEffect(() => {
-    fetchSessions();
-    getInvoice();
-    if ([3, 4].includes(userObj?.role_id)) {
+    if ([3, 4].includes(userObj?.role_id) && userObj?.tenant_id) {
       fetchCounsellor();
     }
+    fetchSessions("allCounselors");
+    getInvoice();
   }, [userObj]);
 
   return (

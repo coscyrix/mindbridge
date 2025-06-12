@@ -97,6 +97,7 @@ function SessionHistory() {
   };
 
   const fetchCounsellor = async () => {
+    if (!userObj?.tenant_id) return;
     try {
       const response = await CommonServices.getClients();
       if (response.status === 200) {
@@ -105,13 +106,11 @@ function SessionHistory() {
           (client) =>
             client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
         );
-        const counselorOptions = allCounselors?.map((item) => {
-          return {
-            label: item?.user_first_name + " " + item?.user_last_name,
-            value: item?.user_profile_id,
-          };
-        });
-        setCounselors([...counselors, ...counselorOptions]);
+        const counselorOptions = allCounselors?.map((item) => ({
+          label: item?.user_first_name + " " + item?.user_last_name,
+          value: item?.user_profile_id,
+        }));
+        setCounselors([{ label: "All counselors", value: "allCounselors" }, ...counselorOptions]);
       }
     } catch (error) {
       console.log("Error fetching clients", error);
@@ -160,7 +159,7 @@ function SessionHistory() {
   };
 
   useEffect(() => {
-    if ([3, 4].includes(userObj?.role_id)) {
+    if ([3, 4].includes(userObj?.role_id) && userObj?.tenant_id) {
       fetchCounsellor();
     }
     fetchSessions("allCounselors");
