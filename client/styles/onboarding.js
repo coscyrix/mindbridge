@@ -53,8 +53,8 @@ export const LeftPanel = styled.div`
 `;
 
 export const RightPanel = styled.div`
-  overflow-y: auto;
   max-height: 100vh;
+  margin:auto;
   width: 55%;
 `;
 
@@ -85,7 +85,7 @@ export const FormContainer = styled.div`
 
     .wrapperInputFields {
       display: flex;
-      align-items: center;
+      align-items: start;
       gap: 1rem;
       justify-content: space-between;
     }
@@ -197,6 +197,12 @@ export const FormContainer = styled.div`
         text-decoration: underline;
       }
     }
+  }
+
+  .primary-button{
+    margin-left: auto;
+    background-color: var(--primary-button-color);
+    color:#fff;
   }
 
   @media (max-width: 768px) {

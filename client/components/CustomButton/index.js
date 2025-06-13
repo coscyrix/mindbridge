@@ -3,6 +3,7 @@ import { CustomButtonContainer, DropdownContainer } from "./style";
 import { ClosedEyeIcon, OpenEyeIcon } from "../../public/assets/icons";
 
 const CustomButton = ({
+  onboardingStep=false,
   onClick,
   title,
   icon,
@@ -46,7 +47,7 @@ const CustomButton = ({
   }, []);
 
   return (
-    <CustomButtonContainer ref={dropdownRef}>
+    <CustomButtonContainer ref={dropdownRef} onboardingStep={onboardingStep}>
       <div
         className={`${
           title == "Download" || title == "Columns" ? title?.toLowerCase() : ""

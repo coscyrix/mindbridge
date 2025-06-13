@@ -10,11 +10,11 @@ import EmpoweringMentalHealth from './EmpoweringMentalHealth/EmpoweringMentalHea
 import MindbridgeJourney from './BeginMindbridgeJourney/MindbridgeJourney';
 import Footer from './Footer';
 import { LandingPageWrapper } from './style';
+import LandingPageLayout from './LandingPageLayout';
 
 const LandingPage = () => {
   return (
     <LandingPageWrapper>
-      <Header />
       <HeroSection />
       <FeaturesAndReportSection />
       <HelpSection />
@@ -23,8 +23,7 @@ const LandingPage = () => {
       <EmpoweringMentalHealth />
       <WorkFlowSection />
       <MindbridgeJourney />
-      <Footer />
-    </LandingPageWrapper>
+      </LandingPageWrapper>
   );
 };
 

@@ -4,25 +4,56 @@ import "../styles/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import { ReferenceContextProvider } from "../context/ReferenceContext";
+import LandingPageLayout from "../components/LandingPageComponents/LandingPageLayout";
+
+const ROUTES = {
+  LANDING_PAGES: ['/', '/search-listing', '/search-details/[id]'],
+  AUTH_PAGES: ['/login', '/reset-password'],
+  ONBOARDING: '/onboarding'
+};
+
+const AppLayout = ({ children, isLandingPage, isOnboardingPage }) => {
+  if (isLandingPage) {
+    return <LandingPageLayout>{children}</LandingPageLayout>;
+  }
+
+  if (isOnboardingPage) {
+    return (
+      <ReferenceContextProvider>
+        {children}
+      </ReferenceContextProvider>
+    );
+  }
+
+  return (
+    <ReferenceContextProvider>
+      <Layout>{children}</Layout>
+    </ReferenceContextProvider>
+  );
+};
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  const allowedPaths = ["/login", "/sign-up", "/reset-password"];
-  const isAbsolutePage =
-    allowedPaths.includes(router.pathname) ||
-    router.pathname.startsWith("/patient-forms");
-  const isLandingPage = router.pathname === "/";
+  const { pathname } = router;
+
+  const isLandingPageRoute = ROUTES.LANDING_PAGES.includes(pathname);
+  const isAuthPage = ROUTES.AUTH_PAGES.includes(pathname);
+  const isOnboardingPage = pathname === ROUTES.ONBOARDING;
+  const isPatientFormsPage = pathname.startsWith("/patient-forms");
+  
+  const shouldUseDefaultLayout = isAuthPage || isPatientFormsPage;
 
   return (
     <>
-      {isAbsolutePage || isLandingPage ? (
+      {shouldUseDefaultLayout ? (
         <Component {...pageProps} />
       ) : (
-        <ReferenceContextProvider>
-            <Layout>
-              <Component {...pageProps} />
-            </Layout>
-        </ReferenceContextProvider>
+        <AppLayout 
+          isLandingPage={isLandingPageRoute}
+          isOnboardingPage={isOnboardingPage}
+        >
+          <Component {...pageProps} />
+        </AppLayout>
       )}
       <ToastContainer />
     </>

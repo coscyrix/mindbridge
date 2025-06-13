@@ -4,9 +4,15 @@ import { otpVerication } from "../../../utils/auth";
 import { useRouter } from "next/router";
 import Spinner from "../../common/Spinner";
 import { OtpVerificationFormContainer } from "./style";
+import { useReferenceContext } from "../../../context/ReferenceContext";
+import CommonServices from "../../../services/CommonServices";
+import Cookies from "js-cookie";
+
 
 const OtpVerificationForm = ({ email }) => {
-  const [otp, setOtp] = useState("");
+  const userData = Cookies.get("user");
+  const userObj = userData && JSON.parse(userData);
+    const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -20,10 +26,19 @@ const OtpVerificationForm = ({ email }) => {
       }
       setError("");
       await otpVerication({ email, otp });
-      router.push("/dashboard");
+      
+      if (userObj?.role_id === 2) {
+        const profileResponse = await CommonServices.getCounselorProfile(userObj.user_profile_id);
+        if (profileResponse.status === 200) {
+          setLoading(false);
+          return router.push('/onboarding');
+        }
+      }
+      
+      setLoading(false);
+      return router.push("/dashboard");
     } catch (error) {
       toast.error(error?.message || "Error while verifying the OTP!");
-    } finally {
       setLoading(false);
     }
   };

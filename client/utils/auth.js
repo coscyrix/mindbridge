@@ -3,10 +3,19 @@ import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import Router from "next/router";
 
+// Main API instance
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     "Content-Type": "application/json",
+  },
+});
+
+// File upload API instance
+export const liveAppApi = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_LIVE_API_URL,
+  headers: {
+    "Content-Type": "multipart/form-data",
   },
 });
 
@@ -94,35 +103,40 @@ export const logout = () => {
   });
 };
 
-// Axios request interceptor to handle token expiration
-api.interceptors.request.use(
-  (config) => {
-    let token = Cookies.get("token");
+// Add interceptors for both API instances
+const addInterceptors = (instance) => {
+  instance.interceptors.request.use(
+    (config) => {
+      let token = Cookies.get("token");
 
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
 
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
 
-// Axios response interceptor to handle error statuses only
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (
-      error.response &&
-      (error.response.status === 401 || error.response.status === 403)
-    ) {
-      console.error("Unauthorized error received. Logging out.");
-      logout();
+  instance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (
+        error.response &&
+        (error.response.status === 401 || error.response.status === 403)
+      ) {
+        console.error("Unauthorized error received. Logging out.");
+        logout();
 
+        return Promise.reject(error);
+      } else if (error) {
+        return Promise.reject(error?.response?.data);
+      }
       return Promise.reject(error);
-    } else if (error) {
-      return Promise.reject(error?.response?.data);
     }
-    return Promise.reject(api);
-  }
-);
+  );
+};
+
+// Add interceptors to both API instances
+addInterceptors(api);
+addInterceptors(liveAppApi);

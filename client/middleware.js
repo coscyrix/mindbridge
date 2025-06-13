@@ -8,6 +8,7 @@ export function middleware(request) {
   const accountVerified = request.cookies.get("accountVerified")?.value;
   const userObj = user && JSON.parse(user);
   const admin = [3, 4].includes(userObj?.role_id);
+  
   const protectedRoutes = [
     "/dashboard",
     "/current-session",
@@ -18,7 +19,10 @@ export function middleware(request) {
     "/invoice",
   ];
 
-  const authRoutes = ["/login", "/sign-up", "/reset-password"];
+  const authRoutes = [
+    "/login",
+    "/reset-password",
+  ];
 
   const isAuthRoute = authRoutes.includes(pathname);
   const isProtectedRoute = protectedRoutes.some((route) =>

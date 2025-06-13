@@ -19,18 +19,17 @@ const WeeklyAvailabilityContainer = styled.div`
     
     .day-header {
       display: flex;
-      align-items: center;
+      align-items: start;
       gap: 16px;
       
       .day-checkbox {
         display: flex;
-        align-items: center;
+        align-items: start;
         min-width: 120px;
         
         input[type="checkbox"] {
-          margin-right: 8px;
-          width: 18px;
-          height: 18px;
+          width: 12px;
+          height: 12px;
         }
         
         label {
@@ -43,6 +42,7 @@ const WeeklyAvailabilityContainer = styled.div`
         display: flex;
         align-items: center;
         gap: 12px;
+        margin-bottom: 10px;
         
         .time-select {
           width: 150px;
@@ -55,13 +55,11 @@ const WeeklyAvailabilityContainer = styled.div`
       }
 
       .remove-button {
-        margin-left: 12px;
         color: #999;
         background: none;
         border: none;
         cursor: pointer;
         font-size: 18px;
-        padding: 4px 8px;
         
         &:hover {
           color: #666;
@@ -75,10 +73,6 @@ const WeeklyAvailabilityContainer = styled.div`
       background: none;
       border: none;
       cursor: pointer;
-      padding: 8px 0;
-      margin-left: 136px;
-      display: flex;
-      align-items: center;
       
       &:hover {
         color: #1976d2;
@@ -153,6 +147,60 @@ const WeeklyAvailability = ({ control }) => {
     }));
   };
 
+  const getTimeArray = (slots) => {
+  if (!slots || !slots.length) return [];
+
+  // Helper: Convert "HH:mm" to minutes past midnight.
+  const timeToMinutes = (time) => {
+    const [hrs, mins] = time.split(':').map(Number);
+    return hrs * 60 + mins;
+  };
+
+  // Helper: Convert minutes back to "HH:mm" (with leading zeros).
+  const minutesToTime = (minutes) => {
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+  };
+
+  // Generate an array of times for a given slot.
+  const generateTimes = (start, end) => {
+    const times = [];
+    let current = timeToMinutes(start);
+    const endMinutes = timeToMinutes(end);
+    
+    // Loop in 1-hour (60 minutes) increments.
+    while (current <= endMinutes) {
+      times.push(minutesToTime(current));
+      current += 60;
+    }
+    
+    // If the last generated time isn't exactly the end, add the end time.
+    if (times[times.length - 1] !== end) {
+      times.push(end);
+    }
+    
+    return times;
+  };
+
+  let allTimes = [];
+
+  // Process each slot.
+  slots.forEach(slot => {
+    if (slot.start && slot.end) {
+      const timesForSlot = generateTimes(slot.start, slot.end);
+      allTimes = allTimes.concat(timesForSlot);
+    }
+  });
+
+  // Remove duplicates and sort (optional, if your slots might overlap).
+  allTimes = [...new Set(allTimes)];
+  allTimes.sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+
+  return allTimes;
+};
+
+
   return (
     <WeeklyAvailabilityContainer>
       <h2>Default Opening Hours For Business</h2>
@@ -161,20 +209,27 @@ const WeeklyAvailability = ({ control }) => {
           <div className="day-header">
             <div className="day-checkbox">
               <Controller
-                name={`availability.${day.id}.enabled`}
+                name={`availability.${day.id}`}
                 control={control}
-                defaultValue={day.id !== 'saturday' && day.id !== 'sunday'}
+                defaultValue={day.id !== 'saturday' && day.id !== 'sunday' ? getTimeArray([defaultTimeSlot]) : []}
                 render={({ field }) => (
                   <>
                     <input
                       type="checkbox"
-                      checked={field.value}
+                      checked={field.value && field.value.length > 0}
                       onChange={(e) => {
-                        field.onChange(e.target.checked);
                         if (!e.target.checked) {
+                          field.onChange([]);
                           setTimeSlots(prev => ({
                             ...prev,
-                            [day.id]: [{ ...defaultTimeSlot }]
+                            [day.id]: []
+                          }));
+                        } else {
+                          const newSlots = [{ ...defaultTimeSlot }];
+                          field.onChange(getTimeArray(newSlots));
+                          setTimeSlots(prev => ({
+                            ...prev,
+                            [day.id]: newSlots
                           }));
                         }
                       }}
@@ -185,98 +240,98 @@ const WeeklyAvailability = ({ control }) => {
                 )}
               />
             </div>
-            
             <Controller
               name={`availability.${day.id}`}
               control={control}
-              defaultValue={{ slots: [{ ...defaultTimeSlot }] }}
+              defaultValue={day.id !== 'saturday' && day.id !== 'sunday' ? getTimeArray([defaultTimeSlot]) : []}
               render={({ field }) => (
-                <Controller
-                  name={`availability.${day.id}.enabled`}
-                  control={control}
-                  render={({ field: enabledField }) => (
-                    !enabledField.value ? (
-                      <span style={{ color: '#666' }}>closed</span>
-                    ) : (
-                      <>
-                        {(timeSlots[day.id] || []).map((slot, index) => (
-                          <div key={index} className="time-selectors">
-                            <Select
-                              className="time-select"
-                              classNamePrefix="select"
-                              options={timeOptions}
-                              value={timeOptions.find(option => 
-                                option.value === (field.value?.slots?.[index]?.start || slot.start)
-                              )}
-                              onChange={(option) => {
-                                const newSlots = [...(field.value?.slots || [])];
-                                if (!newSlots[index]) {
-                                  newSlots[index] = { ...slot };
-                                }
-                                newSlots[index] = { 
-                                  ...newSlots[index], 
-                                  start: option.value 
-                                };
-                                field.onChange({ slots: newSlots });
-                                updateTimeSlot(day.id, index, field, newSlots);
-                              }}
-                              placeholder="Start time"
-                            />
-                            <span className="separator">-</span>
-                            <Select
-                              className="time-select"
-                              classNamePrefix="select"
-                              options={timeOptions}
-                              value={timeOptions.find(option => 
-                                option.value === (field.value?.slots?.[index]?.end || slot.end)
-                              )}
-                              onChange={(option) => {
-                                const newSlots = [...(field.value?.slots || [])];
-                                if (!newSlots[index]) {
-                                  newSlots[index] = { ...slot };
-                                }
-                                newSlots[index] = { 
-                                  ...newSlots[index], 
-                                  end: option.value 
-                                };
-                                field.onChange({ slots: newSlots });
-                                updateTimeSlot(day.id, index, field, newSlots);
-                              }}
-                              placeholder="End time"
-                            />
-                            {index > 0 && (
-                              <button 
-                                className="remove-button" 
-                                type="button"
-                                onClick={() => {
-                                  removeTimeSlot(day.id, index);
-                                  const newSlots = (field.value?.slots || []).filter((_, i) => i !== index);
-                                  field.onChange({ slots: newSlots });
-                                }}
-                              >
-                                ×
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        {(timeSlots[day.id] || []).length < 3 && (
+                !field.value || field.value.length === 0 ? (
+                  <span style={{ color: '#666' }}>closed</span>
+                ) : (
+                  <>
+                  <div className='time-slot-container'>
+                    {(timeSlots[day.id] || []).map((slot, index) => (
+                      <div key={index} className="time-selectors">
+                        <Select
+                          className="time-select"
+                          classNamePrefix="select"
+                          options={timeOptions}
+                          value={timeOptions.find(option => 
+                            option.value === slot.start
+                          )}
+                          onChange={(option) => {
+                            const newSlots = [...timeSlots[day.id]];
+                            newSlots[index] = { 
+                              ...newSlots[index], 
+                              start: option.value 
+                            };
+                            setTimeSlots(prev => ({
+                              ...prev,
+                              [day.id]: newSlots
+                            }));
+                            field.onChange(getTimeArray(newSlots));
+                          }}
+                          placeholder="Start time"
+                        />
+                        <span className="separator">-</span>
+                        <Select
+                          className="time-select"
+                          classNamePrefix="select"
+                          options={timeOptions}
+                          value={timeOptions.find(option => 
+                            option.value === slot.end
+                          )}
+                          onChange={(option) => {
+                            const newSlots = [...timeSlots[day.id]];
+                            newSlots[index] = { 
+                              ...newSlots[index], 
+                              end: option.value 
+                            };
+                            setTimeSlots(prev => ({
+                              ...prev,
+                              [day.id]: newSlots
+                            }));
+                            field.onChange(getTimeArray(newSlots));
+                          }}
+                          placeholder="End time"
+                        />
                           <button 
-                            type="button" 
-                            className="add-time"
+                            className="remove-button" 
+                            type="button"
                             onClick={() => {
-                              const newSlot = { ...defaultTimeSlot };
-                              addTimeSlot(day.id);
-                              const newSlots = [...(field.value?.slots || []), newSlot];
-                              field.onChange({ slots: newSlots });
+                              const newSlots = timeSlots[day.id].filter((_, i) => i !== index);
+                              setTimeSlots(prev => ({
+                                ...prev,
+                                [day.id]: newSlots
+                              }));
+                              field.onChange(getTimeArray(newSlots));
                             }}
+                            disabled={index===0}
+                            style={{visibility:index===0&&'hidden'}}
                           >
-                            Add
+                            ×
                           </button>
-                        )}
-                      </>
-                    )
-                  )}
-                />
+                      </div>
+                    ))}
+                    </div>
+                    {(timeSlots[day.id] || []) && (
+                      <button 
+                        type="button" 
+                        className="add-time"
+                        onClick={() => {
+                          const newSlots = [...timeSlots[day.id], { ...defaultTimeSlot }];
+                          setTimeSlots(prev => ({
+                            ...prev,
+                            [day.id]: newSlots
+                          }));
+                          field.onChange(getTimeArray(newSlots));
+                        }}
+                      >
+                        Add
+                      </button>
+                    )}
+                  </>
+                )
               )}
             />
           </div>

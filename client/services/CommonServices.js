@@ -1,5 +1,5 @@
 import ApiConfig from "../config/apiConfig";
-import { api } from "../utils/auth";
+import { api, liveAppApi } from "../utils/auth";
 
 const CommonServices = {
   getReferences() {
@@ -43,6 +43,24 @@ const CommonServices = {
   getFeedbackFormDetails(params) {
     return api.get(ApiConfig.feedback.getFeedbackFormDetails, { params });
   },
+  uploadOnboardingDocuments(formData){
+    return liveAppApi.post(ApiConfig.onboarding.uploadDocuments, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+  getCounselorProfile(counselorId){
+    return liveAppApi.get(`${ApiConfig.counselorProfile.getCounselorProfile}/${counselorId}`);
+  },
+  getSearchedCounselors(payload){
+    return liveAppApi.get(`${ApiConfig.counselorProfile.searchCounselors}/`, {
+      params: payload
+    });
+  },
+  getSearchFilters(){
+    return liveAppApi.get(ApiConfig.counselorProfile.getSearchFilters);
+  }
 };
 
 export default CommonServices;
