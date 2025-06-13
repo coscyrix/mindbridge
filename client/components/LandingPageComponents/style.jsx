@@ -262,7 +262,6 @@ export const HeroSectionWrapper = styled.div`
     @media screen and (max-width: 768px) {
       font-size: 1rem;
       text-align: center;
-      padding: 0 20px;
     }
   }
 
@@ -271,7 +270,7 @@ export const HeroSectionWrapper = styled.div`
     padding: 90px 80px 90px 63px;
 
     @media screen and (max-width: 768px) {
-      padding: 40px 20px;
+      padding: 40px 60px;
       order: 2;
     }
   }
@@ -337,7 +336,6 @@ export const SearchBarWrapper = styled.div`
   &.search-bar-container {
     display: flex;
     align-items: center;
-    gap: 32px;
     background-color: white;
     padding: 10px;
     border-radius: 5px;
@@ -356,12 +354,16 @@ export const SearchBarWrapper = styled.div`
     flex: 1;
     border-right: 1px solid #2e2e2e33;
     align-items: flex-start;
+    padding-right:32px;
+    margin-right:32px;
 
     @media screen and (max-width: 768px) {
       width: 100%;
       border-right: none;
       border-bottom: 1px solid #2e2e2e33;
       padding-bottom: 15px;
+      padding-right:0px;
+      margin-right:0px;
     }
 
     h4 {
@@ -428,6 +430,9 @@ export const FeatureAndReportSectionWrapper = styled.div`
     margin-bottom: 50px;
     justify-content: center;
     position: relative;
+    @media screen and (max-width: 768px) {
+    padding: 0px 60px;
+  }
     @media screen and (max-width: 425px) {
       padding: 0px 16px;
     }
@@ -448,6 +453,10 @@ export const FeatureAndReportSectionWrapper = styled.div`
     flex-direction: column;
     align-items: center;
     text-align: center;
+    @media screen and (max-width: 768px) {
+      margin: 0px 60px;
+      padding: 50px 16px;
+    }
     @media screen and (max-width: 425px) {
       margin: 0px 16px;
       padding: 50px 16px;
@@ -458,6 +467,9 @@ export const FeatureAndReportSectionWrapper = styled.div`
     align-items: center;
     display: flex;
     flex-direction: column;
+    @media screen and (max-width: 768px) {
+      max-width:100%;
+  }
     @media screen and (max-width: 425px) {
       max-width: 100%;
     }
@@ -525,6 +537,9 @@ export const FeatureAndReportSectionWrapper = styled.div`
     font-size: 2.8125rem;
     text-transform: capitalize;
     margin: 100px 90px 40px 90px;
+    @media screen and (max-width: 768px) {
+      margin: 100px 60px 40px 60px;
+    }
     @media screen and (max-width: 425px) {
       margin: 100px 16px 40px 16px;
       font-size: 1.8125rem;
@@ -534,6 +549,9 @@ export const FeatureAndReportSectionWrapper = styled.div`
   .swiper-container {
     margin: 0px 90px;
     margin-bottom: 100px;
+    @media screen and (max-width: 768px) {
+      margin: 0px 60px;
+    }
     @media screen and (max-width: 425px) {
       margin: 0px 16px;
       margin-bottom: 100px;
@@ -612,6 +630,9 @@ export const HelpSectionWrapper = styled.section`
   color: white;
   text-align: center;
   padding: 95px 300px;
+  @media screen and (max-width: 768px) {
+    padding: 95px 60px;
+  }
   @media screen and (max-width: 425px) {
     padding: 95px 16px;
   }
@@ -658,9 +679,15 @@ export const CoreFeaturesSectionWrapper = styled.section`
   padding: 100px 90px;
   background-color: white;
   gap: 30px;
+  @media screen and (max-width:1024px){
+    padding:100px 90px;
+    flex-direction: column;
+  }
+  @media screen and (max-width:768px){
+    padding:100px 60px;
+  }
   @media screen and (max-width: 425px) {
     padding: 100px 16px;
-    flex-direction: column;
   }
 
   .text-content-container {
@@ -707,6 +734,9 @@ export const TrustAndComplianceSectionWrapper = styled.section`
   display: flex;
   align-items: center;
   padding: 70px 90px;
+  @media screen and (max-width:768px){
+    padding:70px 60px;
+  }
   @media screen and (max-width: 425px) {
     padding: 70px 16px;
   }
@@ -724,6 +754,10 @@ export const TrustAndComplianceSectionWrapper = styled.section`
     padding: 75px 60px;
     border-radius: 12px;
     max-width: 650px;
+    @media screen and (max-width:768px){
+      margin-right:220px;
+      padding:75px 15px;
+    }
     @media screen and (max-width: 425px) {
       padding: 75px 30px;
     }
@@ -770,6 +804,10 @@ export const TrustAndComplianceSectionWrapper = styled.section`
 export const EmpoweringSectionWrapper = styled.section`
   padding: 100px 90px;
   background-color: white;
+
+  @media screen and (max-width:768px){
+    padding:100px 60px;
+  }
 
   @media screen and (max-width: 425px) {
     padding: 100px 16px;
@@ -875,6 +913,10 @@ export const CoreFeatureCardWrapper = styled.div`
   gap: 16px;
   min-width: 340px;
 
+  @media screen and (max-width:768px){
+    min-width: unset;
+  }
+
   @media screen and (max-width: 425px) {
     min-width: unset;
     padding: 15px;
@@ -907,6 +949,13 @@ export const WorkFlowSectionWrapper = styled.section`
   padding: 100px 0px 100px 90px;
   display: flex;
   align-items: center;
+  gap:36px;
+
+  @media screen and (max-width: 768px) {
+    padding: 100px 60px 120px 60px;
+    flex-direction: column;
+    gap: 50px;
+  }
 
   @media screen and (max-width: 425px) {
     padding: 100px 16px 120px 16px;
@@ -919,8 +968,9 @@ export const WorkFlowSectionWrapper = styled.section`
     display: flex;
     align-items: center;
     gap: 50px;
-    @media screen and (max-width: 425px) {
+    @media screen and (max-width: 768px) {
       flex-direction: column;
+      width:100%;
     }
   }
 
@@ -930,7 +980,7 @@ export const WorkFlowSectionWrapper = styled.section`
     gap: 15px;
     margin-right: 20px;
 
-    @media screen and (max-width: 425px) {
+    @media screen and (max-width: 768px) {
       display: none;
     }
   }
@@ -948,6 +998,10 @@ export const WorkFlowSectionWrapper = styled.section`
     height: 460px;
     background-color: #ccc;
     border-radius: 5px;
+    @media screen and (max-width:768px){
+      object-fit: cover;
+      max-height:510px;
+    }
   }
 
   .right-content-container {
@@ -955,7 +1009,7 @@ export const WorkFlowSectionWrapper = styled.section`
     .swiper-slide {
       max-width: 256px !important;
     }
-    @media screen and (max-width: 425px) {
+    @media screen and (max-width: 768px) {
       max-width: 100%;
     }
   }
@@ -967,16 +1021,19 @@ export const WorkFlowSectionWrapper = styled.section`
     font-size: 2.8125rem;
     text-transform: capitalize;
     margin-bottom: 50px;
+    @media screen and (max-width:768px){
+      text-align: center  ;
+    }
   }
 
   .workflow-heading {
-    @media screen and (max-width: 425px) {
+    @media screen and (max-width: 768px) {
       display: none;
     }
   }
   .workflow-heading-mob {
     display: none;
-    @media screen and (max-width: 425px) {
+    @media screen and (max-width: 768px) {
       display: block;
       margin-bottom: 0px;
     }
@@ -1032,7 +1089,7 @@ export const WorkflowFeatureCardWrapper = styled.div`
   text-align: left;
   color: #000;
 
-  @media screen and (max-width: 425px) {
+  @media screen and (max-width: 768px) {
     padding: 35px 10px;
   }
 
@@ -1054,6 +1111,9 @@ export const WorkflowFeatureCardWrapper = styled.div`
 export const MindbridgeJourneyWrapper = styled.section`
   padding: 100px 90px 120px 90px;
   background-color: #fff;
+  @media screen and (max-width: 768px) {
+    padding: 70px 60px 0px 60px;
+  }
   @media screen and (max-width: 425px) {
     padding: 100px 16px 120px 16px;
   }
@@ -1063,8 +1123,8 @@ export const MindbridgeJourneyWrapper = styled.section`
     align-items: start;
     margin-bottom: 40px;
     flex: 1;
-    gap: 50px;
-    @media screen and (max-width: 425px) {
+    gap: 80px;
+    @media screen and (max-width: 768px) {
       flex-direction: column;
     }
   }
@@ -1103,7 +1163,7 @@ export const MindbridgeJourneyWrapper = styled.section`
 
   .image-placeholder {
     width: 100%;
-    height: 320px;
+    height: 350px;
     background-color: #ccc;
     border-radius: 5px;
     display: flex;
@@ -1162,6 +1222,10 @@ export const FooterWrapper = styled.footer`
   color: white;
   padding: 70px 90px 0px 90px;
   text-align: center;
+
+  @media screen and (max-width: 768px) {
+    padding: 70px 60px 0px 60px;
+  }
 
   @media screen and (max-width: 425px) {
     padding: 70px 16px 0px 16px;
