@@ -130,8 +130,8 @@ export default class ServerConfig {
   async listen() {
     try {
       const options = {
-        key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
-        cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
+        // key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
+        // cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
       };
 
       const { default: knex } = await import('knex');

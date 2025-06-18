@@ -21,8 +21,8 @@ router.get('/search/filters', AsyncWrapper(counselorProfileController.getSearchF
 
 // Protected routes
 router.post('/', AsyncWrapper(counselorProfileController.createCounselorProfile.bind(counselorProfileController)));
-router.put('/:counselor_profile_id', AsyncWrapper(counselorProfileController.updateCounselorProfile.bind(counselorProfileController)));
 router.get('/', AsyncWrapper(counselorProfileController.getCounselorProfile.bind(counselorProfileController)));
+router.put('/:counselor_profile_id', AsyncWrapper(counselorProfileController.updateCounselorProfile.bind(counselorProfileController)));
 router.get('/:counselor_profile_id', AsyncWrapper(counselorProfileController.getCounselorProfile.bind(counselorProfileController)));
 router.post('/:counselor_profile_id/reviews', authenticate, AsyncWrapper(counselorProfileController.addReview.bind(counselorProfileController)));
 router.get('/:counselor_profile_id/reviews', authenticate, AsyncWrapper(counselorProfileController.getReviews.bind(counselorProfileController)));
@@ -32,6 +32,13 @@ router.put('/:counselor_profile_id/image',
   authenticate, 
   upload.single('image'),
   AsyncWrapper(counselorProfileController.updateProfileImage.bind(counselorProfileController))
+);
+
+// License file upload endpoint
+router.put('/:counselor_profile_id/license', 
+  authenticate, 
+  upload.single('license'),
+  AsyncWrapper(counselorProfileController.updateLicenseFile.bind(counselorProfileController))
 );
 
 export const counselorProfileRouter = { baseUrl: '/api/counselor-profile', router }; 

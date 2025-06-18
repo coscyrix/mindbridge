@@ -1,63 +1,142 @@
 import CounselorProfile from '../models/counselorProfile.js';
 import joi from 'joi';
 import { saveFile } from '../utils/fileUpload.js';
+import CounselorService from '../models/counselorServices.js';
+import Service from '../models/service.js';
 
 export default class CounselorProfileService {
   constructor() {
     this.counselorProfile = new CounselorProfile();
+    this.counselorService = new CounselorService();
+    this.service = new Service();
   }
 
   async createCounselorProfile(data) {
-    const schema = joi.object({
-      user_profile_id: joi.number().required(),
-      profile_picture_url: joi.string().uri().optional(),
-      license_number: joi.string().required(),
-      license_file_url: joi.string().uri().required(),
-      profile_notes: joi.string().optional(),
-      location: joi.string().required(),
-      services_offered: joi.string().required(),
-      specialties: joi.string().required(),
-      service_modalities: joi.string().required(),
-      availability: joi.string().required(),
-      is_verified: joi.boolean().default(false),
-      patients_seen: joi.number().integer().min(0).default(0),
-      gender: joi.string().required(),
-      race: joi.string().required(),
-      public_phone: joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required()
-    });
+    try {
+      const { services_offered, specialties, ...profileData } = data;
+      
+      // Parse JSON strings to arrays
+      const parsedServices = services_offered ? JSON.parse(services_offered) : [];
+      const parsedSpecialties = specialties ? JSON.parse(specialties) : [];
+      
+      // Create the counselor profile
+      const profile = await this.counselorProfile.createCounselorProfile(profileData);
+      
+      if (profile.error) {
+        return profile;
+      }
 
-    const { error } = schema.validate(data);
-    if (error) {
-      return { message: error.details[0].message, error: -1 };
+      // Add services and specialties
+      if (parsedServices.length || parsedSpecialties.length) {
+        const serviceRecords = [];
+
+        // Add regular services
+        if (parsedServices.length) {
+          // Get services by IDs
+          const serviceIds = await this.service.getServiceById({ service_id: parsedServices });
+          
+          if (serviceIds.rec) {
+            serviceRecords.push(...serviceIds.rec.map(s => ({
+              counselor_profile_id: profile.id,
+              service_id: s.service_id,
+              is_specialty: false
+            })));
+          }
+        }
+
+        // Add specialties
+        if (parsedSpecialties.length) {
+          // Get services by IDs
+          const specialtyIds = await this.service.getServiceById({ service_id: parsedSpecialties });
+          
+          if (specialtyIds.rec) {
+            serviceRecords.push(...specialtyIds.rec.map(s => ({
+              counselor_profile_id: profile.id,
+              service_id: s.service_id,
+              is_specialty: true
+            })));
+          }
+        }
+
+        if (serviceRecords.length) {
+          for (const record of serviceRecords) {
+            await this.counselorService.createCounselorService(record);
+          }
+        }
+      }
+
+      return profile;
+    } catch (error) {
+      logger.error('Error creating counselor profile:', error);
+      return { message: 'Error creating counselor profile', error: -1 };
     }
-
-    return this.counselorProfile.createCounselorProfile(data);
   }
 
   async updateCounselorProfile(counselor_profile_id, data) {
-    const schema = joi.object({
-      profile_picture_url: joi.string().uri().optional(),
-      license_number: joi.string().optional(),
-      license_file_url: joi.string().uri().optional(),
-      profile_notes: joi.string().optional(),
-      location: joi.string().optional(),
-      services_offered: joi.string().optional(),
-      specialties: joi.string().optional(),
-      service_modalities: joi.string().optional(),
-      availability: joi.string().optional(),
-      is_verified: joi.boolean().optional(),
-      patients_seen: joi.number().integer().min(0).optional(),
-      gender: joi.string().optional(),
-      race: joi.string().optional(),
-      public_phone: joi.string().pattern(/^\+?[1-9]\d{1,14}$/).optional()
-    });
+    try {
+      const { services, specialties, ...profileData } = data;
+      
+      // Update the counselor profile
+      const profile = await this.counselorProfile.updateCounselorProfile(counselor_profile_id, profileData);
+      
+      if (profile.error) {
+        return profile;
+      }
 
-    const { error } = schema.validate(data);
-    if (error) {
-      return { message: error.details[0].message, error: -1 };
+      // Update services and specialties
+      if (services || specialties) {
+        // Get existing services
+        const existingServices = await this.counselorService.getCounselorServices({
+          counselor_profile_id
+        });
+
+        // Delete existing services
+        if (existingServices.rec) {
+          for (const service of existingServices.rec) {
+            await this.counselorService.deleteCounselorService(service.counselor_service_id);
+          }
+        }
+
+        const serviceRecords = [];
+
+        // Add new services
+        if (services?.length) {
+          const serviceIds = await this.service.getServiceById({ service_name: services });
+          
+          if (serviceIds.rec) {
+            serviceRecords.push(...serviceIds.rec.map(s => ({
+              counselor_profile_id,
+              service_id: s.service_id,
+              is_specialty: false
+            })));
+          }
+        }
+
+        // Add new specialties
+        if (specialties?.length) {
+          const specialtyIds = await this.service.getServiceById({ service_name: specialties });
+          
+          if (specialtyIds.rec) {
+            serviceRecords.push(...specialtyIds.rec.map(s => ({
+              counselor_profile_id,
+              service_id: s.service_id,
+              is_specialty: true
+            })));
+          }
+        }
+
+        if (serviceRecords.length) {
+          for (const record of serviceRecords) {
+            await this.counselorService.createCounselorService(record);
+          }
+        }
+      }
+
+      return profile;
+    } catch (error) {
+      logger.error('Error updating counselor profile:', error);
+      return { message: 'Error updating counselor profile', error: -1 };
     }
-
-    return this.counselorProfile.updateCounselorProfile(counselor_profile_id, data);
   }
 
   async getCounselorProfile(filters) {
@@ -75,23 +154,13 @@ export default class CounselorProfileService {
       return { message: error.details[0].message, error: -1 };
     }
 
-    return this.counselorProfile.getCounselorProfile(filters);
-  }
-
-  async addReview(data) {
-    const schema = joi.object({
-      counselor_profile_id: joi.number().required(),
-      client_id: joi.number().required(),
-      rating: joi.number().integer().min(1).max(5).required(),
-      review_text: joi.string().required()
-    });
-
-    const { error } = schema.validate(data);
-    if (error) {
-      return { message: error.details[0].message, error: -1 };
+    const profile = await this.counselorProfile.getCounselorProfile(filters);
+    
+    if (profile.error) {
+      return profile;
     }
-
-    return this.counselorProfile.addReview(data);
+    
+    return profile;
   }
 
   async getReviews(counselor_profile_id) {
@@ -128,7 +197,31 @@ export default class CounselorProfileService {
       return { message: error.details[0].message, error: -1 };
     }
 
-    return this.counselorProfile.searchCounselors(searchParams);
+    const results = await this.counselorProfile.searchCounselors(searchParams);
+    
+    if (results.error) {
+      return results;
+    }
+
+    // Get services for each profile
+    if (results.rec) {
+      for (const profile of results.rec) {
+        const services = await this.counselorService.getCounselorServices({
+          counselor_profile_id: profile.counselor_profile_id
+        });
+        
+        if (services.rec) {
+          profile.services_offered = services.rec
+            .filter(s => !s.is_specialty)
+            .map(s => s.service_name);
+          profile.specialties = services.rec
+            .filter(s => s.is_specialty)
+            .map(s => s.service_name);
+        }
+      }
+    }
+
+    return results;
   }
 
   async updateProfileImage(counselor_profile_id, file) {
@@ -159,4 +252,33 @@ export default class CounselorProfileService {
       return { message: 'Error updating profile image', error: -1 };
     }
   }
-} 
+
+  async updateLicenseFile(counselor_profile_id, file) {
+    try {
+      // Validate file
+      if (!file) {
+        return { message: 'No file provided', error: -1 };
+      }
+
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (!allowedTypes.includes(file.mimetype)) {
+        return { message: 'Invalid file type. Only PDF, JPEG and PNG are allowed', error: -1 };
+      }
+
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (file.size > maxSize) {
+        return { message: 'File too large. Maximum size is 10MB', error: -1 };
+      }
+
+      // Save file
+      const fileUrl = await saveFile(file, 'license_files');
+
+      // Update profile with new license file URL
+      return this.counselorProfile.updateLicenseFile(counselor_profile_id, fileUrl);
+    } catch (error) {
+      return { message: 'Error updating license file', error: -1 };
+    }
+  }
+}

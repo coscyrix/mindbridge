@@ -99,10 +99,33 @@ export default class CounselorProfile {
     try {
       const query = this.db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select('cp.*', 'up.user_first_name', 'up.user_last_name', 'u.email')
+        .select(
+          'cp.*',
+          'up.user_first_name',
+          'up.user_last_name',
+          'u.email',
+          this.db.raw('COALESCE(JSON_ARRAYAGG(' +
+            'CASE WHEN s.service_id IS NOT NULL THEN ' +
+            'JSON_OBJECT(' +
+            '"service_id", s.service_id, ' +
+            '"service_name", s.service_name, ' +
+            '"service_code", s.service_code, ' +
+            '"is_report", s.is_report, ' +
+            '"is_additional", s.is_additional, ' +
+            '"total_invoice", s.total_invoice, ' +
+            '"nbr_of_sessions", s.nbr_of_sessions, ' +
+            '"svc_formula_typ", s.svc_formula_typ, ' +
+            '"svc_formula", s.svc_formula, ' +
+            '"gst", s.gst, ' +
+            '"is_specialty", cs.is_specialty' +
+            ') END), JSON_ARRAY()) as services')
+        )
         .from('counselor_profile as cp')
         .join('user_profile as up', 'cp.user_profile_id', 'up.user_profile_id')
-        .join('users as u', 'up.user_id', 'u.user_id');
+        .join('users as u', 'up.user_id', 'u.user_id')
+        .leftJoin('counselor_services as cs', 'cp.counselor_profile_id', 'cs.counselor_profile_id')
+        .leftJoin('service as s', 'cs.service_id', 's.service_id')
+        .groupBy('cp.counselor_profile_id');
 
       if (filters.counselor_profile_id) {
         query.where('cp.counselor_profile_id', filters.counselor_profile_id);
@@ -129,6 +152,51 @@ export default class CounselorProfile {
       }
 
       const results = await query;
+      console.log('Raw query results:', JSON.stringify(results, null, 2));
+
+      // Process the services array for each profile
+      if (results.length > 0) {
+        results.forEach(profile => {
+          try {
+            console.log('Processing profile:', profile.counselor_profile_id);
+            console.log('Raw services:', profile.services);
+            
+            if (profile.services && profile.services !== '[null]') {
+              let services;
+              if (typeof profile.services === 'string') {
+                services = JSON.parse(profile.services);
+              } else {
+                services = profile.services;
+              }
+              
+              console.log('Parsed services:', services);
+              
+              if (Array.isArray(services)) {
+                // Filter out null values and empty objects
+                const validServices = services.filter(s => s && Object.keys(s).length > 0);
+                console.log('Valid services:', validServices);
+                
+                profile.services_offered = validServices.filter(s => !s.is_specialty);
+                profile.specialties = validServices.filter(s => s.is_specialty);
+                
+                console.log('Services offered:', profile.services_offered);
+                console.log('Specialties:', profile.specialties);
+              } else {
+                profile.services_offered = [];
+                profile.specialties = [];
+              }
+            } else {
+              profile.services_offered = [];
+              profile.specialties = [];
+            }
+            delete profile.services;
+          } catch (error) {
+            console.error('Error processing services for profile:', profile.counselor_profile_id, error);
+            profile.services_offered = [];
+            profile.specialties = [];
+          }
+        });
+      }
 
       // If getting a single counselor profile, include related counselors
       if (filters.counselor_profile_id && results.length > 0) {
@@ -377,6 +445,41 @@ export default class CounselorProfile {
     } catch (error) {
       logger.error('Error updating profile image:', error);
       return { message: 'Error updating profile image', error: -1 };
+    }
+  }
+
+  async updateLicenseFile(counselor_profile_id, fileUrl) {
+    try {
+      // Get current profile to check if it exists
+      const currentProfile = await this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('license_file_url')
+        .from('counselor_profile')
+        .where('counselor_profile_id', counselor_profile_id)
+        .first();
+
+      if (!currentProfile) {
+        return { message: 'Counselor profile not found', error: -1 };
+      }
+
+      // Update the profile with new license file URL
+      const result = await this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('counselor_profile')
+        .where('counselor_profile_id', counselor_profile_id)
+        .update({ license_file_url: fileUrl });
+
+      if (!result) {
+        return { message: 'Error updating license file', error: -1 };
+      }
+
+      return { 
+        message: 'License file updated successfully',
+        license_file_url: fileUrl
+      };
+    } catch (error) {
+      logger.error('Error updating license file:', error);
+      return { message: 'Error updating license file', error: -1 };
     }
   }
 } 
