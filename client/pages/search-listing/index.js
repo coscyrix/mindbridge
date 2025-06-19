@@ -3,9 +3,11 @@ import { useRouter } from "next/router";
 import CounselorCard from "../../components/SearchListingComponents/CounselorCard";
 import { SearchListingWrapper } from "../../components/SearchListingComponents/style";
 import CommonServices from "../../services/CommonServices";
+import { useForm } from "react-hook-form";
 
 const SearchListing = () => {
   const router = useRouter();
+  
   const [searchFilters, setSearchFilters] = useState(null);
   const [counselorsData, setCounselorsData] = useState([]);
   const [searchParams, setSearchParams] = useState({
@@ -21,44 +23,45 @@ const SearchListing = () => {
     categories: [],
   });
 
-  const getSearchFilters = async()=>{
+  const getSearchFilters = async () => {
     try {
       const response = await CommonServices.getSearchFilters();
-      if(response.status===200){
-        const{data} = response;
+      if (response.status === 200) {
+        const { data } = response;
+        // data?.filters?.specialties?.map((spe) => spe.service_name);
         setSearchFilters(data.filters);
       }
     } catch (error) {
-      console.log('Error while fetching the search filters', error);
+      console.log("Error while fetching the search filters", error);
     }
-  }
+  };
 
-  const filterSearchResult = async(data)=>{
+  const filterSearchResult = async (data) => {
     try {
       const response = await CommonServices.getSearchedCounselors(data);
-      if(response.status===200){
-        console.log(response,'response');
+      if (response.status === 200) {
+        console.log(response, "response");
         setCounselorsData(response.data.rec);
       }
     } catch (error) {
-      console.log('Error while fetching the error : ', error);
+      console.log("Error while fetching the error : ", error);
     }
-  }
+  };
 
-  useEffect(()=>{
+  useEffect(() => {
     if (router.isReady) {
       const { query } = router;
       if (Object.keys(query).length > 0) {
         filterSearchResult(query);
       }
     }
-  },[router.isReady, router.query])
+  }, [router.isReady, router.query]);
 
-  useEffect(()=>{
-    if(!searchFilters){
+  useEffect(() => {
+    if (!searchFilters) {
       getSearchFilters();
     }
-  },[])
+  }, []);
 
   // Mock data for dropdowns
   const locations = ["XYZ City, Indo...", "ABC City", "DEF City"];
@@ -101,6 +104,8 @@ const SearchListing = () => {
   const handleBookAppointment = (counselorId) => {
     console.log("Booking appointment with counselor:", counselorId);
   };
+
+  console.log(searchFilters , "search::::")
 
   return (
     <SearchListingWrapper>
@@ -169,15 +174,15 @@ const SearchListing = () => {
             <div className="filter-item">
               <img src="./assets/icons/locationIcon.svg" />
               <select
-                value={searchParams.speciality}
+                value={searchParams.speciality?.service_name}
                 onChange={(e) =>
                   handleInputChange("speciality", e.target.value)
                 }
               >
                 <option value="">Select Speciality</option>
                 {searchFilters?.specialties?.map((specialty) => (
-                  <option key={specialty} value={specialty}>
-                    {specialty}
+                  <option key={specialty?.service_name} value={specialty?.service_name}>
+                    {specialty?.service_name}
                   </option>
                 ))}
               </select>
@@ -268,13 +273,13 @@ const SearchListing = () => {
             <h3>Categories</h3>
             <div className="categories-list">
               {searchFilters?.services?.map((service) => (
-                <label key={service} className="category-checkbox">
+                <label key={service?.service_name} className="category-checkbox">
                   <input
                     type="checkbox"
-                    checked={searchParams.categories.includes(service)}
-                    onChange={() => handleCategoryChange(service)}
+                    checked={searchParams.categories.includes(service?.service_name)}
+                    onChange={() => handleCategoryChange(service?.service_name)}
                   />
-                  <span>{service}</span>
+                  <span>{service?.service_name}</span>
                 </label>
               ))}
             </div>
@@ -282,27 +287,33 @@ const SearchListing = () => {
         </div>
 
         <div className="wrapperCardShow">
-          {counselorsData?.length!==0?counselorsData.map((counselor) => (
-            <CounselorCard
-              key={counselor.counselor_profile_id}
-              image={'/assets/images/drImage2.png'||counselor.profile_picture_url}
-              name={`${counselor.user_first_name} ${counselor.user_last_name}`}
-              speciality={counselor.specialties.join(", ")}
-              location={counselor.location}
-              rating={counselor.average_rating}
-              reviews={counselor.review_count}
-              // availability={Object.entries(counselor.availability)
-              //   .filter(([_, times]) => times.length > 0)
-              //   .map(([day, times]) => `${day}: ${times.join(", ")}`)
-              //   .join(" | ")}
-              availability="9:00 AM - 5:00 PM"
-              contact={counselor.public_phone}
-              email={counselor.email}
-              services={counselor.services_offered.join(", ")}
-              available={counselor.service_modalities}
-              counselorId={counselor.counselor_profile_id}
-            />
-          )):<p>No counselors were found associated with your search.</p>}
+          {counselorsData?.length !== 0 ? (
+            counselorsData.map((counselor) => (
+              <CounselorCard
+                key={counselor.counselor_profile_id}
+                image={
+                  "/assets/images/drImage2.png" || counselor.profile_picture_url
+                }
+                name={`${counselor.user_first_name} ${counselor.user_last_name}`}
+                speciality={counselor.specialties.join(", ")}
+                location={counselor.location}
+                rating={counselor.average_rating}
+                reviews={counselor.review_count}
+                // availability={Object.entries(counselor.availability)
+                //   .filter(([_, times]) => times.length > 0)
+                //   .map(([day, times]) => `${day}: ${times.join(", ")}`)
+                //   .join(" | ")}
+                availability={counselor?.availability}
+                contact={counselor.public_phone}
+                email={counselor.email}
+                services={counselor.services_offered.join(", ")}
+                available={counselor.service_modalities}
+                counselorId={counselor.counselor_profile_id}
+              />
+            ))
+          ) : (
+            <p>No counselors were found associated with your search.</p>
+          )}
         </div>
       </div>
     </SearchListingWrapper>

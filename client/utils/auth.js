@@ -67,7 +67,7 @@ export const signUp = async (credentials) => {
 export const onBoarding = async (onBoardingData) => {
   try {
     const response = await api.post("/counselor-profile", onBoardingData);
-    if (response.status === 200) {
+    if (response.status === 201) {
       return response.data;
     } else {
       throw new Error("User cannot be created !!");
@@ -94,35 +94,40 @@ export const logout = () => {
   });
 };
 
-// Axios request interceptor to handle token expiration
-api.interceptors.request.use(
-  (config) => {
-    let token = Cookies.get("token");
+// Add interceptors for both API instances
+const addInterceptors = (instance) => {
+  instance.interceptors.request.use(
+    (config) => {
+      let token = Cookies.get("token");
 
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
 
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
 
-// Axios response interceptor to handle error statuses only
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (
-      error.response &&
-      (error.response.status === 401 || error.response.status === 403)
-    ) {
-      console.error("Unauthorized error received. Logging out.");
-      logout();
+  instance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (
+        error.response &&
+        (error.response.status === 401 || error.response.status === 403)
+      ) {
+        console.error("Unauthorized error received. Logging out.");
+        logout();
 
+        return Promise.reject(error);
+      } else if (error) {
+        return Promise.reject(error?.response?.data);
+      }
       return Promise.reject(error);
-    } else if (error) {
-      return Promise.reject(error?.response?.data);
     }
-    return Promise.reject(api);
-  }
-);
+  );
+};
+
+// Add interceptors to both API instances
+addInterceptors(api);
+addInterceptors(liveAppApi);

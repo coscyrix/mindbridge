@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useRouter } from "next/router";
 import { SearchBarWrapper } from "../style";
 import {
   DoctorIcon,
@@ -8,15 +10,11 @@ import {
 } from "../assets/icons";
 import { SearchIcon } from "../../../public/assets/icons";
 import CustomButton from "../../CustomButton";
+import CommonServices from "../../../services/CommonServices";
 
 const SearchBar = () => {
   const { register, handleSubmit, watch } = useForm();
-  const [searchFilters, setSearchFilters] = useState({
-    race_options: [],
-    gender_options: [],
-    specialties: []
-  });
-  const [locations, setLocations] = useState([]);
+  const [searchFilters, setSearchFilters] = useState(null);
   const router = useRouter();
 
   const formValues = watch();
@@ -27,36 +25,12 @@ const SearchBar = () => {
       const response = await CommonServices.getSearchFilters();
       if(response.status===200){
         const{data} = response;
-        console.log('search filters', data);
-        
-        // Ensure we have valid arrays for each filter type
-        setSearchFilters({
-          race_options: Array.isArray(data.filters?.race_options) ? data.filters.race_options : [],
-          gender_options: Array.isArray(data.filters?.gender_options) ? data.filters.gender_options : [],
-          specialties: Array.isArray(data.filters?.specialties) ? data.filters.specialties : []
-        });
+        setSearchFilters(data?.filters);
       }
     } catch (error) {
       console.log('Error while fetching the search filters', error);
     }
   }
-
-  useEffect(() => {
-    // Fetch search filters including locations
-    const fetchFilters = async () => {
-      try {
-        const response = await fetch('/api/counselor-profile/search-filters');
-        const data = await response.json();
-        if (data.filters && Array.isArray(data.filters.locations)) {
-          setLocations(data.filters.locations);
-        }
-      } catch (error) {
-        console.error('Error fetching locations:', error);
-      }
-    };
-
-    fetchFilters();
-  }, []);
 
   const onSubmit = (data) => {
     const filteredData = Object.fromEntries(
@@ -67,11 +41,13 @@ const SearchBar = () => {
   };
 
   useEffect(()=>{
-    if(!searchFilters.race_options.length && !searchFilters.gender_options.length && !searchFilters.specialties.length)
+    if(!searchFilters)
     {
       getSearchFilters();
     }
   },[])
+
+  console.log(searchFilters,"filters:::")
 
   return (
     <SearchBarWrapper className="search-bar-container">
@@ -81,11 +57,11 @@ const SearchBar = () => {
           <div className="heading-container">
             <h4>Location</h4>
             <div className="search-bar-item">
-              <select className="select-input" {...register("location")}>
+                <select className="select-input" {...register("location")}>
                 <option value="">Select Location</option>
-                {Array.isArray(locations) && locations.map((location, index) => (
-                  <option key={index} value={location}>
-                    {location}
+                {searchFilters?.locations?.map((loc, index) => (
+                  <option key={loc} value={loc.toLowerCase()}>
+                    {loc}
                   </option>
                 ))}
               </select>
@@ -99,7 +75,7 @@ const SearchBar = () => {
             <div className="search-bar-item">
               <select className="select-input" {...register("race")}>
                 <option value="">Select Race</option>
-                {Array.isArray(searchFilters.race_options) && searchFilters.race_options.map((race, index) => (
+                {searchFilters?.race_options?.map((race, index) => (
                   <option key={index} value={race.toLowerCase()}>
                     {race}
                   </option>
@@ -115,7 +91,7 @@ const SearchBar = () => {
             <div className="search-bar-item">
               <select className="select-input" {...register("gender")}>
                 <option value="">Select Gender</option>
-                {Array.isArray(searchFilters.gender_options) && searchFilters.gender_options.map((gender, index) => (
+                {searchFilters?.gender_options?.map((gender, index) => (
                   <option key={index} value={gender.toLowerCase()}>
                     {gender}
                   </option>
@@ -131,22 +107,23 @@ const SearchBar = () => {
             <div className="search-bar-item">
               <select className="select-input" {...register("specialties")}>
                 <option value="">Select Speciality</option>
-                {Array.isArray(searchFilters.specialties) && searchFilters.specialties.map((specialty, index) => (
-                  <option key={index} value={specialty?.service_name?.toLowerCase() || ''}>
-                    {specialty?.service_name || ''}
+                {searchFilters?.specialties?.map((specialty, index) => (
+                  <option key={index} value={specialty?.service_name?.toLowerCase()}>
+                    {specialty?.service_name}
                   </option>
                 ))}
               </select>
             </div>
           </div>
         </div>
-      </div>
-      </div>
-      <CustomButton
-        customClass="search-button"
-        title="Search"
-        icon={<SearchIcon color="#fff" />}
-      />
+        <CustomButton
+          customClass="search-button"
+          title="Search"
+          icon={<SearchIcon color="#fff" />}
+          type="submit"
+          disabled={isFormEmpty}
+        />
+      </form>
     </SearchBarWrapper>
   );
 };

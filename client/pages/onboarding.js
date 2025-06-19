@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import CustomInputField from "../components/CustomInputField";
 import CustomButton from "../components/CustomButton";
@@ -15,8 +15,9 @@ import { onBoarding } from "../utils/auth";
 import styled from "styled-components";
 import LicenseFileUpload from "../components/LicenseFileUpload";
 import CommonServices from "../services/CommonServices";
-import LocationSearch from "../components/LocationSearch";
 import Cookies from "js-cookie";
+import WeeklyAvailability from "../components/WeeklyAvailability";
+import LocationSearch from "../components/LocationSearch";
 
 const StepIndicator = styled.div`
   display: flex;
@@ -242,6 +243,7 @@ const SignUp = () => {
   const [servicesDropdown, setServicesDropdown] = useState([]);
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePictureError, setProfilePictureError] = useState('');
+  const profilePictureInputRef = useRef(null);
   const userData = Cookies.get("user");
   const userObj = userData && JSON.parse(userData);
   const methods = useForm({
@@ -368,14 +370,16 @@ const SignUp = () => {
 
       // Create profile first
       const response = await onBoarding(profileData);
+
+      console.log(response , "response::::::::")
       
       if (response?.id) {
         // Upload profile picture if selected
-        const profilePictureInput = document.getElementById('profile-picture-input');
-        if (profilePictureInput?.files?.[0]) {
+        if (profilePictureInputRef.current?.files?.[0]) {
+          console.log(profilePictureInputRef , "profilePictureInputRef::::::::::::")
           try {
             const formData = new FormData();
-            formData.append('image', profilePictureInput.files[0]);
+            formData.append('image', profilePictureInputRef.current.files[0]);
             await CommonServices.uploadProfileImage(response.id, formData);
           } catch (error) {
             console.error('Error uploading profile picture:', error);
@@ -525,7 +529,7 @@ const SignUp = () => {
             <ProfilePictureUpload>
               <div 
                 className="profile-picture-container"
-                onClick={() => document.getElementById('profile-picture-input').click()}
+                onClick={() => profilePictureInputRef.current?.click()}
               >
                 {profilePicture ? (
                   <img src={profilePicture} alt="Profile" />
@@ -538,13 +542,14 @@ const SignUp = () => {
                 type="file"
                 accept="image/jpeg,image/png,image/gif"
                 onChange={handleProfilePictureChange}
+                ref={profilePictureInputRef}
               />
               {profilePictureError && (
                 <div className="error-message">{profilePictureError}</div>
               )}
             </ProfilePictureUpload>
 
-            <FormRow>
+            <FormRow style={{display:"flex" , justifyContent:"center" , alignItems:"center"}}>
               <FormField className="half-width">
                 <Controller
                   name="license_number"
@@ -762,17 +767,24 @@ const SignUp = () => {
             <DocumentUpload>
               <h3>Additional Documents</h3>
               <p>Upload any additional certifications, insurance documents, or other relevant files.</p>
-              <LicenseFileUpload 
-                counselorProfileId={123}
-                onUploadComplete={handleAddMoreDocument}
-                documentType="other"
-                showDocumentType={true}
-              />
               <div className="document-list">
                 {documentFiles.map((file, index) => (
                   <div key={index} className="document-item">
                     <div className="document-info">
-                      <span className="document-icon">📄</span>
+                      <label htmlFor={`document-file-${index}`} className="document-upload-label" style={{ cursor: 'pointer' }}>
+                        {file ? (
+                          <span style={{ fontSize: 14, color: '#2196F3' }}>{file.name}</span>
+                        ) : (
+                          <span style={{ fontSize: 24, color: '#666' }}>📎</span>
+                        )}
+                        <input
+                          id={`document-file-${index}`}
+                          type="file"
+                          accept="image/*,application/pdf"
+                          style={{ display: 'none' }}
+                          onChange={e => handleDocumentFileChange(index, e.target.files[0])}
+                        />
+                      </label>
                       <div className="document-details">
                         <div className="document-name">
                           <Controller
@@ -818,43 +830,6 @@ const SignUp = () => {
                         type="button"
                         onClick={() => {
                           const newFiles = [...documentFiles];
-                          newFiles[index] = null;
-                          setDocumentFiles(newFiles);
-                        }}
-                        className="secondary-button"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </DocumentUpload>
-            <ButtonContainer>
-              <CustomButton
-                title="Skip Documents"
-                type="button"
-                onClick={() => setCurrentStep(3)}
-                className="secondary-button"
-              />
-            </ButtonContainer>
-          </>
-        );
-      case 3:
-        return (
-          <div className="step-content">
-            <h2>Documents</h2>
-            <p>Please upload your required documents</p>
-
-            <div className="document-upload-section">
-              {documentFiles.map((file, index) => (
-                <div key={index} className="document-upload-item">
-                  <div className="document-upload-header">
-                    <h3>Document {index + 1}</h3>
-                    {index > 0 && (
-                      <CustomButton
-                        title="Remove"
-                        type="button"
-                        onClick={() => {
-                          const newFiles = [...documentFiles];
                           const newNames = [...documentNames];
                           const newDates = [...documentExpiryDates];
                           newFiles.splice(index, 1);
@@ -866,71 +841,52 @@ const SignUp = () => {
                         }}
                         className="secondary-button"
                       />
-                    )}
-                  </div>
-
-                  <div className="document-upload-fields">
-                    <Controller
-                      name={`documentNames.${index}`}
-                      control={methods.control}
-                      rules={{ required: "Document name is required" }}
-                      render={({ field, fieldState: { error } }) => (
-                        <CustomInputField
-                          {...field}
-                          label="Document Name"
-                          required
-                          customClass="document-name-input"
-                          placeholder="Enter document name"
-                          error={error?.message}
-                          onChange={(e) => handleDocumentNameChange(index, e.target.value)}
-                        />
-                      )}
-                    />
-
-                    <Controller
-                      name={`documentExpiryDates.${index}`}
-                      control={methods.control}
-                      rules={{ required: "Document expiry date is required" }}
-                      render={({ field, fieldState: { error } }) => (
-                        <CustomInputField
-                          {...field}
-                          label="Expiry Date"
-                          required
-                          type="date"
-                          customClass="document-expiry-input"
-                          error={error?.message}
-                          onChange={(e) => handleDocumentExpiryChange(index, e.target.value)}
-                        />
-                      )}
-                    />
-
-                    <div className="file-upload-container">
-                      <input
-                        type="file"
-                        id={`document-file-${index}`}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => handleDocumentFileChange(index, e.target.files[0])}
-                        className="file-input"
-                      />
-                      <label htmlFor={`document-file-${index}`} className="file-upload-label">
-                        {file ? file.name : 'Choose File'}
-                      </label>
                     </div>
                   </div>
-                </div>
-              ))}
-
+                ))}
+              </div>
               <div className="add-more-documents">
                 <CustomButton
                   title="Add More Documents"
                   type="button"
-                  onClick={handleAddMoreDocument}
+                  onClick={() => {
+                    setDocumentFiles(prev => [...prev, null]);
+                    setDocumentNames(prev => [...prev, '']);
+                    setDocumentExpiryDates(prev => [...prev, '']);
+                  }}
                   className="secondary-button"
                 />
               </div>
-            </div>
-
-            <div className="form-actions">
+            </DocumentUpload>
+            <ButtonContainer>
+              <CustomButton
+                title="Skip Documents"
+                type="button"
+                onClick={() => {
+                  setDocumentFiles([]);
+                  setDocumentNames([]);
+                  setDocumentExpiryDates([]);
+                  setCurrentStep(3);
+                }}
+                className="secondary-button"
+              />
+            </ButtonContainer>
+          </>
+        );
+      case 3:
+        return (
+          <div className="step-content">
+            <h2>Availability</h2>
+            <p>Please set your weekly availability for sessions.</p>
+            <Controller
+              name="availability"
+              control={methods.control}
+              defaultValue={{}}
+              render={({ field }) => (
+                <WeeklyAvailability control={methods.control} />
+              )}
+            />
+            {/* <div className="form-actions">
               <CustomButton
                 title="Previous"
                 type="button"
@@ -939,11 +895,12 @@ const SignUp = () => {
               />
               <CustomButton
                 title={loading ? "Creating Profile..." : "Create Profile"}
-                type="submit"
+                type="button"
+                onClick={methods.handleSubmit(onSubmit)}
                 disabled={loading}
                 className="primary-button"
               />
-            </div>
+            </div> */}
           </div>
         );
       default:

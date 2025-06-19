@@ -2,7 +2,7 @@ import React from 'react';
 import { MindbridgeJourneyWrapper } from '../style';
 import { AnalyticsIcon, HomeworkIcon, LoginIcon, SessionTrackingIcon } from '../assets/icons';
 import CustomButton from '../../CustomButton';
-import journeyMainImage from '../assets/images/mindbridge-journey-main-image.png';
+import journeyMainImage from '../assets/images/mindbridge-journey-main-image.jpeg';
 
 const MindbridgeJourney = () => {
   const steps = [

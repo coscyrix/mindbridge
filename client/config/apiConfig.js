@@ -1,6 +1,6 @@
 const ApiConfig = {
   getReferences: "/references",
-  getAllCounselors: (roleId) => `/user-profile/?role_id=${roleId}`,
+  getAllCounselors: "/user-profile/?role_id=2",
   dashboard: {
     overallSessions: "/reports/session-stats",
     reportsData: "/reports/session",
@@ -26,6 +26,14 @@ const ApiConfig = {
   feedback: {
     getFeedbackFormDetails: "/feedback",
   },
+  onboarding:{
+    uploadDocuments:"/counselor-documents"
+  },
+  counselorProfile:{
+    getCounselorProfile: '/counselor-profile',
+    searchCounselors:'/counselor-profile/search',
+    getSearchFilters:'/counselor-profile/search/filters',
+  }
 };
 
 export default ApiConfig;

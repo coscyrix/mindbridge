@@ -46,24 +46,33 @@ import CommonServices from "../../services/CommonServices";
 const SearchDetails = () => {
   const [selectedTab, setSelectedTab] = useState("Overview");
   const [selectedDate, setSelectedDate] = useState(null);
-  const [counselorDetails, setCounselorDetails] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [relatedCounselors, setRelatedCounselors] = useState([]);
 
   const router = useRouter();
   const { id } = router.query;
+  const [counselorDetails, setCounselorDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const categories = [
+    "Gynaecologist",
+    "Surgery",
+    "General Practitioners",
+    "Specialists",
+    "Hospital",
+  ];
 
   const getCounselorDetails = async () => {
     try {
       if (id) {
         const response = await CommonServices.getCounselorProfile(id);
-        if (response.status === 200) {
-          setCounselorDetails(response.data.rec[0]);
-          setRelatedCounselors(response.data.related_counselors);
+        if (response.status === 200 && response.data && response.data.rec) {
+          setCounselorDetails(response.data.rec);
+        } else {
+          setCounselorDetails(null);
         }
       }
     } catch (error) {
       console.log('Error while fetching counselor details:', error);
+      setCounselorDetails(null);
     } finally {
       setLoading(false);
     }
@@ -79,16 +88,18 @@ const SearchDetails = () => {
     return <div>Loading...</div>;
   }
 
-  if (!counselorDetails) {
+  if (!counselorDetails || counselorDetails.length === 0) {
     return <div>Counselor not found</div>;
   }
+
+  const counselor = counselorDetails[0];
 
   const formatAvailability = (availability) => {
     return Object.entries(availability)
       .filter(([_, times]) => times.length > 0)
       .map(([day, times]) => ({
         day: day.charAt(0).toUpperCase() + day.slice(1),
-        times: times.join(", ")
+        times: times.join(", "),
       }));
   };
 
@@ -105,21 +116,58 @@ const SearchDetails = () => {
     setSelectedDate(date);
   };
 
-  const services = counselorDetails.services_offered.map(service => ({
-    name: service,
-    category: "Therapy",
-    type: "Consultation",
-    code: "$24",
-    price: "$129.90",
+  const services = (counselor.services_offered || []).map((service) => ({
+    name: service.service_name || service,
+    category: service.is_specialty ? 'Specialty' : 'Therapy',
+    type: service.is_report ? 'Report' : 'Consultation',
+    code: service.service_code ? service.service_code : '',
+    price: service.total_invoice ? `$${service.total_invoice}` : '',
   }));
+
+  const specialties = (counselor.specialties || []).map((specialty) =>
+    specialty.service_name || specialty
+  );
+
+  const counselors = [
+    {
+      id: 1,
+      name: "Dr. Sarah Johnson",
+      speciality: "HCII, CIII, YUUI",
+      location: "New York, NY",
+      rating: 4.8,
+      reviews: 156,
+      availability: "9:00 AM - 5:00 PM",
+      contact: "+1 (555) 123-4567",
+      email: "sarah.johnson@example.com",
+      services: "HCII, CIII, YUUI",
+      available: "In-Person",
+    },
+    {
+      id: 2,
+      name: "Dr. Sarah Johnson",
+      speciality: "HCII, CIII, YUUI",
+      location: "New York, NY",
+      rating: 4.8,
+      reviews: 156,
+      availability: "9:00 AM - 5:00 PM",
+      contact: "+1 (555) 123-4567",
+      email: "sarah.johnson@example.com",
+      services: "HCII, CIII, YUUI",
+      available: "In-Person",
+    },
+  ];
 
   return (
     <>
       <HeaderWrapperBackground>
         <ProfileImage>
           <CameraIcon>📷</CameraIcon>
-          <img src={counselorDetails.profile_picture_url || "/assets/images/drImage2.png"} alt={counselorDetails.user_first_name} />
+          <img
+            src={"/assets/images/drImage2.png" || counselor.profile_picture_url}
+            alt={counselor.user_first_name}
+          />
         </ProfileImage>
+        <UploadCover>📷 Upload a cover image</UploadCover>
       </HeaderWrapperBackground>
       <SearchDetailsWrapper>
         <ProfileHeader>
@@ -127,17 +175,17 @@ const SearchDetails = () => {
             <DoctorInfo>
               <div>
                 <NameBadges>
-                  <h1>{`${counselorDetails.user_first_name} ${counselorDetails.user_last_name}`}</h1>
+                  <h1>{`${counselor.user_first_name} ${counselor.user_last_name}`}</h1>
                   <Badges>
-                    {counselorDetails.is_verified && <VerifiedBadge type="verified" />}
+                    {counselor.is_verified && <VerifiedBadge type="verified" />}
                   </Badges>
                 </NameBadges>
-                <Address>{counselorDetails.location}</Address>
+                <Address>{counselor.location}</Address>
               </div>
               <Rating>
-                {"★".repeat(Math.floor(counselorDetails.average_rating || 0))}
-                {"☆".repeat(5 - Math.floor(counselorDetails.average_rating || 0))}
-                <span>{counselorDetails.review_count || 0} Reviews</span>
+                {"★".repeat(Math.floor(counselor.average_rating))}
+                {"☆".repeat(5 - Math.floor(counselor.average_rating))}
+                <span>{counselor.review_count} Reviews</span>
               </Rating>
             </DoctorInfo>
           </ProfileInfo>
@@ -150,32 +198,14 @@ const SearchDetails = () => {
           >
             Overview
           </TabButton>
-          {/* <TabButton
-            className={selectedTab === "Special Features" ? "active" : ""}
-            onClick={() => setSelectedTab("Special Features")}
-          >
-            Special Features
-          </TabButton>
-          <TabButton
-            className={selectedTab === "Notes" ? "active" : ""}
-            onClick={() => setSelectedTab("Notes")}
-          >
-            Notes
-          </TabButton>
-          <TabButton
-            className={selectedTab === "Client Reviews" ? "active" : ""}
-            onClick={() => setSelectedTab("Client Reviews")}
-          >
-            Client Reviews
-          </TabButton> */}
         </NavigationTabs>
 
         <MainContent>
           <div>
             <Introduction>
               <h2>My Introduction</h2>
-              <HugStats>{counselorDetails.patients_seen} Patients Seen</HugStats>
-              <IntroText>{counselorDetails.profile_notes}</IntroText>
+              <HugStats>{counselor.patients_seen} Patients Seen</HugStats>
+              <IntroText>{counselor.profile_notes}</IntroText>
 
               <DoctorDetails>
                 <DetailItem>
@@ -184,7 +214,7 @@ const SearchDetails = () => {
                   </span>
                   <div>
                     <h3>Specialties</h3>
-                    <p>{counselorDetails.specialties.join(", ")}</p>
+                    <p>{specialties.join(", ")}</p>
                   </div>
                 </DetailItem>
                 <DetailItem>
@@ -193,7 +223,7 @@ const SearchDetails = () => {
                   </span>
                   <div>
                     <h3>Service Modalities</h3>
-                    <p>{counselorDetails.service_modalities.join(", ")}</p>
+                    <p>{(counselor.service_modalities || []).join(", ")}</p>
                   </div>
                 </DetailItem>
                 <DetailItem>
@@ -202,7 +232,11 @@ const SearchDetails = () => {
                   </span>
                   <div>
                     <h3>Availability</h3>
-                    <p>{formatAvailability(counselorDetails.availability).map(slot => `${slot.day}: ${slot.times}`).join(" | ")}</p>
+                    <p>
+                      {formatAvailability(counselor.availability || {})
+                        .map((slot) => `${slot.day}: ${slot.times}`)
+                        .join(" | ")}
+                    </p>
                   </div>
                 </DetailItem>
                 <DetailItem>
@@ -211,7 +245,7 @@ const SearchDetails = () => {
                   </span>
                   <div>
                     <h3>Seen by Patient</h3>
-                    <p>{counselorDetails.patients_seen} Views</p>
+                    <p>{counselor.patients_seen} Views</p>
                   </div>
                 </DetailItem>
               </DoctorDetails>
@@ -229,18 +263,22 @@ const SearchDetails = () => {
               <ContactDetails>
                 <h2>Contact Details</h2>
                 <ContactInfo>
-                  <p>📍 {counselorDetails.location}</p>
-                  <p>📞 {counselorDetails.public_phone}</p>
-                  <p>📧 {counselorDetails.email}</p>
+                  <p>📍 {counselor.location}</p>
+                  <p>📞 {counselor.public_phone}</p>
+                  <p>📧 {counselor.email}</p>
                 </ContactInfo>
                 <Availability>
                   <h3>Availability Hours</h3>
-                  <p>{formatAvailability(counselorDetails.availability).map(slot => `${slot.day}: ${slot.times}`).join(" | ")}</p>
+                  <p>
+                    {formatAvailability(counselor.availability || {})
+                      .map((slot) => `${slot.day}: ${slot.times}`)
+                      .join(" | ")}
+                  </p>
                 </Availability>
                 <ActionButton className="book-appointment">
                   Book Appointment
                 </ActionButton>
-                {/* <ActionButton className="call-now">Call Us Now</ActionButton> */}
+                <ActionButton className="call-now">Call Us Now</ActionButton>
               </ContactDetails>
             </AppointmentSection>
           </div>
@@ -255,41 +293,41 @@ const SearchDetails = () => {
           </ServicesGrid>
         </ServicesSection>
 
-        {relatedCounselors?.length > 0 && (
-          <SliderSection>
-            <SliderTitle>
-              <h2>Other Counsellors</h2>
-              <a href="#">View all</a>
-            </SliderTitle>
-            <SliderContainer>
-              <Swiper
-                modules={[Navigation]}
-                spaceBetween={20}
-                slidesPerView={1}
-                navigation
-                breakpoints={{
-                  768: {
-                    slidesPerView: 2,
-                  },
-                  1200: {
-                    slidesPerView: 1.5,
-                  },
-                }}
-              >
-                {relatedCounselors.map((counselor, index) => (
-                  <SwiperSlide key={index}>
-                    <CounselorCard
-                      image={counselor.profile_picture_url || "/assets/images/drImage2.png"}
-                      key={counselor.counselor_profile_id}
-                      {...counselor}
-                      onBookAppointment={() => router.push(`/search-details/${counselor.counselor_profile_id}`)}
-                    />
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-            </SliderContainer>
-          </SliderSection>
-        )}
+        <SliderSection>
+          <SliderTitle>
+            <h2>Other Counsellors</h2>
+            <a href="#">View all</a>
+          </SliderTitle>
+          <SliderContainer>
+            <Swiper
+              modules={[Navigation]}
+              spaceBetween={20}
+              slidesPerView={1}
+              navigation
+              breakpoints={{
+                768: {
+                  slidesPerView: 2,
+                },
+                1200: {
+                  slidesPerView: 1.5,
+                },
+              }}
+            >
+              {counselors.map((counselor, index) => (
+                <SwiperSlide key={index}>
+                  <CounselorCard
+                    image="/assets/images/drImage2.png"
+                    key={counselor.id}
+                    {...counselor}
+                    onBookAppointment={() =>
+                      handleBookAppointment(counselor.id)
+                    }
+                  />
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </SliderContainer>
+        </SliderSection>
       </SearchDetailsWrapper>
     </>
   );

@@ -19,11 +19,11 @@ const ServiceCard = ({ service }) => {
             <span className="value">{service.type}</span>
           </div>
           <div className="detail-row">
-            <span className="label">Service Code</span>
+            <span className="label">Service Code(USD)</span>
             <span className="value">{service.code}</span>
           </div>
           <div className="detail-row price">
-            <span className="label">Dollar</span>
+            <span className="label">Zimbabwe Dollar (ZIG)</span>
             <span className="value">{service.price}</span>
           </div>
         </div>
