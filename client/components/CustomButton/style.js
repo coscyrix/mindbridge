@@ -1,6 +1,7 @@
 import styled from "styled-components";
 
 export const CustomButtonContainer = styled.div`
+  width: ${({onboardingStep}) => onboardingStep && "100%"};
   position: relative;
   button {
     padding: 10.5px 12px;

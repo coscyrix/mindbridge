@@ -26,6 +26,14 @@ const ApiConfig = {
   feedback: {
     getFeedbackFormDetails: "/feedback",
   },
+  onboarding:{
+    uploadDocuments:"/counselor-documents"
+  },
+  counselorProfile:{
+    getCounselorProfile: '/counselor-profile',
+    searchCounselors:'/counselor-profile/search',
+    getSearchFilters:'/counselor-profile/search/filters',
+  }
 };
 
 export default ApiConfig;

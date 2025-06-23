@@ -16,26 +16,26 @@ const CustomMultiSelect = ({
   ...props
 }) => {
   return (
-    <CustomMultiSelectContainer>
+    <CustomMultiSelectContainer error={error}>
       <div className="select-container">
         {label && <label>{label}</label>}
         <Select
           {...field}
           placeholder={
-            <div style={{ opacity: "0.2", color: "#000000" }}>
+            <div style={{ opacity: "0.2", color: "#000000", borderColor:error&&'red', boxShadow:error&'red' }}>
               {placeholder}
             </div>
           }
           isMulti={isMulti}
           options={options}
-          className={className}
+          className={`${className}`}
           classNamePrefix={classNamePrefix}
           onChange={onChange}
           value={value}
           {...props}
         />
         {error && (
-          <span style={{ color: "red", fontSize: "12px" }}>{error}</span>
+          <span style={{ color: "red", fontSize: "16px" }}>{error}</span>
         )}
       </div>
     </CustomMultiSelectContainer>

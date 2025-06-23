@@ -14,7 +14,7 @@ import OtpVerificationForm from "../OtpVerificationForm";
 const AuthForm = () => {
   const router = useRouter();
   const { pathname } = router;
-  const isSignUp = pathname === "/sign-up";
+  const isSignUp = pathname === "/onboarding";
   const isResetPassword = pathname === "/reset-password";
   const [isOtpStep, setIsOtpStep] = useState(false);
   const [email, setEmail] = useState("");

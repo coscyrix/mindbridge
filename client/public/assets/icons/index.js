@@ -31,3 +31,18 @@ export * from "./ServiceIcon";
 export * from "./InvoiceIcon";
 export * from "./CheckIcon";
 export * from "./InfoIcon";
+
+export const StarIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M8 1L10.163 5.279L15 6.017L11.5 9.388L12.326 14L8 11.838L3.674 14L4.5 9.388L1 6.017L5.837 5.279L8 1Z"
+      fill="currentColor"
+    />
+  </svg>
+);
