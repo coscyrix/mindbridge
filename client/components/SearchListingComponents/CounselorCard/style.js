@@ -118,7 +118,6 @@ export const CardWrapper = styled.div`
 
     .services-list {
       padding-top: 15px;
-      display: flex;
       justify-content: space-between;
       align-items: start;
       gap:5px;
@@ -193,9 +192,9 @@ export const CardWrapper = styled.div`
       }
 
       .time {
-        font-size: 20px;
+        font-size: 16px;
         color: #3973b7;
-        font-weight: 700;
+        font-weight: 600;
         margin: 0px;
       }
     }

@@ -7,9 +7,9 @@ import { ReferenceContextProvider } from "../context/ReferenceContext";
 import LandingPageLayout from "../components/LandingPageComponents/LandingPageLayout";
 
 const ROUTES = {
-  LANDING_PAGES: ['/', '/search-listing', '/search-details/[id]'],
-  AUTH_PAGES: ['/login', '/reset-password'],
-  ONBOARDING: '/onboarding'
+  LANDING_PAGES: ["/", "/search-listing", "/search-details/[id]"],
+  AUTH_PAGES: ["/login", "/reset-password"],
+  ONBOARDING: "/onboarding",
 };
 
 const AppLayout = ({ children, isLandingPage, isOnboardingPage }) => {
@@ -18,11 +18,7 @@ const AppLayout = ({ children, isLandingPage, isOnboardingPage }) => {
   }
 
   if (isOnboardingPage) {
-    return (
-      <ReferenceContextProvider>
-        {children}
-      </ReferenceContextProvider>
-    );
+    return <ReferenceContextProvider>{children}</ReferenceContextProvider>;
   }
 
   return (
@@ -35,12 +31,13 @@ const AppLayout = ({ children, isLandingPage, isOnboardingPage }) => {
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const { pathname } = router;
+  const { type } = router.query;
 
   const isLandingPageRoute = ROUTES.LANDING_PAGES.includes(pathname);
   const isAuthPage = ROUTES.AUTH_PAGES.includes(pathname);
   const isOnboardingPage = pathname === ROUTES.ONBOARDING;
   const isPatientFormsPage = pathname.startsWith("/patient-forms");
-  
+
   const shouldUseDefaultLayout = isAuthPage || isPatientFormsPage;
 
   return (
@@ -48,9 +45,9 @@ function MyApp({ Component, pageProps }) {
       {shouldUseDefaultLayout ? (
         <Component {...pageProps} />
       ) : (
-        <AppLayout 
+        <AppLayout
           isLandingPage={isLandingPageRoute}
-          isOnboardingPage={isOnboardingPage}
+          isOnboardingPage={!type && isOnboardingPage}
         >
           <Component {...pageProps} />
         </AppLayout>

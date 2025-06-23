@@ -5,6 +5,8 @@ import { FeatureAndReportSectionWrapper, FeatureCardWrapper } from "./style";
 import { SwiperContentStyles } from "../Swiper/style";
 import reportSectionPattern from "./assets/images/reports-section-pattern.png";
 import {
+  ArrowIcon,
+  ArrowLeft,
   ComplaintLogoIcon,
   GdprLogoIcon,
   HippaLogoIcon,
@@ -158,8 +160,8 @@ const FeaturesAndReportSection = () => {
       <div className="swiper-container">
         <SwiperContentStyles>
           <CustomSwiper
-            customNextAppearance={">"}
-            customPrevAppearance={"<"}
+            customNextAppearance={<ArrowLeft />}
+            customPrevAppearance={<ArrowIcon />}
             spaceBetween={30}
             slidesPerView={2.5}
             breakpoints={{

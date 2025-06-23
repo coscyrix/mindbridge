@@ -23,6 +23,7 @@ import Dropdown from "../components/Dropdown";
 import moment from "moment";
 import { TooltipButton, TooltipContainer } from "../components/Tooltip";
 import { convertUTCToLocalTime } from "./helper";
+import { CgProfile } from "react-icons/cg";
 
 function exportToCSV(columns, data, tableCaption) {
   const headings = columns
@@ -162,6 +163,12 @@ export const SIDEBAR_HEADINGS = [
     icon: <UsersIcon />,
     url: "/session-history",
     title: "Session History",
+  },
+  {
+    id: 8,
+    icon: <UsersIcon />,
+    url: "/profile",
+    title: "Profile",
   },
   {
     id: 6,

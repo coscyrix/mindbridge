@@ -6,9 +6,14 @@ import { CrossIcon, LogoutIcon } from "../../../public/assets/icons";
 import { useRouter } from "next/router";
 import { logout } from "../../../utils/auth";
 import Cookies from "js-cookie";
+import { CgDetailsLess } from "react-icons/cg";
+import { GrLicense } from "react-icons/gr";
+import { MdOutlineEventAvailable } from "react-icons/md";
+
 function Sidebar({ showSideBar, setShowSideBar }) {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [showProfileOptions, setShowProfileOptions] = useState(false);
   const router = useRouter();
   const route = router.pathname;
 
@@ -30,6 +35,7 @@ function Sidebar({ showSideBar, setShowSideBar }) {
       mediaQuery.removeEventListener("change", handleMediaChange);
     };
   }, []);
+
   const handleCloseSideBar = () => {
     setShowSideBar(false);
   };
@@ -83,27 +89,90 @@ function Sidebar({ showSideBar, setShowSideBar }) {
           </div>
           <div className="headings">
             {SIDEBAR_HEADINGS.map((heading, index) => (
-              <Link
-                href={heading.url}
-                key={index}
-                onClick={isSmallScreen ? handleCloseSideBar : null}
-                className={
-                  route == heading.url ? "active-item" : "heading-item"
-                }
-              >
-                {["Manager", "Admin"].includes(getRole(userData?.role_id)) ? (
-                  <>
-                    {heading.icon} <span>{heading.title}</span>
-                  </>
-                ) : (
-                  heading.title != "Service" &&
-                  heading.title != "Invoice" && (
+              <div>
+                <Link
+                  href={heading.url === "/profile" ? " " : heading?.url}
+                  key={index}
+                  onClick={() =>
+                    heading?.title === "Profile"
+                      ? setShowProfileOptions(!showProfileOptions)
+                      : isSmallScreen
+                      ? handleCloseSideBar
+                      : null
+                  }
+                  className={
+                    route == heading.url ? "active-item" : "heading-item"
+                  }
+                >
+                  {["Manager", "Admin"].includes(getRole(userData?.role_id)) ? (
                     <>
                       {heading.icon} <span>{heading.title}</span>
                     </>
-                  )
+                  ) : (
+                    heading.title != "Service" &&
+                    heading.title != "Invoice" && (
+                      <>
+                        {heading.icon} <span>{heading.title}</span>
+                      </>
+                    )
+                  )}
+                </Link>{" "}
+                {showProfileOptions && heading?.title === "Profile" && (
+                  <div style={{ marginTop: "10px", marginLeft: "34px" }}>
+                    <p
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                      }}
+                      onClick={() =>
+                        router.push(
+                          `/onboarding?type=basic&userId=${userData?.counselor_profile_id}`
+                        )
+                      }
+                    >
+                      {" "}
+                      <CgDetailsLess />
+                      Basic Details
+                    </p>
+
+                    <p
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                      }}
+                      onClick={() =>
+                        router.push(
+                          `/onboarding?type=license&userId=${userData?.counselor_profile_id}`
+                        )
+                      }
+                    >
+                      <GrLicense fontSize={"12px"} />
+                      License Information
+                    </p>
+
+                    <p
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                      }}
+                      onClick={() =>
+                        router.push(
+                          `/onboarding?type=availability&userId=${userData?.counselor_profile_id}`
+                        )
+                      }
+                    >
+                      <MdOutlineEventAvailable />
+                      Availability
+                    </p>
+                  </div>
                 )}
-              </Link>
+              </div>
             ))}
           </div>
         </div>
@@ -114,9 +183,14 @@ function Sidebar({ showSideBar, setShowSideBar }) {
                 userData?.user_first_name[0]?.toUpperCase()}
             </div>
             <div className="profile-details">
-              {userData?.role_id!==2&&<h4>
-                [{userData?.tenant_name && userData?.tenant_name.slice(0, 20).toUpperCase()}]
-              </h4>}
+              {userData?.role_id !== 2 && (
+                <h4>
+                  [
+                  {userData?.tenant_name &&
+                    userData?.tenant_name.slice(0, 20).toUpperCase()}
+                  ]
+                </h4>
+              )}
               <h5>
                 {userData &&
                   `${formatName(

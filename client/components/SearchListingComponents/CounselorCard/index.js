@@ -85,10 +85,12 @@ function groupConsecutiveDays(days, orderedDays) {
 
   const normalisedAvailability = normalizeAvailability(availability);
 
+  console.log(normalisedAvailability , "normalisedAvaialibility::::::::::")
+
   return (
     <CardWrapper>
       <div className="card-header">
-        <img src={image} alt={name} />
+        <img src={image} alt={name} style={{objectFit:"cover"}} />
         <div className="counselor-info">
           <div className="rating-container">
             <div className="stars">
@@ -121,11 +123,11 @@ function groupConsecutiveDays(days, orderedDays) {
                 <h6>Types of Services</h6>
                 <p>{services}</p>
               </div>
-              <div className="servicesDetails">
+              <div className="servicesDetails" style={{marginTop:"20px"}}>
                 <h6>Speciality</h6>
                 <p>{speciality}</p>
               </div>
-              <div className="availabilityWrapper">
+              <div className="availabilityWrapper" style={{marginTop:"20px"}}>
                 <h6>Available</h6>
                 <div>
                   {Array.isArray(available) ? (
@@ -141,12 +143,12 @@ function groupConsecutiveDays(days, orderedDays) {
           </div>
         </div>
 
-        <div className="card-footer">
+        <div className="card-footer" style={{padding:"10px"}}>
           <img
             src="./assets/images/verified-user.svg"
             className="cardImageFooter"
           />
-          <div className="availability" style={{paddingLeft:"10px"}}>
+          <div className="availability" style={{width:"100%"}}>
             <h6 className="label">Availability:</h6>
             <p className="time">{normalisedAvailability}</p>
           </div>

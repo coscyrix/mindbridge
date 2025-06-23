@@ -7,6 +7,7 @@ export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
   },
 });
 
@@ -77,6 +78,24 @@ export const onBoarding = async (onBoardingData) => {
   }
 };
 
+export const updateProfile = async (onBoardingData, profileId) => {
+  try {
+    const response = await api.put(
+      `/counselor-profile/${profileId}`,
+      onBoardingData
+    );
+    if (response.status === 200) {
+      return response.data;
+    } else {
+      throw new Error("User cannot be created !!");
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
+// put /:id
+
 export const logout = () => {
   if (isLoggedOut) return;
   isLoggedOut = true;
@@ -130,4 +149,4 @@ const addInterceptors = (instance) => {
 
 // Add interceptors to both API instances
 addInterceptors(api);
-addInterceptors(liveAppApi);
+addInterceptors(api);

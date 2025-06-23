@@ -133,7 +133,7 @@ const SearchListing = () => {
                 onChange={(e) => handleInputChange("location", e.target.value)}
               >
                 <option value="">Select Location</option>
-                {locations.map((location) => (
+                {searchFilters?.locations.map((location) => (
                   <option key={location} value={location}>
                     {location}
                   </option>
@@ -299,10 +299,6 @@ const SearchListing = () => {
                 location={counselor.location}
                 rating={counselor.average_rating}
                 reviews={counselor.review_count}
-                // availability={Object.entries(counselor.availability)
-                //   .filter(([_, times]) => times.length > 0)
-                //   .map(([day, times]) => `${day}: ${times.join(", ")}`)
-                //   .join(" | ")}
                 availability={counselor?.availability}
                 contact={counselor.public_phone}
                 email={counselor.email}

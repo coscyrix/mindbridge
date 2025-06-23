@@ -11,28 +11,29 @@ import {
   LeftPanel,
 } from "../styles/onboarding";
 import { toast } from "react-toastify";
-import { onBoarding } from "../utils/auth";
+import { api, onBoarding, updateProfile } from "../utils/auth";
 import styled from "styled-components";
 import LicenseFileUpload from "../components/LicenseFileUpload";
 import CommonServices from "../services/CommonServices";
 import Cookies from "js-cookie";
 import WeeklyAvailability from "../components/WeeklyAvailability";
 import LocationSearch from "../components/LocationSearch";
+import axios from "axios";
 
 const StepIndicator = styled.div`
   display: flex;
   justify-content: space-between;
   margin-bottom: 32px;
   position: relative;
-  
+
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 50%;
     left: 0;
     right: 0;
     height: 2px;
-    background: #E0E0E0;
+    background: #e0e0e0;
     z-index: 1;
   }
 
@@ -40,7 +41,7 @@ const StepIndicator = styled.div`
     position: relative;
     z-index: 2;
     background: white;
-    padding: 0 16px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -54,19 +55,19 @@ const StepIndicator = styled.div`
       align-items: center;
       justify-content: center;
       font-weight: 600;
-      border: 2px solid #E0E0E0;
+      border: 2px solid #e0e0e0;
       background: white;
       color: #666;
       transition: all 0.3s ease;
 
       &.active {
-        border-color: #2196F3;
-        color: #2196F3;
+        border-color: #2196f3;
+        color: #2196f3;
       }
 
       &.completed {
-        background: #2196F3;
-        border-color: #2196F3;
+        background: #2196f3;
+        border-color: #2196f3;
         color: white;
       }
     }
@@ -77,7 +78,7 @@ const StepIndicator = styled.div`
       font-weight: 500;
 
       &.active {
-        color: #2196F3;
+        color: #2196f3;
       }
     }
   }
@@ -111,7 +112,7 @@ const ProfilePictureUpload = styled.div`
     background: #f5f5f5;
 
     &:hover {
-      border-color: #2196F3;
+      border-color: #2196f3;
     }
 
     img {
@@ -239,10 +240,16 @@ const raceOptions = [
 ];
 
 const SignUp = () => {
+  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
   const router = useRouter();
+  const { type } = router.query;
+  const { userId } = router.query;
+
   const [servicesDropdown, setServicesDropdown] = useState([]);
   const [profilePicture, setProfilePicture] = useState(null);
-  const [profilePictureError, setProfilePictureError] = useState('');
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
+  const [profilePictureError, setProfilePictureError] = useState("");
+  const [onBoardingDetails, setOnBoardingDetails] = useState("");
   const profilePictureInputRef = useRef(null);
   const userData = Cookies.get("user");
   const userObj = userData && JSON.parse(userData);
@@ -260,8 +267,8 @@ const SignUp = () => {
       race: "",
       license_number: "",
       license_file_url: "",
-      availability: {}
-    }
+      availability: {},
+    },
   });
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -269,20 +276,23 @@ const SignUp = () => {
   const [documentFiles, setDocumentFiles] = useState([]);
   const [documentNames, setDocumentNames] = useState([]);
   const [documentExpiryDates, setDocumentExpiryDates] = useState([]);
+  const [licenseFile, setLicenseFile] = useState(null);
 
   // Check if user profile exists
   useEffect(() => {
     const checkExistingProfile = async () => {
       if (userObj?.user_profile_id) {
         try {
-          const response = await CommonServices.getCounselorProfile(userObj.user_profile_id);
+          const response = await CommonServices.getCounselorProfile(
+            userObj.user_profile_id
+          );
           if (response.status === 200 && response.data?.rec?.length > 0) {
             console.log(response.data, "response.data");
-            
+
             // router.push('/dashboard');
           }
         } catch (error) {
-          console.error('Error checking profile:', error);
+          console.error("Error checking profile:", error);
         }
       }
     };
@@ -290,32 +300,31 @@ const SignUp = () => {
     checkExistingProfile();
   }, [userObj?.user_profile_id, router]);
 
+  const handleLicenseFileSelect = (file) => {
+    setLicenseFile(file);
+  };
+
   const validateStep = async (step) => {
     let fieldsToValidate = [];
-    
+
     switch (step) {
       case 1:
         fieldsToValidate = [
-          'location',
-          'public_phone',
-          'patients_seen',
-          'profile_notes',
-          'services_offered',
-          'service_modalities',
-          'gender',
-          'race'
+          "location",
+          "public_phone",
+          "patients_seen",
+          "profile_notes",
+          "services_offered",
+          "service_modalities",
+          "gender",
+          "race",
         ];
         break;
       case 2:
-        fieldsToValidate = [
-          'license_number',
-          'license_file_url'
-        ];
+        fieldsToValidate = ["license_number", "license_file_url"];
         break;
       case 3:
-        fieldsToValidate = [
-          'availability'
-        ];
+        fieldsToValidate = ["availability"];
         break;
       default:
         return false;
@@ -327,24 +336,31 @@ const SignUp = () => {
 
   const handleProfilePictureChange = async (event) => {
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file) {
+      setProfilePicture(null);
+      setProfilePictureFile(null);
+      return;
+    }
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
     if (!allowedTypes.includes(file.type)) {
-      setProfilePictureError('Invalid file type. Only JPEG, PNG and GIF are allowed.');
+      setProfilePictureError(
+        "Invalid file type. Only JPEG, PNG and GIF are allowed."
+      );
       return;
     }
 
     // Validate file size (5MB)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      setProfilePictureError('File too large. Maximum size is 5MB.');
+      setProfilePictureError("File too large. Maximum size is 5MB.");
       return;
     }
 
-    setProfilePictureError('');
+    setProfilePictureError("");
     setProfilePicture(URL.createObjectURL(file));
+    setProfilePictureFile(file);
   };
 
   const onSubmit = async (formData) => {
@@ -352,11 +368,20 @@ const SignUp = () => {
     try {
       const profileData = {
         user_profile_id: userObj?.user_profile_id,
+        counselor_profile_id: onBoardingDetails?.counselor_profile_id,
         license_number: formData.license_number,
         license_expiry_date: formData.license_expiry_date,
-        services_offered: JSON.stringify(formData?.services_offered?.map((s) => s.value) || []),
-        specialties: JSON.stringify(formData?.specialties?.map((s) => s.value) || []),
-        service_modalities: JSON.stringify(Array.isArray(formData?.service_modalities) ? formData.service_modalities.map((s) => s.value) : []),
+        services_offered: JSON.stringify(
+          formData?.services_offered?.map((s) => s.value) || []
+        ),
+        specialties: JSON.stringify(
+          formData?.specialties?.map((s) => s.value) || []
+        ),
+        service_modalities: JSON.stringify(
+          Array.isArray(formData?.service_modalities)
+            ? formData.service_modalities.map((s) => s.value)
+            : []
+        ),
         availability: JSON.stringify(formData.availability || {}),
         location: formData.location?.value,
         location_lat: formData.location?.lat,
@@ -365,71 +390,127 @@ const SignUp = () => {
         patients_seen: parseInt(formData.patients_seen) || 0,
         gender: formData.gender?.value,
         race: formData.race?.value,
-        profile_notes: formData.profile_notes
+        profile_notes: formData.profile_notes,
       };
 
-      // Create profile first
-      const response = await onBoarding(profileData);
+      // Use update API if type exists, otherwise use create
+      const response = type
+        ? await updateProfile(profileData, userId)
+        : await onBoarding(profileData);
 
-      console.log(response , "response::::::::")
-      
-      if (response?.id) {
+      console.log("Profile creation/update response:", response);
+
+      if (response?.id || userId) {
+        const idToUpdate = response?.id ? response?.id : userId;
+
+        let profileImageSuccess = true;
+        let licenseFileSuccess = true;
+        let documentsSuccess = true;
+
         // Upload profile picture if selected
-        if (profilePictureInputRef.current?.files?.[0]) {
-          console.log(profilePictureInputRef , "profilePictureInputRef::::::::::::")
+        console.log("Checking for profile picture to upload...");
+        if (profilePictureFile) {
+          console.log(
+            "Profile picture found, preparing for upload:",
+            profilePictureFile
+          );
           try {
             const formData = new FormData();
-            formData.append('image', profilePictureInputRef.current.files[0]);
-            await CommonServices.uploadProfileImage(response.id, formData);
+            formData.append("image", profilePictureFile);
+            console.log("Uploading profile picture...");
+            await CommonServices.uploadProfileImage(
+              idToUpdate || response.counselor_profile_id,
+              formData
+            );
+            console.log("Profile picture uploaded successfully.");
           } catch (error) {
-            console.error('Error uploading profile picture:', error);
-            toast.error('Failed to upload profile picture');
+            profileImageSuccess = false;
+            console.error("Error uploading profile picture:", error);
+            toast.error("Failed to upload profile picture");
           }
+        } else {
+          console.log("No profile picture to upload.");
         }
 
         // Upload license file if selected
-        const licenseFileInput = document.getElementById('license-file');
-        if (licenseFileInput?.files?.[0]) {
+        console.log("Checking for license file to upload...");
+        if (licenseFile) {
+          console.log("License file found, preparing for upload:", licenseFile);
           try {
             const formData = new FormData();
-            formData.append('license', licenseFileInput.files[0]);
-            await CommonServices.uploadLicenseFile(response.id, formData);
+            formData.append("license", licenseFile);
+            console.log("Uploading license file...");
+            await CommonServices.uploadLicenseFile(
+              idToUpdate || response.counselor_profile_id,
+              formData
+            );
+            console.log("License file uploaded successfully.");
           } catch (error) {
-            console.error('Error uploading license file:', error);
-            toast.error('Failed to upload license file');
+            licenseFileSuccess = false;
+            console.error("Error uploading license file:", error);
+            toast.error("Failed to upload license file");
           }
+        } else {
+          console.log("No license file to upload.");
         }
 
         // Upload all additional documents
-        const documentUploadPromises = documentFiles.map(async (file, index) => {
-          if (file) {
-            try {
-              const formData = new FormData();
-              formData.append('document', file);
-              formData.append('counselor_profile_id', response.id);
-              formData.append('document_type', 'other');
-              formData.append('document_name', documentNames[index]);
-              formData.append('expiry_date', documentExpiryDates[index]);
-              
-              await CommonServices.uploadOnboardingDocuments(formData);
-              return true;
-            } catch (error) {
-              console.error(`Error uploading document ${index + 1}:`, error);
-              return false;
-            }
-          }
-          return true;
-        });
+        console.log("Checking for additional documents to upload...");
+        if (documentFiles.length > 0) {
+          console.log(`Found ${documentFiles.length} additional documents.`);
+          const documentUploadPromises = documentFiles.map(
+            async (file, index) => {
+              if (file) {
+                console.log(`Uploading document ${index + 1}:`, file.name);
+                try {
+                  const formData = new FormData();
+                  formData.append("document", file);
+                  formData.append(
+                    "counselor_profile_id",
+                    idToUpdate || response.counselor_profile_id
+                  );
+                  formData.append("document_type", "other");
+                  formData.append("document_name", documentNames[index]);
+                  formData.append("expiry_date", documentExpiryDates[index]);
 
-        const documentResults = await Promise.all(documentUploadPromises);
-        if (!documentResults.every(result => result)) {
-          toast.warning('Some documents failed to upload');
+                  await CommonServices.uploadOnboardingDocuments(formData);
+                  console.log(`Document ${index + 1} uploaded successfully.`);
+                  return true;
+                } catch (error) {
+                  console.error(
+                    `Error uploading document ${index + 1}:`,
+                    error
+                  );
+                  return false;
+                }
+              }
+              return true;
+            }
+          );
+
+          const documentResults = await Promise.all(documentUploadPromises);
+          documentsSuccess = documentResults.every((result) => result);
+          if (!documentsSuccess) {
+            toast.warning("Some documents failed to upload");
+          }
+        } else {
+          console.log("No additional documents to upload.");
         }
 
-        toast.success("Profile created successfully", { position: "top-right" });
-        router.push('/dashboard');
-      } else {
-        throw new Error("Failed to create profile");
+        // Only redirect if all uploads succeeded
+        if (profileImageSuccess && licenseFileSuccess && documentsSuccess) {
+          toast.success("Profile created/updated successfully", {
+            position: "top-right",
+          });
+          router.push("/dashboard");
+        }
+      } else if (
+        response?.message === "Counselor profile updated successfully"
+      ) {
+        toast.success(response?.message, {
+          position: "top-right",
+        });
+        router.push("/dashboard");
       }
     } catch (error) {
       console.error("Error in form submission:", error);
@@ -444,39 +525,59 @@ const SignUp = () => {
   const nextStep = async () => {
     const isValid = await validateStep(currentStep);
     if (isValid) {
-      setCurrentStep(prev => Math.min(prev + 1, totalSteps));
+      setCurrentStep((prev) => Math.min(prev + 1, totalSteps));
     }
   };
 
   const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
   const renderStepIndicator = () => (
     <StepIndicator>
       <div className="step">
-        <div className={`step-number ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>1</div>
-        <div className={`step-label ${currentStep === 1 ? 'active' : ''}`}>Basic Details</div>
+        <div
+          className={`step-number ${currentStep >= 1 ? "active" : ""} ${
+            currentStep > 1 ? "completed" : ""
+          }`}
+        >
+          1
+        </div>
+        <div className={`step-label ${currentStep === 1 ? "active" : ""}`}>
+          Basic Details
+        </div>
       </div>
       <div className="step">
-        <div className={`step-number ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>2</div>
-        <div className={`step-label ${currentStep === 2 ? 'active' : ''}`}>License Information</div>
+        <div
+          className={`step-number ${currentStep >= 2 ? "active" : ""} ${
+            currentStep > 2 ? "completed" : ""
+          }`}
+        >
+          2
+        </div>
+        <div className={`step-label ${currentStep === 2 ? "active" : ""}`}>
+          License Information
+        </div>
       </div>
       <div className="step">
-        <div className={`step-number ${currentStep >= 3 ? 'active' : ''}`}>3</div>
-        <div className={`step-label ${currentStep === 3 ? 'active' : ''}`}>Availability</div>
+        <div className={`step-number ${currentStep >= 3 ? "active" : ""}`}>
+          3
+        </div>
+        <div className={`step-label ${currentStep === 3 ? "active" : ""}`}>
+          Availability
+        </div>
       </div>
     </StepIndicator>
   );
 
   const handleUploadComplete = (fileUrl) => {
-    methods.setValue('license_file_url', fileUrl);
+    methods.setValue("license_file_url", fileUrl);
   };
 
   const handleAddMoreDocument = () => {
-    setDocumentFiles(prev => [...prev, null]);
-    setDocumentNames(prev => [...prev, '']);
-    setDocumentExpiryDates(prev => [...prev, '']);
+    setDocumentFiles((prev) => [...prev, null]);
+    setDocumentNames((prev) => [...prev, ""]);
+    setDocumentExpiryDates((prev) => [...prev, ""]);
   };
 
   const handleDocumentFileChange = (index, file) => {
@@ -501,11 +602,11 @@ const SignUp = () => {
     const uploadPromises = documentFiles.map(async (file, index) => {
       if (file) {
         const formData = new FormData();
-        formData.append('file', file);
-        formData.append('document_name', documentNames[index]);
-        formData.append('expiry_date', documentExpiryDates[index]);
-        formData.append('counselor_profile_id', counselorProfileId);
-        
+        formData.append("file", file);
+        formData.append("document_name", documentNames[index]);
+        formData.append("expiry_date", documentExpiryDates[index]);
+        formData.append("counselor_profile_id", counselorProfileId);
+
         try {
           await CommonServices.uploadOnboardingDocuments(formData);
           return true;
@@ -518,16 +619,136 @@ const SignUp = () => {
     });
 
     const results = await Promise.all(uploadPromises);
-    return results.every(result => result);
+    return results.every((result) => result);
   };
 
-  const renderStepContent = () => {
-    switch (currentStep) {
+  useEffect(() => {
+    if (type && userId) {
+      getProfileData();
+    }
+  }, [type , userId]);
+
+  // Add new useEffect for form prefilling
+  useEffect(() => {
+    if (onBoardingDetails) {
+      const servicesOffered = onBoardingDetails.services_offered.map(
+        (service) => ({
+          value: service.service_id,
+          label: service.service_name,
+        })
+      );
+
+      const specialties = onBoardingDetails.specialties.map((specialty) => ({
+        value: specialty.service_id,
+        label: specialty.service_name,
+      }));
+
+      const serviceModalities = onBoardingDetails.service_modalities.map(
+        (modality) => ({
+          value: modality.toLowerCase().replace(" ", "_"),
+          label: modality,
+        })
+      );
+
+      methods.reset({
+        location: {
+          value: onBoardingDetails.location,
+          label: onBoardingDetails.location,
+        },
+        public_phone: onBoardingDetails.public_phone,
+        patients_seen: onBoardingDetails.patients_seen.toString(),
+        profile_notes: onBoardingDetails.profile_notes,
+        services_offered: servicesOffered,
+        specialties: specialties,
+        service_modalities: serviceModalities,
+        gender: {
+          value: onBoardingDetails.gender.toLowerCase(),
+          label:
+            onBoardingDetails.gender.charAt(0).toUpperCase() +
+            onBoardingDetails.gender.slice(1),
+        },
+        race: {
+          value: onBoardingDetails.race.toLowerCase(),
+          label: onBoardingDetails.race,
+        },
+        license_number: onBoardingDetails.license_number,
+        license_file_url: onBoardingDetails.license_file_url,
+        availability: onBoardingDetails.availability || {},
+      });
+
+      const fetchProfileImage = async () => {
+        if (onBoardingDetails.profile_picture_url) {
+          try {
+            const response = await axios.get(
+              `${imageBaseUrl}${onBoardingDetails.profile_picture_url}`,
+              {
+                responseType: "blob", // Important: get raw binary data
+                headers: {
+                  "ngrok-skip-browser-warning": "true",
+                },
+              }
+            );
+
+            const blob = response.data;
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64data = reader.result; // Data URL (base64)
+              setProfilePicture(base64data); // Now usable as <img src={profilePicture} />
+            };
+
+            reader.readAsDataURL(blob);
+          } catch (error) {
+            console.log(error, "error:::::");
+          }
+        }
+      };
+
+      if (onBoardingDetails?.profile_picture_url) {
+        fetchProfileImage();
+      }
+
+      const fetchLicenseImage = async () => {
+        if (onBoardingDetails.license_file_url) {
+          try {
+            const response = await axios.get(
+              `${imageBaseUrl}${onBoardingDetails.license_file_url}`,
+              {
+                responseType: "blob",
+                headers: {
+                  "ngrok-skip-browser-warning": "true",
+                },
+              }
+            );
+
+            const blob = response.data;
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64data = reader.result;
+              setLicenseFile(base64data);
+            };
+
+            reader.readAsDataURL(blob);
+          } catch (error) {
+            console.log(error, "error:::::");
+          }
+        }
+      };
+
+      if (onBoardingDetails.license_file_url) {
+        fetchLicenseImage();
+      }
+    }
+  }, [onBoardingDetails]);
+
+  const renderStepContent = (step = currentStep) => {
+    switch (step) {
       case 1:
         return (
           <>
             <ProfilePictureUpload>
-              <div 
+              <div
                 className="profile-picture-container"
                 onClick={() => profilePictureInputRef.current?.click()}
               >
@@ -549,7 +770,13 @@ const SignUp = () => {
               )}
             </ProfilePictureUpload>
 
-            <FormRow style={{display:"flex" , justifyContent:"center" , alignItems:"center"}}>
+            <FormRow
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
               <FormField className="half-width">
                 <Controller
                   name="license_number"
@@ -573,10 +800,13 @@ const SignUp = () => {
                   control={methods.control}
                   rules={{ required: "License file is required" }}
                   render={({ field, fieldState: { error } }) => (
-                    <LicenseFileUpload 
+                    <LicenseFileUpload
                       counselorProfileId={123}
                       onUploadComplete={handleUploadComplete}
                       error={error?.message}
+                      onFileSelect={handleLicenseFileSelect}
+                      hideUploadButton={true}
+                      licenseFile={licenseFile}
                     />
                   )}
                 />
@@ -603,12 +833,12 @@ const SignUp = () => {
                 <Controller
                   name="public_phone"
                   control={methods.control}
-                  rules={{ 
+                  rules={{
                     required: "Phone number is required",
                     pattern: {
                       value: /^[0-9]{10}$/,
-                      message: "Please enter a valid 10-digit phone number"
-                    }
+                      message: "Please enter a valid 10-digit phone number",
+                    },
                   }}
                   render={({ field, fieldState: { error } }) => (
                     <CustomInputField
@@ -626,12 +856,12 @@ const SignUp = () => {
                 <Controller
                   name="patients_seen"
                   control={methods.control}
-                  rules={{ 
+                  rules={{
                     required: "Number of patients is required",
                     min: {
                       value: 0,
-                      message: "Number of patients cannot be negative"
-                    }
+                      message: "Number of patients cannot be negative",
+                    },
                   }}
                   render={({ field, fieldState: { error } }) => (
                     <CustomInputField
@@ -675,7 +905,7 @@ const SignUp = () => {
                   render={({ field, fieldState: { error } }) => (
                     <CustomMultiSelect
                       {...field}
-                      label='Services Offered*'
+                      label="Services Offered*"
                       placeholder="Select services offered"
                       isMulti={true}
                       options={servicesDropdown}
@@ -692,7 +922,7 @@ const SignUp = () => {
                   render={({ field, fieldState: { error } }) => (
                     <CustomMultiSelect
                       {...field}
-                      label='Specialties*'
+                      label="Specialties*"
                       placeholder="Select your specialties"
                       isMulti={true}
                       options={servicesDropdown}
@@ -712,7 +942,7 @@ const SignUp = () => {
                   render={({ field, fieldState: { error } }) => (
                     <CustomMultiSelect
                       {...field}
-                      label='Gender*'
+                      label="Gender*"
                       placeholder="Select your gender"
                       isMulti={false}
                       options={genderOptions}
@@ -729,7 +959,7 @@ const SignUp = () => {
                   render={({ field, fieldState: { error } }) => (
                     <CustomMultiSelect
                       {...field}
-                      label='Race/Ethnicity*'
+                      label="Race/Ethnicity*"
                       placeholder="Select your race/ethnicity"
                       isMulti={false}
                       options={raceOptions}
@@ -749,7 +979,7 @@ const SignUp = () => {
                   render={({ field, fieldState: { error } }) => (
                     <CustomMultiSelect
                       {...field}
-                      label='Service Modalities*'
+                      label="Service Modalities*"
                       placeholder="Select service modalities"
                       isMulti={true}
                       options={modalityOptions}
@@ -766,23 +996,36 @@ const SignUp = () => {
           <>
             <DocumentUpload>
               <h3>Additional Documents</h3>
-              <p>Upload any additional certifications, insurance documents, or other relevant files.</p>
+              <p>
+                Upload any additional certifications, insurance documents, or
+                other relevant files.
+              </p>
               <div className="document-list">
                 {documentFiles.map((file, index) => (
                   <div key={index} className="document-item">
                     <div className="document-info">
-                      <label htmlFor={`document-file-${index}`} className="document-upload-label" style={{ cursor: 'pointer' }}>
+                      <label
+                        htmlFor={`document-file-${index}`}
+                        className="document-upload-label"
+                        style={{ cursor: "pointer" }}
+                      >
                         {file ? (
-                          <span style={{ fontSize: 14, color: '#2196F3' }}>{file.name}</span>
+                          <span style={{ fontSize: 14, color: "#2196F3" }}>
+                            {file.name}
+                          </span>
                         ) : (
-                          <span style={{ fontSize: 24, color: '#666' }}>📎</span>
+                          <span style={{ fontSize: 24, color: "#666" }}>
+                            📎
+                          </span>
                         )}
                         <input
                           id={`document-file-${index}`}
                           type="file"
                           accept="image/*,application/pdf"
-                          style={{ display: 'none' }}
-                          onChange={e => handleDocumentFileChange(index, e.target.files[0])}
+                          style={{ display: "none" }}
+                          onChange={(e) =>
+                            handleDocumentFileChange(index, e.target.files[0])
+                          }
                         />
                       </label>
                       <div className="document-details">
@@ -799,7 +1042,12 @@ const SignUp = () => {
                                 customClass="document-name-input"
                                 placeholder="Enter document name"
                                 error={error?.message}
-                                onChange={(e) => handleDocumentNameChange(index, e.target.value)}
+                                onChange={(e) =>
+                                  handleDocumentNameChange(
+                                    index,
+                                    e.target.value
+                                  )
+                                }
                               />
                             )}
                           />
@@ -808,7 +1056,9 @@ const SignUp = () => {
                           <Controller
                             name={`documentExpiryDates.${index}`}
                             control={methods.control}
-                            rules={{ required: "Document expiry date is required" }}
+                            rules={{
+                              required: "Document expiry date is required",
+                            }}
                             render={({ field, fieldState: { error } }) => (
                               <CustomInputField
                                 {...field}
@@ -817,7 +1067,12 @@ const SignUp = () => {
                                 customClass="document-expiry-input"
                                 placeholder="Enter expiry date"
                                 error={error?.message}
-                                onChange={(e) => handleDocumentExpiryChange(index, e.target.value)}
+                                onChange={(e) =>
+                                  handleDocumentExpiryChange(
+                                    index,
+                                    e.target.value
+                                  )
+                                }
                               />
                             )}
                           />
@@ -850,9 +1105,9 @@ const SignUp = () => {
                   title="Add More Documents"
                   type="button"
                   onClick={() => {
-                    setDocumentFiles(prev => [...prev, null]);
-                    setDocumentNames(prev => [...prev, '']);
-                    setDocumentExpiryDates(prev => [...prev, '']);
+                    setDocumentFiles((prev) => [...prev, null]);
+                    setDocumentNames((prev) => [...prev, ""]);
+                    setDocumentExpiryDates((prev) => [...prev, ""]);
                   }}
                   className="secondary-button"
                 />
@@ -883,24 +1138,12 @@ const SignUp = () => {
               control={methods.control}
               defaultValue={{}}
               render={({ field }) => (
-                <WeeklyAvailability control={methods.control} />
+                <WeeklyAvailability
+                  control={methods.control}
+                  value={onBoardingDetails?.availability || {}}
+                />
               )}
             />
-            {/* <div className="form-actions">
-              <CustomButton
-                title="Previous"
-                type="button"
-                onClick={() => setCurrentStep(currentStep - 1)}
-                className="secondary-button"
-              />
-              <CustomButton
-                title={loading ? "Creating Profile..." : "Create Profile"}
-                type="button"
-                onClick={methods.handleSubmit(onSubmit)}
-                disabled={loading}
-                className="primary-button"
-              />
-            </div> */}
           </div>
         );
       default:
@@ -908,33 +1151,53 @@ const SignUp = () => {
     }
   };
 
-  const fetchServicesData = async()=>{
+  // Helper to get step from type
+  const getStepFromType = (type) => {
+    if (type === "basic") return 1;
+    if (type === "license") return 2;
+    if (type === "availability") return 3;
+    return currentStep;
+  };
+
+  const fetchServicesData = async () => {
     try {
       const servicesResponse = await CommonServices.getServices();
-      if(servicesResponse.status===200){
+      if (servicesResponse.status === 200) {
         // Map all services for both dropdowns
         const allServices = servicesResponse?.data?.rec?.map((service) => ({
           value: service.service_id,
           label: service.service_name,
           is_report: service.is_report,
-          is_additional: service.is_additional
+          is_additional: service.is_additional,
         }));
 
         // Filter services for regular services dropdown (non-report, non-additional)
         const regularServices = allServices?.filter(
-          service => service.is_report === 0 && service.is_additional === 0
+          (service) => service.is_report === 0 && service.is_additional === 0
         );
         setServicesDropdown(regularServices);
       }
     } catch (error) {
-      console.log('Error fetching all the services', error);
-      toast.error('Failed to load services. Please try again.');
+      console.log("Error fetching all the services", error);
+      toast.error("Failed to load services. Please try again.");
     }
-  }
+  };
 
-  useEffect(()=>{
-fetchServicesData();
-  },[])
+  const getProfileData = async () => {
+    try {
+      const { data, status } = await CommonServices.getCounselorProfile(userId);
+      if (data && status === 200) {
+        setOnBoardingDetails(data?.rec[0]);
+      }
+    } catch (error) {
+      console.log("Error while fetching counselor details:", error);
+      setOnBoardingDetails(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchServicesData();
+  }, []);
 
   return (
     <Wrapper>
@@ -974,37 +1237,50 @@ fetchServicesData();
       <RightPanel>
         <FormContainer>
           <h2>On Boarding</h2>
-          {renderStepIndicator()}
+          {!type && renderStepIndicator()}
           <FormProvider {...methods}>
             <form>
-              {renderStepContent()}
-              <ButtonContainer>
-                {currentStep > 1 && (
-                  <CustomButton
-                    title="Previous"
-                    type="button"
-                    onClick={prevStep}
-                    className="secondary-button"
-                  />
-                )}
-                {currentStep < totalSteps ? (
-                  <CustomButton
-                    title="Next"
-                    type="button"
-                    onClick={nextStep}
-                    customClass="primary-button"
-                    onboardingStep={true}
-                  />
-                ) : (
-                  <CustomButton
-                    title="Submit"
-                    type="button"
-                    onClick={methods.handleSubmit(onSubmit)}
-                    className="primary-button"
-                    disabled={loading}
-                  />
-                )}
-              </ButtonContainer>
+              {type
+                ? renderStepContent(getStepFromType(type))
+                : renderStepContent()}
+              {type && (
+                <CustomButton
+                  title="Submit"
+                  type="button"
+                  onClick={methods.handleSubmit(onSubmit)}
+                  className="primary-button"
+                  disabled={loading}
+                />
+              )}
+              {!type && (
+                <ButtonContainer>
+                  {currentStep > 1 && (
+                    <CustomButton
+                      title="Previous"
+                      type="button"
+                      onClick={prevStep}
+                      className="secondary-button"
+                    />
+                  )}
+                  {currentStep < totalSteps ? (
+                    <CustomButton
+                      title="Next"
+                      type="button"
+                      onClick={nextStep}
+                      customClass="primary-button"
+                      onboardingStep={true}
+                    />
+                  ) : (
+                    <CustomButton
+                      title="Submit"
+                      type="button"
+                      onClick={methods.handleSubmit(onSubmit)}
+                      className="primary-button"
+                      disabled={loading}
+                    />
+                  )}
+                </ButtonContainer>
+              )}
             </form>
           </FormProvider>
         </FormContainer>

@@ -88,11 +88,11 @@ export const HeaderWrapper = styled.div`
     align-items: center;
     .sign-in-link {
       margin-right: 15px;
-      color: var(--link-color);
+      color: #3973B7;
     }
     .register-button {
       padding: 8px 15px;
-      background-color: var(--primary-button-color);
+      background-color: #3973B7;
       color: white;
       border: none;
       border-radius: 4px;
@@ -217,6 +217,7 @@ export const HeroSectionWrapper = styled.div`
   background-color: #f8f5f0;
   height: 700px;
   position: relative;
+  z-index: 50;
 
   @media screen and (max-width: 768px) {
     flex-direction: column;
@@ -349,8 +350,8 @@ export const SearchBarWrapper = styled.div`
     display: flex;
     align-items: center;
     background-color: white;
-    padding: 10px;
-    border-radius: 5px;
+    padding: 16px;
+    border-radius: 12px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
     @media screen and (max-width: 768px) {
@@ -417,8 +418,8 @@ export const SearchBarWrapper = styled.div`
   }
 
   .search-button {
-    padding: 10px 20px;
-    background-color: var(--primary-button-color);
+    padding: 14px 20px;
+    background-color: #3973B7;
     color: white;
     border: none;
     border-radius: 4px;
@@ -530,8 +531,8 @@ export const FeatureAndReportSectionWrapper = styled.div`
   }
 
   .get-started-button {
-    padding: 10px 20px;
-    background-color: var(--primary-button-color);
+    padding: 14px 20px;
+    background-color: #3973B7;
     color: white;
     border: none;
     border-radius: 4px;
@@ -610,7 +611,7 @@ export const FeatureAndReportSectionWrapper = styled.div`
 export const FeatureCardWrapper = styled.div`
   flex: 1;
   padding: 30px;
-  border: 1px solid #eee;
+  box-shadow: 0px 2px 4px 0px #3973B70D;
   border-radius: 12px;
   text-align: center;
   background-color: white;
@@ -732,8 +733,8 @@ export const CoreFeaturesSectionWrapper = styled.section`
   }
 
   .core-features-button {
-    padding: 10px 20px;
-    background-color: var(--primary-button-color);
+    padding: 14px 20px;
+    background-color: #3973B7;
     color: white;
     border: none;
     border-radius: 4px;
@@ -862,8 +863,8 @@ export const EmpoweringSectionWrapper = styled.section`
   }
 
   .get-started-button {
-    padding: 10px 20px;
-    background-color: var(--primary-button-color);
+    padding: 14px 20px;
+    background-color: #3973B7;
     color: white;
     border: none;
     border-radius: 4px;
@@ -914,8 +915,9 @@ export const EmpoweringSectionWrapper = styled.section`
   }
 
   .provider-type-image-placeholder {
-    width: 100px;
-    height: 100px;
+    width: 129px;
+    height: 109px;
+    object-fit: cover;
     background-color: #ccc;
     display: flex;
     justify-content: center;
@@ -993,7 +995,7 @@ export const WorkFlowSectionWrapper = styled.section`
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 50px;
+    gap: 0;
     @media screen and (max-width: 768px) {
       flex-direction: column;
       width:100%;
@@ -1012,8 +1014,9 @@ export const WorkFlowSectionWrapper = styled.section`
   }
 
   .small-image-placeholder {
-    width: 100px;
-    height: 100px;
+    width: 99px;
+    height: 96px;
+    object-fit: cover;
     background-color: #ccc;
     border-radius: 5px;
   }
@@ -1086,6 +1089,7 @@ export const WorkFlowSectionWrapper = styled.section`
     position: relative;
   }
 
+
   .custom-swiper-buttons-container {
     position: absolute;
     bottom: -90px;
@@ -1105,6 +1109,7 @@ export const WorkFlowSectionWrapper = styled.section`
       color: #fff;
       font-size: 2rem;
     }
+   
   }
 `;
 
