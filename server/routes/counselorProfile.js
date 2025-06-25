@@ -41,4 +41,10 @@ router.put('/:counselor_profile_id/license',
   AsyncWrapper(counselorProfileController.updateLicenseFile.bind(counselorProfileController))
 );
 
+// Send appointment email to counselor
+router.post('/send-appointment-email',
+  authenticate,
+  AsyncWrapper(counselorProfileController.sendAppointmentEmail.bind(counselorProfileController))
+);
+
 export const counselorProfileRouter = { baseUrl: '/api/counselor-profile', router }; 

@@ -232,23 +232,36 @@ export default class CounselorProfileController {
       const { counselor_profile_id } = req.params;
       const file = req.file;
 
-      if (!counselor_profile_id) {
-        return res.status(400).json({ message: 'Counselor profile ID is required', error: -1 });
+      if (!file) {
+        return res.status(400).json({ message: 'License file is required' });
       }
 
       const result = await this.counselorProfileService.updateLicenseFile(counselor_profile_id, file);
-      
+
       if (result.error) {
         return res.status(400).json(result);
       }
-      
+
       res.status(200).json(result);
     } catch (error) {
-      logger.error('Error updating license file:', error);
+      console.error('Error updating license file:', error);
       res.status(500).json({ 
         message: 'Error updating license file', 
         error: error.message 
       });
+    }
+  }
+
+  async sendAppointmentEmail(req, res) {
+    try {
+      const result = await this.counselorProfileService.sendAppointmentEmail(req.body);
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error('Error sending appointment email:', error);
+      res.status(500).json({ message: 'Internal server error', error: -1 });
     }
   }
 } 

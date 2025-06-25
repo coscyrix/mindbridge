@@ -15,6 +15,7 @@ import {
 } from '../../utils/emailTmplt.js';
 import UserProfile from '../userProfile.js';
 import dotenv from 'dotenv';
+import CounselorProfile from '../counselorProfile.js';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ export default class User {
     this.authCommon = new AuthCommon();
     this.sendEmail = new SendEmail();
     this.userProfile = new UserProfile();
+    this.counselorProfile = new CounselorProfile();
   }
   //////////////////////////////////////////
 
@@ -209,6 +211,13 @@ export default class User {
           tenant_id: usrPro[0].tenant_id,
           tenant_name: usrPro[0].tenant_name,
         };
+        // If user is a counselor, add counselor_profile_id
+        if (usr.role_id === 2) {
+          const counselorProfile = await this.counselorProfile.getCounselorProfile({ user_profile_id: usr.user_profile_id });
+          if (counselorProfile.rec && counselorProfile.rec.length > 0) {
+            usr.counselor_profile_id = counselorProfile.rec[0].counselor_profile_id;
+          }
+        }
       }
 
       const sendOTP = this.sendOTPforVerification({ email: data.email });

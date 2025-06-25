@@ -3,12 +3,15 @@ import joi from 'joi';
 import { saveFile } from '../utils/fileUpload.js';
 import CounselorService from '../models/counselorServices.js';
 import Service from '../models/service.js';
+import SendEmail from '../middlewares/sendEmail.js';
+import logger from '../config/winston.js';
 
 export default class CounselorProfileService {
   constructor() {
     this.counselorProfile = new CounselorProfile();
     this.counselorService = new CounselorService();
     this.service = new Service();
+    this.sendEmail = new SendEmail();
   }
 
   async createCounselorProfile(data) {
@@ -249,6 +252,7 @@ export default class CounselorProfileService {
       // Update profile with new image URL
       return this.counselorProfile.updateProfileImage(counselor_profile_id, imageUrl);
     } catch (error) {
+      console.error('Error updating profile image:', error);
       return { message: 'Error updating profile image', error: -1 };
     }
   }
@@ -278,7 +282,71 @@ export default class CounselorProfileService {
       // Update profile with new license file URL
       return this.counselorProfile.updateLicenseFile(counselor_profile_id, fileUrl);
     } catch (error) {
+      console.error('Error updating license file:', error);
       return { message: 'Error updating license file', error: -1 };
+    }
+  }
+
+  async sendAppointmentEmail(data) {
+    const schema = joi.object({
+      counselor_profile_id: joi.number().required(),
+      customer_name: joi.string().required(),
+      customer_email: joi.string().email().required(),
+      service: joi.string().required(),
+      appointment_date: joi.date().iso().required(),
+    });
+
+    const { error } = schema.validate(data);
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    try {
+      // Get counselor details
+      const counselorProfile = await this.counselorProfile.getCounselorProfile({
+        counselor_profile_id: data.counselor_profile_id,
+      });
+
+      if (!counselorProfile.rec || counselorProfile.rec.length === 0) {
+        return { message: 'Counselor not found', error: -1 };
+      }
+
+      const counselor = counselorProfile.rec[0];
+      const counselorEmail = counselor.email;
+      const counselorName = `${counselor.user_first_name} ${counselor.user_last_name}`;
+
+      // Create email message
+      const emailMsg = {
+        to: counselorEmail,
+        subject: `New Appointment with ${data.customer_name}`,
+        html: `
+          <h1>New Appointment Confirmation</h1>
+          <p>Hello ${counselorName},</p>
+          <p>You have a new appointment scheduled with the following details:</p>
+          <ul>
+            <li><strong>Customer Name:</strong> ${data.customer_name}</li>
+            <li><strong>Customer Email:</strong> ${data.customer_email}</li>
+            <li><strong>Service:</strong> ${data.service}</li>
+            <li><strong>Appointment Date:</strong> ${new Date(data.appointment_date).toDateString()}</li>
+          </ul>
+          <p>Please reach out to the customer to confirm the details.</p>
+          <p>Thank you,</p>
+          <p>The MindBridge Team</p>
+        `,
+      };
+
+      // Send email
+      const emailResult = await this.sendEmail.sendMail(emailMsg);
+
+      if (emailResult.error) {
+        logger.error('Error sending appointment email to counselor:', emailResult.message);
+        return { message: 'Failed to send appointment email', error: -1 };
+      }
+
+      return { message: 'Appointment email sent successfully' };
+    } catch (err) {
+      logger.error('Error in sendAppointmentEmail service:', err);
+      return { message: 'Internal server error', error: -1 };
     }
   }
 }
