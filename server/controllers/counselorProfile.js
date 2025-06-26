@@ -54,20 +54,21 @@ export default class CounselorProfileController {
         if (!profile || !profile.rec || profile.rec.length === 0) {
           return res.status(200).json({
             message: 'Counselor profile not found',
-            rec: []
+            rec: [],
+            related_counselors: []
           });
         }
-
-        // Return only the specific profile data
+        // Return the specific profile data and related counselors (if any)
         return res.status(200).json({
-          message: 'Counselor profile retrieved successfully',
-          rec: [profile.rec[0]]
+          message: profile.message || 'Counselor profile retrieved successfully',
+          rec: [profile.rec[0]],
+          related_counselors: profile.related_counselors || []
         });
       }
 
       // For general profile listing, return all profiles
-      res.status(200).json({
-        message: 'Counselor profiles retrieved successfully',
+      return res.status(200).json({
+        message: profile.message || 'Counselor profiles retrieved successfully',
         rec: profile.rec || []
       });
     } catch (error) {
