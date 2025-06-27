@@ -114,6 +114,8 @@ export default class CounselorProfileController {
     }
   }
 
+  // GET /api/counselor-profile/search
+  // Supports query params: location, gender, race, specialties, service_modalities, is_verified, min_rating, availability_day, availability_time, min_price, max_price, limit, offset
   async searchCounselors(req, res) {
     try {
       const result = await this.counselorProfileService.searchCounselors(req.query);

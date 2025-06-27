@@ -191,6 +191,8 @@ export default class CounselorProfileService {
       min_rating: joi.number().min(0).max(5).optional(),
       availability_day: joi.string().valid('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday').optional(),
       availability_time: joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
+      min_price: joi.number().min(0).optional(),
+      max_price: joi.number().min(0).optional(),
       limit: joi.number().integer().min(1).max(100).default(10),
       offset: joi.number().integer().min(0).default(0)
     });

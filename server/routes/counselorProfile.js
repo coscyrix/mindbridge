@@ -43,7 +43,6 @@ router.put('/:counselor_profile_id/license',
 
 // Send appointment email to counselor
 router.post('/send-appointment-email',
-  authenticate,
   AsyncWrapper(counselorProfileController.sendAppointmentEmail.bind(counselorProfileController))
 );
 

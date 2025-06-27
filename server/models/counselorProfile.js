@@ -278,6 +278,8 @@ export default class CounselorProfile {
         min_rating,
         availability_day,
         availability_time,
+        min_price,
+        max_price,
         limit = 10,
         offset = 0
       } = searchParams;
@@ -296,6 +298,8 @@ export default class CounselorProfile {
         .join('user_profile as up', 'cp.user_profile_id', 'up.user_profile_id')
         .join('users as u', 'up.user_id', 'u.user_id')
         .leftJoin('counselor_reviews as cr', 'cp.counselor_profile_id', 'cr.counselor_profile_id')
+        .leftJoin('counselor_services as cs', 'cp.counselor_profile_id', 'cs.counselor_profile_id')
+        .leftJoin('service as s', 'cs.service_id', 's.service_id')
         .groupBy('cp.counselor_profile_id');
 
       // Apply filters
@@ -332,6 +336,15 @@ export default class CounselorProfile {
           this.where('cp.availability', 'like', `%"${availability_day}":%`)
             .andWhere('cp.availability', 'like', `%"${availability_time}"%`);
         });
+      }
+
+      // Price range filter (on any service)
+      if (min_price !== undefined && max_price !== undefined) {
+        query.whereBetween('s.total_invoice', [min_price, max_price]);
+      } else if (min_price !== undefined) {
+        query.where('s.total_invoice', '>=', min_price);
+      } else if (max_price !== undefined) {
+        query.where('s.total_invoice', '<=', max_price);
       }
 
       // Add pagination
