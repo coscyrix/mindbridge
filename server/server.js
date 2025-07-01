@@ -21,6 +21,7 @@ import {
   reportRouter,
   counselorProfileRouter,
   counselorDocumentsRouter,
+  onboardingRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -45,6 +46,7 @@ async function main() {
         reportRouter,
         counselorProfileRouter,
         counselorDocumentsRouter,
+        onboardingRouter,
       ],
     });
 
