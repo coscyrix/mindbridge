@@ -62,3 +62,259 @@ a {
   color: var(--link-color);
   padding: 0px !important;
 }
+
+/* loader */
+
+.loader-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.7); 
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dimmed {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.loader-container {
+  position: relative;
+}
+
+.loader-container {
+  width: 100%;
+}
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 3px solid #FFF;
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+} 
+.loader::after {
+  content: '';  
+  box-sizing: border-box;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-bottom-color: blue;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+} 
+.copyright {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px;
+  flex-wrap: wrap;
+}
+
+.left-block {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.right-block {
+  display: flex;
+  flex-direction: row;
+  gap: 18px;
+  
+  text-align: right;
+}
+
+.copyright span {
+  white-space: nowrap;
+}
+.tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #f0f0f0;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+  margin-left: 18px;
+  font-weight: bold;
+  user-select: none;
+}
+/* get started Onbloaring Form */
+.onboarding-form {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 5rem;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.arrow-parent{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.onboarding-form h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  color: #333;
+}
+
+.onboarding-form h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #1e3a8a;
+}
+
+.onboarding-section {
+  margin-bottom: 2.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  color: #444;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+  outline: none;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.error-input {
+  border-color: #e53935 !important;
+  background-color: #fff5f5;
+}
+
+.error-text {
+  color: #e53935;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.disclaimer {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #666;
+  margin-top: 1rem;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.flex {
+  display: flex;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.mt-6 {
+  margin-top: 1.5rem;
+}
+
+button {
+  font-weight: 600;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+button[type="submit"],
+button.primary {
+  background-color: #1a73e8;
+  /* color: white; */
+}
+
+button.primary:hover {
+  background-color: #1669c1;
+}
+
+button.secondary {
+  background-color: #e2e8f0;
+  color: #333;
+}
+
+button.secondary:hover {
+  background-color: #cbd5e1;
+}
+
+
+/* back button */
+.back-Button {
+  background-color: #3973b7;
+  color: #ffffff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.back-Button:hover {
+  background-color: #2e5ea0;
+}
+
+.back-Button:active {
+  background-color: #254b82;
+}
+
+.back-Button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+

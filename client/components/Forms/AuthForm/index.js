@@ -39,7 +39,7 @@ const AuthForm = () => {
       }
     } catch (error) {
       toast.error(
-        error?.message ||
+        error?.response?.data?.message ||
           "Something unexpected happened. Kindly check your connection.",
         { position: "top-right" }
       );

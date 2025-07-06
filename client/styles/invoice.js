@@ -8,7 +8,9 @@ export const InvoiceContainer = styled.div`
     padding: 20px 16px;
     padding-top: 0px;
   }
-
+  .custom-search-container {
+    margin-top: 17px;
+  }
   .date-fields {
     width: 100%;
     border: 1px solid #ddd;
@@ -99,7 +101,7 @@ export const InvoiceContainer = styled.div`
           .custom-select-container {
             display: flex;
             gap: 8px;
-            align-items: end;
+            align-items: start;
             .custom-select {
               width: max-content;
               margin-bottom: 0px;

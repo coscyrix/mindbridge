@@ -20,3 +20,6 @@ export * from './AnalyticsIcon';
 export * from './LandingClientManagementIcon';
 export * from './CheckIcon';
 export * from './LoginIcon';
+export * from './ArrowIcon';
+export * from './RightIcon'
+export * from './ArrowLeft'

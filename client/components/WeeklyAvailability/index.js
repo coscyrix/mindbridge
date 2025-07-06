@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Controller } from 'react-hook-form';
 import Select from 'react-select';
 import styled from 'styled-components';
@@ -113,16 +113,47 @@ const days = [
 
 const defaultTimeSlot = { start: '10:00', end: '19:00' };
 
-const WeeklyAvailability = ({ control }) => {
+const convertTimesToSlots = (times) => {
+  if (!times || times.length === 0) return [];
+  
+  // Sort times to ensure they're in order
+  const sortedTimes = [...times].sort();
+  
+  // Return a single slot with earliest start and latest end time
+  return [{
+    start: sortedTimes[0],
+    end: sortedTimes[sortedTimes.length - 1]
+  }];
+};
+
+const getMinutesDifference = (time1, time2) => {
+  const [hours1, minutes1] = time1.split(':').map(Number);
+  const [hours2, minutes2] = time2.split(':').map(Number);
+  return (hours2 * 60 + minutes2) - (hours1 * 60 + minutes1);
+};
+
+const WeeklyAvailability = ({ control, value }) => {
   const [timeSlots, setTimeSlots] = useState({
-    monday: [defaultTimeSlot],
-    tuesday: [defaultTimeSlot],
-    wednesday: [defaultTimeSlot],
-    thursday: [defaultTimeSlot],
-    friday: [defaultTimeSlot],
-    saturday: [defaultTimeSlot],
-    sunday: [defaultTimeSlot]
+    monday: [],
+    tuesday: [],
+    wednesday: [],
+    thursday: [],
+    friday: [],
+    saturday: [],
+    sunday: []
   });
+
+  // Initialize timeSlots from value prop
+  useEffect(() => {
+    if (value) {
+      const initialTimeSlots = {};
+      days.forEach(day => {
+        const dayTimes = value[day.id] || [];
+        initialTimeSlots[day.id] = convertTimesToSlots(dayTimes);
+      });
+      setTimeSlots(initialTimeSlots);
+    }
+  }, [value]);
 
   const addTimeSlot = (dayId) => {
     setTimeSlots(prev => ({
@@ -164,32 +195,33 @@ const WeeklyAvailability = ({ control }) => {
   };
 
   // Generate an array of times for a given slot.
-  const generateTimes = (start, end) => {
-    const times = [];
-    let current = timeToMinutes(start);
-    const endMinutes = timeToMinutes(end);
+  // const generateTimes = (start, end) => {
+  //   const times = [];
+  //   let current = timeToMinutes(start);
+  //   const endMinutes = timeToMinutes(end);
     
-    // Loop in 1-hour (60 minutes) increments.
-    while (current <= endMinutes) {
-      times.push(minutesToTime(current));
-      current += 60;
-    }
+  //   // Loop in 1-hour (60 minutes) increments.
+  //   while (current <= endMinutes) {
+  //     times.push(minutesToTime(current));
+  //     current += 60;
+  //   }
     
-    // If the last generated time isn't exactly the end, add the end time.
-    if (times[times.length - 1] !== end) {
-      times.push(end);
-    }
+  //   // If the last generated time isn't exactly the end, add the end time.
+  //   if (times[times.length - 1] !== end) {
+  //     times.push(end);
+  //   }
     
-    return times;
-  };
+  //   return times;
+  // };
 
   let allTimes = [];
 
   // Process each slot.
   slots.forEach(slot => {
     if (slot.start && slot.end) {
-      const timesForSlot = generateTimes(slot.start, slot.end);
-      allTimes = allTimes.concat(timesForSlot);
+      // const timesForSlot = generateTimes(slot.start, slot.end);
+      // allTimes = allTimes.concat(timesForSlot);
+      allTimes.push(slot.start, slot.end);
     }
   });
 
@@ -211,7 +243,7 @@ const WeeklyAvailability = ({ control }) => {
               <Controller
                 name={`availability.${day.id}`}
                 control={control}
-                defaultValue={day.id !== 'saturday' && day.id !== 'sunday' ? getTimeArray([defaultTimeSlot]) : []}
+                defaultValue={value ? value[day.id] : []}
                 render={({ field }) => (
                   <>
                     <input
@@ -243,7 +275,7 @@ const WeeklyAvailability = ({ control }) => {
             <Controller
               name={`availability.${day.id}`}
               control={control}
-              defaultValue={day.id !== 'saturday' && day.id !== 'sunday' ? getTimeArray([defaultTimeSlot]) : []}
+              defaultValue={value ? value[day.id] : []}
               render={({ field }) => (
                 !field.value || field.value.length === 0 ? (
                   <span style={{ color: '#666' }}>closed</span>
@@ -252,7 +284,8 @@ const WeeklyAvailability = ({ control }) => {
                   <div className='time-slot-container'>
                     {(timeSlots[day.id] || []).map((slot, index) => (
                       <div key={index} className="time-selectors">
-                        <Select
+                       
+                        From:<Select
                           className="time-select"
                           classNamePrefix="select"
                           options={timeOptions}
@@ -273,7 +306,8 @@ const WeeklyAvailability = ({ control }) => {
                           }}
                           placeholder="Start time"
                         />
-                        <span className="separator">-</span>
+                        <span className="separator">To:</span>
+                        
                         <Select
                           className="time-select"
                           classNamePrefix="select"
@@ -314,7 +348,7 @@ const WeeklyAvailability = ({ control }) => {
                       </div>
                     ))}
                     </div>
-                    {(timeSlots[day.id] || []) && (
+                    {/* {(timeSlots[day.id] || []) && (
                       <button 
                         type="button" 
                         className="add-time"
@@ -329,7 +363,7 @@ const WeeklyAvailability = ({ control }) => {
                       >
                         Add
                       </button>
-                    )}
+                    )} */}
                   </>
                 )
               )}

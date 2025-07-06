@@ -1,35 +1,47 @@
-import React, { useState, useRef } from 'react';
-import CustomButton from '../CustomButton';
-import { toast } from 'react-toastify';
-import CustomInputField from '../CustomInputField';
-import { useFormContext, Controller } from 'react-hook-form';
-import CommonServices from '../../services/CommonServices';
-import { ErrorMessage, FileInfo, FileInput, UploadButton, UploadContainer } from './style';
+import React, { useState, useRef, useEffect } from "react";
+import CustomButton from "../CustomButton";
+import { toast } from "react-toastify";
+import CustomInputField from "../CustomInputField";
+import { useFormContext, Controller } from "react-hook-form";
+import CommonServices from "../../services/CommonServices";
+import {
+  ErrorMessage,
+  FileInfo,
+  FileInput,
+  UploadButton,
+  UploadContainer,
+} from "./style";
 
-const LicenseFileUpload = ({ counselorProfileId, onUploadComplete }) => {
+const LicenseFileUpload = ({
+  counselorProfileId,
+  onUploadComplete,
+  onFileSelect,
+  hideUploadButton,
+  licenseFile,
+}) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState('');
-  const [uploadedFileUrl, setUploadedFileUrl] = useState('');
+  const [error, setError] = useState("");
+  const [uploadedFileUrl, setUploadedFileUrl] = useState("");
   const fileInputRef = useRef(null);
   const { control, getValues } = useFormContext();
 
   const validateFile = (file) => {
     const maxSize = 5 * 1024 * 1024; // 5MB
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
 
     if (!allowedTypes.includes(file.type)) {
-      setError('Please upload a PDF, JPEG, or PNG file');
+      setError("Please upload a PDF, JPEG, or PNG file");
       return false;
     }
 
     if (file.size > maxSize) {
-      setError('File size should be less than 5MB');
+      setError("File size should be less than 5MB");
       return false;
     }
 
-    setError('');
+    setError("");
     return true;
   };
 
@@ -37,6 +49,7 @@ const LicenseFileUpload = ({ counselorProfileId, onUploadComplete }) => {
     const file = event.target.files[0];
     if (file && validateFile(file)) {
       setSelectedFile(file);
+      if (onFileSelect) onFileSelect(file);
     }
   };
 
@@ -53,66 +66,73 @@ const LicenseFileUpload = ({ counselorProfileId, onUploadComplete }) => {
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
-    
+
     const file = event.dataTransfer.files[0];
     if (file && validateFile(file)) {
       setSelectedFile(file);
+      if (onFileSelect) onFileSelect(file);
     }
   };
 
   const handleUploadClick = async () => {
     if (!selectedFile) {
-      setError('Please select a file first');
+      setError("Please select a file first");
       return;
     }
 
     try {
       setIsUploading(true);
-      setError('');
-      
+      setError("");
+
       const formValues = getValues();
       const { document_name, document_type, expiry_date } = formValues;
 
       if (!document_name || !document_type || !expiry_date) {
-        setError('Please fill in all document details');
+        setError("Please fill in all document details");
         setIsUploading(false);
         return;
       }
-      
+
       const formData = new FormData();
-      formData.append('document', selectedFile);
-      formData.append('counselor_profile_id', counselorProfileId);
-      formData.append('document_type', document_type);
-      formData.append('document_name', document_name);
-      formData.append('expiry_date', expiry_date);
+      formData.append("document", selectedFile);
+      formData.append("counselor_profile_id", counselorProfileId);
+      formData.append("document_type", document_type);
+      formData.append("document_name", document_name);
+      formData.append("expiry_date", expiry_date);
 
       const response = await CommonServices.uploadOnboardingDocuments(formData);
-      
+
       if (response.data) {
         setUploadedFileUrl(response.data.fileUrl);
         onUploadComplete(response.data.fileUrl);
-        toast.success('Document uploaded successfully');
+        toast.success("Document uploaded successfully");
       }
     } catch (error) {
-      setError(error.message || 'Failed to upload file. Please try again.');
-      toast.error('Failed to upload document');
+      setError(error.message || "Failed to upload file. Please try again.");
+      toast.error("Failed to upload document");
     } finally {
       setIsUploading(false);
     }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    if (onFileSelect) onFileSelect(null);
   };
 
   const removeFile = () => {
     setSelectedFile(null);
-    setError('');
-    setUploadedFileUrl('');
+    setError("");
+    setUploadedFileUrl("");
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
+    if (onFileSelect) onFileSelect(null);
   };
 
   return (
     <UploadContainer>
-      <Controller
+      {/* <Controller
         name="document_name"
         control={control}
         rules={{ required: "Document name is required" }}
@@ -155,16 +175,14 @@ const LicenseFileUpload = ({ counselorProfileId, onUploadComplete }) => {
             required
           />
         )}
-      />
+      /> */}
 
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-
-      <div 
-        className={isDragging ? 'dragging' : ''}
+      <div
+        className={isDragging ? "dragging" : ""}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        style={{ marginTop: '24px', textAlign:'center' }}
+        style={{ marginTop: "24px", textAlign: "center" }}
       >
         <FileInput
           type="file"
@@ -172,8 +190,8 @@ const LicenseFileUpload = ({ counselorProfileId, onUploadComplete }) => {
           onChange={handleFileSelect}
           accept=".pdf,.jpg,.jpeg,.png"
         />
-        
-        {!selectedFile ? (
+
+        {!selectedFile && !licenseFile ? (
           <>
             <p>Drag and drop your license file here, or</p>
             <UploadButton
@@ -183,23 +201,22 @@ const LicenseFileUpload = ({ counselorProfileId, onUploadComplete }) => {
             >
               browse files
             </UploadButton>
-            <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+            <p style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}>
               Supported formats: PDF, JPEG, PNG (max 5MB)
             </p>
           </>
         ) : (
           <FileInfo>
-            <div>
+            {selectedFile ? <div>
               <div className="file-name">{selectedFile.name}</div>
               <div className="file-size">
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </div>
               {uploadedFileUrl && (
-                <div className="file-url">
-                  URL: {uploadedFileUrl}
-                </div>
+                <div className="file-url">URL: {uploadedFileUrl}</div>
               )}
-            </div>
+             
+            </div> : <img src={licenseFile} height={"100px"} width={"100px"}/>}
             <button
               type="button"
               className="remove-button"
@@ -211,14 +228,14 @@ const LicenseFileUpload = ({ counselorProfileId, onUploadComplete }) => {
           </FileInfo>
         )}
 
-        {selectedFile && !uploadedFileUrl && (
+        {selectedFile && !uploadedFileUrl && !hideUploadButton && (
           <CustomButton
             title={isUploading ? "Uploading..." : "Upload File"}
             type="button"
             onClick={handleUploadClick}
             disabled={isUploading}
             customClass="primary-button"
-            style={{ marginTop: '16px' }}
+            style={{ marginTop: "16px" }}
           />
         )}
       </div>

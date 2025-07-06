@@ -7,7 +7,7 @@ const CustomInputField = ({
   label,
   type = "text",
   placeholder = "",
-  validationRules = {}, // New prop for additional validation rules
+  validationRules = {}, 
   customClass = "",
   disabled = false,
   icon,

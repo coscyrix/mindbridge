@@ -110,7 +110,7 @@ const AdditionalServicesForm = ({
         },
       });
     }
-  }, []);
+  }, [initialData, setValue, reset]);
 
   return (
     <FormProvider {...methods}>

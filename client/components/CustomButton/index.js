@@ -12,6 +12,7 @@ const CustomButton = ({
   renderFooter = null, // Additional prop for custom footer (e.g., Reset and Show All Columns)
   ...props
 }) => {
+
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 

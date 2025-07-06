@@ -3,19 +3,11 @@ import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import Router from "next/router";
 
-// Main API instance
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     "Content-Type": "application/json",
-  },
-});
-
-// File upload API instance
-export const liveAppApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_LIVE_API_URL,
-  headers: {
-    "Content-Type": "multipart/form-data",
+    "ngrok-skip-browser-warning": "true",
   },
 });
 
@@ -43,7 +35,6 @@ export const otpVerication = async (credentials) => {
   try {
     const response = await api.post("/auth/verify", credentials);
     if (response.status === 200) {
-      console.log(response.data);
       if (response.data == "Invalid OTP") throw new Error("Invalid OTP");
       const { data } = response;
       Cookies.set("accountVerified", true);
@@ -76,6 +67,22 @@ export const signUp = async (credentials) => {
 export const onBoarding = async (onBoardingData) => {
   try {
     const response = await api.post("/counselor-profile", onBoardingData);
+    if (response.status === 201) {
+      return response.data;
+    } else {
+      throw new Error("User cannot be created !!");
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateProfile = async (onBoardingData, profileId) => {
+  try {
+    const response = await api.put(
+      `/counselor-profile/${profileId}`,
+      onBoardingData
+    );
     if (response.status === 200) {
       return response.data;
     } else {
@@ -85,6 +92,8 @@ export const onBoarding = async (onBoardingData) => {
     throw error;
   }
 };
+
+// put /:id
 
 export const logout = () => {
   if (isLoggedOut) return;
@@ -130,7 +139,7 @@ const addInterceptors = (instance) => {
 
         return Promise.reject(error);
       } else if (error) {
-        return Promise.reject(error?.response?.data);
+        return Promise.reject(error);
       }
       return Promise.reject(error);
     }
@@ -139,4 +148,4 @@ const addInterceptors = (instance) => {
 
 // Add interceptors to both API instances
 addInterceptors(api);
-addInterceptors(liveAppApi);
+addInterceptors(api);

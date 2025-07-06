@@ -115,7 +115,7 @@ function CreateClientForm({
         setIsOpen(false);
       }
     } catch (error) {
-      toast.error(`Error while creating the client: ${error?.message}`);
+      toast.error(`Error while creating the client`);
     } finally {
       setActiveTab && setActiveTab(0);
       setLoading(false);

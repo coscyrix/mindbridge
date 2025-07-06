@@ -9,6 +9,7 @@ import { POSITIONS, SERVICE_ID } from "../../../utils/constants";
 import { CrossIcon } from "../../../public/assets/icons";
 import Spinner from "../../common/Spinner";
 import { useReferenceContext } from "../../../context/ReferenceContext";
+import Cookies from "js-cookie";
 
 export default function CreateServiceForm({
   isOpen,
@@ -20,11 +21,15 @@ export default function CreateServiceForm({
   loading,
 }) {
   const methods = useForm({ mode: "onTouched" });
+  const userData = Cookies.get("user");
+  const userObj = userData && JSON.parse(userData);
   const [positionTags, setPositionTags] = useState([]);
   const [serviceIdTags, setServiceIdTags] = useState([]);
   const [optionValue, setOptionValue] = useState();
   const [fields, setFields] = useState([{ position: "", service_id: "" }]);
   const [formButton, setFormButton] = useState("Create");
+  const [isAdvanceUpdate, setIsAdvanceUpdate] = useState(true);
+  const [userDetails, setUserDetails] = useState({});
   const { servicesData } = useReferenceContext();
   const servicesDropdown = servicesData
     ?.filter((service) => service.is_report === 1)
@@ -37,34 +42,50 @@ export default function CreateServiceForm({
     methods.setValue("svc_formula_typ", value);
   };
 
-  const handleSaveService = async (data) => {
-    // Prepare the svc_formula array by splitting and cleaning the input
-    if (initialData) {
-      const svcFormula = methods.getValues("svc_formula");
-      const svcFormulaArray = svcFormula
-        // ?.split(",")
-        // .map((item) => item.trim())
-        // .filter((item) => item !== "")
-        .map(Number);
+  useEffect(() => {
+    if (userData) {
+      const details = JSON.parse(userData);
+      setUserDetails(details);
     }
+  }, []);
+
+  const handleSaveService = async (data) => {
+    const svcFormula = methods.getValues("svc_formula");
+    const svcFormulaArray =
+      svcFormula &&
+      svcFormula
+        ?.split(",")
+        .map((item) => item.trim())
+        .filter((item) => item !== "")
+        ?.map(Number);
+
+    const createPayload = {
+      service_name: data.service_name,
+      service_code: data.service_code,
+      svc_formula_typ: "d",
+      nbr_of_sessions: Number(data.nbr_of_sessions),
+      svc_formula: svcFormulaArray || [],
+      total_invoice: parseFloat(data.total_invoice),
+      gst: data.gst,
+      tenant_id: userDetails?.tenant_id,
+    };
 
     const payload = {
       service_name: data.service_name,
       service_code: data.service_code,
+      svc_formula_typ: "d",
+      nbr_of_sessions: Number(data.nbr_of_sessions),
+      svc_formula: svcFormulaArray || [],
       total_invoice: parseFloat(data.total_invoice),
-      // nbr_of_sessions: data.nbr_of_sessions,
       gst: data.gst,
-      // svc_formula: svcFormulaArray,
-      position: positionTags?.map((item) => Number(item)),
-      service_id: serviceIdTags?.map((item) => Number(item)),
-      // svc_formula_typ: data.svc_formula_typ, // Include the svc_formula_typ in the payload
+      tenant_id: userDetails?.tenant_id,
     };
 
     if (initialData) {
       const { service_id } = initialData;
       handleUpdateService(payload, service_id);
     } else {
-      handleCreateService(payload);
+      handleCreateService(createPayload);
     }
 
     // Reset form and clear states after success
@@ -112,10 +133,12 @@ export default function CreateServiceForm({
     }
     if (initialData) {
       setFormButton("Update");
+      setIsAdvanceUpdate(false);
       const { id, active, ...processedData } = initialData;
       methods.reset(processedData);
     } else {
       setFormButton("Create");
+      setIsAdvanceUpdate(false);
       methods.reset();
       methods.setValue("service_name", "");
       methods.setValue("service_code", "");
@@ -138,6 +161,88 @@ export default function CreateServiceForm({
             <p className="labelText">
               {initialData ? "Update Service" : "Create Service"}
             </p>
+
+            {/* Toggle Switch for Normal/Advance Update */}
+            {formButton === "Update" && (
+              <div>
+                <div>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      color: "#666",
+                      marginBottom: "12px",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    <strong>Normal Update:</strong> Allows you to update only
+                    the basic service details — like Service Type, Service Code,
+                    Invoice Amount, and Tax — shown above the red line. <br />
+                    <strong>Advance Update:</strong> Unlocks full access to edit
+                    all fields in the form, including advanced options like
+                    Formula type, Number of Sessions, and Service Schedule Days.
+                  </p>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <span
+                    style={{
+                      marginRight: "12px",
+                      fontSize: "14px",
+                      color: "#333",
+                    }}
+                  >
+                    {isAdvanceUpdate ? "Advance Update" : "Normal Update"}
+                  </span>
+                  <label
+                    style={{
+                      position: "relative",
+                      display: "inline-block",
+                      width: "50px",
+                      height: "24px",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isAdvanceUpdate}
+                      onChange={() => setIsAdvanceUpdate((prev) => !prev)}
+                      style={{ display: "none" }}
+                    />
+                    <span
+                      style={{
+                        position: "absolute",
+                        cursor: "pointer",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: isAdvanceUpdate ? "#4CAF50" : "#ccc",
+                        transition: ".4s",
+                        borderRadius: "34px",
+                      }}
+                    />
+                    <span
+                      style={{
+                        position: "absolute",
+                        content: '""',
+                        height: "18px",
+                        width: "18px",
+                        left: isAdvanceUpdate ? "26px" : "4px",
+                        bottom: "3px",
+                        backgroundColor: "white",
+                        transition: ".4s",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+
             <div className="form-fields">
               <div className="fields">
                 <CustomInputField
@@ -161,12 +266,6 @@ export default function CreateServiceForm({
                   type="number"
                   step="0.01"
                 />
-                <CustomInputField
-                  placeholder="Enter number of session"
-                  name="nbr_of_sessions"
-                  label="Number of Sessions"
-                  type="text"
-                />
               </div>
               <div className="fields">
                 <CustomInputField
@@ -175,147 +274,132 @@ export default function CreateServiceForm({
                   placeholder="Enter GST"
                   type="text"
                 />
-                <div style={{ marginBottom: "12px" }}>
-                  <label>Formula</label>
-                  <div className="radio-button-container">
-                    <div className="radio-cell">
-                      <input
-                        type="radio"
-                        id="dynamic"
-                        value="d"
-                        checked={methods.getValues("svc_formula_typ") === "d"} // Bind to form state
-                        onChange={() => handleRadioChange("d")}
-                      />
-                      <label htmlFor="dynamic" style={{ fontWeight: 400 }}>
-                        Dynamic
-                      </label>
-                    </div>
-                    <div className="radio-cell">
-                      <input
-                        type="radio"
-                        id="static"
-                        value="s"
-                        checked={methods.getValues("svc_formula_typ") === "s"} // Bind to form state
-                        onChange={() => handleRadioChange("s")}
-                      />
-                      <label htmlFor="static" style={{ fontWeight: 400 }}>
-                        Static
-                      </label>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
-            <div>
-              <CustomInputField
-                name="svc_formula"
-                label="Service Schedule Days"
-                placeholder="Enter service schedule days (comma-separated)"
-                type="text"
-                helperText="Fill number of sessions and formula to enable service schedule"
-                validationRules={{
-                  validate: (value) => {
-                    if (optionValue === "d") {
-                      const values = value
-                        .split(",")
-                        .map((v) => v.trim())
-                        .filter((v) => v !== "");
-                      const requiredCount =
-                        parseInt(methods.getValues("nbr_of_sessions")) - 1;
-                      return (
-                        values.length === requiredCount ||
-                        `Enter exactly ${requiredCount} values.`
-                      );
-                    }
-                    return true;
-                  },
-                }}
-                customClass="svc-formula"
-                disabled={
-                  !methods.getValues("nbr_of_sessions") ||
-                  !methods.getValues("svc_formula_typ")
-                }
-              />
-
-              {methods.getValues("svc_formula_typ") == "d" && (
-                <div
-                  type="button"
-                  onClick={addField}
-                  className="add-more-button"
-                >
-                  + Add More
-                </div>
-              )}
-              {fields.map((field, index) => (
-                <div key={index} className="position-container">
-                  <div style={{ width: "100%" }}>
-                    <CustomInputField
-                      name={`fields[${index}].position`}
-                      label="Position"
-                      type="text"
-                      placeholder="Enter position"
-                      value={field.position}
-                      onChange={(e) =>
-                        handleFieldChange(index, "position", e.target.value)
-                      }
-                    />
-                  </div>
-                  {/* <Controller
-                    name={`fields[${index}].position`}
-                    control={methods.control}
-                    render={({ field: controllerField }) => (
-                      <CustomMultiSelect
-                        {...controllerField}
-                        placeholder="Select an option"
-                        isMulti={false}
-                        options={POSITIONS}
-                        value={field.position}
-                        onChange={(value) =>
-                          handleFieldChange(index, "position", value)
-                        }
-                        label="Position"
-                        error={
-                          methods.formState?.errors?.fields?.[index]?.position
-                            ?.message
-                        }
-                      />
-                    )}
-                  /> */}
-
-                  <Controller
-                    name={`fields[${index}].service_id`}
-                    control={methods.control}
-                    render={({ field: controllerField }) => (
-                      <CustomMultiSelect
-                        {...controllerField}
-                        placeholder="Select an option"
-                        isMulti={false}
-                        options={servicesDropdown}
-                        value={field.service_id}
-                        onChange={(value) =>
-                          handleFieldChange(index, "service_id", value)
-                        }
-                        label="Service ID"
-                        error={
-                          methods.formState?.errors?.fields?.[index]?.serviceId
-                            ?.message
-                        }
-                      />
-                    )}
-                  />
-                  {fields.length > 1 && (
-                    <div
-                      type="button"
-                      className="remove-field-button"
-                      onClick={() => removeField(index)}
-                    >
-                      <CrossIcon />
+            {(formButton === "Create" ||
+              (formButton === "Update" && isAdvanceUpdate)) && (
+              <div>
+                {/* <div className="fields">
+                  <div style={{ marginBottom: "12px" }}>
+                    <label>Formula</label>
+                    <div className="ml-10 radio-button-container">
+                      <div className="radio-cell">
+                        <input
+                          type="radio"
+                          id="dynamic"
+                          value="d"
+                          checked={methods.getValues("svc_formula_typ") === "d"}
+                          onChange={() => handleRadioChange("d")}
+                        />
+                        <label htmlFor="dynamic" style={{ fontWeight: 400 }}>
+                          Dynamic
+                        </label>
+                      </div>
+                      <div className="radio-cell">
+                        <input
+                          type="radio"
+                          id="static"
+                          value="s"
+                          checked={methods.getValues("svc_formula_typ") === "s"}
+                          onChange={() => handleRadioChange("s")}
+                        />
+                        <label htmlFor="static" style={{ fontWeight: 400 }}>
+                          Static
+                        </label>
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                  </div>
+                </div> */}
+
+                <CustomInputField
+                  placeholder="Enter number of session"
+                  name="nbr_of_sessions"
+                  label="Number of Sessions"
+                  type="text"
+                />
+                <CustomInputField
+                  name="svc_formula"
+                  label="Service Schedule Days"
+                  placeholder="Enter service schedule days (comma-separated)"
+                  type="text"
+                  helperText="Enter comma-separated durations between each session. Each value must be less than the total number of sessions. For 5 sessions, valid input: 3, 4, 5."
+                  validationRules={{
+                    validate: (value) => {
+                      if (optionValue === "d") {
+                        const values = value
+                          .split(",")
+                          .map((v) => v.trim())
+                          .filter((v) => v !== "");
+                        const requiredCount =
+                          parseInt(methods.getValues("nbr_of_sessions")) - 1;
+                        return (
+                          values.length === requiredCount ||
+                          `Enter exactly ${requiredCount} values.`
+                        );
+                      }
+                      return true;
+                    },
+                  }}
+                  customClass="svc-formula"
+                />
+                {/* {methods.getValues("svc_formula_typ") == "d" && (
+                  <div
+                    type="button"
+                    onClick={addField}
+                    className="add-more-button"
+                  >
+                    + Add More
+                  </div>
+                )}
+                {fields.map((field, index) => (
+                  <div key={index} className="position-container">
+                    <div style={{ width: "100%" }}>
+                      <CustomInputField
+                        name={`fields[${index}].position`}
+                        label="Position"
+                        type="text"
+                        placeholder="Enter position"
+                        value={field.position}
+                        onChange={(e) =>
+                          handleFieldChange(index, "position", e.target.value)
+                        }
+                      />
+                    </div>
+                    <Controller
+                      name={`fields[${index}].service_id`}
+                      control={methods.control}
+                      render={({ field: controllerField }) => (
+                        <CustomMultiSelect
+                          {...controllerField}
+                          placeholder="Select an option"
+                          isMulti={false}
+                          options={servicesDropdown}
+                          value={field.service_id}
+                          onChange={(value) =>
+                            handleFieldChange(index, "service_id", value)
+                          }
+                          label="Service ID"
+                          error={
+                            methods.formState?.errors?.fields?.[index]
+                              ?.serviceId?.message
+                          }
+                        />
+                      )}
+                    />
+                    {fields.length > 1 && (
+                      <div
+                        type="button"
+                        className="remove-field-button"
+                        onClick={() => removeField(index)}
+                      >
+                        <CrossIcon />
+                      </div>
+                    )}
+                  </div>
+                ))} */}
+              </div>
+            )}
           </div>
           <div className="submit-button">
             {formButton === "Update" && (
