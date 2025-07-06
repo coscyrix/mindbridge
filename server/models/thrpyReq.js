@@ -531,7 +531,7 @@ export default class ThrpyReq {
       console.error(error);
       logger.error(error);
       return {
-        message: 'Error creating therapy request, sessions, and reports',
+        message: `Error creating therapy request, sessions, and reports: ${error}`,
         error: -1,
       };
     }
