@@ -11,15 +11,16 @@ export default class ServiceController {
     const data = req.body;
     data.tenant_id = process.env.TENANT_ID;
 
-    if (
-      !data.service_name ||
-      !data.service_code ||
-      !data.total_invoice ||
-      !data.nbr_of_sessions ||
-      !data.gst
-      // ||!data.role_id
-    ) {
-      res.status(400).json({ message: 'Missing mandatory fields' });
+    const missingFields = [];
+    if (!data.service_name) missingFields.push('service_name');
+    if (!data.service_code) missingFields.push('service_code');
+    if (!data.total_invoice) missingFields.push('total_invoice');
+    if (!data.nbr_of_sessions) missingFields.push('nbr_of_sessions');
+    if (!data.gst) missingFields.push('gst');
+    // if (!data.role_id) missingFields.push('role_id');
+
+    if (missingFields.length > 0) {
+      res.status(400).json({ message: 'Missing mandatory fields', missingFields });
       return;
     }
     const service = new ServiceService();

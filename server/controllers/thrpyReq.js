@@ -9,6 +9,10 @@ export default class ThrpyReqController {
   //////////////////////////////////////////
   async postThrpyReq(req, res) {
     const data = req.body;
+    // Inject tenant_id from token if available
+    if (req.decoded && req.decoded.tenant_id) {
+      data.tenant_id = req.decoded.tenant_id;
+    }
 
     if (
       !data.counselor_id ||

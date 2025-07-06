@@ -14,10 +14,16 @@ export default class ThrpyReqService {
   //////////////////////////////////////////
 
   async postThrpyReq(data) {
-    const tenantId = await this.common.getUserTenantId({
-      user_profile_id: data.counselor_id,
-    });
-    data.tenant_id = Number(tenantId[0].tenant_id);
+    // Use tenant_id from data if present (from token)
+    if (!data.tenant_id) {
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+      if (!Array.isArray(tenantId) || !tenantId[0] || !tenantId[0].tenant_id) {
+        return { message: 'Counselor not found or missing tenant_id', error: -1 };
+      }
+      data.tenant_id = Number(tenantId[0].tenant_id);
+    }
 
     const schema = joi.object({
       counselor_id: joi.number().required(),
