@@ -35,7 +35,6 @@ export const otpVerication = async (credentials) => {
   try {
     const response = await api.post("/auth/verify", credentials);
     if (response.status === 200) {
-      console.log(response.data);
       if (response.data == "Invalid OTP") throw new Error("Invalid OTP");
       const { data } = response;
       Cookies.set("accountVerified", true);
@@ -140,7 +139,7 @@ const addInterceptors = (instance) => {
 
         return Promise.reject(error);
       } else if (error) {
-        return Promise.reject(error?.response?.data);
+        return Promise.reject(error);
       }
       return Promise.reject(error);
     }

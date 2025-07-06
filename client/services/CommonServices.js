@@ -52,8 +52,6 @@ const CommonServices = {
     });
   },
   getCounselorProfile(counselorId) {
-    console.log("counselorId", counselorId);
-
     return api.get(`${ApiConfig.counselorProfile.getCounselorProfile}`, {
       params: {
         counselor_profile_id: counselorId,
@@ -140,6 +138,17 @@ const CommonServices = {
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
+    }
+  },
+  submitOnboardingform: async (payload) => {
+    try {
+      const response = await api.post(
+        ApiConfig.getstartedsubmittion.submitgetstartedform,
+        payload
+      ); 
+      return response?.data;
+    } catch (error) {
+      throw error;
     }
   },
 };

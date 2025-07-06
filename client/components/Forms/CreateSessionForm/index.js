@@ -732,7 +732,7 @@ function CreateSessionForm({
     } catch (error) {
       console.error("Error generating schedule:", error);
       toast.error(
-        error?.message || "Failed to generate schedule. Please try again.",
+        error?.response?.data?.message || "Failed to generate schedule. Please try again.",
         {
           position: "top-right",
         }
@@ -1183,9 +1183,10 @@ function CreateSessionForm({
                   )}
                 </div>
               )}
-
+{console.log("main::::::::::::", additionalSessions,sessionTableColumns)}
               {initialData && loader !== "scheduledSessionLoading" && (
                 <CustomTable
+
                   columns={sessionTableColumns}
                   data={additionalSessions}
                   defaultSortFieldId="schedule_date"

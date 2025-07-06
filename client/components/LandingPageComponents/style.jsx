@@ -1,6 +1,7 @@
 import styled from "styled-components";
 import heroSectionBg from "./assets/images/hero-section-bg.jpg";
 import complianceSectionBg from "./assets/images/compliance-section-bg.png";
+import heroImg from "./assets/images/heroImg.png";
 
 export const LandingPageWrapper = styled.div`
   display: flex;
@@ -10,6 +11,10 @@ export const LandingPageWrapper = styled.div`
 
 export const HeaderWrapper = styled.div`
   .desktop-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -18,6 +23,8 @@ export const HeaderWrapper = styled.div`
     font-size: 0.875rem;
     font-weight: 500;
     height: 70px;
+    background-color: white;
+    z-index: 999;
 
     @media (max-width: 768px) {
       display: none;
@@ -83,20 +90,49 @@ export const HeaderWrapper = styled.div`
     }
   }
 
+  .nav-item {
+    padding: 8px 12px;
+  }
+
+  .nav-item:hover {
+    background-color: #f8f8f8;
+    border-radius: 6px;
+  }
+
   .register-container {
     display: flex;
     align-items: center;
-    .sign-in-link {
-      margin-right: 15px;
-      color: #3973B7;
+
+    .register-group {
+      display: flex;
+      align-items: center;
+      gap: 15px; /* Adjust spacing between items */
     }
-    .register-button {
-      padding: 8px 15px;
-      background-color: #3973B7;
+
+    .get-started-button {
+      padding: 10px 16px;
+      background-color: #3973b7;
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
+      font-weight: 500;
       cursor: pointer;
+      white-space: nowrap;
+
+      &:hover {
+        background-color: var(--primary-button-hover-color);
+      }
+    }
+
+    .sign-in-link {
+      color: white;
+      padding: 8px 14px;
+      background-color: #3973b7;
+      border-radius: 6px;
+      font-weight: 500;
+      text-decoration: none;
+      white-space: nowrap;
+
       &:hover {
         background-color: var(--primary-button-hover-color);
       }
@@ -233,7 +269,7 @@ export const HeroSectionWrapper = styled.div`
     margin: 0px;
     margin-bottom: 28px;
 
-    @media screen and (max-width: 1024px){
+    @media screen and (max-width: 1024px) {
       font-size: 3rem;
       line-height: 60px;
     }
@@ -275,7 +311,7 @@ export const HeroSectionWrapper = styled.div`
     flex: 1;
     padding: 90px 80px 90px 63px;
 
-    @media screen and (max-width: 1024px){
+    @media screen and (max-width: 1024px) {
       padding: 90px 40px 90px 63px;
     }
 
@@ -290,7 +326,7 @@ export const HeroSectionWrapper = styled.div`
 
   .image-container {
     flex: 1;
-    background: url(${heroSectionBg.src});
+    background: url(${heroImg.src});
     background-size: cover;
     background-position: center;
     min-height: 500px;
@@ -367,12 +403,12 @@ export const SearchBarWrapper = styled.div`
     flex: 1;
     border-right: 1px solid #2e2e2e33;
     align-items: flex-start;
-    padding-right:32px;
-    margin-right:32px;
+    padding-right: 32px;
+    margin-right: 32px;
 
-    @media screen and (max-width: 1024px){
+    @media screen and (max-width: 1024px) {
       padding-right: 12px;
-      margin-right:12px;
+      margin-right: 12px;
     }
 
     @media screen and (max-width: 768px) {
@@ -380,8 +416,8 @@ export const SearchBarWrapper = styled.div`
       border-right: none;
       border-bottom: 1px solid #2e2e2e33;
       padding-bottom: 15px;
-      padding-right:0px;
-      margin-right:0px;
+      padding-right: 0px;
+      margin-right: 0px;
     }
 
     h4 {
@@ -419,7 +455,7 @@ export const SearchBarWrapper = styled.div`
 
   .search-button {
     padding: 14px 20px;
-    background-color: #3973B7;
+    background-color: #3973b7;
     color: white;
     border: none;
     border-radius: 4px;
@@ -429,7 +465,6 @@ export const SearchBarWrapper = styled.div`
     display: flex;
     align-items: center;
     gap: 8px;
-
     @media screen and (max-width: 768px) {
       width: 300px;
       justify-content: center;
@@ -449,8 +484,8 @@ export const FeatureAndReportSectionWrapper = styled.div`
     justify-content: center;
     position: relative;
     @media screen and (max-width: 768px) {
-    padding: 0px 60px;
-  }
+      padding: 0px 60px;
+    }
     @media screen and (max-width: 425px) {
       padding: 0px 16px;
     }
@@ -458,8 +493,9 @@ export const FeatureAndReportSectionWrapper = styled.div`
 
   .wrapperImage {
     position: absolute;
-    top: -20px;
+    top: 25px;
     left: 0px;
+    width: 210px;
   }
 
   .section-centered-text-card {
@@ -472,8 +508,8 @@ export const FeatureAndReportSectionWrapper = styled.div`
     align-items: center;
     text-align: center;
 
-    @media screen and (max-width:1024px){
-      padding:100px 144px;
+    @media screen and (max-width: 1024px) {
+      padding: 100px 144px;
     }
     @media screen and (max-width: 768px) {
       margin: 0px 60px;
@@ -490,8 +526,8 @@ export const FeatureAndReportSectionWrapper = styled.div`
     display: flex;
     flex-direction: column;
     @media screen and (max-width: 768px) {
-      max-width:100%;
-  }
+      max-width: 100%;
+    }
     @media screen and (max-width: 425px) {
       max-width: 100%;
     }
@@ -502,7 +538,7 @@ export const FeatureAndReportSectionWrapper = styled.div`
     margin: 0px;
     padding-top: 67px;
     padding-bottom: 16px;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .section-description {
@@ -532,7 +568,7 @@ export const FeatureAndReportSectionWrapper = styled.div`
 
   .get-started-button {
     padding: 14px 20px;
-    background-color: #3973B7;
+    background-color: #3973b7;
     color: white;
     border: none;
     border-radius: 4px;
@@ -611,7 +647,7 @@ export const FeatureAndReportSectionWrapper = styled.div`
 export const FeatureCardWrapper = styled.div`
   flex: 1;
   padding: 30px;
-  box-shadow: 0px 2px 4px 0px #3973B70D;
+  box-shadow: 0px 2px 4px 0px #3973b70d;
   border-radius: 12px;
   text-align: center;
   background-color: white;
@@ -701,12 +737,12 @@ export const CoreFeaturesSectionWrapper = styled.section`
   padding: 100px 90px;
   background-color: white;
   gap: 30px;
-  @media screen and (max-width:1024px){
-    padding:100px 90px;
+  @media screen and (max-width: 1024px) {
+    padding: 100px 90px;
     flex-direction: column;
   }
-  @media screen and (max-width:768px){
-    padding:100px 60px;
+  @media screen and (max-width: 768px) {
+    padding: 100px 60px;
   }
   @media screen and (max-width: 425px) {
     padding: 100px 16px;
@@ -734,7 +770,7 @@ export const CoreFeaturesSectionWrapper = styled.section`
 
   .core-features-button {
     padding: 14px 20px;
-    background-color: #3973B7;
+    background-color: #3973b7;
     color: white;
     border: none;
     border-radius: 4px;
@@ -756,8 +792,8 @@ export const TrustAndComplianceSectionWrapper = styled.section`
   display: flex;
   align-items: center;
   padding: 70px 90px;
-  @media screen and (max-width:768px){
-    padding:70px 60px;
+  @media screen and (max-width: 768px) {
+    padding: 70px 60px;
   }
   @media screen and (max-width: 425px) {
     padding: 70px 16px;
@@ -777,13 +813,13 @@ export const TrustAndComplianceSectionWrapper = styled.section`
     border-radius: 12px;
     max-width: 650px;
 
-    @media screen and (max-width:1024px){
+    @media screen and (max-width: 1024px) {
       max-width: 520px;
     }
-    
-    @media screen and (max-width:768px){
-      margin-right:220px;
-      padding:75px 15px;
+
+    @media screen and (max-width: 768px) {
+      margin-right: 220px;
+      padding: 75px 15px;
     }
     @media screen and (max-width: 425px) {
       padding: 75px 30px;
@@ -832,8 +868,8 @@ export const EmpoweringSectionWrapper = styled.section`
   padding: 100px 90px;
   background-color: white;
 
-  @media screen and (max-width:768px){
-    padding:100px 60px;
+  @media screen and (max-width: 768px) {
+    padding: 100px 60px;
   }
 
   @media screen and (max-width: 425px) {
@@ -864,7 +900,7 @@ export const EmpoweringSectionWrapper = styled.section`
 
   .get-started-button {
     padding: 14px 20px;
-    background-color: #3973B7;
+    background-color: #3973b7;
     color: white;
     border: none;
     border-radius: 4px;
@@ -941,7 +977,7 @@ export const CoreFeatureCardWrapper = styled.div`
   gap: 16px;
   min-width: 340px;
 
-  @media screen and (max-width:768px){
+  @media screen and (max-width: 768px) {
     min-width: unset;
   }
 
@@ -977,7 +1013,7 @@ export const WorkFlowSectionWrapper = styled.section`
   padding: 100px 0px 100px 90px;
   display: flex;
   align-items: center;
-  gap:36px;
+  gap: 36px;
 
   @media screen and (max-width: 768px) {
     padding: 100px 60px 120px 60px;
@@ -998,7 +1034,7 @@ export const WorkFlowSectionWrapper = styled.section`
     gap: 0;
     @media screen and (max-width: 768px) {
       flex-direction: column;
-      width:100%;
+      width: 100%;
     }
   }
 
@@ -1027,10 +1063,10 @@ export const WorkFlowSectionWrapper = styled.section`
     height: 460px;
     background-color: #ccc;
     border-radius: 5px;
-    @media screen and (max-width:768px){
+    @media screen and (max-width: 768px) {
       object-fit: cover;
-      max-height:510px;
-      width:100%;
+      max-height: 510px;
+      width: 100%;
     }
   }
 
@@ -1051,8 +1087,8 @@ export const WorkFlowSectionWrapper = styled.section`
     font-size: 2.8125rem;
     text-transform: capitalize;
     margin-bottom: 50px;
-    @media screen and (max-width:768px){
-      text-align: center  ;
+    @media screen and (max-width: 768px) {
+      text-align: center;
     }
   }
 
@@ -1089,7 +1125,6 @@ export const WorkFlowSectionWrapper = styled.section`
     position: relative;
   }
 
-
   .custom-swiper-buttons-container {
     position: absolute;
     bottom: -90px;
@@ -1109,7 +1144,6 @@ export const WorkFlowSectionWrapper = styled.section`
       color: #fff;
       font-size: 2rem;
     }
-   
   }
 `;
 
@@ -1152,7 +1186,6 @@ export const MindbridgeJourneyWrapper = styled.section`
 
   .top-content-container {
     display: flex;
-    align-items: start;
     margin-bottom: 40px;
     flex: 1;
     gap: 80px;
@@ -1286,6 +1319,7 @@ export const FooterWrapper = styled.footer`
 
   .cta-buttons-container {
     display: flex;
+    align-item: center;
     justify-content: center;
     gap: 20px;
     margin-bottom: 70px;

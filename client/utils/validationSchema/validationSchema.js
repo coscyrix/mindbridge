@@ -181,3 +181,26 @@ export const EmailVerificationSchema = z.object({
     })
     .email({ message: "Invalid email address" }),
 });
+// get started validation Schema ;
+
+export const getStartedSchema = z.object({
+  organization: z.string().min(1, "Organization name is required"),
+  contact: z.string().min(1, "Contact name is required"),
+  position: z.string().min(1, "Position/Title is required"),
+  email: z.string().email("Invalid email").min(1, "Email is required"),
+  phone: z.string().min(1, "Phone number is required"),
+  website: z
+    .string()
+    .min(1, "Company website is required")
+    .url("Enter a valid URL (include https://)"),
+  address: z.string().min(1, "Office address is required"),
+  counselors: z.string().min(1, "Number of counselors is required"),
+  clients: z.string().min(1, "Estimated clients per month is required"),
+  features: z.string().min(1, "Interested features are required"),
+  demoTime: z.string().min(1, "Preferred demo date/time is required"),
+  notes: z.string().min(1, "Additional notes are required"),
+
+  typedName: z.string().min(1, "Typed name is required"),
+  signature: z.string().min(1, "Signature is required"),
+  date: z.string().min(1, "Date is required"),
+});

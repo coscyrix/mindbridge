@@ -2,11 +2,12 @@ import React, { useEffect, useState } from "react";
 import VerifiedBadge from "../../components/SearchDetailsComponents/VerifiedBadge";
 import ServiceCard from "../../components/SearchDetailsComponents/ServiceCard";
 import DateSelector from "../../components/SearchDetailsComponents/DateSelector";
-
+import { Tooltip } from "react-tooltip";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
+import { GoArrowLeft } from "react-icons/go";
 import {
   SearchDetailsWrapper,
   ProfileHeader,
@@ -42,23 +43,39 @@ import {
 import CounselorCard from "../../components/SearchListingComponents/CounselorCard";
 import { useRouter } from "next/router";
 import CommonServices from "../../services/CommonServices";
+import CustomModal from "../../components/CustomModal";
+import { useForm, FormProvider } from "react-hook-form";
+import { api } from "../../utils/auth";
+import { toast } from "react-toastify";
+import axios from "axios";
+import CustomLoader from "../../components/Loader/CustomLoader";
+import CustomButton from "../../components/CustomButton";
 
 const SearchDetails = () => {
+  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
+
   const [selectedTab, setSelectedTab] = useState("Overview");
   const [selectedDate, setSelectedDate] = useState(null);
+  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
+  const methods = useForm({
+    mode: "onTouched",
+    defaultValues: {
+      customer_name: "",
+      customer_email: "",
+      service: "",
+      appointment_date: null,
+    },
+  });
+  const [selectedService, setSelectedService] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [isSendingAppointment, setIsSendingAppointment] = useState(false);
 
   const router = useRouter();
   const { id } = router.query;
   const [counselorDetails, setCounselorDetails] = useState(null);
+  const [relatedCounselors, setRelatedCounselors] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const categories = [
-    "Gynaecologist",
-    "Surgery",
-    "General Practitioners",
-    "Specialists",
-    "Hospital",
-  ];
+  const [profilePicture, setProfilePicture] = useState("");
 
   const getCounselorDetails = async () => {
     try {
@@ -66,15 +83,41 @@ const SearchDetails = () => {
         const response = await CommonServices.getCounselorProfile(id);
         if (response.status === 200 && response.data && response.data.rec) {
           setCounselorDetails(response.data.rec);
+          setRelatedCounselors(response.data.related_counselors);
         } else {
           setCounselorDetails(null);
         }
       }
     } catch (error) {
-      console.log('Error while fetching counselor details:', error);
+      console.log("Error while fetching counselor details:", error);
       setCounselorDetails(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const counselor = counselorDetails?.at(0);
+
+  const fetchProfilePicture = async () => {
+    try {
+      const response = await axios.get(
+        `${imageBaseUrl}${counselor?.profile_picture_url}`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const blob = response.data;
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result;
+        setProfilePicture(base64data);
+      };
+
+      reader.readAsDataURL(blob);
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -84,15 +127,21 @@ const SearchDetails = () => {
     }
   }, [router.isReady, id]);
 
+  useEffect(() => {
+    if (id && counselor) {
+      fetchProfilePicture();
+    }
+  }, [id, counselor]);
+
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <CustomLoader style={{ top: "40vh", left: "60vw", height: "50vh" }} />
+    );
   }
 
   if (!counselorDetails || counselorDetails.length === 0) {
     return <div>Counselor not found</div>;
   }
-
-  const counselor = counselorDetails[0];
 
   const formatAvailability = (availability) => {
     return Object.entries(availability)
@@ -103,14 +152,18 @@ const SearchDetails = () => {
       }));
   };
 
-  const dates = [
-    { day: "Sun", date: "01" },
-    { day: "Mon", date: "02" },
-    { day: "Tue", date: "03" },
-    { day: "Wed", date: "04" },
-    { day: "Thu", date: "05" },
-    { day: "Fri", date: "06" },
-  ];
+  const baseDate = new Date("2025-06-30");
+  const dates = Array.from({ length: 7 }).map((_, i) => {
+    const currentDate = new Date(baseDate);
+    currentDate.setDate(baseDate.getDate() + i);
+
+    return {
+      day: currentDate.toLocaleDateString("en-US", { weekday: "short" }),
+      date: currentDate.toISOString().split("T")[0],
+    };
+  });
+
+  console.log(selectedDate);
 
   const handleDateSelect = (date) => {
     setSelectedDate(date);
@@ -118,14 +171,14 @@ const SearchDetails = () => {
 
   const services = (counselor.services_offered || []).map((service) => ({
     name: service.service_name || service,
-    category: service.is_specialty ? 'Specialty' : 'Therapy',
-    type: service.is_report ? 'Report' : 'Consultation',
-    code: service.service_code ? service.service_code : '',
-    price: service.total_invoice ? `$${service.total_invoice}` : '',
+    category: service.is_specialty ? "Specialty" : "Therapy",
+    type: service.is_report ? "Report" : "Consultation",
+    code: service.service_code ? service.service_code : "",
+    price: service.total_invoice ? `$${service.total_invoice}` : "",
   }));
 
-  const specialties = (counselor.specialties || []).map((specialty) =>
-    specialty.service_name || specialty
+  const specialties = (counselor.specialties || []).map(
+    (specialty) => specialty.service_name || specialty
   );
 
   const counselors = [
@@ -157,36 +210,85 @@ const SearchDetails = () => {
     },
   ];
 
+  const serviceOptions = counselor?.services_offered?.map((service) => ({
+    option: service.service_name,
+  }));
+
+  const handleBookAppointmentOpen = () => setIsBookModalOpen(true);
+  const handleBookAppointmentClose = () => {
+    setIsBookModalOpen(false);
+    methods.reset();
+    setSelectedService("");
+    setAppointmentDate("");
+  };
+
+  const onSubmit = async (values) => {
+    try {
+      if (!selectedService || !appointmentDate) {
+        toast.error("All fields are required!");
+      } else {
+        setIsSendingAppointment(true);
+        const payload = {
+          counselor_profile_id: id,
+          customer_name: values?.customer_name,
+          customer_email: values?.customer_email,
+          service: selectedService,
+          appointment_date: appointmentDate,
+        };
+        const { data, status } = await api.post(
+          "counselor-profile/send-appointment-email",
+          payload
+        );
+        if (data && status) {
+          toast.success(data?.message);
+          handleBookAppointmentClose();
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSendingAppointment(false);
+    }
+  };
+
   return (
     <>
       <HeaderWrapperBackground>
         <ProfileImage>
           <CameraIcon>📷</CameraIcon>
           <img
-            src={"/assets/images/drImage2.png" || counselor.profile_picture_url}
+            src={
+              profilePicture ? profilePicture : "/assets/images/drImage2.png"
+            }
             alt={counselor.user_first_name}
           />
         </ProfileImage>
-        <UploadCover>📷 Upload a cover image</UploadCover>
+        {/* <UploadCover>📷 Upload a cover image</UploadCover> */}
       </HeaderWrapperBackground>
       <SearchDetailsWrapper>
         <ProfileHeader>
+          <GoArrowLeft
+            onClick={() => {
+              router.back();
+            }}
+            size={50}
+          />
           <ProfileInfo>
             <DoctorInfo>
               <div>
                 <NameBadges>
                   <h1>{`${counselor.user_first_name} ${counselor.user_last_name}`}</h1>
-                  <Badges>
+                  {/* <Badges>
                     {counselor.is_verified && <VerifiedBadge type="verified" />}
-                  </Badges>
+                  </Badges> */}
                 </NameBadges>
                 <Address>{counselor.location}</Address>
               </div>
-              <Rating>
+              {/* <Rating>
                 {"★".repeat(Math.floor(counselor.average_rating))}
                 {"☆".repeat(5 - Math.floor(counselor.average_rating))}
-                <span>{counselor.review_count} Reviews</span>
-              </Rating>
+                <span>{counselor.review_count || 0} Reviews</span>
+              </Rating> */}
             </DoctorInfo>
           </ProfileInfo>
         </ProfileHeader>
@@ -254,9 +356,24 @@ const SearchDetails = () => {
 
           <div>
             <AppointmentSection>
-              <h2>Select Time Slot</h2>
+              <div>
+                <h2>
+                  Select Time Slot
+                  <span
+                    className="tooltip-icon"
+                    data-tooltip-id="info-tooltip"
+                    data-tooltip-content="If the counselor is available, you can select a date to book your appointment."
+                  >
+                    i
+                  </span>
+                </h2>
+
+                <Tooltip id="info-tooltip" place="top" />
+              </div>
+
               <DateSelector
                 dates={dates}
+                availability={counselor.availability}
                 selectedDate={selectedDate}
                 onDateSelect={handleDateSelect}
               />
@@ -275,10 +392,13 @@ const SearchDetails = () => {
                       .join(" | ")}
                   </p>
                 </Availability>
-                <ActionButton className="book-appointment">
+                <ActionButton
+                  className="book-appointment"
+                  onClick={handleBookAppointmentOpen}
+                >
                   Book Appointment
                 </ActionButton>
-                <ActionButton className="call-now">Call Us Now</ActionButton>
+                {/* <ActionButton className="call-now">Call Us Now</ActionButton> */}
               </ContactDetails>
             </AppointmentSection>
           </div>
@@ -296,7 +416,6 @@ const SearchDetails = () => {
         <SliderSection>
           <SliderTitle>
             <h2>Other Counsellors</h2>
-            <a href="#">View all</a>
           </SliderTitle>
           <SliderContainer>
             <Swiper
@@ -313,14 +432,15 @@ const SearchDetails = () => {
                 },
               }}
             >
-              {counselors.map((counselor, index) => (
+              {relatedCounselors?.map((counselor, index) => (
                 <SwiperSlide key={index}>
                   <CounselorCard
+                    counselorId={counselor?.counselor_profile_id}
                     image="/assets/images/drImage2.png"
                     key={counselor.id}
                     {...counselor}
                     onBookAppointment={() =>
-                      handleBookAppointment(counselor.id)
+                      handleBookAppointmentOpen(counselor.id)
                     }
                   />
                 </SwiperSlide>
@@ -329,6 +449,182 @@ const SearchDetails = () => {
           </SliderContainer>
         </SliderSection>
       </SearchDetailsWrapper>
+      <CustomModal
+        isOpen={isBookModalOpen}
+        onRequestClose={handleBookAppointmentClose}
+        title="Book Appointment"
+      >
+        <FormProvider {...methods}>
+          <form
+            onSubmit={methods.handleSubmit(onSubmit)}
+            style={{ padding: "0px 20px 0px 20px", minWidth: 320 }}
+          >
+            <div style={{ marginBottom: 18 }}>
+              <label
+                htmlFor="customer_name"
+                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+              >
+                Customer Name
+              </label>
+              <input
+                id="customer_name"
+                name="customer_name"
+                type="text"
+                placeholder="Enter your name"
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: 6,
+                  border: "1px solid #e7e7e9",
+                  fontSize: 15,
+                }}
+                {...methods.register("customer_name", {
+                  required: "Name is required",
+                })}
+              />
+              {methods.formState.errors.customer_name && (
+                <p
+                  style={{
+                    color: "#f04438",
+                    margin: "6px 0 0 2px",
+                    fontSize: 13,
+                  }}
+                >
+                  {methods.formState.errors.customer_name.message}
+                </p>
+              )}
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label
+                htmlFor="customer_email"
+                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+              >
+                Customer Email
+              </label>
+              <input
+                id="customer_email"
+                name="customer_email"
+                type="email"
+                placeholder="Enter your email"
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: 6,
+                  border: "1px solid #e7e7e9",
+                  fontSize: 15,
+                }}
+                {...methods.register("customer_email", {
+                  required: "Email is required",
+                })}
+              />
+              {methods.formState.errors.customer_email && (
+                <p
+                  style={{
+                    color: "#f04438",
+                    margin: "6px 0 0 2px",
+                    fontSize: 13,
+                  }}
+                >
+                  {methods.formState.errors.customer_email.message}
+                </p>
+              )}
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label
+                htmlFor="service"
+                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+              >
+                Select Service
+              </label>
+              <select
+                id="service"
+                name="service"
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: 6,
+                  border: "1px solid #e7e7e9",
+                  fontSize: 15,
+                }}
+                value={selectedService}
+                onChange={(e) => {
+                  setSelectedService(e.target.value);
+                }}
+              >
+                <option value="">Select a service</option>
+                {serviceOptions &&
+                  serviceOptions.map((opt, idx) => (
+                    <option key={idx} value={opt.option}>
+                      {opt.option}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label
+                htmlFor="appointment_date"
+                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+              >
+                Appointment Date
+              </label>
+              <input
+                id="appointment_date"
+                name="appointment_date"
+                type="date"
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: 6,
+                  border: "1px solid #e7e7e9",
+                  fontSize: 15,
+                }}
+                value={appointmentDate}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(e) => {
+                  setAppointmentDate(e.target.value);
+                }}
+              />
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginTop: 24,
+              }}
+            >
+              <button
+                type="button"
+                style={{
+                  padding: "10px 24px",
+                  borderRadius: 6,
+                  border: "1px solid #e1e1e1",
+                  background: "#fff",
+                  cursor: "pointer",
+                  minWidth: 107,
+                }}
+                onClick={handleBookAppointmentClose}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSendingAppointment}
+                style={{
+                  padding: "10px 24px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "var(--primary-button-color)",
+                  color: "#fff",
+                  cursor: "pointer",
+                  minWidth: 107,
+                }}
+              >
+                {isSendingAppointment ? "Sending..." : "Send"}
+              </button>
+            </div>
+          </form>
+        </FormProvider>
+      </CustomModal>
     </>
   );
 };

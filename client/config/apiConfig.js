@@ -34,6 +34,11 @@ const ApiConfig = {
     searchCounselors: "/counselor-profile/search",
     getSearchFilters: "/counselor-profile/search/filters",
   },
+  getstartedsubmittion:{
+    getstarted:"/get-started-form",
+    submitgetstartedform:"/onboarding",
+  },
+
 };
 
 export default ApiConfig;

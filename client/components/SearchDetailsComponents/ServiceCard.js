@@ -5,7 +5,7 @@ const ServiceCard = ({ service }) => {
   return (
     <CardWrapper>
       <div className="service-icon">
-        <img src="/assets/images/hospitalImage.png" alt="Hospital" />
+        <img src="/assets/images/health.svg" alt="Hospital" />
       </div>
       <div className="service-content">
         <h3>{service.name}</h3>
@@ -19,11 +19,11 @@ const ServiceCard = ({ service }) => {
             <span className="value">{service.type}</span>
           </div>
           <div className="detail-row">
-            <span className="label">Service Code(USD)</span>
+            <span className="label">Service Code</span>
             <span className="value">{service.code}</span>
           </div>
           <div className="detail-row price">
-            <span className="label">Zimbabwe Dollar (ZIG)</span>
+            <span className="label">Invoice (USD)</span>
             <span className="value">{service.price}</span>
           </div>
         </div>

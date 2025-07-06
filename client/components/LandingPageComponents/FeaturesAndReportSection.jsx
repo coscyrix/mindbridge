@@ -15,18 +15,24 @@ import {
   SecureIcon,
   SimpleIcon,
 } from "./assets/icons";
-import CustomButton from "../CustomButton";
+import { useRouter } from "next/router";
 import reportSectionImage1 from "./assets/images/report-section-image-1.png";
 import reportSectionImage2 from "./assets/images/report-section-image-2.png";
 import reportSectionImage3 from "./assets/images/report-section-image-3.png";
+import Image from "next/image";
+import ButtonRow from "../CustomButton/CustomButtonRow";
+import { SUPPORT_EMAIL, DEMO_MAIL_BODY } from "../../utils/constants";
+import ApiConfig from "../../config/apiConfig";
 
 // Placeholder for the card component within the swiper
 const SwiperCard = ({ imagePlaceholder, title }) => (
   <div className="swiper-card">
-    <img
+    <Image
       src={imagePlaceholder?.src}
-      alt=""
+      alt={title}
       className="swiper-card-image-placeholder"
+      width={200}
+      height={120}
     />
     <h4 className="swiper-card-title">{title}</h4>
   </div>
@@ -35,7 +41,8 @@ const SwiperCard = ({ imagePlaceholder, title }) => (
 const FeatureCard = ({ iconPlaceholder, title, description }) => (
   <FeatureCardWrapper>
     <div className="feature-card">
-      <div className="feature-card-icon">{iconPlaceholder}</div>
+      <img src={iconPlaceholder} />
+      {/* <div className="feature-card-icon">{iconPlaceholder}</div> */}
       <h4 className="feature-card-title">{title}</h4>
       <p className="feature-card-description">{description}</p>
     </div>
@@ -72,56 +79,71 @@ const FeaturesAndReportSection = () => {
 
   const featureCardsData = [
     {
-      iconPlaceholder: <SecureIcon />,
-      title: "Secure",
-      description:
-        "Your data stays safe with enterprise-grade security, encryption, and strict privacy controls.",
-    },
-    {
-      iconPlaceholder: <SimpleIcon />,
+      iconPlaceholder: "/assets/images/simple.svg",
       title: "Simple",
       description:
         "Simple, intuitive design helps you schedule sessions and manage reports within minutes.",
     },
     {
-      iconPlaceholder: <PaymentIcon />,
+      iconPlaceholder: "/assets/images/secure.svg",
+      title: "Secure",
+      description:
+        "Your data stays safe with enterprise-grade security, encryption, and strict privacy controls.",
+    },
+    {
+      iconPlaceholder: "/assets/images/pay.svg",
       title: "Pay-as-You-Go",
       description:
         "Pay only when you use it — no contracts, no subscriptions, just transparent and flexible pricing always.",
     },
   ];
 
+  const logos = [
+    { src: "/assets/images/hippa.svg", alt: "HIPAA logo" },
+    { src: "/assets/images/soc.png", alt: "SOC logo" },
+    { src: "/assets/images/pipeda.svg", alt: "PIPEDA logo" },
+    { src: "/assets/images/eu.svg", alt: "EU logo" },
+  ];
+
+  const router = useRouter();
+  const handleGetStarted = (e) => {
+    router.push(ApiConfig.getstartedsubmittion.getstarted);
+  };
   return (
     <FeatureAndReportSectionWrapper>
       {/* Why MindBridge? Section */}
       <div className="main-section-centered-text">
-        <img
+        <Image
           src={reportSectionPattern?.src}
           height={400}
+          width={1200}
           className="wrapperImage"
+          alt="Report section pattern"
         />
         <div className="section-centered-text manual-width">
-          <h2 className="section-heading">Why MindBridge?</h2>
+          <h2 className="section-heading">
+            Simplify Your Counseling Practice — Secure, Simple, and Scalable
+          </h2>
           <p className="section-description">
-            MindBridge is purpose-built to support mental health professionals
-            with the highest standards of security and usability. From
-            compliance to care, our platform is designed to simplify, protect,
-            and empower your practice.
+            MindBridge is purpose-built to help mental health professionals
+            operate with the highest standards of security, compliance, and
+            ease. From secure documentation to streamlined workflows, we
+            simplify your process so you can focus on care.
           </p>
           <div className="logo-container">
-            {/* Placeholder Logos */}
-            <div>
-              <img src="./assets/images/hippa.png" />
-            </div>
-            <div>
-              <img src="./assets/images/pipeda.png" />
-            </div>
-            <div>
-              <img src="./assets/images/eu.png" />
-            </div>
-            <div>
-              <img src="./assets/images/soc.png" />
-            </div>
+            {logos.map((logo) => (
+              <div key={logo.alt}>
+                <img
+                  src={logo.src}
+                  alt={logo.alt}
+                  style={{
+                    objectFit: "cover",
+                    ...(logo.alt === "SOC logo" && {
+                    }),
+                  }}
+                />
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -131,16 +153,13 @@ const FeaturesAndReportSection = () => {
         <div className="manual-width">
           <h2 className="section-heading">Features You Can Count On</h2>
           <p className="section-description">
-            Discover a smarter way to manage counseling sessions. MindBridge is
-            built to be secure, effortless to use, and fair in pricing — so you
-            can focus on helping others, not handling tech or costs.
+            For counselors, clinics, and care teams seeking a smarter way to
+            manage therapy sessions.
           </p>
           {/* Assuming this button style is unique to this section, keep inline or create specific class if reused */}
-          <CustomButton
-            customClass="get-started-button"
-            title="Get Started Free →"
-          />
+          <ButtonRow handleGetStarted={handleGetStarted} marginBottom="40px" />
         </div>
+
         <div className="feature-cards-container">
           {featureCardsData.map((card, index) => (
             <FeatureCard
@@ -157,7 +176,10 @@ const FeaturesAndReportSection = () => {
       <h2 className="swiper-section-heading">
         From Session To Report — <br></br>Seamlessly
       </h2>
+
       <div className="swiper-container">
+        <ButtonRow handleGetStarted={handleGetStarted} marginBottom="40px" />
+
         <SwiperContentStyles>
           <CustomSwiper
             customNextAppearance={<ArrowLeft />}

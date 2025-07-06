@@ -195,32 +195,33 @@ const WeeklyAvailability = ({ control, value }) => {
   };
 
   // Generate an array of times for a given slot.
-  const generateTimes = (start, end) => {
-    const times = [];
-    let current = timeToMinutes(start);
-    const endMinutes = timeToMinutes(end);
+  // const generateTimes = (start, end) => {
+  //   const times = [];
+  //   let current = timeToMinutes(start);
+  //   const endMinutes = timeToMinutes(end);
     
-    // Loop in 1-hour (60 minutes) increments.
-    while (current <= endMinutes) {
-      times.push(minutesToTime(current));
-      current += 60;
-    }
+  //   // Loop in 1-hour (60 minutes) increments.
+  //   while (current <= endMinutes) {
+  //     times.push(minutesToTime(current));
+  //     current += 60;
+  //   }
     
-    // If the last generated time isn't exactly the end, add the end time.
-    if (times[times.length - 1] !== end) {
-      times.push(end);
-    }
+  //   // If the last generated time isn't exactly the end, add the end time.
+  //   if (times[times.length - 1] !== end) {
+  //     times.push(end);
+  //   }
     
-    return times;
-  };
+  //   return times;
+  // };
 
   let allTimes = [];
 
   // Process each slot.
   slots.forEach(slot => {
     if (slot.start && slot.end) {
-      const timesForSlot = generateTimes(slot.start, slot.end);
-      allTimes = allTimes.concat(timesForSlot);
+      // const timesForSlot = generateTimes(slot.start, slot.end);
+      // allTimes = allTimes.concat(timesForSlot);
+      allTimes.push(slot.start, slot.end);
     }
   });
 
@@ -283,7 +284,8 @@ const WeeklyAvailability = ({ control, value }) => {
                   <div className='time-slot-container'>
                     {(timeSlots[day.id] || []).map((slot, index) => (
                       <div key={index} className="time-selectors">
-                        <Select
+                       
+                        From:<Select
                           className="time-select"
                           classNamePrefix="select"
                           options={timeOptions}
@@ -304,7 +306,8 @@ const WeeklyAvailability = ({ control, value }) => {
                           }}
                           placeholder="Start time"
                         />
-                        <span className="separator">-</span>
+                        <span className="separator">To:</span>
+                        
                         <Select
                           className="time-select"
                           classNamePrefix="select"
@@ -345,7 +348,7 @@ const WeeklyAvailability = ({ control, value }) => {
                       </div>
                     ))}
                     </div>
-                    {(timeSlots[day.id] || []) && (
+                    {/* {(timeSlots[day.id] || []) && (
                       <button 
                         type="button" 
                         className="add-time"
@@ -360,7 +363,7 @@ const WeeklyAvailability = ({ control, value }) => {
                       >
                         Add
                       </button>
-                    )}
+                    )} */}
                   </>
                 )
               )}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { otpVerication } from "../../../utils/auth";
 import { useRouter } from "next/router";
@@ -8,14 +8,21 @@ import { useReferenceContext } from "../../../context/ReferenceContext";
 import CommonServices from "../../../services/CommonServices";
 import Cookies from "js-cookie";
 
-
 const OtpVerificationForm = ({ email }) => {
   const userData = Cookies.get("user");
   const userObj = userData && JSON.parse(userData);
-    const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userDetails, setUserDetails] = useState({});
   const router = useRouter();
+
+  useEffect(() => {
+    if (userData) {
+      const details = JSON.parse(userData);
+      setUserDetails(details);
+    }
+  }, []);
 
   const handleVerifyOtp = async () => {
     try {
@@ -26,18 +33,25 @@ const OtpVerificationForm = ({ email }) => {
       }
       setError("");
       await otpVerication({ email, otp });
-      
+
       if (userObj?.role_id === 2) {
-        const profileResponse = await CommonServices.getCounselorProfile(userObj.user_profile_id);
+        const profileResponse = await CommonServices.getCounselorProfile(
+          userObj.user_profile_id
+        );
         if (profileResponse.status === 200) {
           setLoading(false);
-          return router.push('/onboarding');
+          if (userDetails && userDetails?.counselor_profile_id) {
+            return router.push("/dashboard");
+          } else {
+            return router.push("/onboarding");
+          }
         }
       }
-      
+
       setLoading(false);
       return router.push("/dashboard");
     } catch (error) {
+      
       toast.error(error?.message || "Error while verifying the OTP!");
       setLoading(false);
     }

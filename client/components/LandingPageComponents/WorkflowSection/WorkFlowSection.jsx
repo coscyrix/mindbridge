@@ -8,17 +8,16 @@ import workFlowMainImage from '../assets/images/workflow-main-image.jpeg';
 import CustomSwiper from '../../Swiper';
 import { SwiperSlide } from 'swiper/react';
 import FeatureCard from './FeatureCard';
+import Image from 'next/image';
 
 const WorkFlowSection = () => {
   const [selectedImage, setSelectedImage] = useState(workFlowMainImage.src);
   
   const workflowFeatures = [
-    { title: 'The Counselor Dashboard', description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque facilisis.' },
-    { title: 'Secure Client Communication', description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque facilisis.' },
-    { title: 'Assessment Result Display', description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque facilisis.' },
-    { title: 'The Counselor Dashboard', description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque facilisis.' },
-    { title: 'Secure Client Communication', description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque facilisis.' },
-    { title: 'Assessment Result Display', description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque facilisis.' },
+    { title: 'The Counselor Dashboard', description: 'The MindBridge app provides an intuitive and real-time overview of key metrix and insight for counselors and administrators.' },
+    { title: 'Secure Client Communication', description: 'Confidential messaging designed for therapy. Encrypte, private, and HIPAA-complaint.' },
+    { title: 'Assessment Result Display', description: 'View mental health scores at a glance- PHQ-9, GAD-7, and more.' },
+   
   ];
 
   const handleImageClick = (imageSrc) => {
@@ -33,36 +32,44 @@ const WorkFlowSection = () => {
           <br />With MindBridge
         </h2>
         <div className="small-images-container">
-          <img 
+          <Image 
             src={workflowLeftImage1.src} 
-            alt="" 
+            alt="Workflow step 1" 
             className="small-image-placeholder" 
+            width={60}
+            height={60}
             onClick={() => handleImageClick(workflowLeftImage1.src)}
             style={{ cursor: 'pointer' }}
           />
-          <img 
+          <Image 
             src={workflowLeftImage2.src} 
-            alt="" 
+            alt="Workflow step 2" 
             className="small-image-placeholder" 
+            width={60}
+            height={60}
             onClick={() => handleImageClick(workflowLeftImage2.src)}
             style={{ cursor: 'pointer' }}
           />
-          <img 
+          <Image 
             src={workflowLeftImage3.src} 
-            alt="" 
+            alt="Workflow step 3" 
             className="small-image-placeholder" 
+            width={60}
+            height={60}
             onClick={() => handleImageClick(workflowLeftImage3.src)}
             style={{ cursor: 'pointer' }}
           />
-          <img 
+          <Image 
             src={workflowLeftImage4.src} 
-            alt="" 
+            alt="Workflow step 4" 
             className="small-image-placeholder" 
+            width={60}
+            height={60}
             onClick={() => handleImageClick(workflowLeftImage4.src)}
             style={{ cursor: 'pointer' }}
           />
         </div>
-        <img src={selectedImage} alt="" className="large-image-placeholder" />
+        <Image src={selectedImage} alt="Selected workflow" className="large-image-placeholder" width={300} height={200} />
       </div>
       <div className="right-content-container">
         <h2 className="workflow-heading">

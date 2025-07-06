@@ -29,7 +29,7 @@ function CustomDropDown({
     <>
       <CreateSession>
         <Overlay
-          onClick={handleClose}
+          // onClick={handleClose}
           className={`overlay ${isOpen ? "open" : "closed"}`}
         />
       </CreateSession>

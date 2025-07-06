@@ -246,6 +246,7 @@ function AssessmentResults({ assessmentResultsData }) {
 
   return (
     <AssessmentResultsContainer>
+  
       <CustomCard title="Homework And Assessment Tools Results">
         <CustomClientDetails
           tableData={{

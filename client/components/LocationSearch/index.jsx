@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import styled from 'styled-components';
-import { useLoadScript } from '@react-google-maps/api';
+import React, { useEffect, useRef, useState } from "react";
+import styled from "styled-components";
+import { useLoadScript } from "@react-google-maps/api";
 
-const libraries = ['places'];
+const libraries = ["places"];
 
 const LocationSearchContainer = styled.div`
   position: relative;
@@ -27,7 +27,7 @@ const LocationSearchContainer = styled.div`
     background-color: white;
 
     &:focus {
-      border-color: #2196F3;
+      border-color: #2196f3;
     }
 
     &.error {
@@ -69,15 +69,21 @@ const LocationSearch = ({ value, onChange, error, label }) => {
 
   const inputRef = useRef(null);
   const autocompleteRef = useRef(null);
-  const [inputValue, setInputValue] = useState(value?.label || '');
-
+  const [inputValue, setInputValue] = useState(value?.label || "");
+  useEffect(() => {
+    if (value?.label) {
+      setInputValue(value.label);
+    } else if (typeof value === "string") {
+      setInputValue(value);
+    }
+  }, [value]);
   useEffect(() => {
     if (!isLoaded || loadError) return;
 
     const options = {
-      componentRestrictions: { country: 'us' }, // Restrict to US locations
-      fields: ['address_components', 'formatted_address', 'geometry'],
-      types: ['address'],
+      componentRestrictions: { country: "us" }, // Restrict to US locations
+      fields: ["address_components", "formatted_address", "geometry"],
+      types: ["address"],
     };
 
     autocompleteRef.current = new window.google.maps.places.Autocomplete(
@@ -85,16 +91,16 @@ const LocationSearch = ({ value, onChange, error, label }) => {
       options
     );
 
-    autocompleteRef.current.addListener('place_changed', () => {
+    autocompleteRef.current.addListener("place_changed", () => {
       const place = autocompleteRef.current.getPlace();
-      
+
       if (place.geometry) {
         const locationData = {
           value: place.formatted_address,
           label: place.formatted_address,
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
-          address_components: place.address_components
+          address_components: place.address_components,
         };
         setInputValue(place.formatted_address);
         onChange(locationData);
@@ -103,7 +109,9 @@ const LocationSearch = ({ value, onChange, error, label }) => {
 
     return () => {
       if (autocompleteRef.current) {
-        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        window.google.maps.event.clearInstanceListeners(
+          autocompleteRef.current
+        );
       }
     };
   }, [isLoaded, loadError, onChange]);
@@ -111,7 +119,7 @@ const LocationSearch = ({ value, onChange, error, label }) => {
   const handleInputChange = (e) => {
     const newValue = e.target.value;
     setInputValue(newValue);
-    
+
     // If the input is cleared, clear the selected location
     if (!newValue) {
       onChange(null);
@@ -132,7 +140,7 @@ const LocationSearch = ({ value, onChange, error, label }) => {
       <input
         ref={inputRef}
         type="text"
-        className={`location-input ${error ? 'error' : ''}`}
+        className={`location-input ${error ? "error" : ""}`}
         placeholder="Enter your location"
         value={inputValue}
         onChange={handleInputChange}
@@ -142,4 +150,4 @@ const LocationSearch = ({ value, onChange, error, label }) => {
   );
 };
 
-export default LocationSearch; 
+export default LocationSearch;

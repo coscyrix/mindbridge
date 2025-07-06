@@ -5,7 +5,7 @@ import Header from "../Header";
 function LandingPageLayout({ children }) {
   return (
     <>
-      <Header />
+      <Header  />
         <main>
           {children}
         </main>

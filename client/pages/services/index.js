@@ -80,7 +80,6 @@ function Services() {
       });
     }
   };
-
   const handleUpdateService = async (payload, serviceId) => {
     try {
       const response = await api.put(

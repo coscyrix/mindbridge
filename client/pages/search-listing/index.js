@@ -4,12 +4,21 @@ import CounselorCard from "../../components/SearchListingComponents/CounselorCar
 import { SearchListingWrapper } from "../../components/SearchListingComponents/style";
 import CommonServices from "../../services/CommonServices";
 import { useForm } from "react-hook-form";
-
+import axios from "axios";
+import CustomLoader from "../../components/Loader/CustomLoader";
+import CustomButton from "../../components/CustomButton";
+import { GoArrowLeft } from "react-icons/go";
 const SearchListing = () => {
+  const [isloading, setIsLoading] = useState(false);
+  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
+
   const router = useRouter();
-  
+  const { query } = router;
+
   const [searchFilters, setSearchFilters] = useState(null);
   const [counselorsData, setCounselorsData] = useState([]);
+  const [profilePictures, setProfilePictures] = useState({});
+
   const [searchParams, setSearchParams] = useState({
     searchServices: "",
     location: "",
@@ -17,11 +26,37 @@ const SearchListing = () => {
     gender: "",
     speciality: "",
     priceRange: {
-      min: 1200,
-      max: 20000,
+      min: 1,
+      max: 500,
     },
     categories: [],
   });
+
+  const loadValueFromQuery = () => {
+    if (!router.isReady) return;
+    const query = router.query;
+    setSearchParams((prev) => ({
+      ...prev,
+      searchServices: query.searchServices || "",
+      location: query.location ? query.location.toLowerCase() : "",
+      race: query.race ? query.race.toLowerCase() : "",
+      gender: query.gender ? query.gender.toLowerCase() : "",
+      speciality: query.specialties ? query.specialties.toLowerCase() : "",
+      priceRange: {
+        min: query.min ? Number(query.min) : prev.priceRange.min,
+        max: query.max ? Number(query.max) : prev.priceRange.max,
+      },
+      categories: query.categories
+        ? Array.isArray(query.categories)
+          ? query.categories
+          : [query.categories]
+        : [],
+    }));
+  };
+
+  useEffect(() => {
+    loadValueFromQuery();
+  }, [router.isReady]);
 
   const getSearchFilters = async () => {
     try {
@@ -29,30 +64,141 @@ const SearchListing = () => {
       if (response.status === 200) {
         const { data } = response;
         // data?.filters?.specialties?.map((spe) => spe.service_name);
-        setSearchFilters(data.filters);
+        const uniqueSpecialties = Array.from(
+          new Map(
+            data.filters.specialties.map((item) => [item.service_name, item])
+          ).values()
+        );
+
+        setSearchFilters({
+          ...data.filters,
+          specialties: uniqueSpecialties,
+        });
       }
     } catch (error) {
       console.log("Error while fetching the search filters", error);
     }
   };
-
-  const filterSearchResult = async (data) => {
+  const filterSearchResult = async (data, isInitial = false) => {
     try {
-      const response = await CommonServices.getSearchedCounselors(data);
+      setIsLoading(true);
+      // Remove searchServices from data
+      if (data?.searchServices !== undefined) delete data.searchServices;
+
+      // Utility to filter out empty values
+      const filterPayload = (obj) => {
+        const result = {};
+        Object.entries(obj).forEach(([key, value]) => {
+          if (
+            value === undefined ||
+            value === null ||
+            (typeof value === "string" && value.trim() === "") ||
+            (Array.isArray(value) && value.length === 0) ||
+            (typeof value === "object" &&
+              !Array.isArray(value) &&
+              Object.keys(value).length === 0)
+          ) {
+            // skip
+          } else {
+            result[key] = value;
+          }
+        });
+        return result;
+      };
+
+      // Build the payload
+      let payload = { ...data };
+
+      // Map categories to specialties if present and non-empty
+      if (searchParams.categories && searchParams.categories.length > 0) {
+        payload.specialties = searchParams.categories;
+      }
+
+      // Map priceRange to min_price and max_price if set, but only if not initial call
+      if (!isInitial && searchParams.priceRange) {
+        const { min, max } = searchParams.priceRange;
+        if (min !== undefined && min !== null && min !== "") {
+          payload.min_price = min;
+        }
+        if (max !== undefined && max !== null && max !== "") {
+          payload.max_price = max;
+        }
+      }
+      // Remove original priceRange and categories keys
+      delete payload.priceRange;
+      delete payload.categories;
+
+      // Remove speciality if empty
+      if (payload.speciality === "") delete payload.speciality;
+
+      // Remove specialties if empty
+      if (payload.specialties && payload.specialties.length === 0)
+        delete payload.specialties;
+
+      // Final filter to remove any empty keys
+      payload = filterPayload(payload);
+
+      const response = await CommonServices.getSearchedCounselors(payload);
       if (response.status === 200) {
-        console.log(response, "response");
         setCounselorsData(response.data.rec);
       }
+      setIsLoading(false);
     } catch (error) {
+      setIsLoading(false);
       console.log("Error while fetching the error : ", error);
     }
   };
+
+  const fetchAllProfilePictures = async () => {
+    const pictureMap = {};
+
+    await Promise.all(
+      counselorsData?.map(async (counselor) => {
+        try {
+          const response = await axios.get(
+            `${imageBaseUrl}${counselor.profile_picture_url}`,
+            {
+              responseType: "blob",
+              headers: {
+                "ngrok-skip-browser-warning": "true",
+              },
+            }
+          );
+
+          const blob = response.data;
+          const reader = new FileReader();
+
+          // Wrap reader in a Promise to wait until it's done
+          const base64 = await new Promise((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          pictureMap[counselor.counselor_profile_id] = base64;
+        } catch (error) {
+          console.log(
+            `Error fetching image for ${counselor.counselor_profile_id}`,
+            error
+          );
+        }
+      })
+    );
+
+    setProfilePictures(pictureMap);
+  };
+
+  useEffect(() => {
+    if (counselorsData && counselorsData.length > 0) {
+      fetchAllProfilePictures();
+    }
+  }, [counselorsData]);
 
   useEffect(() => {
     if (router.isReady) {
       const { query } = router;
       if (Object.keys(query).length > 0) {
-        filterSearchResult(query);
+        filterSearchResult(query, true);
       }
     }
   }, [router.isReady, router.query]);
@@ -63,12 +209,10 @@ const SearchListing = () => {
     }
   }, []);
 
-  // Mock data for dropdowns
-  const locations = ["XYZ City, Indo...", "ABC City", "DEF City"];
-
   const handleSearch = (e) => {
     e.preventDefault();
     console.log("Search params:", searchParams);
+    filterSearchResult(searchParams);
   };
 
   const handleInputChange = (field, value) => {
@@ -100,18 +244,11 @@ const SearchListing = () => {
       };
     });
   };
-
-  const handleBookAppointment = (counselorId) => {
-    console.log("Booking appointment with counselor:", counselorId);
-  };
-
-  console.log(searchFilters , "search::::")
-
   return (
     <SearchListingWrapper>
       <div className="search-section">
         <div className="search-container">
-          <div className="search-input-wrapper">
+          {/* <div className="search-input-wrapper">
             <input
               type="text"
               placeholder="Search services"
@@ -123,7 +260,7 @@ const SearchListing = () => {
             <button className="search-icon-button">
               <img src="./assets/icons/searchIcon.svg" />
             </button>
-          </div>
+          </div> */}
 
           <div className="filters-wrapper">
             <div className="filter-item">
@@ -133,8 +270,8 @@ const SearchListing = () => {
                 onChange={(e) => handleInputChange("location", e.target.value)}
               >
                 <option value="">Select Location</option>
-                {searchFilters?.locations.map((location) => (
-                  <option key={location} value={location}>
+                {searchFilters?.locations?.map((location) => (
+                  <option key={location} value={location.toLowerCase()}>
                     {location}
                   </option>
                 ))}
@@ -174,14 +311,17 @@ const SearchListing = () => {
             <div className="filter-item">
               <img src="./assets/icons/locationIcon.svg" />
               <select
-                value={searchParams.speciality?.service_name}
+                value={searchParams.speciality}
                 onChange={(e) =>
                   handleInputChange("speciality", e.target.value)
                 }
               >
                 <option value="">Select Speciality</option>
                 {searchFilters?.specialties?.map((specialty) => (
-                  <option key={specialty?.service_name} value={specialty?.service_name}>
+                  <option
+                    key={specialty?.service_name}
+                    value={specialty?.service_name.toLowerCase()}
+                  >
                     {specialty?.service_name}
                   </option>
                 ))}
@@ -199,21 +339,6 @@ const SearchListing = () => {
 
       <div className="results-section">
         <div className="filters-section">
-          <div className="search-by-name">
-            <h3>Search by Facility Name</h3>
-            <div className="search-input-wrapper">
-              <input
-                type="text"
-                placeholder="Search"
-                value={searchParams.searchTerm}
-                onChange={(e) =>
-                  handleInputChange("searchTerm", e.target.value)
-                }
-              />
-              <button onClick={handleSearch}>Search</button>
-            </div>
-          </div>
-
           <div className="price-range">
             <div className="wrapperRange">
               <h3>Price Range</h3>
@@ -254,15 +379,15 @@ const SearchListing = () => {
             <div className="price-slider">
               <input
                 type="range"
-                min="1200"
-                max="20000"
+                min="1"
+                max="500"
                 value={searchParams.priceRange.min}
                 onChange={(e) => handlePriceRangeChange("min", e.target.value)}
               />
               <input
                 type="range"
-                min="1200"
-                max="20000"
+                min="1"
+                max="500"
                 value={searchParams.priceRange.max}
                 onChange={(e) => handlePriceRangeChange("max", e.target.value)}
               />
@@ -270,13 +395,18 @@ const SearchListing = () => {
           </div>
 
           <div className="categories">
-            <h3>Categories</h3>
+            <h3>Service Type</h3>
             <div className="categories-list">
-              {searchFilters?.services?.map((service) => (
-                <label key={service?.service_name} className="category-checkbox">
+              {searchFilters?.specialties?.map((service) => (
+                <label
+                  key={service?.service_name}
+                  className="category-checkbox"
+                >
                   <input
                     type="checkbox"
-                    checked={searchParams.categories.includes(service?.service_name)}
+                    checked={searchParams.categories.includes(
+                      service?.service_name
+                    )}
                     onChange={() => handleCategoryChange(service?.service_name)}
                   />
                   <span>{service?.service_name}</span>
@@ -284,15 +414,37 @@ const SearchListing = () => {
               ))}
             </div>
           </div>
-        </div>
 
+          <div
+            style={{
+              color: "white",
+              padding: " 8px 12px",
+              backgroundColor: "#3973b7",
+              borderRadius: "6px",
+              textAlign: "center",
+              marginTop: "16px",
+              cursor: "pointer",
+            }}
+            onClick={() => filterSearchResult(query)}
+          >
+            Submit
+          </div>
+        </div>
         <div className="wrapperCardShow">
+          <GoArrowLeft
+            onClick={() => {
+              router.back();
+            }}
+            size={50}
+          />
+
           {counselorsData?.length !== 0 ? (
             counselorsData.map((counselor) => (
               <CounselorCard
                 key={counselor.counselor_profile_id}
                 image={
-                  "/assets/images/drImage2.png" || counselor.profile_picture_url
+                  profilePictures[counselor.counselor_profile_id] ||
+                  "/assets/images/drImage2.png"
                 }
                 name={`${counselor.user_first_name} ${counselor.user_last_name}`}
                 speciality={counselor.specialties.join(", ")}
@@ -312,6 +464,13 @@ const SearchListing = () => {
           )}
         </div>
       </div>
+      {isloading ? (
+        <CustomLoader
+          style={{ top: "30vh", left: "10vw", height: "20vh" }}
+        ></CustomLoader>
+      ) : (
+        <></>
+      )}
     </SearchListingWrapper>
   );
 };

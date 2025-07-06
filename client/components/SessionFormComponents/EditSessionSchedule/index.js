@@ -46,7 +46,7 @@ const EditSessionScheduleForm = ({
       };
       reset(formattedData);
     }
-  }, []);
+  }, [activeData, reset]);
 
   const handleDiscard = () => {
     reset();

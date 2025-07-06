@@ -22,7 +22,7 @@ import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import Spinner from "../components/common/Spinner";
 import CustomPagination from "../components/CustomPagination";
-import { DOWNLOAD_OPTIONS } from "../utils/constants";
+import { DOWNLOAD_OPTIONS, SERVICE_FEE_INFO } from "../utils/constants";
 import moment from "moment";
 
 const Invoice = () => {
@@ -137,7 +137,9 @@ const Invoice = () => {
       name: "Total Amount",
       selector: (row) =>
         // `$${Number(row.session_price + row.session_gst).toFixed(2)}`
-        `$${(Number(row.session_counselor_amt)+Number(row.session_system_amt)).toFixed(2)}`,
+        `$${(
+          Number(row.session_counselor_amt) + Number(row.session_system_amt)
+        ).toFixed(2)}`,
       selectorId: "session_price",
     },
     {
@@ -261,7 +263,7 @@ const Invoice = () => {
       setLoading("tableData");
       const params = new URLSearchParams();
       params.append("role_id", roleId);
-      
+
       // Only append counselor_id if it's not "allCounselors"
       if (counselorId && counselorId !== "allCounselors") {
         params.append("counselor_id", counselorId);
@@ -269,12 +271,12 @@ const Invoice = () => {
         // If role is counselor (2), always send their own ID
         params.append("counselor_id", user?.user_profile_id);
       }
-      
+
       if (startDate) params.append("start_dte", startDate);
       if (endDate) params.append("end_dte", endDate);
-      
+
       const response = await api.get(`/invoice/multi?${params.toString()}`);
-      
+
       if (response?.status === 200) {
         setInvoices(response?.data?.rec);
         setInvoiceTableData(response?.data?.rec?.rec_list);
@@ -461,7 +463,10 @@ const Invoice = () => {
               heading={"Total Amount For A Month"}
               value={`$${
                 invoices
-                  ? (Number(invoices?.summary?.sum_session_counselor_amt)+Number(invoices?.summary?.sum_session_system_amt)).toFixed(2) || 0
+                  ? (
+                      Number(invoices?.summary?.sum_session_counselor_amt) +
+                      Number(invoices?.summary?.sum_session_system_amt)
+                    ).toFixed(2) || 0
                   : 0
               }`}
             />
@@ -487,18 +492,13 @@ const Invoice = () => {
               heading={"Total Amount of Units:"}
               value={invoices?.summary?.sum_session_system_units || 0}
             />
+            <CustomTab heading="Service Fees" lines={SERVICE_FEE_INFO} />
           </div>
-          <div className="search-container">
+          <div  className="search-container">
             <div className="search-and-select">
-              <div className="custom-search-container">
-                <CustomSearch
-                  filterText={filterText}
-                  onFilter={(e) => setFilterText(e.target.value)}
-                />
-              </div>
               <div className="custom-select-container">
                 {[3, 4].includes(roleId) ? (
-                  <div key="counselor-select">
+                  <div  key="counselor-select">
                     <label>Counselor</label>
                     {/* <CustomSelect
                       name="counselor"
@@ -539,6 +539,12 @@ const Invoice = () => {
                     value={endDate ? endDate : ""}
                     placeholder="Select end date"
                     className="date-fields"
+                  />
+                </div>
+                <div className="custom-search-container">
+                  <CustomSearch
+                    filterText={filterText}
+                    onFilter={(e) => setFilterText(e.target.value)}
                   />
                 </div>
               </div>

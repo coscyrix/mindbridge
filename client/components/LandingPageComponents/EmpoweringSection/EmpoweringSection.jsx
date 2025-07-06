@@ -13,7 +13,7 @@ const EmpoweringSection = () => {
         <p className="empowering-description">
           MindBridge offers a robust suite of tools designed to streamline your practice, enhance client engagement, and improve treatment outcomes.
         </p>
-        <CustomButton customClass="get-started-button" title="Get Started Free →"/>
+        <CustomButton customClass="get-started-button" title='Try MindBridge Free Today'/>
       </div>
       <div className="provider-types-grid">
         <div className="provider-type-item">

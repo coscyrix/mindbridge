@@ -3,6 +3,7 @@ import { HeaderWrapper, MobileNav, Overlay } from "./style";
 import CustomButton from "../CustomButton";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import ApiConfig from "../../config/apiConfig";
 
 const Header = () => {
   const router = useRouter();
@@ -20,6 +21,10 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleGetStarted = () => {
+    router.push(ApiConfig.getstartedsubmittion.getstarted);
+  };
+
   return (
     <HeaderWrapper>
       <div className="mobile-header">
@@ -31,11 +36,6 @@ const Header = () => {
           />
         </div>
         <div className="mobile-nav-links">
-          <CustomButton
-            title="Register for free"
-            className="mobile-register-button"
-            onClick={() => router.push("/login")}
-          />
           <button className="hamburger" onClick={() => setIsOpen(true)}>
             <span></span>
             <span></span>
@@ -53,23 +53,30 @@ const Header = () => {
           />
         </div>
         <div className="register-container">
-          <nav>
-            <ul>
-              <li>
+          <div className="register-group">
+            {/* <nav> */}
+            {/* <ul>
+              <li className="nav-item">
                 <Link href="#">Insights</Link>
               </li>
-              <li>
+              <li className="nav-item">
                 <Link href="#">Sessions</Link>
               </li>
-              <li>
+              <li className="nav-item">
                 <Link href="#">Communication</Link>
               </li>
-            </ul>
-          </nav>
-          <Link href="/login" className="sign-in-link">
-            Sign in
-          </Link>
-          <CustomButton title="Register for free" className="register-button" />
+            </ul> */}
+            {/* </nav> */}
+            <CustomButton
+              onClick={handleGetStarted}
+              customClass="get-started-button"
+              title="Get started -pay only when you earn"
+            />
+           
+            <Link href="/login" className="sign-in-link">
+              Provider
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -88,22 +95,16 @@ const Header = () => {
             <span></span>
           </button>
         </div>
-        <Link href="/login" className="mobile-sign-in">
-          Sign in
-        </Link>
-        <nav>
-          <ul>
-            <li>
-              <Link href="#">Insights</Link>
-            </li>
-            <li>
-              <Link href="#">Sessions</Link>
-            </li>
-            <li>
-              <Link href="#">Communication</Link>
-            </li>
-          </ul>
-        </nav>
+        <div className="mobile-register-group">
+          <CustomButton
+            onClick={handleGetStarted}
+            customClass="get-started-button"
+            title="Get started -pay only when you earn"
+          />
+          <Link href="/login" className="mobile-sign-in">
+            Provider
+          </Link>
+        </div>
       </MobileNav>
     </HeaderWrapper>
   );

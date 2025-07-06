@@ -7,7 +7,12 @@ import { ReferenceContextProvider } from "../context/ReferenceContext";
 import LandingPageLayout from "../components/LandingPageComponents/LandingPageLayout";
 
 const ROUTES = {
-  LANDING_PAGES: ["/", "/search-listing", "/search-details/[id]"],
+  LANDING_PAGES: [
+    "/",
+    "/search-listing",
+    "/search-details/[id]",
+    "/get-started-form",
+  ],
   AUTH_PAGES: ["/login", "/reset-password"],
   ONBOARDING: "/onboarding",
 };

@@ -366,13 +366,17 @@ const SignUp = () => {
   const onSubmit = async (formData) => {
     setLoading(true);
     try {
+      console.log("Selected services (array):", formData?.services_offered);
+      // console.log("in")
       const profileData = {
         user_profile_id: userObj?.user_profile_id,
         counselor_profile_id: onBoardingDetails?.counselor_profile_id,
         license_number: formData.license_number,
         license_expiry_date: formData.license_expiry_date,
         services_offered: JSON.stringify(
-          formData?.services_offered?.map((s) => s.value) || []
+         Array.isArray(formData?.services_offered)
+            ? formData.services_offered.map((s) => s.label)
+            : []
         ),
         specialties: JSON.stringify(
           formData?.specialties?.map((s) => s.value) || []
@@ -393,11 +397,10 @@ const SignUp = () => {
         profile_notes: formData.profile_notes,
       };
 
-      // Use update API if type exists, otherwise use create
       const response = type
         ? await updateProfile(profileData, userId)
         : await onBoarding(profileData);
-
+      // const response = {id:'abc'};
       console.log("Profile creation/update response:", response);
 
       if (response?.id || userId) {
@@ -434,12 +437,15 @@ const SignUp = () => {
 
         // Upload license file if selected
         console.log("Checking for license file to upload...");
-        if (licenseFile) {
-          console.log("License file found, preparing for upload:", licenseFile);
+        if (licenseFile && typeof licenseFile !== "string") {
+          console.log(
+            "New license file found, preparing for upload:",
+            licenseFile
+          );
           try {
             const formData = new FormData();
             formData.append("license", licenseFile);
-            console.log("Uploading license file...");
+            console.log("Uploading new license file...");
             await CommonServices.uploadLicenseFile(
               idToUpdate || response.counselor_profile_id,
               formData
@@ -451,7 +457,9 @@ const SignUp = () => {
             toast.error("Failed to upload license file");
           }
         } else {
-          console.log("No license file to upload.");
+          console.log(
+            "No new license file uploaded, using existing license_file_url."
+          );
         }
 
         // Upload all additional documents
@@ -521,7 +529,7 @@ const SignUp = () => {
       setLoading(false);
     }
   };
-
+  
   const nextStep = async () => {
     const isValid = await validateStep(currentStep);
     if (isValid) {
@@ -626,7 +634,7 @@ const SignUp = () => {
     if (type && userId) {
       getProfileData();
     }
-  }, [type , userId]);
+  }, [type, userId]);
 
   // Add new useEffect for form prefilling
   useEffect(() => {
@@ -699,7 +707,7 @@ const SignUp = () => {
 
             reader.readAsDataURL(blob);
           } catch (error) {
-            console.log(error, "error:::::");
+            console.error(error);
           }
         }
       };
@@ -731,7 +739,7 @@ const SignUp = () => {
 
             reader.readAsDataURL(blob);
           } catch (error) {
-            console.log(error, "error:::::");
+            console.log(error);
           }
         }
       };
@@ -1186,7 +1194,9 @@ const SignUp = () => {
   const getProfileData = async () => {
     try {
       const { data, status } = await CommonServices.getCounselorProfile(userId);
-      if (data && status === 200) {
+      console.log(data);
+      if (data && status === 200) 
+        {
         setOnBoardingDetails(data?.rec[0]);
       }
     } catch (error) {
