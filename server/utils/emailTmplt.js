@@ -474,8 +474,17 @@ export const homeworkEmailAttachment = (
 };
 
 export const onboardingAdminEmail = (data) => {
+  // Check if signature is a base64 string (starts with 'data:image')
+  let signatureHtml = '';
+  if (data.signature && typeof data.signature === 'string' && data.signature.startsWith('data:image')) {
+    signatureHtml = `<img src="${data.signature}" alt="Signature" style="max-width:200px;max-height:100px;" />`;
+  } else if (data.signature) {
+    signatureHtml = data.signature;
+  } else {
+    signatureHtml = 'N/A';
+  }
   return {
-    to: 'aashish@deliverable.services',
+    to: 'admin-rasham@mindbridge.solutions',
     subject: 'New MindBridge Onboarding/Demo Request',
     html: `
       <h2>New Onboarding/Demo Request Submitted</h2>
@@ -493,7 +502,7 @@ export const onboardingAdminEmail = (data) => {
         <li><strong>Preferred Demo Date/Time:</strong> ${data.demoTime}</li>
         <li><strong>Additional Notes:</strong> ${data.notes}</li>
         <li><strong>Typed Name:</strong> ${data.typedName}</li>
-        <li><strong>Signature:</strong> ${data.signature}</li>
+        <li><strong>Signature:</strong> ${signatureHtml}</li>
         <li><strong>Date:</strong> ${data.date}</li>
       </ul>
       <p>Submitted at: ${new Date().toLocaleString()}</p>
