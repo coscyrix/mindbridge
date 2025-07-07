@@ -103,6 +103,24 @@ export default class Session {
         return { message: 'Service is not additional', error: -1 };
       }
 
+      // Fetch reference fees for the tenant
+      const ref_fees = await this.common.getRefFeesByTenantId(data.tenant_id);
+      if (!ref_fees || ref_fees.error) {
+        logger.error('Error getting reference fees');
+        return { message: 'Error getting reference fees', error: -1 };
+      }
+
+      // Calculate session amounts
+      const total_invoice = Number(svc.total_invoice);
+      const tax_pcnt = Number(ref_fees[0].tax_pcnt);
+      const counselor_pcnt = Number(ref_fees[0].counselor_pcnt);
+      const system_pcnt = Number(ref_fees[0].system_pcnt);
+
+      const session_price = total_invoice;
+      const session_taxes = total_invoice * tax_pcnt;
+      const session_counselor_amt = (total_invoice + session_taxes) * counselor_pcnt;
+      const session_system_amt = (total_invoice + session_taxes) * system_pcnt;
+
       tmpSession = {
         thrpy_req_id: data.thrpy_req_id,
         service_id: data.service_id,
@@ -113,6 +131,10 @@ export default class Session {
         is_additional: svc.is_additional && svc.is_additional === 1 ? 1 : 0,
         is_report: svc.is_report && svc.is_report === 1 ? 1 : 0,
         tenant_id: data.tenant_id,
+        session_price,
+        session_taxes,
+        session_counselor_amt,
+        session_system_amt,
       };
 
       const postSession = await db

@@ -151,7 +151,7 @@ export const treatmentToolsEmail = (
       <p>Participation is completely voluntary, and all information remains confidential. Your input will be invaluable in enhancing the quality of care we provide.</p>
       <p>Please click the link below to complete the assessment:</p>
       <p><a href="${process.env.BASE_URL}${process.env.FORMS}${tools_name.toLowerCase()}?form_id=${form_id}&client_id=${client_id}&session_id=${session_id}">Complete ${tools_name} Assessment</a></p>
-      <p>If you have any questions or concerns, feel free to reach out. We’re here to support you.</p>
+      <p>If you have any questions or concerns, feel free to reach out. We're here to support you.</p>
       <p>Thank you,</p>
       <p>The Counselling Team Member</p>
     `,
@@ -191,7 +191,7 @@ export const consentFormEmail = (email, clientName, consentFormLink) => {
       <p>Attached, you will find the Consent Form document, which is an important step in our process. This document requires careful review and your consent to proceed.</p>
       <p>Please take some time to review the form at your earliest convenience. Once completed, kindly submit it. If you have any questions or would like further clarification, we can review and finalize it together during our next session.</p>
       <p><a href="${consentFormLink}">Click here to access the Consent Form</a></p>
-      <p>If you have any concerns or need assistance, don’t hesitate to reach out.</p>
+      <p>If you have any concerns or need assistance, don't hesitate to reach out.</p>
       <p>Thank you,</p>
       <p>The Counselling Team Member</p>
     `,
@@ -406,8 +406,8 @@ export const dischargeEmail = (email, clientName) => {
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <p>Dear ${capitalizeFirstLetter(clientName)},</p>
-        <p>I hope this email finds you well. I wanted to take a moment to acknowledge the completion of your therapy sessions and congratulate you on the progress you’ve made during this journey.</p>
-        <p>It has been a privilege to work alongside you and witness your growth, resilience, and commitment to your well-being. I am confident that the tools and insights you’ve developed during our sessions will continue to support you in navigating life’s challenges.</p>
+        <p>I hope this email finds you well. I wanted to take a moment to acknowledge the completion of your therapy sessions and congratulate you on the progress you've made during this journey.</p>
+        <p>It has been a privilege to work alongside you and witness your growth, resilience, and commitment to your well-being. I am confident that the tools and insights you've developed during our sessions will continue to support you in navigating life's challenges.</p>
         <p>Thank you for trusting me to be part of your journey. I wish you continued strength, growth, and fulfillment in the path ahead.</p>
         <p style="text-align: left;">Thank you,</p>
         <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>
@@ -470,5 +470,42 @@ export const homeworkEmailAttachment = (
         <p>The Counselling Team Member</p>
       `,
     attachments: [{ filename: fileName, content: fileBuffer }],
+  };
+};
+
+export const onboardingAdminEmail = (data) => {
+  // Check if signature is a base64 string (starts with 'data:image')
+  let signatureHtml = '';
+  if (data.signature && typeof data.signature === 'string' && data.signature.startsWith('data:image')) {
+    signatureHtml = `<img src="${data.signature}" alt="Signature" style="max-width:200px;max-height:100px;" />`;
+  } else if (data.signature) {
+    signatureHtml = data.signature;
+  } else {
+    signatureHtml = 'N/A';
+  }
+  return {
+    to: 'admin-rasham@mindbridge.solutions',
+    subject: 'New MindBridge Onboarding/Demo Request',
+    html: `
+      <h2>New Onboarding/Demo Request Submitted</h2>
+      <ul>
+        <li><strong>Organization Name:</strong> ${data.organization}</li>
+        <li><strong>Contact Name:</strong> ${data.contact}</li>
+        <li><strong>Position/Title:</strong> ${data.position}</li>
+        <li><strong>Email Address:</strong> ${data.email}</li>
+        <li><strong>Phone Number:</strong> ${data.phone}</li>
+        <li><strong>Company Website:</strong> ${data.website}</li>
+        <li><strong>Office Address:</strong> ${data.address}</li>
+        <li><strong>Number of Counselors:</strong> ${data.counselors}</li>
+        <li><strong>Estimated Clients per Month:</strong> ${data.clients}</li>
+        <li><strong>Interested Features:</strong> ${data.features}</li>
+        <li><strong>Preferred Demo Date/Time:</strong> ${data.demoTime}</li>
+        <li><strong>Additional Notes:</strong> ${data.notes}</li>
+        <li><strong>Typed Name:</strong> ${data.typedName}</li>
+        <li><strong>Signature:</strong> ${signatureHtml}</li>
+        <li><strong>Date:</strong> ${data.date}</li>
+      </ul>
+      <p>Submitted at: ${new Date().toLocaleString()}</p>
+    `,
   };
 };

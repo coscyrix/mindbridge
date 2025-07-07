@@ -9,11 +9,11 @@ import { toast } from "react-toastify";
 import { useRouter } from "next/router";
 import CustomInputField from "../../../CustomInputField";
 import Spinner from "../../../common/Spinner";
+import SignatureField from "../../../SignatureCanvas";
 
 const ConsentForm = ({ initialData, loader }) => {
   const signaturePadRef = useRef(null);
   const [loading, setLoading] = useState(false);
-
   const methods = useForm({
     defaultValues: {
       client_name: "",
@@ -51,16 +51,18 @@ const ConsentForm = ({ initialData, loader }) => {
     const { client_id, form_id, tenant_id } = router.query;
     try {
       setLoading(true);
-      if (!client_id || !form_id || !tenant_id) {
-        toast.error("Required parameters are missing from the route.");
-        setLoading(false);
-        return;
-      }
       const payload = {
         client_id: client_id,
         imgBase64,
         tenant_id,
       };
+      console.log(payload)
+      if (!client_id || !form_id || !tenant_id) {
+        toast.error("Required parameters are missing from the route.");
+        setLoading(false);
+        return;
+      }
+      console.log(payload);
       const response = await api.post("/feedback/consent", payload);
       if (response.status === 200) {
         toast.success(data?.message || "Consent form submitted successfully!");
@@ -218,75 +220,13 @@ const ConsentForm = ({ initialData, loader }) => {
                       )}
                     />
                   </div>
-                  <div style={{ display: "flex" }}>
-                    <label> Client Signature : </label>
-                    <Controller
-                      name="imgBase64"
-                      control={control}
-                      rules={{
-                        required: "Signature is required",
-                        validate: (value) =>
-                          value !== null || "Please provide a valid signature",
-                      }}
-                      render={({ field }) => (
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "10px",
-                            alignItems: "center",
-                          }}
-                        >
-                          {!field.value && !initialData && (
-                            <SignatureCanvas
-                              ref={signaturePadRef}
-                              penColor="black"
-                              canvasProps={{
-                                className: "signature-canvas",
-                              }}
-                            />
-                          )}
-                          {initialData?.imgBase64 ? (
-                            <div>
-                              <img
-                                src={initialData.imgBase64}
-                                alt="Client Signature"
-                              />
-                            </div>
-                          ) : field?.value ? (
-                            <div>
-                              <img src={field.value} alt="Client Signature" />
-                            </div>
-                          ) : null}
-                          <div>
-                            {!initialData && !field.value && (
-                              <button
-                                type="button"
-                                onClick={() => saveSignature(field)}
-                              >
-                                Save
-                              </button>
-                            )}
-                            {!initialData && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  clearSignature();
-                                  field.onChange(null);
-                                }}
-                              >
-                                Clear
-                              </button>
-                            )}
-                          </div>
-                          {errors.signature && (
-                            <small style={{ color: "red" }}>
-                              {errors.signature.message}
-                            </small>
-                          )}
-                        </div>
-                      )}
-                    />
-                  </div>
+                  <SignatureField
+                    name="imgBase64"
+                    label="Client Signature"
+                    control={control}
+                    errors={errors}
+                    initialData={initialData}
+                  />
                 </div>
               </div>
 

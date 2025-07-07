@@ -7,8 +7,6 @@ export const SearchDetailsWrapper = styled.div`
 `;
 
 export const ProfileHeader = styled.div`
-  border-radius: 8px;
-  padding: 20px;
 `;
 
 export const ProfileInfo = styled.div`
@@ -31,7 +29,7 @@ export const ProfileImage = styled.div`
   width: 120px;
   height: 120px;
   bottom: -60px;
-  left: 120px;
+  left: 160px;
   img {
     width: 100%;
     height: 100%;
@@ -309,7 +307,6 @@ export const ActionButton = styled.button`
 `;
 
 export const ServicesSection = styled.div`
-  padding: 20px;
 
   h2 {
     margin: 0 0 20px 0;

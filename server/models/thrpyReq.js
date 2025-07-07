@@ -53,10 +53,10 @@ export default class ThrpyReq {
         user_profile_id: data.counselor_id,
       });
 
-      if (!recCounselor) {
-        logger.error('Error getting counselor profile');
+      if (!recCounselor || !recCounselor.rec || !recCounselor.rec[0]) {
+        logger.error('Counselor profile not found');
         return {
-          message: 'Error getting counselor profile',
+          message: 'Counselor profile not found',
           error: -1,
         };
       }
@@ -531,7 +531,7 @@ export default class ThrpyReq {
       console.error(error);
       logger.error(error);
       return {
-        message: 'Error creating therapy request, sessions, and reports',
+        message: `Error creating therapy request, sessions, and reports: ${error}`,
         error: -1,
       };
     }

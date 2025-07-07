@@ -1,6 +1,5 @@
 import CounselorProfileService from '../services/counselorProfile.js';
 import logger from '../config/winston.js';
-
 export default class CounselorProfileController {
   constructor() {
     this.counselorProfileService = new CounselorProfileService();
@@ -43,19 +42,43 @@ export default class CounselorProfileController {
     }
   }
 
-  async getCounselorProfile(req, res) {
+  getCounselorProfile = async (req, res) => {
     try {
-      const result = await this.counselorProfileService.getCounselorProfile(req.query);
-      
-      if (result.error) {
-        return res.status(400).json(result);
+      const { counselor_profile_id } = req.query;
+      const query = counselor_profile_id ? { counselor_profile_id: parseInt(counselor_profile_id) } : {};
+
+      const profile = await this.counselorProfileService.getCounselorProfile(query);
+
+      if (counselor_profile_id) {
+        // If specific profile is requested but not found, return empty array
+        if (!profile || !profile.rec || profile.rec.length === 0) {
+          return res.status(200).json({
+            message: 'Counselor profile not found',
+            rec: [],
+            related_counselors: []
+          });
+        }
+        // Return the specific profile data and related counselors (if any)
+        return res.status(200).json({
+          message: profile.message || 'Counselor profile retrieved successfully',
+          rec: [profile.rec[0]],
+          related_counselors: profile.related_counselors || []
+        });
       }
-      
-      res.status(200).json(result);
+
+      // For general profile listing, return all profiles
+      return res.status(200).json({
+        message: profile.message || 'Counselor profiles retrieved successfully',
+        rec: profile.rec || []
+      });
     } catch (error) {
-      res.status(500).json({ message: 'Internal server error', error: -1 });
+      console.error('Error getting counselor profile:', error);
+      res.status(500).json({
+        message: 'Error retrieving counselor profile',
+        error: error.message
+      });
     }
-  }
+  };
 
   async addReview(req, res) {
     try {
@@ -91,6 +114,8 @@ export default class CounselorProfileController {
     }
   }
 
+  // GET /api/counselor-profile/search
+  // Supports query params: location, gender, race, specialties, service_modalities, is_verified, min_rating, availability_day, availability_time, min_price, max_price, limit, offset
   async searchCounselors(req, res) {
     try {
       const result = await this.counselorProfileService.searchCounselors(req.query);
@@ -136,11 +161,12 @@ export default class CounselorProfileController {
         ]
       };
 
-      // Get unique specialties and services from existing profiles
+      // Get unique specialties, services, and locations from existing profiles
       this.counselorProfileService.getCounselorProfile({})
         .then(profiles => {
           const specialties = new Set();
           const services = new Set();
+          const locations = new Set();
 
           profiles.rec.forEach(profile => {
             if (Array.isArray(profile.specialties)) {
@@ -149,10 +175,14 @@ export default class CounselorProfileController {
             if (Array.isArray(profile.services_offered)) {
               profile.services_offered.forEach(service => services.add(service));
             }
+            if (profile.location) {
+              locations.add(profile.location);
+            }
           });
 
           filters.specialties = Array.from(specialties).sort();
           filters.services = Array.from(services).sort();
+          filters.locations = Array.from(locations).sort();
 
           res.status(200).json({
             message: 'Search filters retrieved successfully',
@@ -197,6 +227,44 @@ export default class CounselorProfileController {
         message: 'Error updating profile image', 
         error: error.message 
       });
+    }
+  }
+
+  async updateLicenseFile(req, res) {
+    try {
+      const { counselor_profile_id } = req.params;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ message: 'License file is required' });
+      }
+
+      const result = await this.counselorProfileService.updateLicenseFile(counselor_profile_id, file);
+
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('Error updating license file:', error);
+      res.status(500).json({ 
+        message: 'Error updating license file', 
+        error: error.message 
+      });
+    }
+  }
+
+  async sendAppointmentEmail(req, res) {
+    try {
+      const result = await this.counselorProfileService.sendAppointmentEmail(req.body);
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error('Error sending appointment email:', error);
+      res.status(500).json({ message: 'Internal server error', error: -1 });
     }
   }
 } 

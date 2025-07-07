@@ -19,6 +19,7 @@ export const SwiperContentStyles = styled.div`
   .swiper-card-image-placeholder {
     width: 100%;
     height: 360px;
+    object-fit: cover;
     background-color: #ccc;
     margin-bottom: 15px;
     display: flex;

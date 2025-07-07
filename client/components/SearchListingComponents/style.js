@@ -9,6 +9,7 @@ export const SearchListingWrapper = styled.div`
   }
 
   .search-section {
+  margin-top:70px;
     display: flex;
     justify-content: center;
     width: 100%;

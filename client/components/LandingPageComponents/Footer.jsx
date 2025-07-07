@@ -1,8 +1,19 @@
 import React from "react";
 import { FooterWrapper } from "./style";
-import CustomButton from "../CustomButton";
-
+import { useRouter } from "next/router";
+import { SUPPORT_EMAIL, DEMO_MAIL_BODY } from "../../utils/constants";
+import ButtonRow from "../CustomButton/CustomButtonRow";
+import ApiConfig from "../../config/apiConfig";
 const Footer = () => {
+  const termsDocUrl = process.env.NEXT_PUBLIC_TERMS_AND_CONDITION;
+  const userGuide = process.env.NEXT_PUBLIC_MINDBRIDGE_USER_GUIDE;
+  const privacyPractices = process.env.NEXT_PUBLIC_NOTICE_OF_PRIVACY_PRACTICES;
+  const privacyPolicy = process.env.NEXT_PUBLIC_PRIVACY_POLICY;
+  const learnMore = process.env.NEXT_PUBLIC_LEARN_MORE_VEDIO_LINK
+  const router = useRouter();
+  const handleGetStarted = (e) => {
+    router.push(ApiConfig.getstartedsubmittion.getstarted);
+  };
   return (
     <FooterWrapper>
       {/* Call to Action Section */}
@@ -18,21 +29,17 @@ const Footer = () => {
           <br />
           your needs.
         </p>
-        <div className="cta-buttons-container">
-          <CustomButton
-            customClass="primary-footer-button"
-            title="Get Started Free →"
-          />
-          <CustomButton
-            customClass="secondary-footer-button"
-            title="Get Started Free →"
-          />
-        </div>
+
+        <ButtonRow
+          handleGetStarted={handleGetStarted}
+          // mailoronboarding={true}
+          marginBottom="40"
+        />
       </div>
 
       {/* Footer Navigation and Newsletter */}
       <div className="footer-nav-newsletter-container">
-        <div className="footer-nav-column">
+        {/* <div className="footer-nav-column">
           <h4 className="footer-heading">The Company</h4>
           <ul className="footer-list">
             <li>
@@ -56,7 +63,7 @@ const Footer = () => {
               </a>
             </li>
           </ul>
-        </div>
+        </div> */}
         <div className="footer-nav-column">
           <h4 className="footer-heading">Blog</h4>
           <ul className="footer-list">
@@ -71,8 +78,19 @@ const Footer = () => {
               </a>
             </li>
             <li>
-              <a href="#" className="footer-list-item">
+              <a href={userGuide} download className="footer-list-item">
                 Guides
+              </a>
+              
+            </li>
+            <li>
+              <a
+                href={learnMore}
+                className="footer-list-item"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Learn more
               </a>
             </li>
           </ul>
@@ -97,23 +115,48 @@ const Footer = () => {
             </li>
           </ul>
         </div>
-        <div className="newsletter-container">
-          <h4 className="footer-heading">Sign Up For Newsletter</h4>
-          <div className="newsletter-input-container">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="newsletter-input"
-            />
-            <span className="newsletter-arrow">→</span>
+        <form
+          action={`mailto:${SUPPORT_EMAIL}?subject=Demo Request&body=${encodeURIComponent(
+            DEMO_MAIL_BODY
+          )}`}
+          method="POST"
+          enctype="text/plain"
+        >
+          <div className="newsletter-container">
+            <h4 className="footer-heading">Sign Up For Newsletter</h4>
+            <div className="newsletter-input-container">
+              <input
+                type="email"
+                name="email"
+                placeholder="Enter your email"
+                className="newsletter-input"
+                required
+              />
+              <button type="submit" className="newsletter-arrow">
+                →
+              </button>
+            </div>
           </div>
-        </div>
+        </form>
       </div>
 
       {/* Copyright */}
       <div className="copyright">
-        © 2025 MindBridge HealthTerms of Use Clinical Membership Terms &
-        Conditions Privacy Policy Notice of Privacy Practices
+        <div className="left-block">
+          <span>© 2025 MindBridge Health Terms of Use Clinical Membership</span>
+        </div>
+
+        <div className="right-block">
+          <a href={termsDocUrl} download>
+            Terms & Conditions
+          </a>
+          <a href={privacyPractices} download>
+            Notice of Privacy Practices
+          </a>
+          <a href={privacyPolicy} download>
+            Privacy Policy
+          </a>
+        </div>
       </div>
     </FooterWrapper>
   );

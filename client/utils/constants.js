@@ -16,13 +16,12 @@ import {
   UsersIcon,
 } from "../public/assets/icons";
 import CustomButton from "../components/CustomButton";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
-import * as XLSX from "xlsx";
+
 import Dropdown from "../components/Dropdown";
 import moment from "moment";
 import { TooltipButton, TooltipContainer } from "../components/Tooltip";
 import { convertUTCToLocalTime } from "./helper";
+import { CgProfile } from "react-icons/cg";
 
 function exportToCSV(columns, data, tableCaption) {
   const headings = columns
@@ -56,7 +55,10 @@ function formatTime(time) {
 }
 
 //For the pdfFunction proper functioning, give selectorId to each column
-function exportToPDF(columns, data, tableCaption) {
+async function exportToPDF(columns, data, tableCaption) {
+  const { jsPDF } = await import("jspdf");
+  const autoTable = await import("jspdf-autotable");
+
   const doc = new jsPDF();
 
   const headings = columns
@@ -95,7 +97,7 @@ function exportToPDF(columns, data, tableCaption) {
 
   doc.text(tableCaption, 20, 10);
 
-  doc.autoTable({
+  autoTable.default(doc, {
     head: [headings],
     body: rows,
   });
@@ -103,7 +105,9 @@ function exportToPDF(columns, data, tableCaption) {
   doc.save(`${tableCaption}.pdf`);
 }
 
-function exportToExcel(columns, data, tableCaption) {
+async function exportToExcel(columns, data, tableCaption) {
+  const XLSX = await import("xlsx");
+
   const headings = columns
     .filter((column) => column.name)
     .map((column) => column.name);
@@ -120,7 +124,6 @@ function exportToExcel(columns, data, tableCaption) {
   const workbook = XLSX.utils.book_new();
 
   XLSX.utils.book_append_sheet(workbook, worksheet, tableCaption);
-
   XLSX.writeFile(workbook, `${tableCaption}.xlsx`);
 }
 
@@ -162,6 +165,12 @@ export const SIDEBAR_HEADINGS = [
     icon: <UsersIcon />,
     url: "/session-history",
     title: "Session History",
+  },
+  {
+    id: 8,
+    icon: <UsersIcon />,
+    url: "/profile",
+    title: "Profile",
   },
   {
     id: 6,
@@ -701,7 +710,7 @@ export const SERVICES_TABLE_COLUMNS = (
   },
   {
     name: "Total Invoice",
-    selector: (row) => `$${(Number(row.total_invoice) - Number(row.gst)).toFixed(2)}`,
+    selector: (row) => `$${Number(row.total_invoice).toFixed(2)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
@@ -714,7 +723,7 @@ export const SERVICES_TABLE_COLUMNS = (
   {
     name: "Total Invoice + Tax",
     selector: (row) =>
-      `$${(Number(row.total_invoice)).toFixed(2)}`,
+      `$${(Number(row.total_invoice) + Number(row.gst)).toFixed(2)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
@@ -1092,12 +1101,14 @@ export const DOWNLOAD_OPTIONS = (columns, data, tableCaption) => [
       {
         name: "Download PDF",
         icon: <PdfIcon />,
-        onClick: () => exportToPDF(columns, data, tableCaption), // Pass `data` here
+        onClick: async () => {
+          await exportToPDF(columns, data, tableCaption);
+        }, // Pass `data` here
       },
       {
         name: "Download Excel",
         icon: <ExcelIcon />,
-        onClick: () => exportToExcel(columns, data, tableCaption), // Pass `data` here
+        onClick: async () => await exportToExcel(columns, data, tableCaption), // Pass `data` here
       },
       {
         name: "Download CSV",
@@ -1843,3 +1854,11 @@ export const DIFFICULT_DAYS_OBJ = {
   <rect x="246" y="170" width="16" height="120" fill="#000" />
 </svg>`,
 };
+export const SUPPORT_EMAIL = "admin-rasham@mindbridge.solutions";
+export const DEMO_MAIL_BODY = `Hi, I would like to explore the demo.`;
+export const SERVICE_FEE_INFO = [
+  "2% Service Fee + 5% (Tax)",
+  "Total Monthly Revenue (Include Tax) = $100",
+  "Service Fee = $100 * .02 = $2 + 5% (Tax)",
+  "Total Service Fee = $2.1",
+];

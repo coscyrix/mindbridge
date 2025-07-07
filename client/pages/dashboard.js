@@ -8,6 +8,8 @@ import { DashboardTableContainer } from "../styles/dashboard";
 import CommonServices from "../services/CommonServices";
 import { toast } from "react-toastify";
 import { useReferenceContext } from "../context/ReferenceContext";
+import CustomTab from "../components/CustomTab";
+import { SERVICE_FEE_INFO } from "../utils/constants";
 function Dashboard() {
   const { userObj, tokenExpired } = useReferenceContext();
   const { role_id, user_profile_id } = userObj || {};
@@ -101,6 +103,7 @@ function Dashboard() {
       </p>
       <DashboardTableContainer>
         <div className="dashboardTableContainer">
+          {/* <CustomTab lines={SERVICE_FEE_INFO}/> */}
           <AssessmentResults assessmentResultsData={assessmentResults} />
           <Reports reportsData={reports} />
         </div>

@@ -1,5 +1,6 @@
 import ApiConfig from "../config/apiConfig";
-import { api, liveAppApi } from "../utils/auth";
+import { api } from "../utils/auth";
+import axios from "axios";
 
 const CommonServices = {
   getReferences() {
@@ -43,24 +44,113 @@ const CommonServices = {
   getFeedbackFormDetails(params) {
     return api.get(ApiConfig.feedback.getFeedbackFormDetails, { params });
   },
-  uploadOnboardingDocuments(formData){
-    return liveAppApi.post(ApiConfig.onboarding.uploadDocuments, formData, {
+  uploadOnboardingDocuments(formData) {
+    return api.post(ApiConfig.onboarding.uploadDocuments, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+        "Content-Type": "multipart/form-data",
+      },
     });
   },
-  getCounselorProfile(counselorId){
-    return liveAppApi.get(`${ApiConfig.counselorProfile.getCounselorProfile}/${counselorId}`);
-  },
-  getSearchedCounselors(payload){
-    return liveAppApi.get(`${ApiConfig.counselorProfile.searchCounselors}/`, {
-      params: payload
+  getCounselorProfile(counselorId) {
+    return api.get(`${ApiConfig.counselorProfile.getCounselorProfile}`, {
+      params: {
+        counselor_profile_id: counselorId,
+      },
     });
   },
-  getSearchFilters(){
-    return liveAppApi.get(ApiConfig.counselorProfile.getSearchFilters);
-  }
+  getSearchedCounselors(payload) {
+    return api.get(`${ApiConfig.counselorProfile.searchCounselors}/`, {
+      params: payload,
+    });
+  },
+  getSearchFilters() {
+    return api.get(ApiConfig.counselorProfile.getSearchFilters, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  },
+  async uploadProfileImage(counselorProfileId, formData) {
+    try {
+      const response = await api.put(
+        `${ApiConfig.counselorProfile.getCounselorProfile}/${counselorProfileId}/image`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  async uploadLicenseFile(counselorProfileId, formData) {
+    try {
+      const response = await api.put(
+        `${ApiConfig.counselorProfile.getCounselorProfile}/${counselorProfileId}/license`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  async uploadOnboardingDocuments(formData) {
+    try {
+      const response = await axios.post(
+        ApiConfig.onboarding.uploadDocuments,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+  async deleteDocument(documentId) {
+    try {
+      const response = await axios.delete(
+        `${ApiConfig.onboarding.uploadDocuments}/${documentId}`
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+  async getDocuments(counselorProfileId) {
+    try {
+      const response = await axios.get(
+        `${ApiConfig.onboarding.uploadDocuments}/${counselorProfileId}`
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+  submitOnboardingform: async (payload) => {
+    try {
+      const response = await api.post(
+        ApiConfig.getstartedsubmittion.submitgetstartedform,
+        payload
+      ); 
+      return response?.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
 
 export default CommonServices;
