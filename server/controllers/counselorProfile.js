@@ -134,7 +134,7 @@ export default class CounselorProfileController {
     }
   }
 
-  getSearchFilters = (req, res) => {
+  getSearchFilters = async (req, res) => {
     try {
       const filters = {
         service_modalities: ['Online', 'In Person', 'Phone'],
@@ -160,30 +160,21 @@ export default class CounselorProfileController {
           { min: 3.0, label: '3.0+ stars' }
         ]
       };
-
-      // Get unique specialties, services, and locations from existing profiles
+      // Fetch all target outcomes
+      const Reference = (await import('../models/reference.js')).default;
+      const ref = new Reference();
+      const allRefs = await ref.getAllReferences();
+      filters.target_outcomes = allRefs.ref_target_outcomes || [];
+      // Get unique locations from existing profiles
       this.counselorProfileService.getCounselorProfile({})
         .then(profiles => {
-          const specialties = new Set();
-          const services = new Set();
           const locations = new Set();
-
           profiles.rec.forEach(profile => {
-            if (Array.isArray(profile.specialties)) {
-              profile.specialties.forEach(specialty => specialties.add(specialty));
-            }
-            if (Array.isArray(profile.services_offered)) {
-              profile.services_offered.forEach(service => services.add(service));
-            }
             if (profile.location) {
               locations.add(profile.location);
             }
           });
-
-          filters.specialties = Array.from(specialties).sort();
-          filters.services = Array.from(services).sort();
           filters.locations = Array.from(locations).sort();
-
           res.status(200).json({
             message: 'Search filters retrieved successfully',
             filters

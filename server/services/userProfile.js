@@ -54,18 +54,30 @@ export default class UserProfileService {
       // if the user is manager create tenant
       const postTenantName = await this.common.postTenant({
         tenant_name: data.tenant_name,
+        admin_fee: data.admin_fee,
+        tax_percent: data.tax_percent
       });
       if (postTenantName.error) {
         return { message: postTenantName.message, error: -1 };
       }
-      //returning generated tenant_id in postTenantName
-      // const checkTenantId =
-      //   await this.common.getTenantByTenantId(postTenantName);
-
-      // if (checkTenantId.error) {
-      //   return { message: checkTenantId.message, error: -1 };
-      // }
       data.tenant_id = Number(postTenantName);
+
+      // If service_templates are provided, copy them for the new tenant
+      if (Array.isArray(data.service_templates) && data.service_templates.length > 0) {
+        const ServiceTemplateService = (await import('./serviceTemplate.js')).default;
+        const serviceTemplateService = new ServiceTemplateService();
+        for (const svc of data.service_templates) {
+          // svc should have template_service_id and price
+          if (!svc.template_service_id || typeof svc.price !== 'number') {
+            return { message: 'Each service_template must have template_service_id and price', error: -1 };
+          }
+          // Copy template to tenant's service table with provided price
+          const result = await serviceTemplateService.copyTemplateToTenantService(svc.template_service_id, data.tenant_id, svc.price);
+          if (result.error) {
+            return { message: `Failed to copy service template: ${svc.template_service_id}`, error: -1, details: result };
+          }
+        }
+      }
     }
 
     delete data.tenant_name;
@@ -85,6 +97,8 @@ export default class UserProfileService {
       clam_num: joi.number().optional(),
       role_id: joi.number().optional(),
       tenant_id: joi.number().required(),
+      admin_fee: joi.number().precision(2).optional(),
+      tax_percent: joi.number().precision(2).optional(),
     });
 
     console.log('//////////////////////////////////////////');

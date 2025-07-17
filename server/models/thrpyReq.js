@@ -76,9 +76,9 @@ export default class ThrpyReq {
         user_profile_id: data.client_id,
       });
 
-      if (!recClient) {
-        logger.error('Error getting client profile');
-        return { message: 'Error getting client profile', error: -1 };
+      if (!recClient || !recClient.rec || !recClient.rec[0]) {
+        logger.error('Client profile not found');
+        return { message: 'Client profile not found', error: -1 };
       }
 
       if (recClient.rec[0].role_id !== 1) {
@@ -94,11 +94,25 @@ export default class ThrpyReq {
         service_id: data.service_id,
       });
 
+      if (!servc || !servc.rec || !servc.rec[0]) {
+        logger.error(`Service not found for service_id: ${data.service_id}`);
+        return { message: `Service not found for service_id: ${data.service_id}`, error: -1 };
+      }
+
       const svc = servc.rec[0];
 
       const drService = await this.service.getServiceById({
-        service_code: process.env.DISCHARGE_SERVICE_CODE,
+        service_code: process.env.DISCHARGE_SERVICE_CODE || 'DR',
       });
+
+      console.log('drService', drService);
+
+      if (!drService || !drService.rec || !drService.rec[0]) {
+        logger.error(`Discharge report service not found for service_code: ${process.env.DISCHARGE_SERVICE_CODE}`);
+        return { message: `Discharge report service not found for service_code: ${process.env.DISCHARGE_SERVICE_CODE}`, error: -1 };
+      }
+
+      const drSvc = drService.rec[0];
 
       if (svc.is_additional === 1) {
         logger.error('Additional services cannot be requested');
@@ -112,23 +126,6 @@ export default class ThrpyReq {
         logger.error('Report services cannot be requested');
         return {
           message: 'Report services cannot be requested',
-          error: -1,
-        };
-      }
-
-      const drSvc = drService.rec[0];
-
-      if (!svc) {
-        logger.error(`Error getting service with ID: ${data.service_id}`);
-        return { message: 'Error getting service', error: -1 };
-      }
-
-      if (!drSvc) {
-        logger.error(
-          `Error getting discharge report service with service_code: DR`,
-        );
-        return {
-          message: 'Error getting discharge report service',
           error: -1,
         };
       }

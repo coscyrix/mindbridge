@@ -328,7 +328,10 @@ export default class Service {
         query = query.andWhere('tenant_id', data.tenant_id);
       }
 
+      console.log('query', query.toQuery());
       const rec = await query;
+
+      logger.info('rec', rec);
 
       if (!rec || rec.length === 0) {
         logger.error('Error getting service');

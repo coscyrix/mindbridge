@@ -549,6 +549,8 @@ export default class Common {
       const tmpTenant = {
         tenant_name: data.tenant_name,
         tenant_generated_id: generated_id,
+        ...(data.admin_fee !== undefined && { admin_fee: data.admin_fee }),
+        ...(data.tax_percent !== undefined && { tax_percent: data.tax_percent })
       };
 
       const postTenant = await db

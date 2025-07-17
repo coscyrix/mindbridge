@@ -17,3 +17,4 @@ export { reportRouter } from './report.js';
 export { counselorProfileRouter } from './counselorProfile.js';
 export { counselorDocumentsRouter } from './counselorDocuments.js';
 export { onboardingRouter } from './onboarding.js';
+export { serviceTemplateRouter } from './serviceTemplate.js';
