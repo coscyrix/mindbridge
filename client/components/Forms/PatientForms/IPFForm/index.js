@@ -35,7 +35,6 @@ const IPFForm = () => {
       selfCare,
       ...payloadData
     } = data;
-    console.log(data, "formData");
     try {
       setLoading(true);
       if (!client_id || !session_id) {

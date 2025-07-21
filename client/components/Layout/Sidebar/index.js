@@ -18,8 +18,7 @@ function Sidebar({ showSideBar, setShowSideBar }) {
   const router = useRouter();
   const route = router.pathname;
   const isAdmin = userData?.role_id == 4 ? true : false;
-  console.log(":::::::::::",isAdmin)
-  console.log("::::::::::",userData)
+  const isManager = userData?.role_id == 3 ? true : false;
 
   const formatName = (name) =>
     name[0].toUpperCase() + name.slice(1).toLowerCase();
@@ -27,7 +26,9 @@ function Sidebar({ showSideBar, setShowSideBar }) {
   useEffect(() => {
     // to get cookie data -> only in case of client side
     const user = Cookies.get("user");
-    setUserData(JSON.parse(user));
+    if (user && user !== undefined) {
+      setUserData(JSON.parse(user));
+    }
 
     const mediaQuery = window.matchMedia("(max-width: 1024px)");
     const handleMediaChange = () => {
@@ -94,9 +95,13 @@ function Sidebar({ showSideBar, setShowSideBar }) {
             </div>
           </div>
           <div className="headings">
-            {SIDEBAR_HEADINGS.filter(
-              (item) => !(isAdmin && item.title === "Profile")
-            ).map((heading, index) => (
+            {SIDEBAR_HEADINGS.filter((item) => {
+              if ((isManager || isAdmin) && item.title === "Profile")
+                return false;
+              if (!isAdmin && item.title === "Consent Management") return false;
+
+              return true;
+            }).map((heading, index) => (
               <div key={heading.title || index}>
                 <Link
                   href={heading.url === "/profile" ? " " : heading?.url}
@@ -126,7 +131,16 @@ function Sidebar({ showSideBar, setShowSideBar }) {
                   )}
                 </Link>{" "}
                 {showProfileOptions && heading?.title === "Profile" && (
-                  <div style={{ marginTop: "10px", marginLeft: "34px" }}>
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      marginLeft: "34px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "baseline",
+                      gap: "10px",
+                    }}
+                  >
                     <p
                       style={{
                         display: "flex",

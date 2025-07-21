@@ -3,7 +3,12 @@ import { useRouter } from "next/router";
 import CustomInputField from "../components/CustomInputField";
 import CustomButton from "../components/CustomButton";
 import CustomMultiSelect from "../components/CustomMultiSelect";
-import { useForm, FormProvider, Controller } from "react-hook-form";
+import {
+  useForm,
+  FormProvider,
+  Controller,
+  useFormContext,
+} from "react-hook-form";
 import {
   FormContainer,
   RightPanel,
@@ -267,6 +272,7 @@ const SignUp = () => {
       race: "",
       license_number: "",
       license_file_url: "",
+      license_provider: "",
       availability: {},
     },
   });
@@ -299,9 +305,9 @@ const SignUp = () => {
 
     checkExistingProfile();
   }, [userObj?.user_profile_id, router]);
-
   const handleLicenseFileSelect = (file) => {
     setLicenseFile(file);
+    // console.log(file,"dddd")
   };
 
   const validateStep = async (step) => {
@@ -318,6 +324,10 @@ const SignUp = () => {
           "service_modalities",
           "gender",
           "race",
+          "license_number",
+          "license_file_url",
+          "license_provider",
+          "specialties",
         ];
         break;
       case 2:
@@ -366,15 +376,15 @@ const SignUp = () => {
   const onSubmit = async (formData) => {
     setLoading(true);
     try {
-      console.log("Selected services (array):", formData?.services_offered);
       // console.log("in")
       const profileData = {
         user_profile_id: userObj?.user_profile_id,
         counselor_profile_id: onBoardingDetails?.counselor_profile_id,
         license_number: formData.license_number,
+        license_provider: formData.license_provider,
         license_expiry_date: formData.license_expiry_date,
         services_offered: JSON.stringify(
-         Array.isArray(formData?.services_offered)
+          Array.isArray(formData?.services_offered)
             ? formData.services_offered.map((s) => s.label)
             : []
         ),
@@ -401,8 +411,6 @@ const SignUp = () => {
         ? await updateProfile(profileData, userId)
         : await onBoarding(profileData);
       // const response = {id:'abc'};
-      console.log("Profile creation/update response:", response);
-
       if (response?.id || userId) {
         const idToUpdate = response?.id ? response?.id : userId;
 
@@ -411,21 +419,14 @@ const SignUp = () => {
         let documentsSuccess = true;
 
         // Upload profile picture if selected
-        console.log("Checking for profile picture to upload...");
         if (profilePictureFile) {
-          console.log(
-            "Profile picture found, preparing for upload:",
-            profilePictureFile
-          );
           try {
             const formData = new FormData();
             formData.append("image", profilePictureFile);
-            console.log("Uploading profile picture...");
             await CommonServices.uploadProfileImage(
               idToUpdate || response.counselor_profile_id,
               formData
             );
-            console.log("Profile picture uploaded successfully.");
           } catch (error) {
             profileImageSuccess = false;
             console.error("Error uploading profile picture:", error);
@@ -436,21 +437,14 @@ const SignUp = () => {
         }
 
         // Upload license file if selected
-        console.log("Checking for license file to upload...");
         if (licenseFile && typeof licenseFile !== "string") {
-          console.log(
-            "New license file found, preparing for upload:",
-            licenseFile
-          );
           try {
             const formData = new FormData();
             formData.append("license", licenseFile);
-            console.log("Uploading new license file...");
             await CommonServices.uploadLicenseFile(
               idToUpdate || response.counselor_profile_id,
               formData
             );
-            console.log("License file uploaded successfully.");
           } catch (error) {
             licenseFileSuccess = false;
             console.error("Error uploading license file:", error);
@@ -463,13 +457,10 @@ const SignUp = () => {
         }
 
         // Upload all additional documents
-        console.log("Checking for additional documents to upload...");
         if (documentFiles.length > 0) {
-          console.log(`Found ${documentFiles.length} additional documents.`);
           const documentUploadPromises = documentFiles.map(
             async (file, index) => {
               if (file) {
-                console.log(`Uploading document ${index + 1}:`, file.name);
                 try {
                   const formData = new FormData();
                   formData.append("document", file);
@@ -482,7 +473,6 @@ const SignUp = () => {
                   formData.append("expiry_date", documentExpiryDates[index]);
 
                   await CommonServices.uploadOnboardingDocuments(formData);
-                  console.log(`Document ${index + 1} uploaded successfully.`);
                   return true;
                 } catch (error) {
                   console.error(
@@ -529,7 +519,7 @@ const SignUp = () => {
       setLoading(false);
     }
   };
-  
+
   const nextStep = async () => {
     const isValid = await validateStep(currentStep);
     if (isValid) {
@@ -680,6 +670,7 @@ const SignUp = () => {
           label: onBoardingDetails.race,
         },
         license_number: onBoardingDetails.license_number,
+
         license_file_url: onBoardingDetails.license_file_url,
         availability: onBoardingDetails.availability || {},
       });
@@ -744,7 +735,7 @@ const SignUp = () => {
         }
       };
 
-      if (onBoardingDetails.license_file_url) {
+      if (onBoardingDetails.license_file_url ) {
         fetchLicenseImage();
       }
     }
@@ -811,15 +802,34 @@ const SignUp = () => {
                     <LicenseFileUpload
                       counselorProfileId={123}
                       onUploadComplete={handleUploadComplete}
-                      error={error?.message}
+                      errormsg={error?.message}
                       onFileSelect={handleLicenseFileSelect}
                       hideUploadButton={true}
                       licenseFile={licenseFile}
+                      value={field.value} 
+                      onChange={field.onChange}
                     />
                   )}
                 />
               </FormField>
             </FormRow>
+            <FormField className="half-width">
+              <Controller
+                name="license_provider"
+                control={methods.control}
+                rules={{ required: "License provider is required" }}
+                render={({ field, fieldState: { error } }) => (
+                  <CustomInputField
+                    {...field}
+                    label="License Provider*"
+                    required
+                    customClass="license-provider-input"
+                    placeholder="Enter your license provider"
+                    error={error?.message}
+                  />
+                )}
+              />
+            </FormField>
 
             <FormField>
               <Controller
@@ -933,7 +943,7 @@ const SignUp = () => {
                       label="Specialties*"
                       placeholder="Select your specialties"
                       isMulti={true}
-                      options={servicesDropdown}
+                      options={specialtiesOptions}
                       error={error?.message}
                     />
                   )}
@@ -1194,9 +1204,7 @@ const SignUp = () => {
   const getProfileData = async () => {
     try {
       const { data, status } = await CommonServices.getCounselorProfile(userId);
-      console.log(data);
-      if (data && status === 200) 
-        {
+      if (data && status === 200) {
         setOnBoardingDetails(data?.rec[0]);
       }
     } catch (error) {

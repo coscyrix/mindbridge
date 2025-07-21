@@ -13,6 +13,7 @@ export default class Service {
 
   async postService(data) {
     try {
+      
       if (data.svc_formula_typ === 'd') {
         if (!data.svc_formula || !data.nbr_of_sessions) {
           logger.error(
@@ -35,12 +36,17 @@ export default class Service {
           };
         }
       } else if (data.svc_formula_typ === 's') {
-        if (data.svc_formula.length !== 1 || data.svc_formula.length !== 0) {
-          logger.error('Service formula must be one or zero');
-          return {
-            message: 'Service formula must be one or zero',
-            error: -1,
-          };
+        const isReport = data.service_name.toLowerCase().includes('report');
+        if (isReport) {
+          
+        } else {
+          if (data.svc_formula.length !== 0 && data.svc_formula.length !== 1) {
+            logger.error('Report service formula must be one or zero');
+            return {
+              message: 'Report service formula must be one or zero',
+              error: -1,
+            };
+          }
         }
       }
 
@@ -53,6 +59,7 @@ export default class Service {
           };
         }
       }
+
 
       const checkReport = await this.getServiceById({
         service_id: data.service_id,
@@ -113,11 +120,12 @@ export default class Service {
 
       const checkCde = await this.getServiceById({
         service_code: data.service_code,
+        tenant_id: data.tenant_id,
       });
 
       if (checkCde.rec && checkCde.rec.length > 0) {
-        logger.error('Code already exists');
-        return { message: 'Code already exists', error: -1 };
+        logger.error('Code already exists for this tenant');
+        return { message: 'Code already exists for this tenant', error: -1 };
       }
 
       const tmpSvc = {
@@ -136,7 +144,6 @@ export default class Service {
         gst: data.gst || 0,
         tenant_id: data.tenant_id,
       };
-
       const postSvc = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('service')
@@ -151,7 +158,7 @@ export default class Service {
     } catch (error) {
       logger.error(error);
 
-      return { message: 'Error creating service', error: -1 };
+      return { message: 'Error creating services', error: -1 };
     }
   }
 

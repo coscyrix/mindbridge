@@ -13,6 +13,7 @@ import { ClientValidationSchema } from "../../../utils/validationSchema/validati
 import { useReferenceContext } from "../../../context/ReferenceContext";
 import Spinner from "../../common/Spinner";
 import CustomMultiSelect from "../../CustomMultiSelect";
+import CustomEditableInputModal from "../../CustomEditableInputModal";
 
 function CreateClientForm({
   isOpen,
@@ -26,6 +27,7 @@ function CreateClientForm({
   const [formButton, setFormButton] = useState("Create");
   const { targetOutcomes, roles, servicesData } = useReferenceContext();
   const [loading, setLoading] = useState(false);
+  const [serviceTemplates, setServiceTemplates] = useState([]);
 
   const userData = Cookies.get("user");
   const user = userData ? JSON.parse(userData) : null;
@@ -52,6 +54,30 @@ function CreateClientForm({
     label: service?.service_name,
     value: service?.service_code,
   }));
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchServiceTemplates = async () => {
+      try {
+        const res = await api.get("/service-templates");
+        if (res.status === 200 && res.data.rec) {
+          setServiceTemplates(res.data.rec);
+          if (methods.getValues("role_id") === 3 && !initialData) {
+            const allServices = res.data.rec.map((template) => ({
+              service_id: template.template_service_id,
+              service_price: parseFloat(template.price),
+              name: template.name,
+            }));
+            methods.setValue("service", allServices);
+          }
+        }
+      } catch (error) {
+        toast.error("Failed to fetch service templates");
+      }
+    };
+    fetchServiceTemplates();
+  }, [isOpen]);
+
   const defaultValues = {
     user_first_name: "",
     user_last_name: "",
@@ -66,14 +92,18 @@ function CreateClientForm({
         }
       : "",
     user_phone_nbr: "",
+    admin_fee: "",
+    tax: "",
+    service: [],
+    description: "",
   };
-
   const methods = useForm({
     resolver: zodResolver(ClientValidationSchema),
     defaultValues: defaultValues,
   });
 
   const handleCreateClient = async (data) => {
+  
     let processedData;
     if (role == 1) {
       processedData = {
@@ -87,7 +117,39 @@ function CreateClientForm({
         user_phone_nbr: data?.user_phone_nbr,
         tenant_name: data?.tenant_name,
       };
-    } else {
+    } else if(role ===2){
+      processedData = {
+        user_profile_id: user?.user_profile_id,
+        user_first_name: data?.user_first_name,
+        user_last_name: data?.user_last_name,
+        email: data?.email,
+        role_id: data?.role_id,
+        user_phone_nbr: data?.user_phone_nbr,
+        tenant_name: data?.tenant_name,
+        description: data.description,
+      };
+    }
+    else if(role === 3){
+      const processed_service_template =
+        role == 3
+          ? data.service.map((item) => ({
+              template_service_id: item.service_id,
+              price: item.service_price,
+            }))
+          : null;
+      processedData = {
+        user_profile_id: user?.user_profile_id,
+        user_first_name: data?.user_first_name,
+        user_last_name: data?.user_last_name,
+        email: data?.email,
+        role_id: data?.role_id,
+        user_phone_nbr: data?.user_phone_nbr,
+        tenant_name: data?.tenant_name,
+        admin_fee: data.admin_fee,
+        tax_percent: data.tax,
+        service_templates: processed_service_template,
+      };
+    }else{
       processedData = {
         user_profile_id: user?.user_profile_id,
         user_first_name: data?.user_first_name,
@@ -98,7 +160,6 @@ function CreateClientForm({
         tenant_name: data?.tenant_name,
       };
     }
-
     try {
       setLoading(true);
       const res = await api.post(
@@ -132,7 +193,7 @@ function CreateClientForm({
       target_outcome_id,
       tenant_name,
     } = data;
-
+    
     const processedData = {
       user_first_name,
       user_last_name,
@@ -140,7 +201,7 @@ function CreateClientForm({
       role_id,
       user_phone_nbr,
       target_outcome_id: target_outcome_id?.value,
-      tenant_name: tenant_name || "",
+      //tenant_name: tenant_name || "",
     };
 
     try {
@@ -212,7 +273,26 @@ function CreateClientForm({
     }
   }, [role]);
 
+  // Auto-fill service field for manager (role 3) as soon as both role and templates are ready, even on first open
+  useEffect(() => {
+    if (
+      isOpen &&
+      role === 3 &&
+      !initialData &&
+      serviceTemplates.length > 0 &&
+      (!methods.getValues("service") || methods.getValues("service").length === 0)
+    ) {
+      const allServices = serviceTemplates.map((template) => ({
+        service_id: template.template_service_id,
+        service_price: parseFloat(template.total_invoice ?? template.price),
+        name: template.service_name ?? template.name,
+      }));
+      methods.setValue("service", allServices);
+    }
+  }, [isOpen, role, serviceTemplates, initialData]);
+
   return (
+
     <CreateClientWrapper>
       <FormProvider {...methods}>
         <form
@@ -251,16 +331,6 @@ function CreateClientForm({
                 </p>
               )}
             </div>
-            {role == 3 && (
-              <div className="fields">
-                <CustomInputField
-                  name="tenant_name"
-                  label="Practice Name"
-                  placeholder="Enter name of your practice"
-                  type="text"
-                />
-              </div>
-            )}
             {role == 1 && (
               <div className="fields">
                 <CustomInputField
@@ -268,6 +338,16 @@ function CreateClientForm({
                   label="Serial Number"
                   placeholder="Enter Serial Number"
                   type="number"
+                />
+              </div>
+            )}
+            {role == 2 && (
+              <div className="fields">
+                <CustomInputField
+                  name="description"
+                  label="Description"
+                  placeholder="Enter Description"
+                  type="text"
                 />
               </div>
             )}
@@ -348,11 +428,61 @@ function CreateClientForm({
                 />
                 {methods?.formState?.errors?.target_outcome_id && (
                   <p className="custom-error-massage">
-                    {/* {methods.formState.errors.target_outcome_id.message} */}
                     Target Outcomes is required
                   </p>
                 )}
               </div>
+            )}
+            {role == 3 && (
+              <>
+                <div className="fields">
+                  <CustomInputField
+                    name="tenant_name"
+                    label="Practice Name"
+                    placeholder="Enter name of your practice"
+                    type="text"
+                  />
+                </div>
+                <div className="fields">
+                  <CustomInputField
+                    name="admin_fee"
+                    label="Admin Fees*"
+                    placeholder="Enter admin fees"
+                    type="number"
+                  />
+                </div>
+                <div className="fields">
+                  <CustomInputField
+                    name="tax"
+                    label="Tax*"
+                    placeholder="Enter Tax"
+                    type="number"
+                  />
+                </div>
+                <div className="select-field-wrapper">
+                  <label>Services*</label>
+                  {serviceTemplates.length === 0 ? (
+                    <Spinner width="25px" height="25px" />
+                  ) : (
+                    <Controller
+                      name="service"
+                      control={methods.control}
+                      render={({ field }) => (
+                        <CustomEditableInputModal
+                          initialTemplates={field.value}
+                          templates={serviceTemplates}
+                          onChange={(val) => field.onChange(val)}
+                        />
+                      )}
+                    />
+                  )}
+                  {methods.formState.errors?.service && (
+                    <p className="custom-error-massage">
+                      {methods.formState.errors?.service.message}
+                    </p>
+                  )}
+                </div>
+              </>
             )}
           </div>
           <div className="submit-button">

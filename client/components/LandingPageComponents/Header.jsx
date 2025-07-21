@@ -4,7 +4,7 @@ import CustomButton from "../CustomButton";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import ApiConfig from "../../config/apiConfig";
-
+import ButtonRow from "../CustomButton/CustomButtonRow";
 const Header = () => {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -21,14 +21,16 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleGetStarted = () => {
-    router.push(ApiConfig.getstartedsubmittion.getstarted);
-  };
 
   return (
     <HeaderWrapper>
       <div className="mobile-header">
-        <div className="logo">
+        <div
+          className="logo"
+          onClick={() => {
+            router.push("/");
+          }}
+        >
           <img
             height="41px"
             src="/assets/images/Mindbridge_logo.svg"
@@ -45,7 +47,12 @@ const Header = () => {
       </div>
 
       <div className="desktop-header">
-        <div className="logo">
+        <div
+          className="logo"
+          onClick={() => {
+            router.push("/");
+          }}
+        >
           <img
             height="41px"
             src="/assets/images/Mindbridge_logo.svg"
@@ -67,15 +74,7 @@ const Header = () => {
               </li>
             </ul> */}
             {/* </nav> */}
-            <CustomButton
-              onClick={handleGetStarted}
-              customClass="get-started-button"
-              title="Get started -pay only when you earn"
-            />
-           
-            <Link href="/login" className="sign-in-link">
-              Provider
-            </Link>
+            <ButtonRow marginBottom="10px" isNavbar={true}></ButtonRow>
           </div>
         </div>
       </div>
@@ -96,14 +95,7 @@ const Header = () => {
           </button>
         </div>
         <div className="mobile-register-group">
-          <CustomButton
-            onClick={handleGetStarted}
-            customClass="get-started-button"
-            title="Get started -pay only when you earn"
-          />
-          <Link href="/login" className="mobile-sign-in">
-            Provider
-          </Link>
+          <ButtonRow marginBottom="10px" isMobile={true} isNavbar={true}></ButtonRow>
         </div>
       </MobileNav>
     </HeaderWrapper>

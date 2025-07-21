@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { EmpoweringSectionWrapper } from "../style";
 import CustomButton from "../../CustomButton";
 import { CheckIcon } from "../assets/icons";
@@ -7,7 +7,32 @@ import empowermentImage2 from "../assets/images/empowerment-img-2.png";
 import ButtonRow from "../../CustomButton/CustomButtonRow";
 import { useRouter } from "next/router";
 import ApiConfig from "../../../config/apiConfig";
+import { GoArrowRight } from "react-icons/go";
+import Link from "next/link";
+import GetStartedForm from "../../GetStartedForm";
+
 const EmpoweringMentalHealth = () => {
+
+  const [isOpen, setIsOpen] = useState(false);
+    const sidebarRef = useRef(null);
+  
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+          setIsOpen(false);
+        }
+      };
+  
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+  const [showModal, setShowModal] = useState(false);
+  
+    const handleGetStarted = () => {
+      // console.log("hi")
+      setShowModal(true);
+    };
+    const closeModal = () => setShowModal(false)
   const providerTypes = [
     {
       title: "Private Practitioners",
@@ -34,19 +59,19 @@ const EmpoweringMentalHealth = () => {
     },
   ];
   const router = useRouter();
-  const handleGetStarted = (e) => {
-    router.push(ApiConfig.getstartedsubmittion.getstarted);
-  };
 
   return (
     <EmpoweringSectionWrapper>
-      <div className="text-content-container">
+      <div className="text-content-container text-content-container-empowering">
         <h2 className="empowering-heading">
-          Empowering Mental Health
-          <br />
-          Providers
+          Empowering Mental Health Providers
         </h2>
-        <ButtonRow handleGetStarted={handleGetStarted} marginBottom="0px" />
+
+        <button onClick={handleGetStarted} className={`get-started-free-btn`}>
+          <span>Get Started Free</span>
+
+          <GoArrowRight className="arrow" />
+        </button>
       </div>
       <div className="provider-types-grid">
         {providerTypes.map((type, index) => (
@@ -66,6 +91,7 @@ const EmpoweringMentalHealth = () => {
           </div>
         ))}
       </div>
+      {showModal && <GetStartedForm open={showModal} onClose={closeModal} />}
     </EmpoweringSectionWrapper>
   );
 };

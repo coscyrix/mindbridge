@@ -9,11 +9,12 @@ const HeroSection = () => {
       <div className="features-container">
         <h1>
           We Don&apos;t Lock You In
-          <br />- You Only Pay When
-          <br />
+          {/* <br /> */}
+          - You Only Pay When
+          {/* <br /> */}
           You Use It.
         </h1>
-        <p>
+        <p className="paragraph-heading">
           Forget subscriptions. MindBridge offers counselling management tools
           you pay for only when sessions are completed.
         </p>

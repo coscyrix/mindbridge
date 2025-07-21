@@ -20,6 +20,7 @@ const CustomMultiSelect = ({
       <div className="select-container">
         {label && <label>{label}</label>}
         <Select
+        classNames="multiselect-options"
           {...field}
           placeholder={
             <div style={{ opacity: "0.2", color: "#000000", borderColor:error&&'red', boxShadow:error&'red' }}>
@@ -33,9 +34,20 @@ const CustomMultiSelect = ({
           onChange={onChange}
           value={value}
           {...props}
+            styles={{
+    control: (baseStyles, state) => ({
+      ...baseStyles,
+      borderColor: error ? 'var(--error-color)' : '#e1e1e1',
+      boxShadow: error ? '0px 0px 0px 4px #fee4e2' : 'none',
+      '&:hover': {
+        borderColor: error ? 'var(--error-color)' : '#bdbdbd',
+      },
+    }),
+  }}
+
         />
         {error && (
-          <span style={{ color: "red", fontSize: "16px" }}>{error}</span>
+          <small style={{ color: "red",}}>{error}</small>
         )}
       </div>
     </CustomMultiSelectContainer>

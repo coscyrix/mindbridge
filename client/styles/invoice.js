@@ -38,7 +38,7 @@ export const InvoiceContainer = styled.div`
 
   .top-section-wrapper {
     padding-top: 20px;
-    position: sticky;
+    // position: sticky;
     top: 60px;
     z-index: 5;
     background: var(--background-color);
@@ -81,7 +81,7 @@ export const InvoiceContainer = styled.div`
       .search-container {
         display: flex;
         gap: 8px;
-        align-items: end;
+        align-items: center;
         justify-content: space-between;
         margin-bottom: 10px;
         @media screen and (max-width: 768px) {

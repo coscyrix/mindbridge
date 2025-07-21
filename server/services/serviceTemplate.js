@@ -35,7 +35,7 @@ export default class ServiceTemplateService {
     if (templateRes.error) return templateRes;
     const template = templateRes.rec;
     // Fetch tenant for admin_fee and tax_percent
-    const tenantRes = await this.common.getTenantByTenantId(tenant_id);
+    const tenantRes = await this.common.getTenantByTenantGeneratedId(tenant_id);
     if (tenantRes.error) return tenantRes;
     const tenant = tenantRes[0];
     // Use provided price as basePrice
@@ -43,21 +43,33 @@ export default class ServiceTemplateService {
     const adminFee = Number(tenant.admin_fee) || 0;
     const taxPercent = Number(tenant.tax_percent) || 0;
     const finalPrice = basePrice + adminFee + (basePrice * taxPercent / 100);
-    // Prepare service data
+
+    // Copy all fields from template, override only necessary ones
     const serviceData = {
-      service_name: template.name,
-      service_code: template.name.replace(/\s+/g, '_').toUpperCase() + '_' + Date.now(),
-      is_report: 0,
-      is_additional: 0,
+      ...template,
+      service_name: template.name || template.service_name,
+      service_code: template.service_code || (template.name || template.service_name || 'SERVICE').replace(/\s+/g, '_').toUpperCase(),
       total_invoice: finalPrice,
-      nbr_of_sessions: 1,
-      svc_formula_typ: 's',
-      svc_formula: JSON.stringify([7]),
-      svc_report_formula: JSON.stringify({}),
       gst: taxPercent,
       tenant_id: tenant_id,
-      template_service_id: template_service_id
+      template_service_id: template_service_id,
     };
+    // Remove/override fields that should not be copied or are not relevant for the service table
+    delete serviceData.template_service_id; // avoid conflict if present
+    delete serviceData.id; // generic id field if present
+    delete serviceData.created_at;
+    delete serviceData.updated_at;
+    // You can add more fields to delete if needed
+
+    // Ensure required fields for service
+    if (!serviceData.nbr_of_sessions) serviceData.nbr_of_sessions = 1;
+    if (!serviceData.svc_formula_typ) serviceData.svc_formula_typ = 's';
+    if (!serviceData.svc_formula) serviceData.svc_formula = JSON.stringify([7]);
+    if (!serviceData.svc_report_formula) serviceData.svc_report_formula = JSON.stringify({});
+    if (serviceData.is_report === undefined) serviceData.is_report = 0;
+    if (serviceData.is_additional === undefined) serviceData.is_additional = 0;
+    
+
     return this.service.postService(serviceData);
   }
 } 

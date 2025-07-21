@@ -124,7 +124,7 @@ const Invoice = () => {
         <div
           style={{
             color:
-              row.session_status?.toLowerCase() == "show" ? "green" : "red",
+              row.session_status?.toLowerCase() === "show" ? "green" : "red",
             pointerEvents: "none",
           }}
         >
@@ -136,7 +136,6 @@ const Invoice = () => {
     {
       name: "Total Amount",
       selector: (row) =>
-        // `$${Number(row.session_price + row.session_gst).toFixed(2)}`
         `$${(
           Number(row.session_counselor_amt) + Number(row.session_system_amt)
         ).toFixed(2)}`,
@@ -160,7 +159,8 @@ const Invoice = () => {
       selectorId: "session_system_amt",
     },
   ];
-
+  if (invoiceTableData && invoiceTableData.length > 0) {
+  }
   const [visibleColumns, setVisibleColumns] = useState(
     columns?.map((col) => ({ ...col, omit: false }))
   );
@@ -368,14 +368,6 @@ const Invoice = () => {
       toggleIcon: true,
     }));
 
-  let columnOptions = [];
-
-  // Add column titles to subHeadings
-  columnOptions.push({
-    heading: "Show/Hide Columns",
-    subHeadings: columnTitles,
-  });
-
   const renderFooter = () => (
     <div
       style={{
@@ -442,10 +434,19 @@ const Invoice = () => {
     (currentPage + 1) * itemsPerPage
   );
 
+  const columnOptions = [];
+
+  if (paginatedData && paginatedData.length > 0) {
+    columnOptions.push({
+      heading: "Show/Hide Columns",
+      subHeadings: columnTitles,
+    });
+  }
+
   if (roleId === null) {
     return null;
   }
-
+  
   return (
     <InvoiceContainer>
       <div className="top-section-wrapper">
@@ -494,11 +495,11 @@ const Invoice = () => {
             />
             <CustomTab heading="Service Fees" lines={SERVICE_FEE_INFO} />
           </div>
-          <div  className="search-container">
+          <div className="search-container">
             <div className="search-and-select">
               <div className="custom-select-container">
                 {[3, 4].includes(roleId) ? (
-                  <div  key="counselor-select">
+                  <div key="counselor-select">
                     <label>Counselor</label>
                     {/* <CustomSelect
                       name="counselor"
@@ -569,9 +570,9 @@ const Invoice = () => {
           </div>
         </div>
       </div>
-
+      {/* {console.log(invoiceTableData)} */}
       <CustomTable
-        columns={visibleColumns}
+        columns={columns}
         data={paginatedData || []}
         onRowclick={(row) => handleEdit(row)}
         loading={loading === "tableData"}

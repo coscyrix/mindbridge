@@ -4,25 +4,22 @@ import CustomSwiper from "../Swiper";
 import { FeatureAndReportSectionWrapper, FeatureCardWrapper } from "./style";
 import { SwiperContentStyles } from "../Swiper/style";
 import reportSectionPattern from "./assets/images/reports-section-pattern.png";
+import { Navigation } from "swiper/modules";
+import "swiper/css";
+import { useRef, useState } from "react";
+import { Swiper } from "swiper/react";
 import {
   ArrowIcon,
   ArrowLeft,
-  ComplaintLogoIcon,
-  GdprLogoIcon,
-  HippaLogoIcon,
-  PaymentIcon,
-  PipedaLogoIcon,
-  SecureIcon,
-  SimpleIcon,
 } from "./assets/icons";
 import { useRouter } from "next/router";
 import reportSectionImage1 from "./assets/images/report-section-image-1.png";
 import reportSectionImage2 from "./assets/images/report-section-image-2.png";
 import reportSectionImage3 from "./assets/images/report-section-image-3.png";
+import reportSectionImage4 from "./assets/images/report-section-image-4.png";
+import reportSectionImage5 from "./assets/images/report-section-image-5.png";
 import Image from "next/image";
 import ButtonRow from "../CustomButton/CustomButtonRow";
-import { SUPPORT_EMAIL, DEMO_MAIL_BODY } from "../../utils/constants";
-import ApiConfig from "../../config/apiConfig";
 
 // Placeholder for the card component within the swiper
 const SwiperCard = ({ imagePlaceholder, title }) => (
@@ -64,16 +61,16 @@ const FeaturesAndReportSection = () => {
       title: "Start Sessions in Seconds",
     },
     {
-      imagePlaceholder: reportSectionImage2,
-      title: "Start Sessions in Seconds",
+      imagePlaceholder: reportSectionImage4,
+      title: "Secure & Private Conversations",
     },
     {
-      imagePlaceholder: reportSectionImage3,
-      title: "Start Sessions in Seconds",
+      imagePlaceholder: reportSectionImage5,
+      title: "Track Progress Effortlessly",
     },
     {
       imagePlaceholder: reportSectionImage1,
-      title: "Start Sessions in Seconds",
+      title: "Seamless Counselor Collaboration",
     },
   ];
 
@@ -100,15 +97,13 @@ const FeaturesAndReportSection = () => {
 
   const logos = [
     { src: "/assets/images/hippa.svg", alt: "HIPAA logo" },
-    { src: "/assets/images/soc.png", alt: "SOC logo" },
+    { src: "/assets/images/soc_uodated.svg", alt: "SOC logo" },
     { src: "/assets/images/pipeda.svg", alt: "PIPEDA logo" },
     { src: "/assets/images/eu.svg", alt: "EU logo" },
   ];
 
   const router = useRouter();
-  const handleGetStarted = (e) => {
-    router.push(ApiConfig.getstartedsubmittion.getstarted);
-  };
+  const swiperRef = useRef(null);
   return (
     <FeatureAndReportSectionWrapper>
       {/* Why MindBridge? Section */}
@@ -120,8 +115,8 @@ const FeaturesAndReportSection = () => {
           className="wrapperImage"
           alt="Report section pattern"
         />
-        <div className="section-centered-text manual-width">
-          <h2 className="section-heading">
+        <div className="section-centered-text manual-width manual-width-1">
+          <h2 className="section-heading section-heading-1">
             Simplify Your Counseling Practice — Secure, Simple, and Scalable
           </h2>
           <p className="section-description">
@@ -138,8 +133,7 @@ const FeaturesAndReportSection = () => {
                   alt={logo.alt}
                   style={{
                     objectFit: "cover",
-                    ...(logo.alt === "SOC logo" && {
-                    }),
+                    ...(logo.alt === "SOC logo" && {}),
                   }}
                 />
               </div>
@@ -155,9 +149,12 @@ const FeaturesAndReportSection = () => {
           <p className="section-description">
             For counselors, clinics, and care teams seeking a smarter way to
             manage therapy sessions.
-          </p>
-          {/* Assuming this button style is unique to this section, keep inline or create specific class if reused */}
-          <ButtonRow handleGetStarted={handleGetStarted} marginBottom="40px" />
+          </p>   
+          <div className="feature-button">
+            <ButtonRow           
+              marginBottom="40px"
+            />
+          </div>
         </div>
 
         <div className="feature-cards-container">
@@ -174,16 +171,15 @@ const FeaturesAndReportSection = () => {
 
       {/* From Session To Report Section */}
       <h2 className="swiper-section-heading">
-        From Session To Report — <br></br>Seamlessly
+        From Session To Report — Seamlessly
       </h2>
 
       <div className="swiper-container">
-        <ButtonRow handleGetStarted={handleGetStarted} marginBottom="40px" />
-
         <SwiperContentStyles>
           <CustomSwiper
-            customNextAppearance={<ArrowLeft />}
+            swiperRef={swiperRef}
             customPrevAppearance={<ArrowIcon />}
+            customNextAppearance={<ArrowLeft />}
             spaceBetween={30}
             slidesPerView={2.5}
             breakpoints={{

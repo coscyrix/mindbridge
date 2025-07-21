@@ -46,9 +46,6 @@ const CoreFeatures = () => {
     },
   ];
   const router = useRouter();
-  const handleGetStarted = (e) => {
-    router.push(ApiConfig.getstartedsubmittion.getstarted);
-  };
 
   return (
     <CoreFeaturesSectionWrapper>
@@ -62,7 +59,12 @@ const CoreFeatures = () => {
           Discover the powerful, secure, and intuitive tools designed to
           simplify mental health care management.
         </p>
-        <ButtonRow handleGetStarted={handleGetStarted} marginBottom="0px" />
+        <div className="buttonRow">
+          <ButtonRow marginLeft="10px" />
+        </div>
+
+        {/* <div className="explore-feature-core-button">
+        </div> */}
       </div>
       <div className="cards-grid-container">
         {coreFeaturesData.map((feature, index) => (

@@ -123,7 +123,8 @@ async function exportToExcel(columns, data, tableCaption) {
   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
   const workbook = XLSX.utils.book_new();
 
-  XLSX.utils.book_append_sheet(workbook, worksheet, tableCaption);
+  const safeSheetName = tableCaption.slice(0, 31);
+  XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
   XLSX.writeFile(workbook, `${tableCaption}.xlsx`);
 }
 
@@ -183,6 +184,12 @@ export const SIDEBAR_HEADINGS = [
     icon: <InvoiceIcon />,
     url: "/invoice",
     title: "Invoice",
+  },
+  {
+    id: 8,
+    icon: <DashboardIcon />,
+    url: "/consent-management",
+    title: "Consent Management",
   },
 ];
 
@@ -1861,4 +1868,63 @@ export const SERVICE_FEE_INFO = [
   "Total Monthly Revenue (Include Tax) = $100",
   "Service Fee = $100 * .02 = $2 + 5% (Tax)",
   "Total Service Fee = $2.1",
+];
+
+export const TREATMENT_TARGET = [
+  { label: "Anxiety", value: 1 },
+  { label: "Depression", value: 2 },
+  { label: "Stress Management", value: 3 },
+  { label: "Relationship Issues", value: 4 },
+  { label: "Grief and Loss", value: 5 },
+  { label: "Trauma and PTSD", value: 6 },
+  { label: "Self-Esteem and Self-Confidence Issues", value: 7 },
+  { label: "Addiction and Substance Abuse", value: 8 },
+  { label: "Identity and Self-Exploration", value: 9 },
+  { label: "Family and Parenting Issues", value: 10 },
+  { label: "Work and Career-Related Issues", value: 11 },
+  { label: "Chronic Illness and Health-Related Concerns", value: 12 },
+  { label: "Anger Management", value: 13 },
+  { label: "Eating Disorders and Body Image Issues", value: 14 },
+  { label: "Life Transitions", value: 15 },
+  { label: "Coping with Disability", value: 16 },
+  { label: "Other", value: 17 },
+];
+
+export const CONSENT_OPTIONS = [
+  { label: "Limits of confidentiality", value: "limits_of_confidentiality" },
+  {
+    label: "Session cancellation policy",
+    value: "session_cancellation_policy",
+  },
+  { label: "Data privacy notice", value: "data_privacy_notice" },
+  { label: "Client rights and responsibilities", value: "client_rights" },
+];
+export const CONSENT_CATEGORY_OPTIONS = [
+  { label: "Group Therapy", value: "group_therapy" },
+  { label: "Individual Care", value: "individual_care" },
+  { label: "Family Sessions", value: "family_sessions" },
+  { label: "Psychiatric Evaluation", value: "psychiatric_evaluation" },
+];
+
+export const service_templates = [
+  { service_id: 101, service_price: 120.5 },
+  { service_id: 102, service_price: 150.0 },
+  { service_id: 103, service_price: 99.99 },
+  { service_id: 104, service_price: 200.0 },
+  { service_id: 105, service_price: 250.0 },
+  { service_id: 106, service_price: 175.25 },
+  { service_id: 107, service_price: 80.0 },
+  { service_id: 108, service_price: 300.0 },
+  { service_id: 109, service_price: 199.99 },
+  { service_id: 110, service_price: 220.0 },
+  { service_id: 111, service_price: 185.75 },
+  { service_id: 112, service_price: 140.0 },
+  { service_id: 113, service_price: 210.5 },
+  { service_id: 114, service_price: 95.0 },
+  { service_id: 115, service_price: 135.0 },
+  { service_id: 116, service_price: 180.0 },
+  { service_id: 117, service_price: 275.0 },
+  { service_id: 118, service_price: 160.0 },
+  { service_id: 119, service_price: 240.0 },
+  { service_id: 120, service_price: 110.0 },
 ];

@@ -2,6 +2,9 @@ import styled from "styled-components";
 import { SearchIcon } from "../../public/assets/icons";
 
 export const ClientDetailsContainer = styled.div`
+.table-filter{
+    margin:10px;
+    }
   .content{
     .tab-and-heading-container{
       position:sticky;
@@ -13,12 +16,14 @@ export const ClientDetailsContainer = styled.div`
     @media screen and (max-width:768px){
       top:64px;
     }
+    
 
 
-      .heading-container {
+    .heading-container {
     display: flex;
-    justify-content: space-between;
-    align-items: end;
+    gap:10px
+    justify-content: space-evenly;
+    align-items: start;
     gap:20px;
     @media only screen and (max-width:1100px){
       flex-direction:column;
@@ -260,6 +265,7 @@ export const ClientDetailsContainer = styled.div`
     .button-group {
       display: flex;
       gap: 8px;
+
 
       .custom-select-container {
         display: flex;

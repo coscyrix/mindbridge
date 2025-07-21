@@ -8,6 +8,7 @@ import axios from "axios";
 import CustomLoader from "../../components/Loader/CustomLoader";
 import CustomButton from "../../components/CustomButton";
 import { GoArrowLeft } from "react-icons/go";
+import { TREATMENT_TARGET } from "../../utils/constants";
 const SearchListing = () => {
   const [isloading, setIsLoading] = useState(false);
   const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
@@ -211,7 +212,6 @@ const SearchListing = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    console.log("Search params:", searchParams);
     filterSearchResult(searchParams);
   };
 
@@ -247,8 +247,8 @@ const SearchListing = () => {
   return (
     <SearchListingWrapper>
       <div className="search-section">
-        <div className="search-container">
-          {/* <div className="search-input-wrapper">
+        {/* <div className="search-container">
+          <div className="search-input-wrapper">
             <input
               type="text"
               placeholder="Search services"
@@ -260,12 +260,13 @@ const SearchListing = () => {
             <button className="search-icon-button">
               <img src="./assets/icons/searchIcon.svg" />
             </button>
-          </div> */}
+          </div>
 
           <div className="filters-wrapper">
             <div className="filter-item">
               <img src="./assets/icons/locationIcon.svg" />
               <select
+                className="select-input"
                 value={searchParams.location}
                 onChange={(e) => handleInputChange("location", e.target.value)}
               >
@@ -281,6 +282,7 @@ const SearchListing = () => {
             <div className="filter-item">
               <img src="/assets/icons/raceIcon.svg" alt="Race" />
               <select
+                className="select-input"
                 value={searchParams.race}
                 onChange={(e) => handleInputChange("race", e.target.value)}
               >
@@ -296,6 +298,7 @@ const SearchListing = () => {
             <div className="filter-item">
               <img src="/assets/icons/genderIcon.svg" alt="Gender" />
               <select
+                className="select-input"
                 value={searchParams.gender}
                 onChange={(e) => handleInputChange("gender", e.target.value)}
               >
@@ -311,18 +314,19 @@ const SearchListing = () => {
             <div className="filter-item">
               <img src="./assets/icons/locationIcon.svg" />
               <select
+                className="select-input"
                 value={searchParams.speciality}
                 onChange={(e) =>
                   handleInputChange("speciality", e.target.value)
                 }
               >
                 <option value="">Select Speciality</option>
-                {searchFilters?.specialties?.map((specialty) => (
+                {TREATMENT_TARGET.map((specialty) => (
                   <option
                     key={specialty?.service_name}
-                    value={specialty?.service_name.toLowerCase()}
+                    value={specialty?.label.toLowerCase()}
                   >
-                    {specialty?.service_name}
+                    {specialty?.label}
                   </option>
                 ))}
               </select>
@@ -334,7 +338,13 @@ const SearchListing = () => {
               <img src="./assets/icons/searchIcon.svg" />
             </div>
           </div>
-        </div>
+        </div> */}
+        <GoArrowLeft
+          onClick={() => {
+            router.back();
+          }}
+          size={30}
+        />
       </div>
 
       <div className="results-section">
@@ -431,13 +441,6 @@ const SearchListing = () => {
           </div>
         </div>
         <div className="wrapperCardShow">
-          <GoArrowLeft
-            onClick={() => {
-              router.back();
-            }}
-            size={50}
-          />
-
           {counselorsData?.length !== 0 ? (
             counselorsData.map((counselor) => (
               <CounselorCard

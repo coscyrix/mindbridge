@@ -18,6 +18,9 @@ const LicenseFileUpload = ({
   onFileSelect,
   hideUploadButton,
   licenseFile,
+  errormsg,
+  value, 
+  onChange, 
 }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -26,7 +29,6 @@ const LicenseFileUpload = ({
   const [uploadedFileUrl, setUploadedFileUrl] = useState("");
   const fileInputRef = useRef(null);
   const { control, getValues } = useFormContext();
-
   const validateFile = (file) => {
     const maxSize = 5 * 1024 * 1024; // 5MB
     const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
@@ -49,7 +51,16 @@ const LicenseFileUpload = ({
     const file = event.target.files[0];
     if (file && validateFile(file)) {
       setSelectedFile(file);
-      if (onFileSelect) onFileSelect(file);
+      if (onFileSelect) {
+        onFileSelect(file);
+      }
+      if (onChange) {
+        onChange(file);
+      } else {
+        if (onChange) {
+          onChange(null);
+        }
+      }
     }
   };
 
@@ -130,9 +141,17 @@ const LicenseFileUpload = ({
     if (onFileSelect) onFileSelect(null);
   };
 
+  useEffect(() => {
+    if (licenseFile && !selectedFile) {
+      setSelectedFile(licenseFile);
+    }
+  }, [licenseFile, selectedFile]);
+
   return (
-    <UploadContainer>
-      {/* <Controller
+    <>
+      <UploadContainer className={errormsg && "errorContainer"}>
+        <p className={errormsg ? "error-text" : "helper-text"}>
+          {/* <Controller
         name="document_name"
         control={control}
         rules={{ required: "Document name is required" }}
@@ -177,69 +196,79 @@ const LicenseFileUpload = ({
         )}
       /> */}
 
-      <div
-        className={isDragging ? "dragging" : ""}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        style={{ marginTop: "24px", textAlign: "center" }}
-      >
-        <FileInput
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileSelect}
-          accept=".pdf,.jpg,.jpeg,.png"
-        />
+          <div
+            className={isDragging ? "dragging" : ""}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            style={{ marginTop: "24px", textAlign: "center" }}
+          >
+            <FileInput
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept=".pdf,.jpg,.jpeg,.png"
+            />
 
-        {!selectedFile && !licenseFile ? (
-          <>
-            <p>Drag and drop your license file here, or</p>
-            <UploadButton
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-            >
-              browse files
-            </UploadButton>
-            <p style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}>
-              Supported formats: PDF, JPEG, PNG (max 5MB)
-            </p>
-          </>
-        ) : (
-          <FileInfo>
-            {selectedFile ? <div>
-              <div className="file-name">{selectedFile.name}</div>
-              <div className="file-size">
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </div>
-              {uploadedFileUrl && (
-                <div className="file-url">URL: {uploadedFileUrl}</div>
-              )}
-             
-            </div> : <img src={licenseFile} height={"100px"} width={"100px"}/>}
-            <button
-              type="button"
-              className="remove-button"
-              onClick={removeFile}
-              disabled={isUploading}
-            >
-              ×
-            </button>
-          </FileInfo>
-        )}
+            {!selectedFile && !licenseFile ? (
+              <>
+                <p>Drag and drop your license file here, or</p>
+                <UploadButton
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  browse files
+                </UploadButton>
+                <p
+                  style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}
+                >
+                  Supported formats: PDF, JPEG, PNG (max 5MB)
+                </p>
+              </>
+            ) : (
+              <FileInfo>
+                {selectedFile ? (
+                  <div>
+                    <div className="file-name">{selectedFile.name}</div>
+                    <div className="file-size">
+                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                    {uploadedFileUrl && (
+                      <div className="file-url">URL: {uploadedFileUrl}</div>
+                    )}
+                  </div>
+                ) : (
+                  <img src={licenseFile} height={"100px"} width={"100px"} />
+                )}
+                <button
+                  type="button"
+                  className="remove-button"
+                  onClick={removeFile}
+                  disabled={isUploading}
+                >
+                  ×
+                </button>
+              </FileInfo>
+            )}
 
-        {selectedFile && !uploadedFileUrl && !hideUploadButton && (
-          <CustomButton
-            title={isUploading ? "Uploading..." : "Upload File"}
-            type="button"
-            onClick={handleUploadClick}
-            disabled={isUploading}
-            customClass="primary-button"
-            style={{ marginTop: "16px" }}
-          />
-        )}
-      </div>
-    </UploadContainer>
+            {selectedFile && !uploadedFileUrl && !hideUploadButton && (
+              <CustomButton
+                title={isUploading ? "Uploading..." : "Upload File"}
+                type="button"
+                onClick={handleUploadClick}
+                disabled={isUploading}
+                customClass="primary-button"
+                style={{ marginTop: "16px" }}
+              />
+            )}
+          </div>
+        </p>
+      </UploadContainer>
+      <p className={errormsg ? "error-text" : "helper-text"}>
+        {errormsg || ""}
+      </p>
+    </>
   );
 };
 

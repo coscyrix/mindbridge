@@ -589,4 +589,23 @@ export default class Common {
       return { message: 'Error getting tenant', error: -1 };
     }
   }
+
+  async getTenantByTenantGeneratedId(tenant_generated_id) {
+    try {
+      const rec = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select()
+        .where('tenant_generated_id', tenant_generated_id)
+        .from('tenant');
+
+      if (!rec || rec.length === 0) {
+        return { message: 'Tenant not found', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error getting tenant', error: -1 };
+    }
+  }
 }

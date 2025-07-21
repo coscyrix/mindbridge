@@ -1,44 +1,46 @@
-import React from "react";
-import CustomButton from "./index";
+import React, { useState } from "react";
+import { useRouter } from "next/router";
+import ApiConfig from "../../config/apiConfig";
+import { ButtonRowWrapper } from "./style";
+import GetStartedForm from "../GetStartedForm";
 
-import { DEMO_MAIL_BODY, SUPPORT_EMAIL } from "../../utils/constants";
 const ButtonRow = ({
-  marginBottom = "70px",
-  handleGetStarted,
-  // mailoronboarding,
+  marginLeft = "0px",
+  isNavbar = false,
+  isMobile = false,
 }) => {
+  const router = useRouter();
+  const [showModal, setShowModal] = useState(false);
+
+  const handleGetStarted = () => {
+    // console.log("hi")
+    setShowModal(true);
+  };
+  const closeModal = () => setShowModal(false);
+  const redirectToLogin = (e) => {
+    router.push("/login");
+  };
+  const patchColor = isNavbar ? "#FFC004" : "#F6F6F6";
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "20px",
-      }}
+    <ButtonRowWrapper
+      marginLeft={marginLeft}
+      isMobile={isMobile}
+      isNavbar={isNavbar}
     >
-      <CustomButton
-        // type="button"
-        onClick={handleGetStarted}
-        customClass="core-features-button get-started-button"
-        title="Get started - pay only when you earn"
-      />
-      <CustomButton
-        customClass="secondary-footer-button"
-        style={{ marginBottom: marginBottom }}
-        title="Explore Demo – No Credit Card Needed"
-        onClick={() => {
-          handleGetStarted()
-          // if (mailoronboarding) {
-          //   handleGetStarted();
-          // } else {
-          //   window.location.href = `mailto:${SUPPORT_EMAIL}?subject=Demo Request&body=${encodeURIComponent(
-          //     DEMO_MAIL_BODY
-          //   )}`;
-          // }
-        }}
-      />
-    </div>
+      <button className="get-started-btn" onClick={handleGetStarted}>
+        <span>Get Started</span>
+        <span className="badge">Pay only when you earn</span>
+      </button>
+      <button
+        className="login-btn"
+        onClick={isNavbar ? redirectToLogin : handleGetStarted}
+      >
+        {isNavbar
+          ? "Provider Login"
+          : "Explore free Demo- No credit card needed"}
+      </button>
+      {showModal && <GetStartedForm open={showModal} onClose={closeModal} />}
+    </ButtonRowWrapper>
   );
 };
 

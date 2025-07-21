@@ -14,13 +14,14 @@ const CustomInputField = ({
   helperText,
   handleShowPassword,
   value,
+  prefix,
   ...props
 }) => {
   const {
     register,
     formState: { errors },
   } = useFormContext();
-
+  // {console.log(errors)}
   return (
     <CustomInputContainer>
       {label && <label htmlFor={name}>{label}</label>}
@@ -33,20 +34,41 @@ const CustomInputField = ({
         >
           {icon}
         </div>
-        <input
-          id={name}
-          type={type}
-          lang="en-GB"
-          {...register(name, {
-            required: "This field is required",
-            ...validationRules,
-          })}
-          value={value}
-          placeholder={placeholder}
-          className={`${customClass} ${errors[name] ? "error-input" : ""}`}
-          disabled={disabled}
-          {...props}
-        />
+
+        {prefix ? (
+          <span class="textbox">
+            <span className="https">https://</span>
+            <input
+              id={name}
+              type={type}
+              lang="en-GB"
+              {...register(name, {
+                required: "This field is required",
+                ...validationRules,
+              })}
+              value={value}
+              placeholder={placeholder}
+              className={`${customClass} ${errors[name] ? "error-input" : ""}`}
+              disabled={disabled}
+              {...props}
+            />
+          </span>
+        ) : (
+          <input
+            id={name}
+            type={type}
+            lang="en-GB"
+            {...register(name, {
+              required: "This field is required",
+              ...validationRules,
+            })}
+            value={value}
+            placeholder={placeholder}
+            className={`${customClass} ${errors[name] ? "error-input" : ""}`}
+            disabled={disabled}
+            {...props}
+          />
+        )}
       </div>
       {/* Show error message if there is an error, else show helperText */}
       <p className={`${errors[name] ? "error-text" : "helper-text"}`}>

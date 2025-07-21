@@ -75,7 +75,7 @@ function Services() {
       }
     } catch (error) {
       console.error("Error while creating service:", error);
-      toast.error("Failed to create service. Please try again.", {
+      toast.error(error.response.data.message, {
         position: "top-right",
       });
     }

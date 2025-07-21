@@ -12,6 +12,7 @@ import { SearchIcon } from "../../../public/assets/icons";
 import CustomButton from "../../CustomButton";
 import CommonServices from "../../../services/CommonServices";
 import { toast } from "react-toastify";
+import { TREATMENT_TARGET } from "../../../utils/constants";
 
 const SearchBar = () => {
   const { register, handleSubmit, watch } = useForm();
@@ -39,7 +40,9 @@ const SearchBar = () => {
       Object.entries(data).filter(([_, value]) => value !== "")
     );
     if (Object.keys(filteredData).length === 0) {
-      toast.error("Please select any feild to search your query", { position: "top-right" });
+      toast.error("Please select any feild to search your query", {
+        position: "top-right",
+      });
       return;
     }
     const queryParams = new URLSearchParams(filteredData).toString();
@@ -56,9 +59,11 @@ const SearchBar = () => {
     <SearchBarWrapper className="search-bar-container">
       <form onSubmit={handleSubmit(onSubmit)} style={{ display: "contents" }}>
         <div className="search-block">
-          <LocationIcon />
           <div className="heading-container">
-            <h4>Location</h4>
+            <div className="location-text-icon">
+              <LocationIcon />
+              <h4>Location</h4>
+            </div>
             <div className="search-bar-item">
               <select className="select-input" {...register("location")}>
                 <option value="">Select Location</option>
@@ -72,9 +77,12 @@ const SearchBar = () => {
           </div>
         </div>
         <div className="search-block">
-          <RacesIcon />
           <div className="heading-container">
-            <h4>Race</h4>
+            <div className="location-text-icon">
+              <RacesIcon />
+              <h4>Race</h4>
+            </div>
+
             <div className="search-bar-item">
               <select className="select-input" {...register("race")}>
                 <option value="">Select Race</option>
@@ -88,9 +96,11 @@ const SearchBar = () => {
           </div>
         </div>
         <div className="search-block">
-          <GenderIcon />
           <div className="heading-container">
-            <h4>Gender</h4>
+            <div className="location-text-icon">
+              <GenderIcon />
+              <h4>Gender</h4>
+            </div>
             <div className="search-bar-item">
               <select className="select-input" {...register("gender")}>
                 <option value="">Select Gender</option>
@@ -104,25 +114,24 @@ const SearchBar = () => {
           </div>
         </div>
         <div className="search-block no-border">
-          <DoctorIcon />
           <div className="heading-container">
-            <h4>Treatment Target</h4>
+            <div className="location-text-icon">
+              <DoctorIcon className="treatment-target-icon" />
+              <h4 className="treatment-target-text">Treatment Target</h4>
+            </div>
             <div className="search-bar-item">
               <select className="select-input" {...register("specialties")}>
                 <option value="">Select Treatment Target</option>
-                {searchFilters?.specialties?.map((specialty, index) => (
-                  <option
-                    key={index}
-                    value={specialty?.service_name?.toLowerCase()}
-                  >
-                    {specialty?.service_name}
+                {TREATMENT_TARGET.map((specialties, index) => (
+                  <option key={index} value={specialties?.label.toLowerCase()}>
+                    {specialties?.label}
                   </option>
                 ))}
               </select>
             </div>
           </div>
         </div>
-        <button style={{display:"flex" , alignItems:"center" , gap:"8px" , height:"50px" , backgroundColor:"#3973B7" , color:"white" , fontWeight:500 , fontSize:"16px" , padding:"16px" , border:"1px solid #3973B7" , borderRadius:"6px" , cursor:"pointer"}}>
+        <button className="search-button">
           <SearchIcon color="#fff" />
           Search
         </button>

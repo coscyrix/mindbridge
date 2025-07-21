@@ -12,6 +12,8 @@ export const CreateSessionLayoutWrapper = styled.div`
   transition: transform 300ms ease-in-out;
   z-index: 99;
 
+ 
+
   .heading {
     position: absolute;
     top: 20px;

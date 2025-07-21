@@ -7,16 +7,25 @@ export const SearchListingWrapper = styled.div`
   @media (max-width: 768px) {
     padding: 20px 16px;
   }
+  .select-input {
+    border: none;
+    outline: none;
+    font-weight: 500;
+    font-size: 0.875rem;
+    width: 100%;
+    padding:6px;
+  }
 
   .search-section {
-  margin-top:70px;
+    margin-top: 70px;
     display: flex;
-    justify-content: center;
+    justify-content: start;
     width: 100%;
     border-bottom: 1px solid #2e2e2e1a;
     padding-bottom: 18px;
     padding-top: 18px;
     margin-bottom: 34px;
+    padding-left:70px;
 
     .search-container {
       display: flex;
@@ -71,7 +80,9 @@ export const SearchListingWrapper = styled.div`
         display: flex;
         gap: 16px;
         align-items: center;
-        flex-wrap: wrap;
+        padding: 18px 60px 13px 70px;
+
+        // flex-wrap: wrap;
 
         .filter-item {
           border: 1px solid #2e2e2e33;
@@ -118,7 +129,7 @@ export const SearchListingWrapper = styled.div`
           border: none;
           border-radius: 4px;
           cursor: pointer;
-          padding: 10px 16px;
+          padding: 10px 12px;
 
           .search-button {
             background-color: #2e2e2e;
@@ -246,6 +257,7 @@ export const SearchListingWrapper = styled.div`
 
           .separator {
             color: #666;
+            margin-top:20px;
           }
         }
 

@@ -5,7 +5,7 @@ export const SwiperContentStyles = styled.div`
   .swiper-section-heading {
     font-size: 2.5em;
     margin-bottom: 30px;
-    font-family: 'Georgia, serif';
+    font-family: "Georgia, serif";
   }
 
   /* Remove specific swiper-card styles from here */
@@ -25,8 +25,11 @@ export const SwiperContentStyles = styled.div`
     display: flex;
     justify-content: center;
     align-items: center;
-    @media screen and (max-width:425px){
-      height:180px;
+    @media screen and (max-width: 425px) {
+      height: 180px;
+    }
+    @media screen and (max-width: 780px) {
+      height: 250px;
     }
   }
 
@@ -41,4 +44,4 @@ export const SwiperCardBaseStyles = styled.div`
   padding: 20px;
   text-align: left;
   background-color: white;
-`; 
+`;

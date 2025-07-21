@@ -84,8 +84,6 @@ const SMARTGoalForms = ({ formData }) => {
     }
   };
 
-  console.log(methods?.watch(), "formValues");
-
   return (
     <SMARTGoalsContainer>
       <h1>Smart Goals</h1>

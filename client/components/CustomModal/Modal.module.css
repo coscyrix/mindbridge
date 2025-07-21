@@ -24,16 +24,16 @@
 
 .modal_header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  border-bottom: 1px solid #ddd;
+  /* border-bottom: 1px solid #ddd; */
   margin-bottom: 20px;
-  padding-bottom: 20px;
+  flex-direction: column;
 }
 
 .modal_header h2 {
   margin: 0;
-  font-size: 25px;
+  font-size: 28px;
 }
 
 .close_button {
@@ -42,8 +42,15 @@
   font-size: 20px;
   cursor: pointer;
   color: #888;
+  position: absolute;
+    right: 14px;
+    padding: 0;
+    top: 10px;
 }
-
+.close_button svg{
+      width: 24px;
+    height: 24px;
+}
 .close_button:hover {
   color: #000;
 }
@@ -52,4 +59,44 @@
   font-size: 16px;
   max-height: 500px;
   overflow: auto;
+  text-align: center;
 }
+.ripple_icon {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ripple_icon::before,
+.ripple_icon::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background-color: #bfdbfe; 
+}
+
+.ripple_icon::before {
+  width: 48px;
+  height: 48px;
+}
+
+.ripple_icon::after {
+  width: 32px;
+  height: 32px;
+  background-color: #2563eb;
+  z-index: 1;
+}
+
+.inner_circle {
+  position: absolute;
+  z-index: 2;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+}
+
