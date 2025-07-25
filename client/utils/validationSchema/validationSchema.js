@@ -1,21 +1,25 @@
 import { z } from "zod";
 import { featureOptions } from "../../components/GetStartedForm";
-const ServiceTemplateSchema = z.object({
+import { gasQuestionBank } from "../constants";
+const safeNumber = (val) =>
+  val !== "" && val !== null && val !== undefined && !isNaN(Number(val))
+    ? Number(val)
+    : undefined;
+
+export const ServiceTemplateSchema = z.object({
   service_id: z.preprocess(
-    (val) => (val !== "" ? Number(val) : undefined),
+    safeNumber,
     z
       .number({ required_error: "Service ID is required" })
       .min(1, "Service ID must be greater than 0")
   ),
   service_price: z.preprocess(
-    (val) => (val !== "" ? Number(val) : undefined),
+    safeNumber,
     z
       .number({ required_error: "Price is required" })
-      .min(0, "Price must be greater than 0")
+      .min(0, "Price must be greater than or equal to 0")
   ),
 });
-
-
 
 export const ClientValidationSchema = z
   .object({
@@ -55,10 +59,7 @@ export const ClientValidationSchema = z
       .string()
       .nonempty("Email is required")
       .email("Invalid email address"),
-    service: z
-      .array(ServiceTemplateSchema)
-      .min(1, "At least one service is required"),
-
+    service: z.array(ServiceTemplateSchema).optional(),
     role_id: z
       .preprocess(
         (value) => Number(value),
@@ -74,23 +75,15 @@ export const ClientValidationSchema = z
         ),
       })
       .optional(),
-    tax: z.preprocess(
-      (val) => Number(val),
-      z
-        .number()
-        // .min(1, { message: "Tax is required for this profile" })
-        .nullable()
-        .optional()
-    ),
+    tax: z.preprocess((val) => {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }, z.number().nullable().optional()),
 
-    admin_fee: z.preprocess(
-      (val) => Number(val),
-      z
-        .number()
-        // .min(1, { message: "Admin fees is required for this profile" })
-        .nullable()
-        .optional()
-    ),
+    admin_fee: z.preprocess((val) => {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }, z.number().nullable().optional()),
     description: z.string().nullable().optional(),
   })
   .refine(
@@ -332,3 +325,30 @@ export const consentManagementSchema = z.object({
       { message: "Consent text cannot be empty" }
     ),
 });
+
+export const createGasSchema = (goalKey) => {
+  const questionSet = gasQuestionBank[goalKey] || [];
+  const dynamicQuestionSchema = questionSet.reduce((acc, q) => {
+    acc[q.name] = z
+      .number({
+        required_error: "This question is required",
+        invalid_type_error: "Select a valid score",
+      })
+      .min(-2, "Minimum value is -2")
+      .max(2, "Maximum value is +2");
+    return acc;
+  }, {});
+
+  return z.object({
+    goal: z
+      .object({
+        label: z.string(),
+        value: z.string(),
+      })
+      .nullable()
+      .refine((val) => !!val?.value, {
+        message: "Treatment goal is required",
+      }),
+    ...dynamicQuestionSchema,
+  });
+};

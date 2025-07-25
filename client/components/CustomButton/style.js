@@ -15,6 +15,10 @@ export const CustomButtonContainer = styled.div`
     position: relative;
     cursor: pointer;
   }
+  .blue {
+    background: #3973b7;
+    color: #fff;
+  }
 `;
 
 export const DropdownContainer = styled.div`
@@ -22,7 +26,7 @@ export const DropdownContainer = styled.div`
   background-color: white;
   border: 1px solid #ccc;
   border-radius: 4px;
-  z-index: 10;
+  z-index: 1001;
   min-width: 200px;
   width: max-content;
   padding: 6px 8px;
@@ -69,7 +73,6 @@ export const DropdownContainer = styled.div`
 `;
 
 export const ButtonRowWrapper = styled.div`
-
   display: flex;
   // justify-content: center;
   align-items: center;
@@ -164,7 +167,7 @@ export const ButtonRowWrapper = styled.div`
       margin-left: 4px;
     }
   }
-  .next-submit{
-  background:blue;
+  .next-submit {
+    background: blue;
   }
 `;

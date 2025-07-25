@@ -253,7 +253,7 @@ function ClientManagement() {
     } else {
       setClientData([]);
     }
-  }, [clients,]);
+  }, [clients]);
 
   useEffect(() => {
     fetchClients();

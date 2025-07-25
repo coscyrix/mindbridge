@@ -1,9 +1,8 @@
 import styled from "styled-components";
 
 export const CustomEditableInputModalWrapper = styled.div`
-  padding: 20px;
-  margin: 20px;
-
+  // padding: 20px;
+  // margin: 20px;
   .service-row {
     display: grid;
     grid-template-columns: 2fr 2fr 2fr;
@@ -29,6 +28,11 @@ export const CustomEditableInputModalWrapper = styled.div`
     font-size: 0.95rem;
     color: #333;
     white-space: nowrap;
+  }
+  .scroll-wrapper {
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 8px;
   }
 
   .input {

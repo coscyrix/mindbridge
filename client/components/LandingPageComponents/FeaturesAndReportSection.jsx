@@ -149,11 +149,9 @@ const FeaturesAndReportSection = () => {
           <p className="section-description">
             For counselors, clinics, and care teams seeking a smarter way to
             manage therapy sessions.
-          </p>   
+          </p>
           <div className="feature-button">
-            <ButtonRow           
-              marginBottom="40px"
-            />
+            <ButtonRow marginBottom="40px" />
           </div>
         </div>
 
@@ -183,12 +181,16 @@ const FeaturesAndReportSection = () => {
             spaceBetween={30}
             slidesPerView={2.5}
             breakpoints={{
-              320: {
-                slidesPerView: 1.5,
+              200: {
+                slidesPerView: 1.1,
+                spaceBetween: 10,
+              },
+              420: {
+                slidesPerView: 1.1,
                 spaceBetween: 10,
               },
               640: {
-                slidesPerView: 2,
+                slidesPerView: 1.7,
                 spaceBetween: 20,
               },
               1024: {

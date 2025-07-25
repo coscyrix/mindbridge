@@ -27,7 +27,6 @@ const Footer = () => {
   const [showModal, setShowModal] = useState(false);
 
   const handleGetStarted = () => {
-    // console.log("hi")
     setShowModal(true);
   };
   const closeModal = () => setShowModal(false);

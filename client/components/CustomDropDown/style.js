@@ -3,7 +3,7 @@ import styled from "styled-components";
 export const CustomDropDownWrapper = styled.div`
   position: relative;
   width: 100%;
-  z-index: 11;
+  z-index: 1001;
 `;
 
 export const DropdownButton = styled.button`
@@ -16,7 +16,7 @@ export const DropdownButton = styled.button`
   cursor: pointer;
   display: flex;
   align-items: center;
-  z-index: 11;
+  z-index: 1001;
 `;
 
 export const DropdownMenu = styled.ul`
@@ -31,7 +31,7 @@ export const DropdownMenu = styled.ul`
   margin: 0;
   padding: 0;
   display: ${(props) => (props.isOpen ? "block" : "none")};
-  z-index: 11;
+  z-index: 1001;
 `;
 
 export const DropdownItem = styled.li`
@@ -49,5 +49,5 @@ export const Overlay = styled.div`
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 10;
+  z-index: 1000;
 `;

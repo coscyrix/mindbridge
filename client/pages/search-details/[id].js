@@ -52,6 +52,7 @@ import CustomLoader from "../../components/Loader/CustomLoader";
 import CustomButton from "../../components/CustomButton";
 import { bookAppointmentSchema } from "../../utils/validationSchema/validationSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { TREATMENT_TARGET } from "../../utils/constants";
 const SearchDetails = () => {
   const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
 
@@ -318,13 +319,16 @@ const SearchDetails = () => {
                   </span>
                   <div>
                     <h3>Specialties</h3>
-                    <p>{specialties.join(", ")}</p>
+                    {TREATMENT_TARGET.map((specialties, index) => (
+                      <p key={specialties.label}> {specialties.label}</p>
+                    ))}
+                    {/* <p>{specialties.join(", ")}</p> */}
                   </div>
                 </DetailItem>
                 <DetailItem>
                   <span className="icon">
                     <img src="/assets/icons/fontisto_person.svg" />
-                  </span>
+                  </span>s
                   <div>
                     <h3>Service Modalities</h3>
                     <p>{(counselor.service_modalities || []).join(", ")}</p>
@@ -579,9 +583,9 @@ const SearchDetails = () => {
                 }}
               >
                 <option value="">Select a service</option>
-                {serviceOptions?.map((opt, idx) => (
-                  <option key={idx} value={opt.option}>
-                    {opt.option}
+                {TREATMENT_TARGET?.map((opt, idx) => (
+                  <option key={idx} value={opt.label}>
+                    {opt.label}
                   </option>
                 ))}
               </select>

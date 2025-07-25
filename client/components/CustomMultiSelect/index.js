@@ -33,6 +33,8 @@ const CustomMultiSelect = ({
           classNamePrefix={classNamePrefix}
           onChange={onChange}
           value={value}
+          menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+          menuPosition="fixed"
           {...props}
             styles={{
     control: (baseStyles, state) => ({
@@ -42,6 +44,10 @@ const CustomMultiSelect = ({
       '&:hover': {
         borderColor: error ? 'var(--error-color)' : '#bdbdbd',
       },
+    }),
+    menuPortal: (base) => ({
+      ...base,
+      zIndex: 9999,
     }),
   }}
 

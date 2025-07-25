@@ -32,7 +32,8 @@ function CreateClientForm({
   const userData = Cookies.get("user");
   const user = userData ? JSON.parse(userData) : null;
   const Counselor = user?.role_id == 2;
-  const adminOrManager = user?.role_id == 4;
+  const admin = user?.role_id == 4;
+  const manager = user?.role_id == 3;
 
   const Target = targetOutcomes?.map((target) => ({
     label: target?.target_name,
@@ -42,7 +43,8 @@ function CreateClientForm({
     ?.filter((roledetail) => {
       if (initialData) return true;
       if (Counselor) return roledetail?.role_id === 1;
-      if (adminOrManager) return roledetail?.role_id !== 1;
+      if (admin) return roledetail?.role_id !== 1;
+      if (manager) return roledetail?.role_id != 1 && roledetail?.role_id != 4;
       return true;
     })
     .map((roledetail) => ({
@@ -72,7 +74,7 @@ function CreateClientForm({
           }
         }
       } catch (error) {
-        toast.error("Failed to fetch service templates");
+        toast.error(error?.response?.data?.message);
       }
     };
     fetchServiceTemplates();
@@ -96,6 +98,7 @@ function CreateClientForm({
     tax: "",
     service: [],
     description: "",
+    service: serviceTemplates,
   };
   const methods = useForm({
     resolver: zodResolver(ClientValidationSchema),
@@ -131,12 +134,13 @@ function CreateClientForm({
     }
     else if(role === 3){
       const processed_service_template =
-        role == 3
+        role === 3 && Array.isArray(data.service)
           ? data.service.map((item) => ({
               template_service_id: item.service_id,
               price: item.service_price,
             }))
-          : null;
+          : [];
+    
       processedData = {
         user_profile_id: user?.user_profile_id,
         user_first_name: data?.user_first_name,
@@ -192,8 +196,17 @@ function CreateClientForm({
       user_phone_nbr,
       target_outcome_id,
       tenant_name,
+      description,
+      tax,
+      admin_fee,
     } = data;
-    
+    const processed_service_template =
+      role === 3 && Array.isArray(data.service)
+        ? data.service.map((item) => ({
+            template_service_id: item.service_id,
+            price: item.service_price,
+          }))
+        : [];
     const processedData = {
       user_first_name,
       user_last_name,
@@ -201,7 +214,16 @@ function CreateClientForm({
       role_id,
       user_phone_nbr,
       target_outcome_id: target_outcome_id?.value,
-      //tenant_name: tenant_name || "",
+      ...(role_id === 3 && {
+        tenant_name: tenant_name || "",
+        admin_fee,
+        tax,
+        service_templates: processed_service_template,
+        tenant_name,
+      }),
+      ...(role_id === 2 && {
+        description: description,
+      }),
     };
 
     try {
@@ -280,7 +302,8 @@ function CreateClientForm({
       role === 3 &&
       !initialData &&
       serviceTemplates.length > 0 &&
-      (!methods.getValues("service") || methods.getValues("service").length === 0)
+      (!methods.getValues("service") ||
+        methods.getValues("service").length === 0)
     ) {
       const allServices = serviceTemplates.map((template) => ({
         service_id: template.template_service_id,
@@ -341,7 +364,7 @@ function CreateClientForm({
                 />
               </div>
             )}
-            {role == 2 && (
+            {role == 2 && user?.role_id == 4 && (
               <div className="fields">
                 <CustomInputField
                   name="description"
@@ -469,7 +492,7 @@ function CreateClientForm({
                       control={methods.control}
                       render={({ field }) => (
                         <CustomEditableInputModal
-                          initialTemplates={field.value}
+                          initialTemplates={serviceTemplates}
                           templates={serviceTemplates}
                           onChange={(val) => field.onChange(val)}
                         />

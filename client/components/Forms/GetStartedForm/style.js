@@ -1,7 +1,7 @@
 import styled from "styled-components";
 
-const GetStartedFormWrapper = styled.div`
-  // padding: 2.5rem 3rem;
+const GetStartedFormTemplateWrapper = styled.div`
+  padding: 2.5rem 3rem;
   background: white;
   border-radius: 12px;
   max-width: 1000px;
@@ -33,8 +33,19 @@ const GetStartedFormWrapper = styled.div`
     color: #555;
     cursor: pointer;
     z-index: 100;
+    @media screen and (max-width: 770px) {
+      display: none;
+    }
   }
-
+  .back-button {
+    display: none;
+    position: absolute;
+    top: 104px;
+    left: 55px;
+    @media screen and (max-width: 770px) {
+      display: block;
+    }
+  }
   .form-header {
     margin-bottom: 2rem;
   }
@@ -50,6 +61,7 @@ const GetStartedFormWrapper = styled.div`
       letter-spacing: 0%;
       text-align: center;
       font-family: Playfair Display;
+      margin-left: 10px;
     }
   }
 
@@ -256,4 +268,4 @@ const GetStartedFormWrapper = styled.div`
   }
 `;
 
-export default GetStartedFormWrapper;
+export default GetStartedFormTemplateWrapper;

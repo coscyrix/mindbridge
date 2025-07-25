@@ -114,6 +114,7 @@ export const SidebarContainer = styled.div`
     background: #f6f7f8;
     padding: 12px;
     border-radius: 8px;
+    cursor: pointer;
 
     .profile-details-container {
       display: flex;

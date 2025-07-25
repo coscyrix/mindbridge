@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Overlay, SidebarContainer } from "./style";
 import { SIDEBAR_HEADINGS } from "../../../utils/constants";
 import Link from "next/link";
@@ -10,15 +10,29 @@ import { CgDetailsLess } from "react-icons/cg";
 import { GrLicense } from "react-icons/gr";
 import { MdOutlineEventAvailable } from "react-icons/md";
 import Image from "next/image";
+import ChangePasswordModal from "../../ChangePasswordModal";
+import ProfileOptionsModal from "../../ProfileOptionModal";
 
 function Sidebar({ showSideBar, setShowSideBar }) {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [userData, setUserData] = useState(null);
   const [showProfileOptions, setShowProfileOptions] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const router = useRouter();
   const route = router.pathname;
   const isAdmin = userData?.role_id == 4 ? true : false;
   const isManager = userData?.role_id == 3 ? true : false;
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const profileDropdownRef = useRef(null);
+  const profileRef = useRef(null);
+
+  const handleOpenPasswordModal = () => {
+    setShowPasswordModal(true);
+  };
+
+  const handleClosePasswordModal = () => {
+    setShowPasswordModal(false);
+  };
 
   const formatName = (name) =>
     name[0].toUpperCase() + name.slice(1).toLowerCase();
@@ -45,6 +59,7 @@ function Sidebar({ showSideBar, setShowSideBar }) {
     setShowSideBar(false);
   };
   useEffect(() => {
+    if (typeof document === "undefined") return;
     if (showSideBar) {
       document.body.classList.add("open");
     } else {
@@ -74,6 +89,32 @@ function Sidebar({ showSideBar, setShowSideBar }) {
         return "";
     }
   };
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const handleClickOutside = (event) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target) &&
+        profileRef.current &&
+        !profileRef.current.contains(event.target)
+      ) {
+        setShowProfileModal(false);
+      }
+    };
+
+    const handleEsc = (event) => {
+      if (event.key === "Escape") {
+        setShowProfileModal(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, []);
 
   return (
     <>
@@ -103,12 +144,17 @@ function Sidebar({ showSideBar, setShowSideBar }) {
               return true;
             }).map((heading, index) => (
               <div key={heading.title || index}>
-                <Link
-                  href={heading.url === "/profile" ? " " : heading?.url}
+                <div
+                  // href={heading?.url}
+                  style={{ cursor: "pointer" }}
                   key={index}
                   onClick={() =>
                     heading?.title === "Profile"
-                      ? setShowProfileOptions(!showProfileOptions)
+                      ? router.push(
+                          `/onboarding?type=basic&userId=${userData?.counselor_profile_id}`
+                        )
+                      : heading?.title !== "Profile"
+                      ? router.push(heading?.url)
                       : isSmallScreen
                       ? handleCloseSideBar
                       : null
@@ -129,77 +175,19 @@ function Sidebar({ showSideBar, setShowSideBar }) {
                       </>
                     )
                   )}
-                </Link>{" "}
-                {showProfileOptions && heading?.title === "Profile" && (
-                  <div
-                    style={{
-                      marginTop: "10px",
-                      marginLeft: "34px",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "baseline",
-                      gap: "10px",
-                    }}
-                  >
-                    <p
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        cursor: "pointer",
-                      }}
-                      onClick={() =>
-                        router.push(
-                          `/onboarding?type=basic&userId=${userData?.counselor_profile_id}`
-                        )
-                      }
-                    >
-                      {" "}
-                      <CgDetailsLess />
-                      Basic Details
-                    </p>
-
-                    <p
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        cursor: "pointer",
-                      }}
-                      onClick={() =>
-                        router.push(
-                          `/onboarding?type=license&userId=${userData?.counselor_profile_id}`
-                        )
-                      }
-                    >
-                      <GrLicense fontSize={"12px"} />
-                      License Information
-                    </p>
-
-                    <p
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        cursor: "pointer",
-                      }}
-                      onClick={() =>
-                        router.push(
-                          `/onboarding?type=availability&userId=${userData?.counselor_profile_id}`
-                        )
-                      }
-                    >
-                      <MdOutlineEventAvailable />
-                      Availability
-                    </p>
-                  </div>
-                )}
+                </div>
               </div>
             ))}
           </div>
         </div>
         <div className="profile">
-          <div className="profile-details-container">
+          <div
+            ref={profileRef}
+            onClick={() => {
+              setShowProfileModal((prev) => !prev);
+            }}
+            className="profile-details-container"
+          >
             <div className="avatar">
               {userData?.user_first_name &&
                 userData?.user_first_name[0]?.toUpperCase()}
@@ -227,15 +215,38 @@ function Sidebar({ showSideBar, setShowSideBar }) {
               <small>{userData && getRole(userData?.role_id)}</small>
             </div>
           </div>
-          <div style={{ cursor: "pointer" }} onClick={handleLogout}>
+          {/* <div style={{ cursor: "pointer" }} onClick={handleLogout}>
             <LogoutIcon />
-          </div>
+          </div> */}
         </div>
       </SidebarContainer>
       <Overlay
         onClick={handleCloseSideBar}
         className={`overlay ${showSideBar ? "open" : "closed"}`}
       />
+      <ChangePasswordModal
+        open={showPasswordModal}
+        onClose={handleClosePasswordModal}
+      />
+      {showProfileModal && (
+        <div
+          ref={profileDropdownRef}
+          onClick={() => setShowProfileModal((prev) => !prev)}
+          style={{
+            position: "absolute",
+            bottom: "120px",
+            left: "20px",
+            zIndex: 1000,
+          }}
+        >
+          <ProfileOptionsModal
+            open={showProfileModal}
+            onClose={() => setShowProfileModal((prev) => !prev)}
+            onLogout={handleLogout}
+            onChangePassword={handleOpenPasswordModal}
+          />
+        </div>
+      )}
     </>
   );
 }

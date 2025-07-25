@@ -146,6 +146,23 @@ const LicenseFileUpload = ({
       setSelectedFile(licenseFile);
     }
   }, [licenseFile, selectedFile]);
+  const [blob,setBlob] = useState(null);
+  useEffect(() => {
+    const fetchFile = async () => {
+      if (licenseFile) {
+        try {
+          const response = await fetch(licenseFile);
+          const blob = await response.blob();
+          setBlob(blob);
+        } catch (error) {
+          console.error("Error fetching the file:", error);
+        }
+      }
+    };
+
+    fetchFile();
+  }, [licenseFile]);
+  
 
   return (
     <>
@@ -230,9 +247,14 @@ const LicenseFileUpload = ({
               <FileInfo>
                 {selectedFile ? (
                   <div>
+                  
                     <div className="file-name">{selectedFile.name}</div>
                     <div className="file-size">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      {selectedFile?.size
+                        ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`
+                        : blob?.size
+                        ? `${(blob.size / 1024 / 1024).toFixed(2)} MB`
+                        : "no size"}
                     </div>
                     {uploadedFileUrl && (
                       <div className="file-url">URL: {uploadedFileUrl}</div>

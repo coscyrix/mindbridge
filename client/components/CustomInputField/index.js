@@ -55,6 +55,7 @@ const CustomInputField = ({
           </span>
         ) : (
           <input
+            step="any"
             id={name}
             type={type}
             lang="en-GB"

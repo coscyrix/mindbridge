@@ -68,6 +68,7 @@ export default function CreateServiceForm({
       total_invoice: parseFloat(data.total_invoice),
       gst: data.gst,
       tenant_id: userDetails?.tenant_id,
+      user_profile_id: userDetails?.user_profile_id,
     };
     
     const payload = {
@@ -78,7 +79,8 @@ export default function CreateServiceForm({
       // svc_formula: svcFormulaArray || [],
       total_invoice: parseFloat(data.total_invoice),
       gst: data.gst,
-      // tenant_id: userDetails?.tenant_id,
+      tenant_id: userDetails?.tenant_id,
+      user_profile_id:userDetails?.user_profile_id
     };
 
     if (initialData) {

@@ -3,6 +3,8 @@ import styled from "styled-components";
 export const CustomMultiSelectContainer = styled.div`
   width: 100%;
   margin-bottom: 16px;
+  position: relative;
+  z-index: 1000;
 
   .select-container label {
     display: block;
@@ -10,9 +12,13 @@ export const CustomMultiSelectContainer = styled.div`
   }
   .select-container {
     width: 100%;
+    position: relative;
+    z-index: 1000;
     .multi-select {
       padding-bottom: 8px;
       width: 100%;
+      position: relative;
+      z-index: 1000;
       /* z-index: 9; */
 
       .select__control {
@@ -28,6 +34,14 @@ export const CustomMultiSelectContainer = styled.div`
 
       .select__indicator-separator {
         display: none;
+      }
+
+      .select__menu {
+        z-index: 1001 !important;
+      }
+
+      .select__menu-list {
+        z-index: 1001 !important;
       }
     }
   }

@@ -24,6 +24,7 @@ import Cookies from "js-cookie";
 import WeeklyAvailability from "../components/WeeklyAvailability";
 import LocationSearch from "../components/LocationSearch";
 import axios from "axios";
+import { TREATMENT_TARGET } from "../utils/constants";
 
 const StepIndicator = styled.div`
   display: flex;
@@ -307,7 +308,6 @@ const SignUp = () => {
   }, [userObj?.user_profile_id, router]);
   const handleLicenseFileSelect = (file) => {
     setLicenseFile(file);
-    // console.log(file,"dddd")
   };
 
   const validateStep = async (step) => {
@@ -320,14 +320,13 @@ const SignUp = () => {
           "public_phone",
           "patients_seen",
           "profile_notes",
-          "services_offered",
+          "treatment_target",
           "service_modalities",
           "gender",
           "race",
           "license_number",
           "license_file_url",
           "license_provider",
-          "specialties",
         ];
         break;
       case 2:
@@ -376,26 +375,28 @@ const SignUp = () => {
   const onSubmit = async (formData) => {
     setLoading(true);
     try {
-      // console.log("in")
       const profileData = {
         user_profile_id: userObj?.user_profile_id,
         counselor_profile_id: onBoardingDetails?.counselor_profile_id,
         license_number: formData.license_number,
         license_provider: formData.license_provider,
         license_expiry_date: formData.license_expiry_date,
-        services_offered: JSON.stringify(
-          Array.isArray(formData?.services_offered)
-            ? formData.services_offered.map((s) => s.label)
-            : []
-        ),
-        specialties: JSON.stringify(
-          formData?.specialties?.map((s) => s.value) || []
-        ),
+        // services_offered: JSON.stringify(
+        //   Array.isArray(formData?.services_offered)
+        //     ? formData.services_offered.map((s) => s.label)
+        //     : []
+        // ),
+        // specialties: JSON.stringify(
+        //   formData?.specialties?.map((s) => s.value) || []
+        // ),
         service_modalities: JSON.stringify(
           Array.isArray(formData?.service_modalities)
             ? formData.service_modalities.map((s) => s.value)
             : []
         ),
+        treatment_target: Array.isArray(formData?.treatment_target)
+          ? formData.treatment_target.map((t) => t.value)
+          : [],
         availability: JSON.stringify(formData.availability || {}),
         location: formData.location?.value,
         location_lat: formData.location?.lat,
@@ -636,7 +637,7 @@ const SignUp = () => {
         })
       );
 
-      const specialties = onBoardingDetails.specialties.map((specialty) => ({
+      const specialties = onBoardingDetails.specialties?.map((specialty) => ({
         value: specialty.service_id,
         label: specialty.service_name,
       }));
@@ -735,7 +736,7 @@ const SignUp = () => {
         }
       };
 
-      if (onBoardingDetails.license_file_url ) {
+      if (onBoardingDetails.license_file_url) {
         fetchLicenseImage();
       }
     }
@@ -794,6 +795,7 @@ const SignUp = () => {
                 />
               </FormField>
               <FormField className="half-width">
+              <label>License File</label>
                 <Controller
                   name="license_file_url"
                   control={methods.control}
@@ -803,10 +805,11 @@ const SignUp = () => {
                       counselorProfileId={123}
                       onUploadComplete={handleUploadComplete}
                       errormsg={error?.message}
+                      label="License Number"
                       onFileSelect={handleLicenseFileSelect}
                       hideUploadButton={true}
                       licenseFile={licenseFile}
-                      value={field.value} 
+                      value={field.value}
                       onChange={field.onChange}
                     />
                   )}
@@ -916,7 +919,7 @@ const SignUp = () => {
 
             <FormRow>
               <FormField className="half-width">
-                <Controller
+                {/* <Controller
                   name="services_offered"
                   control={methods.control}
                   rules={{ required: "Services offered is required" }}
@@ -930,20 +933,20 @@ const SignUp = () => {
                       error={error?.message}
                     />
                   )}
-                />
+                /> */}
               </FormField>
               <FormField className="half-width">
                 <Controller
-                  name="specialties"
+                  name="treatment_target"
                   control={methods.control}
-                  rules={{ required: "Specialties are required" }}
+                  rules={{ required: "Treatment target is required" }}
                   render={({ field, fieldState: { error } }) => (
                     <CustomMultiSelect
                       {...field}
-                      label="Specialties*"
-                      placeholder="Select your specialties"
+                      label="Treatment Target"
+                      placeholder="Select your Treatment Target"
                       isMulti={true}
-                      options={specialtiesOptions}
+                      options={TREATMENT_TARGET}
                       error={error?.message}
                     />
                   )}
@@ -1259,9 +1262,9 @@ const SignUp = () => {
           <FormProvider {...methods}>
             <form>
               {type
-                ? renderStepContent(getStepFromType(type))
+                ? renderStepContent(getStepFromType(currentStep))
                 : renderStepContent()}
-              {type && (
+              {/* {type && (
                 <CustomButton
                   title="Submit"
                   type="button"
@@ -1269,8 +1272,8 @@ const SignUp = () => {
                   className="primary-button"
                   disabled={loading}
                 />
-              )}
-              {!type && (
+              )} */}
+              {type && (
                 <ButtonContainer>
                   {currentStep > 1 && (
                     <CustomButton

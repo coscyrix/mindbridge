@@ -48,7 +48,7 @@ export const CustomSelectContainer = styled.div`
       border: 1px solid #ccc;
       border-radius: 4px;
       background: white;
-      z-index: 10;
+      z-index: 1001;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       max-height: 200px;
       overflow-y: auto;

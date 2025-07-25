@@ -38,52 +38,53 @@ export const HeaderWrapper = styled.div`
   }
 
   .mobile-header {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #fff;
+  @media (max-width: 768px) {
+    display:flex;
+  }
+}
+
+.mobile-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.get-started {
+  background-color: #3a78c9;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.earn-badge {
+  background-color: #ffc107;
+  color: #000;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  @media (max-width: 460px) {
     display: none;
-    padding: 15px 20px;
-    border-bottom: 1px solid #eee;
-    align-items: center;
-    justify-content: space-between;
-    height: 70px;
+  }
+}
 
-    @media (max-width: 768px) {
-      display: flex;
-    }
+.user-icon img {
+  height: 36px;
+  width: 36px;
+  border-radius: 50%;
+}
 
-    .mobile-nav-links {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .hamburger {
-      border: none;
-      background: none;
-      padding: 10px;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-
-      span {
-        display: block;
-        width: 24px;
-        height: 2px;
-        background-color: #333;
-        transition: all 0.3s ease;
-      }
-    }
-
-    .mobile-register-button {
-      padding: 8px 15px;
-      background-color: var(--primary-button-color);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      &:hover {
-        background-color: var(--primary-button-hover-color);
-      }
-    }
   }
 
   ul {
@@ -517,7 +518,7 @@ export const HeroSectionWrapper = styled.div`
     justify-content: space-between;
 
     @media screen and (max-width: 865px) {
-      width:fit-content;
+      width: fit-content;
     }
     @media screen and (max-width: 768px) {
       // width: 100%;
@@ -678,7 +679,6 @@ export const SearchBarWrapper = styled.div`
 
   .treatment-target-text {
     white-space: nowrap;
-
   }
   .location-text-icon {
     display: flex;
@@ -809,7 +809,7 @@ export const FeatureAndReportSectionWrapper = styled.div`
     background: #f8f6f0;
     margin: 0px 90px;
     border-radius: 12px;
-    padding: 10px 10px;
+    padding: 30px 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -824,7 +824,7 @@ export const FeatureAndReportSectionWrapper = styled.div`
     }
     @media screen and (max-width: 425px) {
       margin: 0px 16px;
-      padding: 50px 6px;
+      padding: 30px 10px;
     }
   }
   .manual-width {
@@ -951,7 +951,7 @@ export const FeatureAndReportSectionWrapper = styled.div`
     @media screen and (max-width: 470px) {
       top: -70px;
     }
-      
+
     position: absolute;
     top: -65px;
     right: 0px;

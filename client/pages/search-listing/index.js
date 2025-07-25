@@ -112,7 +112,7 @@ const SearchListing = () => {
 
       // Map categories to specialties if present and non-empty
       if (searchParams.categories && searchParams.categories.length > 0) {
-        payload.specialties = searchParams.categories;
+        payload.treatment_target = searchParams.categories.map(Number);
       }
 
       // Map priceRange to min_price and max_price if set, but only if not initial call
@@ -137,6 +137,8 @@ const SearchListing = () => {
         delete payload.specialties;
 
       // Final filter to remove any empty keys
+      
+      
       payload = filterPayload(payload);
 
       const response = await CommonServices.getSearchedCounselors(payload);
@@ -405,21 +407,16 @@ const SearchListing = () => {
           </div>
 
           <div className="categories">
-            <h3>Service Type</h3>
+            <h3>Treatment Target</h3>
             <div className="categories-list">
-              {searchFilters?.specialties?.map((service) => (
-                <label
-                  key={service?.service_name}
-                  className="category-checkbox"
-                >
+              {TREATMENT_TARGET?.map((service) => (
+                <label key={service.label} className="category-checkbox">
                   <input
                     type="checkbox"
-                    checked={searchParams.categories.includes(
-                      service?.service_name
-                    )}
-                    onChange={() => handleCategoryChange(service?.service_name)}
+                    checked={searchParams.categories.includes(service.value)}
+                    onChange={() => handleCategoryChange(service.value)}
                   />
-                  <span>{service?.service_name}</span>
+                  <span>{service.label}</span>
                 </label>
               ))}
             </div>
@@ -440,6 +437,7 @@ const SearchListing = () => {
             Submit
           </div>
         </div>
+        {/* {console.log(counselorsData)} */}
         <div className="wrapperCardShow">
           {counselorsData?.length !== 0 ? (
             counselorsData.map((counselor) => (
@@ -450,7 +448,7 @@ const SearchListing = () => {
                   "/assets/images/drImage2.png"
                 }
                 name={`${counselor.user_first_name} ${counselor.user_last_name}`}
-                speciality={counselor.specialties.join(", ")}
+                // speciality={TREATMENT_TARGET}
                 location={counselor.location}
                 rating={counselor.average_rating}
                 reviews={counselor.review_count}
