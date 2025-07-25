@@ -36,9 +36,22 @@ export const InvoiceContainer = styled.div`
     }
   }
 
+  /* Global styles for react-select dropdowns */
+  .select__menu {
+    z-index: 1001 !important;
+  }
+
+  .select__menu-list {
+    z-index: 1001 !important;
+  }
+
+  .select__menu-portal {
+    z-index: 1001 !important;
+  }
+
   .top-section-wrapper {
     padding-top: 20px;
-    position: sticky;
+    // position: sticky;
     top: 60px;
     z-index: 5;
     background: var(--background-color);
@@ -81,7 +94,7 @@ export const InvoiceContainer = styled.div`
       .search-container {
         display: flex;
         gap: 8px;
-        align-items: end;
+        align-items: center;
         justify-content: space-between;
         margin-bottom: 10px;
         @media screen and (max-width: 768px) {
@@ -102,6 +115,8 @@ export const InvoiceContainer = styled.div`
             display: flex;
             gap: 8px;
             align-items: start;
+            position: relative;
+            z-index: 1000;
             .custom-select {
               width: max-content;
               margin-bottom: 0px;
@@ -114,8 +129,16 @@ export const InvoiceContainer = styled.div`
             }
             .select-container .multi-select {
               padding-bottom: 0px;
+              position: relative;
+              z-index: 1000;
               .select__control {
                 padding: 1px 6px;
+              }
+              .select__menu {
+                z-index: 1001 !important;
+              }
+              .select__menu-list {
+                z-index: 1001 !important;
               }
             }
           }

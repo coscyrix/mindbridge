@@ -120,7 +120,7 @@ export default class UserController {
     const data = req.body;
 
     if (!data.email || !data.old_password || !data.new_password) {
-      res.status(400).json({ message: 'Missing mandatory fields' });
+      res.status(400).json({ message: "Email, old password, and new password are required" });
       return;
     }
 

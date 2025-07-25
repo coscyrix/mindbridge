@@ -1,3 +1,8 @@
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import localizedFormat from "dayjs/plugin/localizedFormat";
+import relativeTime from "dayjs/plugin/relativeTime";
 export function mapFormDataToQuestions(formData, allQuestions) {
   const result = [];
   for (const [code, score] of Object.entries(formData)) {
@@ -80,3 +85,19 @@ export function convertLocalToUTCTime(req_dte, req_time) {
 
   return utcDateTime;
 }
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(localizedFormat);
+
+export const getCurrentTimestamp = () => dayjs().toISOString();
+
+export const formatReadableDate = (date) =>
+  dayjs(date).format("YYYY-MM-DD HH:mm:ss");
+
+export const formatWithTimezone = (date, tz = "Asia/Kolkata") =>
+  dayjs(date).tz(tz).format("YYYY-MM-DD HH:mm:ss z");
+
+dayjs.extend(relativeTime);
+
+export const fromNow = (date) => dayjs(date).fromNow();

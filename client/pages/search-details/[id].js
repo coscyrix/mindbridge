@@ -50,7 +50,9 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import CustomLoader from "../../components/Loader/CustomLoader";
 import CustomButton from "../../components/CustomButton";
-
+import { bookAppointmentSchema } from "../../utils/validationSchema/validationSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { TREATMENT_TARGET } from "../../utils/constants";
 const SearchDetails = () => {
   const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
 
@@ -58,14 +60,18 @@ const SearchDetails = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const methods = useForm({
+    resolver: zodResolver(bookAppointmentSchema),
     mode: "onTouched",
     defaultValues: {
       customer_name: "",
       customer_email: "",
+      customer_phone_no: "",
       service: "",
       appointment_date: null,
+      description: "",
     },
   });
+
   const [selectedService, setSelectedService] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
   const [isSendingAppointment, setIsSendingAppointment] = useState(false);
@@ -163,8 +169,6 @@ const SearchDetails = () => {
     };
   });
 
-  console.log(selectedDate);
-
   const handleDateSelect = (date) => {
     setSelectedDate(date);
   };
@@ -224,27 +228,26 @@ const SearchDetails = () => {
 
   const onSubmit = async (values) => {
     try {
-      if (!selectedService || !appointmentDate) {
-        toast.error("All fields are required!");
-      } else {
-        setIsSendingAppointment(true);
-        const payload = {
-          counselor_profile_id: id,
-          customer_name: values?.customer_name,
-          customer_email: values?.customer_email,
-          service: selectedService,
-          appointment_date: appointmentDate,
-        };
-        const { data, status } = await api.post(
-          "counselor-profile/send-appointment-email",
-          payload
-        );
-        if (data && status) {
-          toast.success(data?.message);
-          handleBookAppointmentClose();
-        }
+      setIsSendingAppointment(true);
+      const payload = {
+        counselor_profile_id: id,
+        customer_name: values?.customer_name,
+        customer_email: values?.customer_email,
+        service: values.service,
+        appointment_date: values.appointment_date,
+        customer_phone_no: values.customer_phone_no,
+        description: values.description,
+      };
+      const { data, status } = await api.post(
+        "counselor-profile/send-appointment-email",
+        payload
+      );
+      if (data && status) {
+        toast.success(data?.message);
+        handleBookAppointmentClose();
       }
     } catch (error) {
+      toast.error(error.response.data.message);
       console.error(error);
     } finally {
       setIsSendingAppointment(false);
@@ -316,13 +319,16 @@ const SearchDetails = () => {
                   </span>
                   <div>
                     <h3>Specialties</h3>
-                    <p>{specialties.join(", ")}</p>
+                    {TREATMENT_TARGET.map((specialties, index) => (
+                      <p key={specialties.label}> {specialties.label}</p>
+                    ))}
+                    {/* <p>{specialties.join(", ")}</p> */}
                   </div>
                 </DetailItem>
                 <DetailItem>
                   <span className="icon">
                     <img src="/assets/icons/fontisto_person.svg" />
-                  </span>
+                  </span>s
                   <div>
                     <h3>Service Modalities</h3>
                     <p>{(counselor.service_modalities || []).join(", ")}</p>
@@ -457,7 +463,7 @@ const SearchDetails = () => {
         <FormProvider {...methods}>
           <form
             onSubmit={methods.handleSubmit(onSubmit)}
-            style={{ padding: "0px 20px 0px 20px", minWidth: 320 }}
+            style={{ padding: "0 20px", minWidth: 320 }}
           >
             <div style={{ marginBottom: 18 }}>
               <label
@@ -468,7 +474,7 @@ const SearchDetails = () => {
               </label>
               <input
                 id="customer_name"
-                name="customer_name"
+                {...methods.register("customer_name")}
                 type="text"
                 placeholder="Enter your name"
                 style={{
@@ -478,9 +484,6 @@ const SearchDetails = () => {
                   border: "1px solid #e7e7e9",
                   fontSize: 15,
                 }}
-                {...methods.register("customer_name", {
-                  required: "Name is required",
-                })}
               />
               {methods.formState.errors.customer_name && (
                 <p
@@ -494,6 +497,7 @@ const SearchDetails = () => {
                 </p>
               )}
             </div>
+
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="customer_email"
@@ -503,7 +507,7 @@ const SearchDetails = () => {
               </label>
               <input
                 id="customer_email"
-                name="customer_email"
+                {...methods.register("customer_email")}
                 type="email"
                 placeholder="Enter your email"
                 style={{
@@ -513,9 +517,6 @@ const SearchDetails = () => {
                   border: "1px solid #e7e7e9",
                   fontSize: 15,
                 }}
-                {...methods.register("customer_email", {
-                  required: "Email is required",
-                })}
               />
               {methods.formState.errors.customer_email && (
                 <p
@@ -529,6 +530,40 @@ const SearchDetails = () => {
                 </p>
               )}
             </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <label
+                htmlFor="customer_phone_no"
+                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+              >
+                Customer Contact No.
+              </label>
+              <input
+                id="customer_phone_no"
+                {...methods.register("customer_phone_no")}
+                type="tel"
+                placeholder="Enter your number"
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: 6,
+                  border: "1px solid #e7e7e9",
+                  fontSize: 15,
+                }}
+              />
+              {methods.formState.errors.customer_phone_no && (
+                <p
+                  style={{
+                    color: "#f04438",
+                    margin: "6px 0 0 2px",
+                    fontSize: 13,
+                  }}
+                >
+                  {methods.formState.errors.customer_phone_no.message}
+                </p>
+              )}
+            </div>
+
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="service"
@@ -538,7 +573,7 @@ const SearchDetails = () => {
               </label>
               <select
                 id="service"
-                name="service"
+                {...methods.register("service")}
                 style={{
                   width: "100%",
                   padding: "10px",
@@ -546,20 +581,27 @@ const SearchDetails = () => {
                   border: "1px solid #e7e7e9",
                   fontSize: 15,
                 }}
-                value={selectedService}
-                onChange={(e) => {
-                  setSelectedService(e.target.value);
-                }}
               >
                 <option value="">Select a service</option>
-                {serviceOptions &&
-                  serviceOptions.map((opt, idx) => (
-                    <option key={idx} value={opt.option}>
-                      {opt.option}
-                    </option>
-                  ))}
+                {TREATMENT_TARGET?.map((opt, idx) => (
+                  <option key={idx} value={opt.label}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
+              {methods.formState.errors.service && (
+                <p
+                  style={{
+                    color: "#f04438",
+                    margin: "6px 0 0 2px",
+                    fontSize: 13,
+                  }}
+                >
+                  {methods.formState.errors.service.message}
+                </p>
+              )}
             </div>
+
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="appointment_date"
@@ -569,8 +611,9 @@ const SearchDetails = () => {
               </label>
               <input
                 id="appointment_date"
-                name="appointment_date"
                 type="date"
+                min={new Date().toISOString().split("T")[0]}
+                {...methods.register("appointment_date")}
                 style={{
                   width: "100%",
                   padding: "10px",
@@ -578,13 +621,52 @@ const SearchDetails = () => {
                   border: "1px solid #e7e7e9",
                   fontSize: 15,
                 }}
-                value={appointmentDate}
+              />
+              {methods.formState.errors.appointment_date && (
+                <p
+                  style={{
+                    color: "#f04438",
+                    margin: "6px 0 0 2px",
+                    fontSize: 13,
+                  }}
+                >
+                  {methods.formState.errors.appointment_date.message}
+                </p>
+              )}
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label
+                htmlFor="description"
+                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+              >
+                Description
+              </label>
+              <input
+                id="description"
+                type="textarea"
                 min={new Date().toISOString().split("T")[0]}
-                onChange={(e) => {
-                  setAppointmentDate(e.target.value);
+                {...methods.register("description")}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: 6,
+                  border: "1px solid #e7e7e9",
+                  fontSize: 15,
                 }}
               />
+              {methods.formState.errors.description && (
+                <p
+                  style={{
+                    color: "#f04438",
+                    margin: "6px 0 0 2px",
+                    fontSize: 13,
+                  }}
+                >
+                  {methods.formState.errors.description.message}
+                </p>
+              )}
             </div>
+
             <div
               style={{
                 display: "flex",
@@ -594,6 +676,7 @@ const SearchDetails = () => {
             >
               <button
                 type="button"
+                onClick={handleBookAppointmentClose}
                 style={{
                   padding: "10px 24px",
                   borderRadius: 6,
@@ -602,7 +685,6 @@ const SearchDetails = () => {
                   cursor: "pointer",
                   minWidth: 107,
                 }}
-                onClick={handleBookAppointmentClose}
               >
                 Cancel
               </button>

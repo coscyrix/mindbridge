@@ -81,13 +81,11 @@ function ClientSession() {
     try {
       const response = await CommonServices.getClients();
       if (response.status === 200) {
-        console.log("response", userObj?.tenant_id);
         const { data } = response;
         const allCounselors = data?.rec?.filter(
           (client) =>
             client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
         );
-        console.log('allCounselors', allCounselors);
         
         const counselorOptions = allCounselors?.map((item) => ({
           label: item?.user_first_name + " " + item?.user_last_name,
@@ -222,8 +220,6 @@ function ClientSession() {
     fetchSessions(selectCounselor);
     getInvoice();
   }, [userObj]);
-
-  console.log('counselors', counselors);
 
   return (
     <ClientSessionWrapper>

@@ -1,12 +1,14 @@
 import DBconn from '../config/db.config.js';
 import knex from 'knex';
 import logger from '../config/winston.js';
+import CounselorTargetOutcome from './counselorTargetOutcome.js';
 
 const db = knex(DBconn.dbConn.development);
 
 export default class CounselorProfile {
   constructor() {
     this.db = db;
+    this.counselorTargetOutcome = new CounselorTargetOutcome();
   }
 
   async createCounselorProfile(data) {
@@ -38,8 +40,6 @@ export default class CounselorProfile {
           license_file_url: data.license_file_url,
           profile_notes: data.profile_notes,
           location: data.location,
-          services_offered: data.services_offered,
-          specialties: data.specialties,
           service_modalities: data.service_modalities,
           availability: data.availability,
           is_verified: data.is_verified || false,
@@ -49,7 +49,24 @@ export default class CounselorProfile {
           public_phone: data.public_phone
         });
 
-      return { message: 'Counselor profile created successfully', id: result[0] };
+      const counselor_profile_id = result[0];
+
+      // Add target outcome mappings if provided (array)
+      if (data.target_outcome_id && Array.isArray(data.target_outcome_id)) {
+        for (const tid of data.target_outcome_id) {
+          await this.counselorTargetOutcome.addCounselorTargetOutcome({
+            counselor_profile_id,
+            target_outcome_id: tid
+          });
+        }
+      } else if (data.target_outcome_id) {
+        await this.counselorTargetOutcome.addCounselorTargetOutcome({
+          counselor_profile_id,
+          target_outcome_id: data.target_outcome_id
+        });
+      }
+
+      return { message: 'Counselor profile created successfully', id: counselor_profile_id };
     } catch (error) {
       logger.error('Error creating counselor profile:', error);
       if (error.code === 'ER_DUP_ENTRY') {
@@ -65,15 +82,11 @@ export default class CounselorProfile {
   async updateCounselorProfile(counselor_profile_id, data) {
     try {
       const updateData = {};
-      
-      // Handle all fields
       if (data.profile_picture_url) updateData.profile_picture_url = data.profile_picture_url;
       if (data.license_number) updateData.license_number = data.license_number;
       if (data.license_file_url) updateData.license_file_url = data.license_file_url;
       if (data.profile_notes) updateData.profile_notes = data.profile_notes;
       if (data.location) updateData.location = data.location;
-      if (data.services_offered) updateData.services_offered = data.services_offered;
-      if (data.specialties) updateData.specialties = data.specialties;
       if (data.service_modalities) updateData.service_modalities = data.service_modalities;
       if (data.availability) updateData.availability = data.availability;
       if (data.is_verified !== undefined) updateData.is_verified = data.is_verified;
@@ -82,11 +95,35 @@ export default class CounselorProfile {
       if (data.race) updateData.race = data.race;
       if (data.public_phone) updateData.public_phone = data.public_phone;
 
-      const result = await this.db
+      await this.db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('counselor_profile')
         .where('counselor_profile_id', counselor_profile_id)
         .update(updateData);
+
+      // Update or add target outcome mappings if provided (array)
+      if (data.target_outcome_id) {
+        // Remove all existing mappings first
+        const existing = await this.counselorTargetOutcome.getCounselorTargetOutcome({ counselor_profile_id });
+        if (existing.rec && existing.rec.length > 0) {
+          for (const row of existing.rec) {
+            await this.counselorTargetOutcome.deleteCounselorTargetOutcome(row.id);
+          }
+        }
+        if (Array.isArray(data.target_outcome_id)) {
+          for (const tid of data.target_outcome_id) {
+            await this.counselorTargetOutcome.addCounselorTargetOutcome({
+              counselor_profile_id,
+              target_outcome_id: tid
+            });
+          }
+        } else {
+          await this.counselorTargetOutcome.addCounselorTargetOutcome({
+            counselor_profile_id,
+            target_outcome_id: data.target_outcome_id
+          });
+        }
+      }
 
       return { message: 'Counselor profile updated successfully' };
     } catch (error) {
@@ -103,109 +140,36 @@ export default class CounselorProfile {
           'cp.*',
           'up.user_first_name',
           'up.user_last_name',
-          'u.email',
-          this.db.raw('COALESCE(JSON_ARRAYAGG(' +
-            'CASE WHEN s.service_id IS NOT NULL THEN ' +
-            'JSON_OBJECT(' +
-            '"service_id", s.service_id, ' +
-            '"service_name", s.service_name, ' +
-            '"service_code", s.service_code, ' +
-            '"is_report", s.is_report, ' +
-            '"is_additional", s.is_additional, ' +
-            '"total_invoice", s.total_invoice, ' +
-            '"nbr_of_sessions", s.nbr_of_sessions, ' +
-            '"svc_formula_typ", s.svc_formula_typ, ' +
-            '"svc_formula", s.svc_formula, ' +
-            '"gst", s.gst, ' +
-            '"is_specialty", cs.is_specialty' +
-            ') END), JSON_ARRAY()) as services')
+          'u.email'
         )
         .from('counselor_profile as cp')
         .join('user_profile as up', 'cp.user_profile_id', 'up.user_profile_id')
-        .join('users as u', 'up.user_id', 'u.user_id')
-        .leftJoin('counselor_services as cs', 'cp.counselor_profile_id', 'cs.counselor_profile_id')
-        .leftJoin('service as s', 'cs.service_id', 's.service_id')
-        .groupBy('cp.counselor_profile_id');
+        .join('users as u', 'up.user_id', 'u.user_id');
 
       if (filters.counselor_profile_id) {
         query.where('cp.counselor_profile_id', filters.counselor_profile_id);
       }
-
       if (filters.user_profile_id) {
         query.where('cp.user_profile_id', filters.user_profile_id);
       }
-
       if (filters.location) {
         query.where('cp.location', 'like', `%${filters.location}%`);
       }
-
       if (filters.gender) {
         query.where('cp.gender', filters.gender);
       }
-
       if (filters.race) {
         query.where('cp.race', filters.race);
       }
 
-      if (filters.specialty) {
-        query.where('cp.specialties', 'like', `%${filters.specialty}%`);
-      }
-
       const results = await query;
-      console.log('Raw query results:', JSON.stringify(results, null, 2));
 
-      // Process the services array for each profile
-      if (results.length > 0) {
-        results.forEach(profile => {
-          try {
-            console.log('Processing profile:', profile.counselor_profile_id);
-            console.log('Raw services:', profile.services);
-            
-            if (profile.services && profile.services !== '[null]') {
-              let services;
-              if (typeof profile.services === 'string') {
-                services = JSON.parse(profile.services);
-              } else {
-                services = profile.services;
-              }
-              
-              console.log('Parsed services:', services);
-              
-              if (Array.isArray(services)) {
-                // Filter out null values and empty objects
-                const validServices = services.filter(s => s && Object.keys(s).length > 0);
-                console.log('Valid services:', validServices);
-                
-                profile.services_offered = validServices.filter(s => !s.is_specialty);
-                profile.specialties = validServices.filter(s => s.is_specialty);
-                
-                console.log('Services offered:', profile.services_offered);
-                console.log('Specialties:', profile.specialties);
-              } else {
-                profile.services_offered = [];
-                profile.specialties = [];
-              }
-            } else {
-              profile.services_offered = [];
-              profile.specialties = [];
-            }
-            delete profile.services;
-          } catch (error) {
-            console.error('Error processing services for profile:', profile.counselor_profile_id, error);
-            profile.services_offered = [];
-            profile.specialties = [];
-          }
+      // Attach all target outcomes for each profile
+      for (const profile of results) {
+        const targetOutcomes = await this.counselorTargetOutcome.getCounselorTargetOutcome({
+          counselor_profile_id: profile.counselor_profile_id
         });
-      }
-
-      // If getting a single counselor profile, include related counselors
-      if (filters.counselor_profile_id && results.length > 0) {
-        const relatedCounselors = await this.getRelatedCounselors(filters.counselor_profile_id);
-        return {
-          message: 'Counselor profile retrieved successfully',
-          rec: results,
-          related_counselors: relatedCounselors.rec
-        };
+        profile.target_outcomes = targetOutcomes.rec || [];
       }
 
       return {

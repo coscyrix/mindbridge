@@ -81,7 +81,7 @@ const LocationSearch = ({ value, onChange, error, label }) => {
     if (!isLoaded || loadError) return;
 
     const options = {
-      componentRestrictions: { country: "us" }, // Restrict to US locations
+      componentRestrictions: undefined, // Restrict to US locations
       fields: ["address_components", "formatted_address", "geometry"],
       types: ["address"],
     };
@@ -96,11 +96,16 @@ const LocationSearch = ({ value, onChange, error, label }) => {
 
       if (place.geometry) {
         const locationData = {
-          value: place.formatted_address,
-          label: place.formatted_address,
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-          address_components: place.address_components,
+          // value: place.formatted_address,
+          // label: place.formatted_address,
+          // lat: place.geometry.location.lat(),
+          // lng: place.geometry.location.lng(),
+          // address_components: place.address_components,
+          value: inputRef.current.value, // use raw input
+          label: inputRef.current.value,
+          lat: place.geometry?.location?.lat?.() ?? null,
+          lng: place.geometry?.location?.lng?.() ?? null,
+          address_components: place.address_components || [],
         };
         setInputValue(place.formatted_address);
         onChange(locationData);

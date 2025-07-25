@@ -2,7 +2,7 @@ import React from "react";
 import { useRouter } from "next/router";
 import { CardWrapper } from "./style";
 import { StarIcon } from "../../../public/assets/icons";
-
+import { TREATMENT_TARGET } from "../../../utils/constants";
 const CounselorCard = ({
   name,
   speciality,
@@ -137,8 +137,10 @@ const CounselorCard = ({
                 <p>{services}</p>
               </div>
               <div className="servicesDetails" style={{ marginTop: "20px" }}>
-                <h6>Speciality</h6>
-                <p>{speciality}</p>
+                <h6>Treatment target</h6>
+                {TREATMENT_TARGET.map((specialties, index) => (
+                  <p key={specialties.value || index}>{specialties.label}</p>
+                ))}
               </div>
               <div
                 className="availabilityWrapper"

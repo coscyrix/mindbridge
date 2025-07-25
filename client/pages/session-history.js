@@ -80,7 +80,9 @@ function SessionHistory() {
           counselor_id: counselorId,
         });
       } else {
-        response = await CommonServices.getSessionsByCounselor({role_id:4});
+        response = await CommonServices.getSessionsByCounselor({
+          role_id: 767565,
+        });
       }
 
       if (response.status === 200) {
@@ -142,12 +144,12 @@ function SessionHistory() {
     router.push(`/client-session/${id}`);
   };
 
- useEffect(() => {
-   // Ensure the initial value is set correctly
-   const initialCounselor = 'allCounselors';
-   setSelectCounselor(initialCounselor);
-   fetchSessions(initialCounselor);
- }, []);
+  useEffect(() => {
+    // Ensure the initial value is set correctly
+    const initialCounselor = "allCounselors";
+    setSelectCounselor(initialCounselor);
+    fetchSessions(initialCounselor);
+  }, []);
 
   useEffect(() => {
     updateUserDataToDisplay();

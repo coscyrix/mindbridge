@@ -68,17 +68,19 @@ export default function CreateServiceForm({
       total_invoice: parseFloat(data.total_invoice),
       gst: data.gst,
       tenant_id: userDetails?.tenant_id,
+      user_profile_id: userDetails?.user_profile_id,
     };
-
+    
     const payload = {
       service_name: data.service_name,
       service_code: data.service_code,
-      svc_formula_typ: "d",
-      nbr_of_sessions: Number(data.nbr_of_sessions),
-      svc_formula: svcFormulaArray || [],
+      // svc_formula_typ: "d",
+      // nbr_of_sessions: Number(data.nbr_of_sessions),
+      // svc_formula: svcFormulaArray || [],
       total_invoice: parseFloat(data.total_invoice),
       gst: data.gst,
       tenant_id: userDetails?.tenant_id,
+      user_profile_id:userDetails?.user_profile_id
     };
 
     if (initialData) {

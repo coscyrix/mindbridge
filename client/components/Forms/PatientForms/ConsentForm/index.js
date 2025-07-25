@@ -10,7 +10,6 @@ import { useRouter } from "next/router";
 import CustomInputField from "../../../CustomInputField";
 import Spinner from "../../../common/Spinner";
 import SignatureField from "../../../SignatureCanvas";
-
 const ConsentForm = ({ initialData, loader }) => {
   const signaturePadRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -56,13 +55,11 @@ const ConsentForm = ({ initialData, loader }) => {
         imgBase64,
         tenant_id,
       };
-      console.log(payload)
       if (!client_id || !form_id || !tenant_id) {
         toast.error("Required parameters are missing from the route.");
         setLoading(false);
         return;
       }
-      console.log(payload);
       const response = await api.post("/feedback/consent", payload);
       if (response.status === 200) {
         toast.success(data?.message || "Consent form submitted successfully!");

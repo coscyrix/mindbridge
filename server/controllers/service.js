@@ -9,7 +9,22 @@ export default class ServiceController {
   //////////////////////////////////////////
   async postService(req, res) {
     const data = req.body;
-    data.tenant_id = process.env.TENANT_ID;
+    const { tenant_id: userTenantId, isAdmin } = req.decoded || {};
+
+    // Only admin or tenant can create a service
+    if (!isAdmin && !userTenantId) {
+      return res.status(403).json({ message: 'Only tenant or admin can create a service' });
+    }
+
+    if (isAdmin) {
+      // Admin must specify tenant_id in body
+      if (!data.tenant_id) {
+        return res.status(400).json({ message: 'Admin must specify tenant_id in request body' });
+      }
+    } else {
+      // Tenant: force tenant_id from token
+      data.tenant_id = userTenantId;
+    }
 
     const missingFields = [];
     if (!data.service_name) missingFields.push('service_name');
@@ -92,16 +107,18 @@ export default class ServiceController {
 
   async getServiceById(req, res) {
     const service_id = req.query.service_id;
+    const { tenant_id: userTenantId, isAdmin } = req.decoded || {};
+    let data = { service_id };
 
-    // if (!service_id) {
-    //   res.status(400).json({ message: "Missing mandatory params" });
-    //   return;
-    // }
-
-    const data = {
-      service_id: service_id,
-      // role_id: data.role_id
-    };
+    // Admin can filter by tenant_id if provided, else see all
+    if (isAdmin) {
+      if (req.query.tenant_id) {
+        data.tenant_id = req.query.tenant_id;
+      }
+    } else {
+      // Non-admins only see their own tenant's services
+      data.tenant_id = userTenantId;
+    }
 
     const service = new ServiceService();
     const rec = await service.getServiceById(data);

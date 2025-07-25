@@ -24,6 +24,8 @@ export default class UserProfileService {
       user_last_name: joi.string().min(2).required(),
       user_phone_nbr: joi.number().optional(),
       user_typ_id: joi.number().optional(),
+      admin_fee: joi.number().precision(2).optional(),
+      tax_percent: joi.number().precision(2).optional(),
       clam_num: joi.number().optional(),
       tenant_id: joi.number().required(),
     });
@@ -54,17 +56,12 @@ export default class UserProfileService {
       // if the user is manager create tenant
       const postTenantName = await this.common.postTenant({
         tenant_name: data.tenant_name,
+        admin_fee: data.admin_fee,
+        tax_percent: data.tax_percent
       });
       if (postTenantName.error) {
         return { message: postTenantName.message, error: -1 };
       }
-      //returning generated tenant_id in postTenantName
-      // const checkTenantId =
-      //   await this.common.getTenantByTenantId(postTenantName);
-
-      // if (checkTenantId.error) {
-      //   return { message: checkTenantId.message, error: -1 };
-      // }
       data.tenant_id = Number(postTenantName);
     }
 
@@ -85,6 +82,9 @@ export default class UserProfileService {
       clam_num: joi.number().optional(),
       role_id: joi.number().optional(),
       tenant_id: joi.number().required(),
+      admin_fee: joi.number().precision(2).optional(),
+      tax_percent: joi.number().precision(2).optional(),
+      service_templates: joi.array().optional(),
     });
 
     console.log('//////////////////////////////////////////');
@@ -98,7 +98,35 @@ export default class UserProfileService {
     }
 
     const userProfile = new UserProfile();
-    return userProfile.userPostClientProfile(data);
+    const userProfileResult = await userProfile.userPostClientProfile(data);
+    console.log(userProfileResult, 'userProfileResult');
+
+    if (userProfileResult.error) {
+      return userProfileResult;
+    }
+
+    // If service_templates are provided, copy them for the new tenant (after user profile creation)
+    if (data.role_id === 3 && Array.isArray(data.service_templates) && data.service_templates.length > 0) {
+      const ServiceTemplateService = (await import('./serviceTemplate.js')).default;
+      const serviceTemplateService = new ServiceTemplateService();
+      for (const svc of data.service_templates) {
+        // svc should have template_service_id and price
+        if (!svc.template_service_id || typeof svc.price !== 'number') {
+          return { message: 'Each service_template must have template_service_id and price', error: -1 };
+        }
+        console.log(userProfileResult.tenant_id, 'userProfileResult.tenant_id');
+        
+        // Copy template to tenant's service table with provided price
+        const result = await serviceTemplateService.copyTemplateToTenantService(svc.template_service_id, userProfileResult.tenant_id, svc.price);
+        console.log(result, 'result');
+        
+        if (result.error) {
+          return { message: `Failed to copy service template: ${svc.template_service_id}`, error: -1, details: result };
+        }
+      }
+    }
+
+    return userProfileResult;
   }
 
   //////////////////////////////////////////

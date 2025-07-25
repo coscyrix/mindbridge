@@ -29,7 +29,7 @@ const ConfirmationModal = ({
           />
           <CustomButton
             onClick={!loading && handleAffirmativeAction}
-            style={{ padding: loading ? "5.75px 12px" : "10.5px 12px" }}
+            style={{ padding: loading ? "14px 75px" : "14px 75px" }}
             customClass="save-button"
             title={
               loading ? (

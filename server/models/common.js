@@ -549,6 +549,8 @@ export default class Common {
       const tmpTenant = {
         tenant_name: data.tenant_name,
         tenant_generated_id: generated_id,
+        ...(data.admin_fee !== undefined && { admin_fee: data.admin_fee }),
+        ...(data.tax_percent !== undefined && { tax_percent: data.tax_percent })
       };
 
       const postTenant = await db
@@ -575,6 +577,25 @@ export default class Common {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select()
         .where('tenant_id', tenant_id)
+        .from('tenant');
+
+      if (!rec || rec.length === 0) {
+        return { message: 'Tenant not found', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error getting tenant', error: -1 };
+    }
+  }
+
+  async getTenantByTenantGeneratedId(tenant_generated_id) {
+    try {
+      const rec = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select()
+        .where('tenant_generated_id', tenant_generated_id)
         .from('tenant');
 
       if (!rec || rec.length === 0) {

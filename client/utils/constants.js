@@ -123,7 +123,8 @@ async function exportToExcel(columns, data, tableCaption) {
   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
   const workbook = XLSX.utils.book_new();
 
-  XLSX.utils.book_append_sheet(workbook, worksheet, tableCaption);
+  const safeSheetName = tableCaption.slice(0, 31);
+  XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
   XLSX.writeFile(workbook, `${tableCaption}.xlsx`);
 }
 
@@ -169,7 +170,7 @@ export const SIDEBAR_HEADINGS = [
   {
     id: 8,
     icon: <UsersIcon />,
-    url: "/profile",
+    url: "/onboarding",
     title: "Profile",
   },
   {
@@ -183,6 +184,12 @@ export const SIDEBAR_HEADINGS = [
     icon: <InvoiceIcon />,
     url: "/invoice",
     title: "Invoice",
+  },
+  {
+    id: 8,
+    icon: <DashboardIcon />,
+    url: "/consent-management",
+    title: "Consent Management",
   },
 ];
 
@@ -1861,4 +1868,862 @@ export const SERVICE_FEE_INFO = [
   "Total Monthly Revenue (Include Tax) = $100",
   "Service Fee = $100 * .02 = $2 + 5% (Tax)",
   "Total Service Fee = $2.1",
+];
+
+export const TREATMENT_TARGET = [
+  { label: "Anxiety", value: 1 },
+  { label: "Depression", value: 2 },
+  { label: "Stress Management", value: 3 },
+  { label: "Relationship Issues", value: 4 },
+  { label: "Grief and Loss", value: 5 },
+  { label: "Trauma and PTSD", value: 6 },
+  { label: "Self-Esteem and Self-Confidence Issues", value: 7 },
+  { label: "Addiction and Substance Abuse", value: 8 },
+  { label: "Identity and Self-Exploration", value: 9 },
+  { label: "Family and Parenting Issues", value: 10 },
+  { label: "Work and Career-Related Issues", value: 11 },
+  { label: "Chronic Illness and Health-Related Concerns", value: 12 },
+  { label: "Anger Management", value: 13 },
+  { label: "Eating Disorders and Body Image Issues", value: 14 },
+  { label: "Life Transitions", value: 15 },
+  { label: "Coping with Disability", value: 16 },
+  { label: "Other", value: 17 },
+];
+
+export const CONSENT_OPTIONS = [
+  { label: "Limits of confidentiality", value: "limits_of_confidentiality" },
+  {
+    label: "Session cancellation policy",
+    value: "session_cancellation_policy",
+  },
+  { label: "Data privacy notice", value: "data_privacy_notice" },
+  { label: "Client rights and responsibilities", value: "client_rights" },
+];
+export const CONSENT_CATEGORY_OPTIONS = [
+  { label: "Group Therapy", value: "group_therapy" },
+  { label: "Individual Care", value: "individual_care" },
+  { label: "Family Sessions", value: "family_sessions" },
+  { label: "Psychiatric Evaluation", value: "psychiatric_evaluation" },
+];
+
+export const service_templates = [
+  { service_id: 101, service_price: 120.5 },
+  { service_id: 102, service_price: 150.0 },
+  { service_id: 103, service_price: 99.99 },
+  { service_id: 104, service_price: 200.0 },
+  { service_id: 105, service_price: 250.0 },
+  { service_id: 106, service_price: 175.25 },
+  { service_id: 107, service_price: 80.0 },
+  { service_id: 108, service_price: 300.0 },
+  { service_id: 109, service_price: 199.99 },
+  { service_id: 110, service_price: 220.0 },
+  { service_id: 111, service_price: 185.75 },
+  { service_id: 112, service_price: 140.0 },
+  { service_id: 113, service_price: 210.5 },
+  { service_id: 114, service_price: 95.0 },
+  { service_id: 115, service_price: 135.0 },
+  { service_id: 116, service_price: 180.0 },
+  { service_id: 117, service_price: 275.0 },
+  { service_id: 118, service_price: 160.0 },
+  { service_id: 119, service_price: 240.0 },
+  { service_id: 120, service_price: 110.0 },
+];
+
+export const gasQuestionBank = {
+  Improving_Emotional_Regulation_in_Therapy: [
+    {
+      question:
+        "How often do you use emotional regulation techniques (e.g., breathing exercises, cognitive reframing ,mindfulness)?",
+      name: "q1",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week) ", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How effective are these techniques in reducing your emotional distress?",
+      name: "q2",
+      options: [
+        {
+          label: "They do not help at all, and I feel overwhelmed",
+          value: -2,
+        },
+        {
+          label:
+            "They help slightly, but I still struggle to regulate emotions",
+          value: -1,
+        },
+        {
+          label: "They help somewhat, and I feel some control over my emotions",
+          value: 0,
+        },
+        {
+          label:
+            "They are effective in most situations, and I manage distress well",
+          value: 1,
+        },
+        {
+          label:
+            "They are very effective, and I confidently handle high-stress situations ",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "Do you apply emotional regulation techniques outside of therapy sessions?",
+      name: "q3",
+      options: [
+        {
+          label: "No, I only use them in therapy",
+          value: -2,
+        },
+        {
+          label: "Rarely, I forget to use them in daily life",
+          value: -1,
+        },
+        {
+          label: "Sometimes, I remember to use them in specific situations",
+          value: 0,
+        },
+        {
+          label: "Often, I apply them in most situations without reminders",
+          value: 1,
+        },
+        {
+          label: "Always, I use them automatically in all stressful situations",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How confident do you feel in managing emotional distress on your own?",
+      name: "q4",
+      options: [
+        {
+          label: "Not confident at all, I feel overwhelmed frequently",
+          value: -2,
+        },
+        {
+          label: "Slightly confident, but I need guidance",
+          value: -1,
+        },
+        {
+          label:
+            "Moderately confident, I can manage some emotions independently",
+          value: 0,
+        },
+        {
+          label: "Confident, I regulate emotions well most of the time",
+          value: 1,
+        },
+        {
+          label:
+            "Very confident, I handle emotions independently and effectively",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "Have you noticed a change in your emotional well-being since starting therapy?",
+      name: "q5",
+      options: [
+        {
+          label: "No improvement, I still feel the same distress",
+          value: -2,
+        },
+        {
+          label: "Minimal improvement, I struggle with emotional regulation",
+          value: -1,
+        },
+        {
+          label: "Some improvement, I feel more in control of emotions",
+          value: 0,
+        },
+        {
+          label:
+            "Significant improvement, I handle emotions better than before ",
+          value: 1,
+        },
+        {
+          label: "Major improvement, I feel empowered and emotionally balanced",
+          value: 2,
+        },
+      ],
+    },
+  ],
+  Depression: [
+    {
+      question: "How often do you engage in activities that improve your mood?",
+      name: "q1",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week) ", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+    {
+      question: "How well can you manage negative thoughts?",
+      name: "q2",
+      options: [
+        { label: "Not at all, negative thoughts overwhelm me", value: -2 },
+        { label: "Slightly, but I struggle most of the time", value: -1 },
+        { label: "Somewhat, I can manage them sometimes", value: 0 },
+        { label: "Well, I manage them in most situations", value: 1 },
+        {
+          label: "Very well, I manage negative thoughts confidently",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How much energy and motivation do you feel daily?",
+      name: "q3",
+      options: [
+        { label: "None, I feel exhausted and unmotivated", value: -2 },
+        {
+          label: "Low, I have minimal energy and struggle to start tasks",
+          value: -1,
+        },
+        { label: "Moderate, I can get through daily tasks", value: 0 },
+        { label: "Good, I feel energetic and motivated most days", value: 1 },
+        {
+          label: "Very good, I feel energized and motivated every day",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How frequently do you engage in social interactions?",
+      name: "q4",
+      options: [
+        { label: "Never, I avoid social contact", value: -2 },
+        {
+          label: "Rarely, only when necessary",
+          value: -1,
+        },
+        { label: "Sometimes, in specific situations", value: 0 },
+        { label: "Often, I engage with others regularly ", value: 1 },
+        {
+          label: "Very often, I socialize freely and confidently ",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How much have depressive symptoms decreased since starting therapy?",
+      name: "q5",
+      options: [
+        { label: "No change, I feel the same ", value: -2 },
+        {
+          label: "Minimal change, symptoms remain strong",
+          value: -1,
+        },
+        { label: "Some change, I feel slightly better", value: 0 },
+        { label: "Significant change, I feel much better", value: 1 },
+        {
+          label: "Major change, I feel greatly improved",
+          value: 2,
+        },
+      ],
+    },
+  ],
+  Stress_Management: [
+    {
+      question:
+        "How often do you use stress management techniques (e.g., relaxation exercises, time management, self-care)?",
+      name: "q1",
+      options: [
+        { label: "Never (0 times per week) ", value: -2 },
+        {
+          label: "Rarely (1-2 times per week)",
+          value: -1,
+        },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        {
+          label: "Daily (7+ times per week) ",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How well do you balance work and personal life?",
+      name: "q2",
+      options: [
+        { label: "Not at all, I feel constantly unbalanced", value: -2 },
+        { label: "Slightly, but it's difficult most days", value: -1 },
+        { label: "Somewhat, I maintain balance sometimes", value: 0 },
+        { label: "Well, I balance work and life in most situations", value: 1 },
+        {
+          label:
+            "Very well, I maintain a healthy work-life balance confidently",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How effectively can you shift your mindset in stressful situations?",
+      name: "q3",
+      options: [
+        { label: "Not at all, stress controls my thoughts", value: -2 },
+        { label: "Slightly, but it's very challenging", value: -1 },
+        { label: "Somewhat, I can reframe stress sometimes", value: 0 },
+        {
+          label: "Effectively, I manage my mindset well in most situations",
+          value: 1,
+        },
+        {
+          label: "Very effectively, I shift my mindset confidently in stress",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How often do you feel overwhelmed by stress?",
+      name: "q4",
+      options: [
+        { label: "Always, I feel overwhelmed daily", value: -2 },
+        { label: "Often, stress affects me regularly", value: -1 },
+        { label: "Sometimes, I feel stressed but manage it", value: 0 },
+        {
+          label: "Rarely, I feel only mild stress",
+          value: 1,
+        },
+        {
+          label: "Never, I handle stress calmly and stay balanced",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How much has your ability to handle stress improved?",
+      name: "q5",
+      options: [
+        { label: "No change, I still feel overwhelmed", value: -2 },
+        { label: "Minimal change, I still struggle a lot", value: -1 },
+        { label: "Some change, I handle stress slightly better", value: 0 },
+        {
+          label: "Significant change, I manage stress well now",
+          value: 1,
+        },
+        {
+          label: "Major change, I feel confident and resilient",
+          value: 2,
+        },
+      ],
+    },
+  ],
+  Self_Esteem_and_Self_Confidence_Issues: [
+    {
+      question: "How often do you engage in positive self-talk?",
+      name: "q1",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        {
+          label: "Regularly (5-6 times per week)",
+          value: 1,
+        },
+        {
+          label: "Daily (7+ times per week)",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How confident are you in setting and achieving personal goals?",
+      name: "q2",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident, but I need help", value: -1 },
+        { label: "Somewhat confident", value: 0 },
+        {
+          label: "RConfident, I set and achieve goals regularly",
+          value: 1,
+        },
+        {
+          label: "Very confident, I set and achieve goals easily",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How well do you accept compliments and acknowledge your strengths?",
+      name: "q3",
+      options: [
+        { label: "Not at all, I reject compliments", value: -2 },
+        { label: "Rarely, I struggle to accept them", value: -1 },
+        { label: "Somewhat, I accept them sometimes", value: 0 },
+        {
+          label: "Well, I accept compliments and recognize strengths",
+          value: 1,
+        },
+        {
+          label: "Very well, I appreciate compliments and know my strengths",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How frequently do you engage in activities that boost self-esteem?",
+      name: "q4",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        {
+          label: "Often",
+          value: 1,
+        },
+        {
+          label: "Very Often",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How much has your self-confidence improved?",
+      name: "q5",
+      options: [
+        { label: "No improvement", value: -2 },
+        { label: "Minimal improvement", value: -1 },
+        { label: "Some improvement", value: 0 },
+        {
+          label: "Significant improvement",
+          value: 1,
+        },
+        {
+          label: "Major improvement",
+          value: 2,
+        },
+      ],
+    },
+  ],
+  Addiction_and_Substance_Abuse: [
+    {
+      question:
+        "How often do you use alternative coping strategies instead of substances?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Always", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in resisting urges or cravings?",
+      name: "q2",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Somewhat confident", value: 0 },
+        {
+          label: "Confident",
+          value: 1,
+        },
+        {
+          label: "Very confident",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How frequently do you engage in structured recovery activities (e.g., support groups, therapy)?",
+      name: "q3",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Very often", value: 2 },
+      ],
+    },
+    {
+      question: "How well do you manage stress without substance use?",
+      name: "q4",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Slightly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How much has your substance use decreased over time?",
+      name: "q5",
+      options: [
+        { label: "No decerease", value: -2 },
+        { label: "Minimal decerease", value: -1 },
+        { label: "Some decerease", value: 0 },
+        { label: "Significant decerease", value: 1 },
+        { label: "Major decerease", value: 2 },
+      ],
+    },
+  ],
+  Work_and_Career_Related_Issues: [
+    {
+      question: "How often do you feel motivated and engaged in your work?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Always", value: 2 },
+      ],
+    },
+    {
+      question: "How well do you manage workplace stress and challenges?",
+      name: "q2",
+      options: [
+        { label: "Not well at all", value: -2 },
+        { label: "Slightly well", value: -1 },
+        { label: "Somewhat well", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in making career-related decisions?",
+      name: "q3",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Somewhat confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How frequently do you advocate for yourself professionally (e.g., boundaries, fair workload)?",
+      name: "q4",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Always", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How much has your job satisfaction and career confidence improved?",
+      name: "q5",
+      options: [
+        { label: "No improvement", value: -2 },
+        { label: "Minimal improvement", value: -1 },
+        { label: "Some improvement", value: 0 },
+        {
+          label: "Significant improvement",
+          value: 1,
+        },
+        {
+          label: "Major improvement",
+          value: 2,
+        },
+      ],
+    },
+  ],
+  Anger_Management: [
+    {
+      question:
+        "How often do you use anger management techniques (e.g., deep breathing, cognitive reframing)?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        {
+          label: "Often",
+          value: 1,
+        },
+        {
+          label: "Always",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How well can you de-escalate tense situations?",
+      name: "q2",
+      options: [
+        { label: "Not well at all", value: -2 },
+        { label: "Slightly well", value: -1 },
+        { label: "Somewhat well", value: 0 },
+        {
+          label: "Well",
+          value: 1,
+        },
+        {
+          label: "Very well",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How frequently do you express frustration in a controlled way?",
+      name: "q3",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        {
+          label: "Often",
+          value: 1,
+        },
+        {
+          label: "Always",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How confident are you in managing triggers without aggression?",
+      name: "q4",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Somewhat confident", value: 0 },
+        {
+          label: "Confident",
+          value: 1,
+        },
+        {
+          label: "Very confident",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How much has your ability to regulate anger improved?",
+      name: "q5",
+      options: [
+        { label: "No improvement", value: -2 },
+        { label: "Minimal improvement", value: -1 },
+        { label: "Some improvement", value: 0 },
+        {
+          label: "Significant improvement",
+          value: 1,
+        },
+        {
+          label: "Major improvement",
+          value: 2,
+        },
+      ],
+    },
+  ],
+  Eating_Disorders_and_Body_Image_Issues: [
+    {
+      question: "How often do you engage in mindful eating habits?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        {
+          label: "Often",
+          value: 1,
+        },
+        {
+          label: "Always",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How well can you challenge negative thoughts about body image?",
+      name: "q2",
+      options: [
+        { label: "Not well at all", value: -2 },
+        { label: "Slightly well", value: -1 },
+        { label: "Somewhat well", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How frequently do you eat in response to hunger rather than emotions?",
+      name: "q3",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        {
+          label: "Often",
+          value: 1,
+        },
+        {
+          label: "Always",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How confident are you in managing food-related stress?",
+      name: "q4",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Somewhat confident", value: 0 },
+        {
+          label: "Confident",
+          value: 1,
+        },
+        {
+          label: "Very confident",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question:
+        "How much has your relationship with food and body image improved?",
+      name: "q5",
+      options: [
+        { label: "No improvement", value: -2 },
+        { label: "Minimal improvement", value: -1 },
+        { label: "Some improvement", value: 0 },
+        {
+          label: "Significant improvement",
+          value: 1,
+        },
+        {
+          label: "Major improvement",
+          value: 2,
+        },
+      ],
+    },
+  ],
+  Life_Transitions: [
+    {
+      question: "How often do you engage in self-care during life transitions?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        {
+          label: "Often",
+          value: 1,
+        },
+        {
+          label: "Always",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How well do you adapt to new routines and responsibilities?",
+      name: "q2",
+      options: [
+        { label: "Not well at all", value: -2 },
+        { label: "Slightly well", value: -1 },
+        { label: "Somewhat well", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in facing uncertainties?",
+      name: "q3",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Somewhat confident", value: 0 },
+        {
+          label: "Confident",
+          value: 1,
+        },
+        {
+          label: "Very confident",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How frequently do you use coping strategies for change?",
+      name: "q4",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        {
+          label: "Often",
+          value: 1,
+        },
+        {
+          label: "Always",
+          value: 2,
+        },
+      ],
+    },
+    {
+      question: "How much has your adjustment to change improved?",
+      name: "q5",
+      options: [
+        { label: "No improvement", value: -2 },
+        { label: "Minimal improvement", value: -1 },
+        { label: "Some improvement", value: 0 },
+        {
+          label: "Significant improvement",
+          value: 1,
+        },
+        {
+          label: "Major improvement",
+          value: 2,
+        },
+      ],
+    },
+  ],
+};
+
+export const treatment_goals = [
+  {
+    label: "Improving Emotional Regulation in Therapy",
+    value: "Improving_Emotional_Regulation_in_Therapy",
+  },
+  { label: "Depression", value: "Depression" },
+  { label: "Stress Management", value: "Stress_Management" },
+  {
+    label: "Self-Esteem and Self-Confidence Issues",
+    value: "Self_Esteem_and_Self_Confidence_Issues",
+  },
+  {
+    label: "Addiction and Substance Abuse",
+    value: "Addiction_and_Substance_Abuse",
+  },
+  {
+    label: "Work and Career-Related Issues",
+    value: "Work_and_Career_Related_Issues",
+  },
+  { label: "Anger Management", value: "Anger_Management" },
+  {
+    label: "Eating Disorders and Body Image Issues",
+    value: "Eating_Disorders_and_Body_Image_Issues",
+  },
+  { label: "Life Transitions", value: "Life_Transitions" },
 ];

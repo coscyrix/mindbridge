@@ -1,4 +1,25 @@
 import { z } from "zod";
+import { featureOptions } from "../../components/GetStartedForm";
+import { gasQuestionBank } from "../constants";
+const safeNumber = (val) =>
+  val !== "" && val !== null && val !== undefined && !isNaN(Number(val))
+    ? Number(val)
+    : undefined;
+
+export const ServiceTemplateSchema = z.object({
+  service_id: z.preprocess(
+    safeNumber,
+    z
+      .number({ required_error: "Service ID is required" })
+      .min(1, "Service ID must be greater than 0")
+  ),
+  service_price: z.preprocess(
+    safeNumber,
+    z
+      .number({ required_error: "Price is required" })
+      .min(0, "Price must be greater than or equal to 0")
+  ),
+});
 
 export const ClientValidationSchema = z
   .object({
@@ -10,6 +31,7 @@ export const ClientValidationSchema = z
       .optional(),
     tenant_name: z
       .string()
+      .nullable()
       //.min(2, { message: "At least 2 characters required" })
       .optional(),
     user_first_name: z
@@ -37,7 +59,7 @@ export const ClientValidationSchema = z
       .string()
       .nonempty("Email is required")
       .email("Invalid email address"),
-    service: z.string().nonempty("Service Type is required").optional(),
+    service: z.array(ServiceTemplateSchema).optional(),
     role_id: z
       .preprocess(
         (value) => Number(value),
@@ -53,6 +75,16 @@ export const ClientValidationSchema = z
         ),
       })
       .optional(),
+    tax: z.preprocess((val) => {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }, z.number().nullable().optional()),
+
+    admin_fee: z.preprocess((val) => {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }, z.number().nullable().optional()),
+    description: z.string().nullable().optional(),
   })
   .refine(
     (data) => {
@@ -181,7 +213,11 @@ export const EmailVerificationSchema = z.object({
     })
     .email({ message: "Invalid email address" }),
 });
-// get started validation Schema ;
+// get started validation Schema;
+const featureItemSchema = z.object({
+  value: z.string().min(1, "Feature value is required"),
+  label: z.string().min(1, "Feature label is required"),
+});
 
 export const getStartedSchema = z.object({
   organization: z.string().min(1, "Organization name is required"),
@@ -189,18 +225,130 @@ export const getStartedSchema = z.object({
   position: z.string().min(1, "Position/Title is required"),
   email: z.string().email("Invalid email").min(1, "Email is required"),
   phone: z.string().min(1, "Phone number is required"),
-  website: z
-    .string()
-    .min(1, "Company website is required")
-    .url("Enter a valid URL (include https://)"),
+  website: z.string().min(1, "Company website is required"),
   address: z.string().min(1, "Office address is required"),
   counselors: z.string().min(1, "Number of counselors is required"),
   clients: z.string().min(1, "Estimated clients per month is required"),
-  features: z.string().min(1, "Interested features are required"),
-  demoTime: z.string().min(1, "Preferred demo date/time is required"),
+  features: z
+    .array(featureItemSchema)
+    .min(1, "At least one feature is required")
+    .refine((data) => data.length > 0, {
+      message: "At least one feature must be selected",
+    }),
+  demodate: z.string().min(1, "Preferred demo date is required"),
+  demotime: z.string().min(1, "Preferred demo time is required"),
   notes: z.string().min(1, "Additional notes are required"),
-
   typedName: z.string().min(1, "Typed name is required"),
-  signature: z.string().min(1, "Signature is required"),
+  signature: z
+    .string()
+    .min(1, "Signature is required")
+    .regex(/^data:image\/png;base64,/, "Signature must be a base64 image"),
   date: z.string().min(1, "Date is required"),
+  confirmInfo: z.literal(true, {
+    errorMap: () => ({ message: "You must confirm the information." }),
+  }),
+  agreeTerms: z.literal(true, {
+    errorMap: () => ({
+      message: "You must agree to the Terms and Privacy Policy.",
+    }),
+  }),
 });
+
+export const bookAppointmentSchema = z.object({
+  customer_name: z.string().min(1, "Name is required"),
+  customer_email: z.string().email("Invalid email address"),
+  customer_phone_no: z
+    .string()
+    .min(10, "Phone number must be at least 10 digits")
+    .max(15, "Phone number can't exceed 15 digits")
+    .regex(/^[0-9]+$/, "Phone number must contain only digits"),
+  service: z.string().min(1, "Please select a service"),
+  appointment_date: z
+    .string()
+    .min(1, "Appointment date is required")
+    .refine(
+      (val) => {
+        const today = new Date().toISOString().split("T")[0];
+        return val >= today;
+      },
+      { message: "Date must be today or later" }
+    ),
+  description: z
+    .string()
+    .min(1, "Description is required")
+    .max(500, "Description must be under 500 characters"),
+});
+
+const optionSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+});
+
+export const consentManagementSchema = z.object({
+  signature: z
+    .string()
+    .min(1, "Signature is required")
+    .regex(/^data:image\/png;base64,/, "Signature must be a base64 image"),
+  timestamp: z
+    .string()
+    .min(1, "Timestamp is required")
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: "Invalid date format",
+    }),
+  ipAddress: z
+    .string({ required_error: "IP address is required" })
+    .refine(
+      (ip) =>
+        /^(([0-9]{1,3}\.){3}[0-9]{1,3})$/.test(ip) &&
+        ip.split(".").every((num) => parseInt(num) <= 255),
+      {
+        message: "Invalid IP address",
+      }
+    ),
+  consentText: z
+    .array(optionSchema)
+    .min(1, "Please select at least one consent topic"),
+  category: z.array(optionSchema).min(1, "Please select at least one category"),
+  agreeTerms: z.literal(true, {
+    errorMap: () => ({
+      message: "You must agree to the Terms and condition outlined above.",
+    }),
+  }),
+  consent_Editor_Values: z
+    .string()
+    .min(1, "Consent text is required")
+    .refine(
+      (html) => {
+        const stripped = html.replace(/<[^>]*>/g, "").trim();
+        return stripped.length > 0;
+      },
+      { message: "Consent text cannot be empty" }
+    ),
+});
+
+export const createGasSchema = (goalKey) => {
+  const questionSet = gasQuestionBank[goalKey] || [];
+  const dynamicQuestionSchema = questionSet.reduce((acc, q) => {
+    acc[q.name] = z
+      .number({
+        required_error: "This question is required",
+        invalid_type_error: "Select a valid score",
+      })
+      .min(-2, "Minimum value is -2")
+      .max(2, "Maximum value is +2");
+    return acc;
+  }, {});
+
+  return z.object({
+    goal: z
+      .object({
+        label: z.string(),
+        value: z.string(),
+      })
+      .nullable()
+      .refine((val) => !!val?.value, {
+        message: "Treatment goal is required",
+      }),
+    ...dynamicQuestionSchema,
+  });
+};
