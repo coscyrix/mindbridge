@@ -105,6 +105,7 @@ export default class Session {
 
       // Fetch reference fees for the tenant
       const ref_fees = await this.common.getRefFeesByTenantId(data.tenant_id);
+      console.log('ref_fees', ref_fees); 
       if (!ref_fees || ref_fees.error) {
         logger.error('Error getting reference fees');
         return { message: 'Error getting reference fees', error: -1 };

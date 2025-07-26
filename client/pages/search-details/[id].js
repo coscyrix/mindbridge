@@ -65,7 +65,7 @@ const SearchDetails = () => {
     defaultValues: {
       customer_name: "",
       customer_email: "",
-      customer_phone_no: "",
+      contact_number: "",
       service: "",
       appointment_date: null,
       description: "",
@@ -228,6 +228,7 @@ const SearchDetails = () => {
 
   const onSubmit = async (values) => {
     try {
+      console.log("Form submitted with values:", values);
       setIsSendingAppointment(true);
       const payload = {
         counselor_profile_id: id,
@@ -235,20 +236,22 @@ const SearchDetails = () => {
         customer_email: values?.customer_email,
         service: values.service,
         appointment_date: values.appointment_date,
-        customer_phone_no: values.customer_phone_no,
+        contact_number: values.contact_number,
         description: values.description,
       };
+      console.log("Sending payload:", payload);
       const { data, status } = await api.post(
         "counselor-profile/send-appointment-email",
         payload
       );
+      console.log("API response:", { data, status });
       if (data && status) {
         toast.success(data?.message);
         handleBookAppointmentClose();
       }
     } catch (error) {
-      toast.error(error.response.data.message);
-      console.error(error);
+      console.error("Form submission error:", error);
+      toast.error(error.response?.data?.message || "An error occurred while sending the appointment request");
     } finally {
       setIsSendingAppointment(false);
     }
@@ -533,15 +536,15 @@ const SearchDetails = () => {
 
             <div style={{ marginBottom: 18 }}>
               <label
-                htmlFor="customer_phone_no"
+                htmlFor="contact_number"
                 style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
               >
                 Customer Contact No.
               </label>
               <input
-                id="customer_phone_no"
-                {...methods.register("customer_phone_no")}
-                type="tel"
+                id="contact_number"
+                {...methods.register("contact_number")}
+                type="text"
                 placeholder="Enter your number"
                 style={{
                   width: "100%",
@@ -551,7 +554,7 @@ const SearchDetails = () => {
                   fontSize: 15,
                 }}
               />
-              {methods.formState.errors.customer_phone_no && (
+              {methods.formState.errors.contact_number && (
                 <p
                   style={{
                     color: "#f04438",
@@ -559,7 +562,7 @@ const SearchDetails = () => {
                     fontSize: 13,
                   }}
                 >
-                  {methods.formState.errors.customer_phone_no.message}
+                  {methods.formState.errors.contact_number.message}
                 </p>
               )}
             </div>
@@ -641,10 +644,9 @@ const SearchDetails = () => {
               >
                 Description
               </label>
-              <input
+              <textarea
                 id="description"
-                type="textarea"
-                min={new Date().toISOString().split("T")[0]}
+                rows={4}
                 {...methods.register("description")}
                 style={{
                   width: "100%",
