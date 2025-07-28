@@ -562,7 +562,36 @@ export default class Common {
         return { message: 'Error creating tenant', error: -1 };
       }
 
-      return generated_id;
+      // Get the tenant_id from the inserted record
+      const tenantRecord = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('tenant_id')
+        .from('tenant')
+        .where('tenant_generated_id', generated_id)
+        .first();
+
+      if (!tenantRecord) {
+        return { message: 'Error retrieving tenant after creation', error: -1 };
+      }
+
+      // Create entry in ref_fees table
+      const refFeesData = {
+        tenant_id: tenantRecord.tenant_id,
+        tax_pcnt: data.tax_percent || 0,
+        counselor_pcnt: 0.600, // Default 60% for counselor
+        system_pcnt: data.admin_fee || 0
+      };
+
+      const postRefFees = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('ref_fees')
+        .insert(refFeesData);
+
+      if (!postRefFees) {
+        return { message: 'Error creating ref_fees entry', error: -1 };
+      }
+
+      return tenantRecord.tenant_id;
     } catch (error) {
       console.error(error);
       return { message: 'Error creating tenant', error: -1 };

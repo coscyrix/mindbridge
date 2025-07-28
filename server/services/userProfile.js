@@ -54,15 +54,15 @@ export default class UserProfileService {
 
     if (data.role_id === 3) {
       // if the user is manager create tenant
-      const postTenantName = await this.common.postTenant({
+      const postTenantResult = await this.common.postTenant({
         tenant_name: data.tenant_name,
         admin_fee: data.admin_fee,
         tax_percent: data.tax_percent
       });
-      if (postTenantName.error) {
-        return { message: postTenantName.message, error: -1 };
+      if (postTenantResult.error) {
+        return { message: postTenantResult.message, error: -1 };
       }
-      data.tenant_id = Number(postTenantName);
+      data.tenant_id = Number(postTenantResult);
     }
 
     delete data.tenant_name;
