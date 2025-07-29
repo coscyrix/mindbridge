@@ -102,7 +102,8 @@ The server uses environment variables from `server/#Environment Configuration.en
 
 ## Volume Mounts
 
-- `./uploads` is mounted to `/app/uploads` in the server container for file storage
+- `uploads_data` volume is mounted to `/app/uploads` in the server container for file storage
+- This ensures uploaded files persist between container restarts
 
 ## Network
 

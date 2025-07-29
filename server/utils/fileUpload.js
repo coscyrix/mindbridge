@@ -8,8 +8,13 @@ const __dirname = path.dirname(__filename);
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (error) {
+  logger.error('Error creating uploads directory:', error);
+  // Continue execution - the directory might already exist or be created later
 }
 
 export const saveFile = async (file, subdirectory = '') => {

@@ -15,7 +15,7 @@ services:
     env_file:
       - ./server/#Environment Configuration.env
     volumes:
-      - ./uploads:/app/uploads
+      - uploads_data:/app/uploads
     networks:
       - mindbridge-network
     restart: unless-stopped
@@ -55,4 +55,4 @@ networks:
     driver: bridge
 
 volumes:
-  uploads: 
+  uploads_data: 
