@@ -26,7 +26,16 @@ export default class ServerConfig {
     this.app.use('/', Express.static(path.join(__dirname, 'public')));
     
     // Serve static files from uploads directory
-    this.app.use('/uploads', Express.static(path.join(__dirname, '../../uploads')));
+    const uploadsPath = path.join(process.cwd(), 'uploads');
+    // Ensure uploads directory exists before serving static files
+    if (!fs.existsSync(uploadsPath)) {
+      try {
+        fs.mkdirSync(uploadsPath, { recursive: true });
+      } catch (error) {
+        console.error('Warning: Could not create uploads directory:', error.message);
+      }
+    }
+    this.app.use('/uploads', Express.static(uploadsPath));
 
     this.app.use(cors({
       origin: process.env.ALLOWED_ORIGINS || '*', // Allow all origins from env or default to *
@@ -166,8 +175,8 @@ export default class ServerConfig {
   async listen() {
     try {
       const options = {
-        key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
-        cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
+        // key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
+        // cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
       };
 
       const { default: knex } = await import('knex');
