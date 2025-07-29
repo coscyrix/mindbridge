@@ -64,6 +64,7 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_SHARP_PATH=/app/node_modules/sharp
     networks:
       - mindbridge-network
     restart: unless-stopped

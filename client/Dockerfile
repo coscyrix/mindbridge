@@ -15,6 +15,8 @@ RUN yarn build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_SHARP_PATH=/app/node_modules/sharp
 
 # Don't run as root
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
@@ -25,8 +27,11 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-# Ensure proper permissions for static files
-RUN chown -R nextjs:nodejs /app/public
+# Ensure proper permissions for all files and directories
+RUN chown -R nextjs:nodejs /app
+
+# Create cache directories with proper permissions
+RUN mkdir -p /app/.next/cache && chown -R nextjs:nodejs /app/.next/cache
 
 USER nextjs
 

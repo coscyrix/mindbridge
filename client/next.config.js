@@ -5,6 +5,10 @@ const nextConfig = {
   experimental: {
     optimizeCss: false,
   },
+  // Disable image optimization in Docker to avoid permission issues
+  images: {
+    unoptimized: true,
+  },
   // Ensure static files are served correctly
   async headers() {
     return [
