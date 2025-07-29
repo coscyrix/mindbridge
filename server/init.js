@@ -6,10 +6,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
+const uploadsDir = path.join(process.cwd(), 'uploads');
 
 console.log('Initializing server...');
-console.log('Current directory:', __dirname);
+console.log('Current working directory:', process.cwd());
 console.log('Uploads directory path:', uploadsDir);
 
 try {

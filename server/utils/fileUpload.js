@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../../uploads');
+const uploadsDir = path.join(process.cwd(), 'uploads');
 try {
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
@@ -49,7 +49,7 @@ export const saveFile = async (file, subdirectory = '') => {
 
 export const deleteFile = async (filepath) => {
   try {
-    const absolutePath = path.join(__dirname, '../..', filepath);
+    const absolutePath = path.join(process.cwd(), filepath);
     if (fs.existsSync(absolutePath)) {
       await fs.promises.unlink(absolutePath);
     }
