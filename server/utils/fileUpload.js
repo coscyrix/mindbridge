@@ -11,14 +11,20 @@ const uploadsDir = path.join(__dirname, '../../uploads');
 try {
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
+    logger.info('Created uploads directory:', uploadsDir);
   }
 } catch (error) {
-  logger.error('Error creating uploads directory:', error);
-  // Continue execution - the directory might already exist or be created later
+  logger.warn('Could not create uploads directory during module load:', error.message);
+  // Continue execution - the directory will be created when needed
 }
 
 export const saveFile = async (file, subdirectory = '') => {
   try {
+    // Ensure uploads directory exists first
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    
     // Create subdirectory if it doesn't exist
     const targetDir = path.join(uploadsDir, subdirectory);
     if (!fs.existsSync(targetDir)) {
