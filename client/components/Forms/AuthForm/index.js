@@ -172,6 +172,9 @@ const AuthForm = () => {
                       "Login Now"
                     )}
                   </button>
+                  <Link href="/">
+                    <div className="back-to-home">Back to home</div>
+                  </Link>
                 </div>
               </form>
             </FormProvider>

@@ -149,15 +149,15 @@ const GetStartedFormTemplate = ({ onClose, open }) => {
         <header className="form-header">
           <div className="arrow-parent">
             <span>
-            <GoArrowLeft
-              size={30}
-              className="back-button"
-              onClick={() => {
-                router.back();
-              }}
-              aria-label="Close Get Started Form"
-              type="button"
-            ></GoArrowLeft>
+              <GoArrowLeft
+                size={30}
+                className="back-button"
+                onClick={() => {
+                  router.back();
+                }}
+                aria-label="Close Get Started Form"
+                type="button"
+              ></GoArrowLeft>
             </span>
             <h1>MindBridge Demo & Onboarding Form</h1>
           </div>
@@ -212,7 +212,8 @@ const GetStartedFormTemplate = ({ onClose, open }) => {
                     ))}
                   </select>
                   <CustomInputField
-                    // customClass={`phone-number-input ${
+                    customClass={`phone-number-input`}
+                    //${
                     //   errors?.[name] ? "error-input" : ""
                     // }`}
                     label="Phone Number"

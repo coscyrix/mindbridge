@@ -5,6 +5,7 @@ const nextConfig = {
   experimental: {
     optimizeCss: false,
   },
+  output: 'standalone',
 };
 
 module.exports = nextConfig;

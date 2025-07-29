@@ -80,7 +80,9 @@ export default function CreateServiceForm({
       total_invoice: parseFloat(data.total_invoice),
       gst: data.gst,
       tenant_id: userDetails?.tenant_id,
-      user_profile_id:userDetails?.user_profile_id
+      user_profile_id:userDetails?.user_profile_id,
+      discount_pcnt: data.discount_pcnt,
+      total_invoice_and_taxes: data.totalInvoiceTaxes,
     };
 
     if (initialData) {
@@ -151,10 +153,18 @@ export default function CreateServiceForm({
       setFields([{ position: "", service_id: "" }]);
       methods.setValue("svc_formula_typ", "");
       methods.setValue("svc_formula", "");
+      methods.setValue("totalInvoiceTaxes", "");
       setFormButton("Create");
     }
   }, [isOpen]);
-
+  useEffect(() => {
+    if (initialData?.gst && initialData?.total_invoice) {
+      const gst = parseFloat(initialData.gst) || 0;
+      const invoice = parseFloat(initialData.total_invoice) || 0;
+      const total = gst + invoice;
+      methods.setValue("totalInvoiceTaxes", parseFloat(total.toFixed(2)));
+    }
+  }, [initialData]);
   return (
     <CreateServiceFormWrapper>
       <FormProvider {...methods}>
@@ -277,6 +287,28 @@ export default function CreateServiceForm({
                   type="text"
                 />
               </div>
+              {formButton === "Update" ? (
+                <>
+                  <div className="fields">
+                    <CustomInputField
+                      name="discount_pcnt"
+                      label="Discount"
+                      placeholder="Enter discount"
+                      type="number"
+                    />
+                  </div>
+                  <div className="fields">
+                    <CustomInputField
+                      name="totalInvoiceTaxes"
+                      label="Total invoice + taxes"
+                      placeholder="Enter total invoice + taxes"
+                      type="number"
+                    />
+                  </div>
+                </>
+              ) : (
+                <></>
+              )}
             </div>
 
             {(formButton === "Create" ||

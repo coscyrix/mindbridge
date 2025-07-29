@@ -129,7 +129,7 @@ function CreateClientForm({
         role_id: data?.role_id,
         user_phone_nbr: data?.user_phone_nbr,
         tenant_name: data?.tenant_name,
-        description: data.description,
+        // description: data.description,
       };
     }
     else if(role === 3){
@@ -222,7 +222,7 @@ function CreateClientForm({
         tenant_name,
       }),
       ...(role_id === 2 && {
-        description: description,
+        // description: description,
       }),
     };
 

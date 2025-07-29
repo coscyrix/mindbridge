@@ -123,7 +123,12 @@ function Sidebar({ showSideBar, setShowSideBar }) {
       >
         <div className="headings-container">
           <div className="sidebar-header">
-            <div className="app-logo">
+            <div
+              onClick={() => {
+                router.push("/");
+              }}
+              className="app-logo"
+            >
               <Image
                 src="/assets/images/Mindbridge_logo.svg"
                 alt="company-logo"

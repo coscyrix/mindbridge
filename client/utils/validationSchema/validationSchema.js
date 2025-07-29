@@ -352,3 +352,26 @@ export const createGasSchema = (goalKey) => {
     ...dynamicQuestionSchema,
   });
 };
+export const splitFeeManagementSchema = z
+  .object({
+    tenant_share: z
+      .number({
+        required_error: "Tenant share is required",
+        invalid_type_error: "Must be a number",
+      })
+      .min(0, "Tenant share must be at least 0")
+      .max(100, "Tenant share must be at most 100"),
+
+    counselor_share: z
+      .number({
+        required_error: "Counselor share is required",
+        invalid_type_error: "Must be a number",
+      })
+      .min(0, "Counselor share must be at least 0")
+      .max(100, "Counselor share must be at most 100"),
+  })
+  .refine((data) => data.tenant_share + data.counselor_share === 100, {
+    message: "Total share must be exactly 100%",
+    path: ["tenant_share"], 
+  });
+

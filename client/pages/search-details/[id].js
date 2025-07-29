@@ -72,6 +72,15 @@ const SearchDetails = () => {
     },
   });
 
+  useEffect(() => {
+    if (selectedDate) {
+      methods.reset({
+        ...methods.getValues(), 
+        appointment_date: selectedDate,
+      });
+    }
+  }, [selectedDate]);
+
   const [selectedService, setSelectedService] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
   const [isSendingAppointment, setIsSendingAppointment] = useState(false);

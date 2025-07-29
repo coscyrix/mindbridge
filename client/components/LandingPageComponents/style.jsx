@@ -29,7 +29,7 @@ export const HeaderWrapper = styled.div`
     background-color: white;
     z-index: 999;
 
-    @media (max-width: 768px) {
+    @media (max-width: 770px) {
       display: none;
     }
   }
@@ -45,6 +45,10 @@ export const HeaderWrapper = styled.div`
   background-color: #fff;
   @media (max-width: 768px) {
     display:flex;
+    position: fixed;
+    z-index: 10;
+    width: 100%;
+
   }
 }
 
@@ -443,6 +447,7 @@ export const HeroSectionWrapper = styled.div`
       line-height: 40px;
       text-align: center;
       padding: 0px;
+      margin-top: 35px;
     }
   }
 
