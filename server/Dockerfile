@@ -20,7 +20,8 @@ RUN adduser -S nextjs -u 1001
 # Create uploads directory and set permissions
 RUN mkdir -p /app/uploads && \
     chown -R nextjs:nodejs /app && \
-    chmod 755 /app/uploads
+    chmod 755 /app/uploads && \
+    chmod +x /app/start.sh
 
 USER nextjs
 
@@ -32,4 +33,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
 
 # Start the application
-CMD ["sh", "-c", "node init.js && npm start"] 
+CMD ["./start.sh"] 

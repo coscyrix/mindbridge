@@ -199,15 +199,21 @@ export default class ServerConfig {
       
       this.app.locals.knex = db;
 
-      // Create an HTTP/HTTPS server
-      const httpServer =
-        process.env.NODE_ENV === 'local_development'
-          ? http.createServer(options, this.app)
-          : https.createServer(options, this.app);
+      // Create an HTTP server (simplified for Docker)
+      const httpServer = http.createServer(this.app);
 
-      process.env.NODE_ENV === 'development'
-        ? https.createServer(options, this.app)
-        : https.createServer(options, this.app);
+      // Add graceful shutdown handling
+      const gracefulShutdown = (signal) => {
+        this.console.info(`Received ${signal}. Starting graceful shutdown...`);
+        httpServer.close(() => {
+          this.console.info('HTTP server closed.');
+          process.exit(0);
+        });
+      };
+
+      // Listen for shutdown signals
+      process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+      process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
       httpServer.listen(this.port, () => {
         this.console.info(`🚀..Server running on port: ${this.port}`);
