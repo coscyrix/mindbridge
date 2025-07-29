@@ -63,7 +63,7 @@ const LocationSearchContainer = styled.div`
 
 const LocationSearch = ({ value, onChange, error, label }) => {
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyAhqBGpeRFqmMX8UL8Py5QYaAPd6udhppg",
     libraries,
   });
 
