@@ -1,156 +1,187 @@
 # MindBridge Docker Setup
 
-This document provides instructions for running the MindBridge application using Docker.
+This document describes the Docker configuration for the MindBridge application, which consists of a Node.js server and a Next.js client.
 
-## Prerequisites
+## Overview
 
-- Docker installed on your system
-- Docker Compose installed on your system
+The application is containerized using Docker with the following components:
+- **Server**: Node.js Express API server (port 5000)
+- **Client**: Next.js frontend application (port 3000)
+- **Database**: MySQL (external)
 
-## Project Structure
+## Docker Files
 
-```
-mindbridge/
-├── client/          # Next.js frontend application
-├── server/          # Node.js backend API
-├── docker-compose.yml
-└── DOCKER_README.md
-```
+### Server Dockerfile
+- **Location**: `server/Dockerfile`
+- **Base Image**: Node.js 18 Alpine
+- **Port**: 5000
+- **Features**:
+  - Multi-stage build for optimization
+  - Non-root user for security
+  - System dependencies for Puppeteer
+  - Health checks
+  - Proper file permissions
 
-## Quick Start
+### Server Production Dockerfile
+- **Location**: `server/Dockerfile.prod`
+- **Features**:
+  - Optimized for production
+  - Smaller image size
+  - Only production dependencies
+  - Enhanced security
 
-1. **Clone the repository and navigate to the project directory:**
-   ```bash
-   cd mindbridge
-   ```
+### Client Dockerfile
+- **Location**: `client/Dockerfile`
+- **Base Image**: Node.js 18 Alpine
+- **Port**: 3000
+- **Features**:
+  - Multi-stage build
+  - Next.js standalone output
+  - Optimized for production
 
-2. **Build and start all services:**
-   ```bash
-   docker-compose up --build
-   ```
+## Docker Compose Configuration
 
-3. **Access the applications:**
-   - Frontend (Next.js): http://localhost:3000
-   - Backend API: http://localhost:3001
-
-## Individual Service Commands
-
-### Build and run server only:
+### Development Setup
 ```bash
-docker-compose up --build server
+# Start development environment
+docker-compose up
+
+# Start in background
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
 ```
 
-### Build and run client only:
+### Production Setup
 ```bash
-docker-compose up --build client
+# Start production environment
+docker-compose --profile production up
+
+# Start in background
+docker-compose --profile production up -d
 ```
 
-### Run in detached mode:
-```bash
-docker-compose up -d --build
-```
+## Services
 
-### Stop all services:
-```bash
-docker-compose down
-```
+### Server Service
+- **Container Name**: mindbridge-server
+- **Port Mapping**: 3001:5000
+- **Environment**: Development
+- **Health Check**: `/health` endpoint
 
-### View logs:
-```bash
-# All services
-docker-compose logs
+### Server Production Service
+- **Container Name**: mindbridge-server-prod
+- **Port Mapping**: 3002:5000
+- **Environment**: Production
+- **Profile**: production
 
-# Specific service
-docker-compose logs server
-docker-compose logs client
-```
-
-## Development Mode
-
-For development, you can run the services individually:
-
-### Server Development:
-```bash
-cd server
-npm install
-npm run dev
-```
-
-### Client Development:
-```bash
-cd client
-npm install
-npm run dev
-```
+### Client Service
+- **Container Name**: mindbridge-client
+- **Port Mapping**: 3000:3000
+- **Dependencies**: Server service
+- **Health Check**: `/api/hello` endpoint
 
 ## Environment Configuration
 
-The server uses environment variables from `server/#Environment Configuration.env`. Make sure this file exists and contains the necessary configuration.
+The server uses environment variables from `server/#Environment Configuration.env`:
+- Database configuration
+- JWT settings
+- Email configuration
+- CORS settings
 
-## Docker Images
+## Volumes
 
-### Server Image
-- **Base**: Node.js 18 Alpine
-- **Port**: 3000 (mapped to 3001 on host)
-- **Health Check**: HTTP endpoint at `/health`
+- **uploads_data**: Persistent storage for file uploads
 
-### Client Image
-- **Base**: Node.js 18 Alpine
-- **Port**: 3000
-- **Build**: Multi-stage build with standalone output
-- **Health Check**: HTTP endpoint at `/api/hello`
+## Networks
 
-## Volume Mounts
+- **mindbridge-network**: Bridge network for inter-service communication
 
-- `uploads_data` volume is mounted to `/app/uploads` in the server container for file storage
-- This ensures uploaded files persist between container restarts
+## Health Checks
 
-## Network
+Both server and client services include health checks:
+- **Server**: Checks `/health` endpoint
+- **Client**: Checks `/api/hello` endpoint
+- **Interval**: 30 seconds
+- **Timeout**: 3-10 seconds
+- **Retries**: 3
 
-Both services communicate through a custom bridge network `mindbridge-network`.
+## Recent Improvements
+
+### Dockerfile Updates
+1. **Corrected Port**: Changed from 3000 to 5000 to match server configuration
+2. **System Dependencies**: Added Chromium and related packages for Puppeteer
+3. **Security**: Improved user permissions and non-root user setup
+4. **Health Checks**: Updated to use correct port
+5. **Multi-stage Build**: Added production-optimized Dockerfile
+
+### Docker Compose Updates
+1. **Production Profile**: Added separate production service
+2. **Port Configuration**: Ensured consistent port mapping
+3. **Health Checks**: Improved health check configurations
+
+## Building and Running
+
+### Development
+```bash
+# Build and start all services
+docker-compose up --build
+
+# Build specific service
+docker-compose build server
+docker-compose build client
+```
+
+### Production
+```bash
+# Build and start production services
+docker-compose --profile production up --build
+
+# Build production server
+docker-compose --profile production build server-prod
+```
 
 ## Troubleshooting
 
-### Common Issues:
+### Common Issues
 
-1. **Port conflicts**: Make sure ports 3000 and 3001 are available
-2. **Environment variables**: Ensure the environment file exists in the server directory
-3. **Build failures**: Check that all dependencies are properly listed in package.json files
+1. **Port Conflicts**: Ensure ports 3000, 3001, and 3002 are available
+2. **Permission Issues**: Check file permissions in uploads directory
+3. **Health Check Failures**: Verify services are running and accessible
+4. **Environment Variables**: Ensure `.env` file is properly configured
 
-### Debug Commands:
+### Debugging
 
 ```bash
-# Check container status
-docker-compose ps
+# View service logs
+docker-compose logs server
+docker-compose logs client
 
-# Execute commands in running containers
+# Access container shell
 docker-compose exec server sh
 docker-compose exec client sh
 
-# View resource usage
-docker stats
+# Check container status
+docker-compose ps
 ```
 
-## Production Deployment
+## Security Considerations
 
-For production deployment, consider:
+1. **Non-root User**: All containers run as non-root users
+2. **File Permissions**: Proper permissions set on uploads directory
+3. **Network Isolation**: Services communicate through internal network
+4. **Environment Variables**: Sensitive data managed through env files
 
-1. Using environment-specific docker-compose files
-2. Setting up proper logging and monitoring
-3. Configuring reverse proxy (nginx)
-4. Setting up SSL certificates
-5. Implementing proper backup strategies
+## Performance Optimization
 
-## Cleanup
+1. **Multi-stage Builds**: Reduces final image size
+2. **Alpine Linux**: Lightweight base images
+3. **Production Dependencies**: Only necessary packages in production
+4. **Health Checks**: Automatic service monitoring
 
-To remove all containers, networks, and volumes:
-```bash
-docker-compose down -v --rmi all
-```
+## Monitoring
 
-## Security Notes
-
-- Both containers run as non-root users
-- Health checks are implemented for monitoring
-- Environment variables are properly isolated
-- File permissions are set correctly 
+- Health checks run every 30 seconds
+- Logs are available through Docker Compose
+- Services restart automatically unless stopped manually 
