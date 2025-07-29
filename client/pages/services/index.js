@@ -10,6 +10,7 @@ import CreateServiceForm from "../../components/Forms/CreateServiceForm";
 import CustomClientDetails from "../../components/CustomClientDetails";
 import { toast } from "react-toastify";
 import CommonServices from "../../services/CommonServices";
+import { useReferenceContext } from "../../context/ReferenceContext";
 function Services() {
   const [showCreateFlyout, setShowCreateFlyout] = useState(false);
   const [activeData, setActiveData] = useState();
@@ -17,7 +18,8 @@ function Services() {
   const actionDropdownRef = useRef(null);
   const [servicesData, setServicesData] = useState(null);
   const [servicesDataLoading, setServicesDataLoading] = useState(false);
-
+  const { userObj } = useReferenceContext();
+  const isManager = userObj?.role_id === 3;
   const fetchServices = async () => {
     try {
       setServicesDataLoading(true);
@@ -155,6 +157,7 @@ function Services() {
         setIsOpen={setShowCreateFlyout}
       >
         <CreateServiceForm
+        isManager={isManager}
           isOpen={showCreateFlyout}
           setIsOpen={setShowCreateFlyout}
           initialData={activeData}
@@ -172,7 +175,7 @@ function Services() {
               handleCellClick,
               handleEdit,
               handleDelete,
-              actionDropdownRef
+              actionDropdownRef,
             ),
             data: servicesData,
           }}

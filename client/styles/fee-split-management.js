@@ -52,6 +52,7 @@ export const FeeSplitManagementWrapper = styled.div`
     border: none;
     cursor: pointer;
     transition: 0.3s ease;
+    margin-top: 16px;
 
     &:hover {
       background-color: #115293;
@@ -66,5 +67,8 @@ export const FeeSplitManagementWrapper = styled.div`
     .form-row {
       margin-bottom: 1rem;
     }
+  }
+  .note {
+    color: #747474;
   }
 `;

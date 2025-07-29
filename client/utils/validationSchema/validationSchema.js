@@ -283,48 +283,40 @@ const optionSchema = z.object({
   label: z.string(),
   value: z.string(),
 });
-
-export const consentManagementSchema = z.object({
-  signature: z
-    .string()
-    .min(1, "Signature is required")
-    .regex(/^data:image\/png;base64,/, "Signature must be a base64 image"),
-  timestamp: z
-    .string()
-    .min(1, "Timestamp is required")
-    .refine((val) => !isNaN(Date.parse(val)), {
-      message: "Invalid date format",
-    }),
-  ipAddress: z
-    .string({ required_error: "IP address is required" })
-    .refine(
-      (ip) =>
-        /^(([0-9]{1,3}\.){3}[0-9]{1,3})$/.test(ip) &&
-        ip.split(".").every((num) => parseInt(num) <= 255),
-      {
-        message: "Invalid IP address",
-      }
-    ),
-  consentText: z
-    .array(optionSchema)
-    .min(1, "Please select at least one consent topic"),
-  category: z.array(optionSchema).min(1, "Please select at least one category"),
-  agreeTerms: z.literal(true, {
-    errorMap: () => ({
-      message: "You must agree to the Terms and condition outlined above.",
-    }),
-  }),
-  consent_Editor_Values: z
-    .string()
-    .min(1, "Consent text is required")
-    .refine(
-      (html) => {
-        const stripped = html.replace(/<[^>]*>/g, "").trim();
-        return stripped.length > 0;
-      },
-      { message: "Consent text cannot be empty" }
-    ),
+const counselorOptionSchema = z.object({
+  label: z.string(),
+  tenant_id: z.string(),
+  value: z.string(), //thuis value is same as counselor id
 });
+
+
+export const getConsentManagementSchema = (userData) => {
+  const isAdmin = userData?.role_id === 4;
+
+  return z.object({
+    agreeTerms: z.literal(true, {
+      errorMap: () => ({
+        message: "You must agree to the Terms and condition outlined above.",
+      }),
+    }),
+    consent_Editor_Values: z
+      .string()
+      .min(1, "Consent text is required")
+      .refine(
+        (html) => {
+          const stripped = html.replace(/<[^>]*>/g, "").trim();
+          return stripped.length > 0;
+        },
+        { message: "Consent text cannot be empty" }
+      ),
+    counselorSelect: isAdmin
+      ? counselorOptionSchema.nullable().refine((val) => !!val, {
+          message: "Counselor is required for Admin",
+        })
+      : z.any().optional(),
+  });
+};
+
 
 export const createGasSchema = (goalKey) => {
   const questionSet = gasQuestionBank[goalKey] || [];
@@ -354,24 +346,16 @@ export const createGasSchema = (goalKey) => {
 };
 export const splitFeeManagementSchema = z
   .object({
-    tenant_share: z
-      .number({
-        required_error: "Tenant share is required",
-        invalid_type_error: "Must be a number",
-      })
-      .min(0, "Tenant share must be at least 0")
-      .max(100, "Tenant share must be at most 100"),
-
-    counselor_share: z
-      .number({
-        required_error: "Counselor share is required",
-        invalid_type_error: "Must be a number",
-      })
-      .min(0, "Counselor share must be at least 0")
-      .max(100, "Counselor share must be at most 100"),
+    tenant_share: z.preprocess((val) => {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }, z.number({ required_error: "Tenant share is required" }).min(0, "Tenant share must be at least 0").max(100, "Tenant share must be at most 100")),
+    counselor_share: z.preprocess((val) => {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }, z.number({ required_error: "Counselor share is required" }).min(0, "Counselor share must be at least 0").max(100, "Counselor share must be at most 100")),
   })
   .refine((data) => data.tenant_share + data.counselor_share === 100, {
     message: "Total share must be exactly 100%",
-    path: ["tenant_share"], 
+    path: ["tenant_share"],
   });
-

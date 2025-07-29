@@ -144,7 +144,10 @@ function Sidebar({ showSideBar, setShowSideBar }) {
             {SIDEBAR_HEADINGS.filter((item) => {
               if ((isManager || isAdmin) && item.title === "Profile")
                 return false;
-              if (!isAdmin && item.title === "Consent Management") return false;
+              // if (!isManager && item.title === "Consent Management") return false;
+              if (!isManager && item.title === "Fee Split Management") {
+                return false;
+              }
 
               return true;
             }).map((heading, index) => (

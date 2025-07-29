@@ -38,6 +38,9 @@ const ApiConfig = {
     getstarted: "/get-started-form",
     submitgetstartedform: "/onboarding",
   },
+  consentFormSubmittion: {
+    consentForm: "/consent-description",
+  },
 };
 
 export default ApiConfig;

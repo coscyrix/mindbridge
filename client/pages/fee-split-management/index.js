@@ -55,7 +55,7 @@ const FeeSplitManagement = () => {
                 color="primary"
               />
             }
-            label="Enable Custom Consent Form Editor"
+            label="Fee Split management"
           />
         </div>
 
@@ -72,7 +72,7 @@ const FeeSplitManagement = () => {
                         label="Tenant share (%)"
                         {...field}
                         value={field.value}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        onChange={(e) => field.onChange(e.target.value)}
                         error={!!errors?.tenant_share}
                         helperText={errors?.tenant_share?.message}
                       />
@@ -89,13 +89,14 @@ const FeeSplitManagement = () => {
                         label="Counselor share (%)"
                         {...field}
                         value={field.value}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        onChange={(e) => field.onChange(e.target.value)}
                         error={!!errors?.counselor_share}
                         helperText={errors?.counselor_share?.message}
                       />
                     )}
                   />
                 </div>
+                <span className="note">Note: The sum of both input must be equal to 100</span>
                 <div className="form-row">
                   <CustomButton
                     className="button-blue"
