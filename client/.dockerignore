@@ -29,4 +29,5 @@ logs
 .env.production.local
 android
 ios
-capacitor.config.ts 
+capacitor.config.ts
+# Don't ignore public directory - it contains static assets 
