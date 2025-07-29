@@ -69,7 +69,12 @@ export default class ServerConfig {
     });
 
     this.app.get('/ping', (req, res) => {
-      res.send('pong');
+      res.json({
+        message: 'pong',
+        timestamp: new Date().toISOString(),
+        port: this.port,
+        processId: process.pid
+      });
     });
 
     // Health check endpoint for CORS testing
@@ -78,6 +83,8 @@ export default class ServerConfig {
         status: 'OK',
         message: 'Server is running and accepting requests from all origins',
         timestamp: new Date().toISOString(),
+        port: this.port,
+        processId: process.pid,
         cors: {
           allowedOrigins: process.env.ALLOWED_ORIGINS || '*',
           allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

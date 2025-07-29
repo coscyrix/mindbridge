@@ -28,7 +28,12 @@ import {
 
 async function main() {
   try {
-    const PORT = process.env.PORT;
+    const PORT = process.env.PORT || 5000;
+    console.log('🔧 Server configuration:');
+    console.log('  - PORT:', PORT);
+    console.log('  - NODE_ENV:', process.env.NODE_ENV);
+    console.log('  - Process ID:', process.pid);
+    
     const server = new ServerConfig({
       port: PORT,
       routers: [
