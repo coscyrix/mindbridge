@@ -228,7 +228,7 @@ function CustomClientDetails({
           <div className="tab-and-heading-container">
             <div className="custom-tab">{customTab}</div>
             <div className="heading-container">
-              <div className="heading">
+              {/* <div className="heading">
                 <div className="heading-wrapper">
                   <div className="mobile-heading-wrapper">
                     <h2 className="heading-text">{title}</h2>
@@ -244,7 +244,7 @@ function CustomClientDetails({
                   <p className="heading-desc">{overview}</p>
                 </div>
                 {children && <div className="children-wrapper">{children}</div>}
-              </div>
+              </div> */}
               <div>
                 {[3, 4].includes(user?.role_id) && handleSelectCounselor ? (
                   <div
@@ -290,6 +290,7 @@ function CustomClientDetails({
                   </div>
                 </div>
               </div>
+
               {/* Replace second CustomSearch usage */}
               <div className="button-group">
                 <div className="search">
@@ -338,6 +339,10 @@ function CustomClientDetails({
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="table-filter">
+            {children && <div className="children-wrapper">{children}</div>}
           </div>
 
           {/* Table with Paginated Data */}

@@ -1,0 +1,75 @@
+import ServiceTemplate from '../models/serviceTemplate.js';
+import Service from '../models/service.js';
+import Common from '../models/common.js';
+
+export default class ServiceTemplateService {
+  constructor() {
+    this.serviceTemplate = new ServiceTemplate();
+    this.service = new Service();
+    this.common = new Common();
+  }
+
+  async createTemplate(data) {
+    return this.serviceTemplate.createTemplate(data);
+  }
+
+  async getTemplates(filters) {
+    return this.serviceTemplate.getTemplates(filters);
+  }
+
+  async getTemplateById(template_service_id) {
+    return this.serviceTemplate.getTemplateById(template_service_id);
+  }
+
+  async updateTemplate(template_service_id, data) {
+    return this.serviceTemplate.updateTemplate(template_service_id, data);
+  }
+
+  async deleteTemplate(template_service_id) {
+    return this.serviceTemplate.deleteTemplate(template_service_id);
+  }
+
+  async copyTemplateToTenantService(template_service_id, tenant_id, price) {
+    // Fetch template
+    const templateRes = await this.serviceTemplate.getTemplateById(template_service_id);
+    if (templateRes.error) return templateRes;
+    const template = templateRes.rec;
+    // Fetch tenant for admin_fee and tax_percent
+    const tenantRes = await this.common.getTenantByTenantGeneratedId(tenant_id);
+    if (tenantRes.error) return tenantRes;
+    const tenant = tenantRes[0];
+    // Use provided price as basePrice
+    const basePrice = Number(price) || 0;
+    const adminFee = Number(tenant.admin_fee) || 0;
+    const taxPercent = Number(tenant.tax_percent) || 0;
+    const finalPrice = basePrice + adminFee + (basePrice * taxPercent / 100);
+
+    // Copy all fields from template, override only necessary ones
+    const serviceData = {
+      ...template,
+      service_name: template.name || template.service_name,
+      service_code: template.service_code || (template.name || template.service_name || 'SERVICE').replace(/\s+/g, '_').toUpperCase(),
+      total_invoice: finalPrice,
+      gst: taxPercent,
+      tenant_id: tenant_id,
+      template_service_id: template_service_id,
+    };
+    // Remove/override fields that should not be copied or are not relevant for the service table
+    delete serviceData.template_service_id; // avoid conflict if present
+    delete serviceData.id; // generic id field if present
+    delete serviceData.created_at;
+    delete serviceData.updated_at;
+    // You can add more fields to delete if needed
+
+    // Ensure required fields for service
+    if (!serviceData.nbr_of_sessions) serviceData.nbr_of_sessions = 1;
+    if (!serviceData.svc_formula_typ) serviceData.svc_formula_typ = 's';
+    if (!serviceData.svc_formula) serviceData.svc_formula = JSON.stringify([7]);
+    if (!serviceData.svc_report_formula) serviceData.svc_report_formula = JSON.stringify({});
+    if (serviceData.is_report === undefined) serviceData.is_report = 0;
+    if (serviceData.is_additional === undefined) serviceData.is_additional = 0;
+    
+
+    return this.service.postService(serviceData);
+  }
+} 

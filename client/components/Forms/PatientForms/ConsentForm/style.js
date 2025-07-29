@@ -12,7 +12,12 @@ export const ConsentFormContainer = styled.div`
     max-width: 300px;
     font-size: 15px;
   }
-
+  .editableTextEditorSubmit {
+    background: var(--primary-button-color);
+    margin-top: 60px;
+    margin-bottom: 30px;
+    color: white;
+  }
   .content {
     text-align: left;
     h3 {

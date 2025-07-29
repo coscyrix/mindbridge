@@ -11,6 +11,7 @@ const patientForms = [
   { formName: "Consent Form", url: "consent" },
   { formName: "WHODas Form", url: "whodas" },
   { formName: "Smart Goals", url: "smartgoals" },
+  { formName: "Goal Assessment Scaling (GAS)", url: "gas" },
 ];
 
 const PatientForms = () => {

@@ -3,7 +3,12 @@ import { useRouter } from "next/router";
 import CustomInputField from "../components/CustomInputField";
 import CustomButton from "../components/CustomButton";
 import CustomMultiSelect from "../components/CustomMultiSelect";
-import { useForm, FormProvider, Controller } from "react-hook-form";
+import {
+  useForm,
+  FormProvider,
+  Controller,
+  useFormContext,
+} from "react-hook-form";
 import {
   FormContainer,
   RightPanel,
@@ -19,6 +24,7 @@ import Cookies from "js-cookie";
 import WeeklyAvailability from "../components/WeeklyAvailability";
 import LocationSearch from "../components/LocationSearch";
 import axios from "axios";
+import { TREATMENT_TARGET } from "../utils/constants";
 
 const StepIndicator = styled.div`
   display: flex;
@@ -267,6 +273,7 @@ const SignUp = () => {
       race: "",
       license_number: "",
       license_file_url: "",
+      license_provider: "",
       availability: {},
     },
   });
@@ -299,7 +306,6 @@ const SignUp = () => {
 
     checkExistingProfile();
   }, [userObj?.user_profile_id, router]);
-
   const handleLicenseFileSelect = (file) => {
     setLicenseFile(file);
   };
@@ -314,10 +320,13 @@ const SignUp = () => {
           "public_phone",
           "patients_seen",
           "profile_notes",
-          "services_offered",
+          "treatment_target",
           "service_modalities",
           "gender",
           "race",
+          "license_number",
+          "license_file_url",
+          "license_provider",
         ];
         break;
       case 2:
@@ -366,26 +375,28 @@ const SignUp = () => {
   const onSubmit = async (formData) => {
     setLoading(true);
     try {
-      console.log("Selected services (array):", formData?.services_offered);
-      // console.log("in")
       const profileData = {
         user_profile_id: userObj?.user_profile_id,
         counselor_profile_id: onBoardingDetails?.counselor_profile_id,
         license_number: formData.license_number,
+        license_provider: formData.license_provider,
         license_expiry_date: formData.license_expiry_date,
-        services_offered: JSON.stringify(
-         Array.isArray(formData?.services_offered)
-            ? formData.services_offered.map((s) => s.label)
-            : []
-        ),
-        specialties: JSON.stringify(
-          formData?.specialties?.map((s) => s.value) || []
-        ),
+        // services_offered: JSON.stringify(
+        //   Array.isArray(formData?.services_offered)
+        //     ? formData.services_offered.map((s) => s.label)
+        //     : []
+        // ),
+        // specialties: JSON.stringify(
+        //   formData?.specialties?.map((s) => s.value) || []
+        // ),
         service_modalities: JSON.stringify(
           Array.isArray(formData?.service_modalities)
             ? formData.service_modalities.map((s) => s.value)
             : []
         ),
+        treatment_target: Array.isArray(formData?.treatment_target)
+          ? formData.treatment_target.map((t) => t.value)
+          : [],
         availability: JSON.stringify(formData.availability || {}),
         location: formData.location?.value,
         location_lat: formData.location?.lat,
@@ -401,8 +412,6 @@ const SignUp = () => {
         ? await updateProfile(profileData, userId)
         : await onBoarding(profileData);
       // const response = {id:'abc'};
-      console.log("Profile creation/update response:", response);
-
       if (response?.id || userId) {
         const idToUpdate = response?.id ? response?.id : userId;
 
@@ -411,21 +420,14 @@ const SignUp = () => {
         let documentsSuccess = true;
 
         // Upload profile picture if selected
-        console.log("Checking for profile picture to upload...");
         if (profilePictureFile) {
-          console.log(
-            "Profile picture found, preparing for upload:",
-            profilePictureFile
-          );
           try {
             const formData = new FormData();
             formData.append("image", profilePictureFile);
-            console.log("Uploading profile picture...");
             await CommonServices.uploadProfileImage(
               idToUpdate || response.counselor_profile_id,
               formData
             );
-            console.log("Profile picture uploaded successfully.");
           } catch (error) {
             profileImageSuccess = false;
             console.error("Error uploading profile picture:", error);
@@ -436,21 +438,14 @@ const SignUp = () => {
         }
 
         // Upload license file if selected
-        console.log("Checking for license file to upload...");
         if (licenseFile && typeof licenseFile !== "string") {
-          console.log(
-            "New license file found, preparing for upload:",
-            licenseFile
-          );
           try {
             const formData = new FormData();
             formData.append("license", licenseFile);
-            console.log("Uploading new license file...");
             await CommonServices.uploadLicenseFile(
               idToUpdate || response.counselor_profile_id,
               formData
             );
-            console.log("License file uploaded successfully.");
           } catch (error) {
             licenseFileSuccess = false;
             console.error("Error uploading license file:", error);
@@ -463,13 +458,10 @@ const SignUp = () => {
         }
 
         // Upload all additional documents
-        console.log("Checking for additional documents to upload...");
         if (documentFiles.length > 0) {
-          console.log(`Found ${documentFiles.length} additional documents.`);
           const documentUploadPromises = documentFiles.map(
             async (file, index) => {
               if (file) {
-                console.log(`Uploading document ${index + 1}:`, file.name);
                 try {
                   const formData = new FormData();
                   formData.append("document", file);
@@ -482,7 +474,6 @@ const SignUp = () => {
                   formData.append("expiry_date", documentExpiryDates[index]);
 
                   await CommonServices.uploadOnboardingDocuments(formData);
-                  console.log(`Document ${index + 1} uploaded successfully.`);
                   return true;
                 } catch (error) {
                   console.error(
@@ -529,7 +520,7 @@ const SignUp = () => {
       setLoading(false);
     }
   };
-  
+
   const nextStep = async () => {
     const isValid = await validateStep(currentStep);
     if (isValid) {
@@ -646,7 +637,7 @@ const SignUp = () => {
         })
       );
 
-      const specialties = onBoardingDetails.specialties.map((specialty) => ({
+      const specialties = onBoardingDetails.specialties?.map((specialty) => ({
         value: specialty.service_id,
         label: specialty.service_name,
       }));
@@ -680,6 +671,7 @@ const SignUp = () => {
           label: onBoardingDetails.race,
         },
         license_number: onBoardingDetails.license_number,
+
         license_file_url: onBoardingDetails.license_file_url,
         availability: onBoardingDetails.availability || {},
       });
@@ -803,6 +795,7 @@ const SignUp = () => {
                 />
               </FormField>
               <FormField className="half-width">
+              <label>License File</label>
                 <Controller
                   name="license_file_url"
                   control={methods.control}
@@ -811,15 +804,35 @@ const SignUp = () => {
                     <LicenseFileUpload
                       counselorProfileId={123}
                       onUploadComplete={handleUploadComplete}
-                      error={error?.message}
+                      errormsg={error?.message}
+                      label="License Number"
                       onFileSelect={handleLicenseFileSelect}
                       hideUploadButton={true}
                       licenseFile={licenseFile}
+                      value={field.value}
+                      onChange={field.onChange}
                     />
                   )}
                 />
               </FormField>
             </FormRow>
+            <FormField className="half-width">
+              <Controller
+                name="license_provider"
+                control={methods.control}
+                rules={{ required: "License provider is required" }}
+                render={({ field, fieldState: { error } }) => (
+                  <CustomInputField
+                    {...field}
+                    label="License Provider*"
+                    required
+                    customClass="license-provider-input"
+                    placeholder="Enter your license provider"
+                    error={error?.message}
+                  />
+                )}
+              />
+            </FormField>
 
             <FormField>
               <Controller
@@ -906,7 +919,7 @@ const SignUp = () => {
 
             <FormRow>
               <FormField className="half-width">
-                <Controller
+                {/* <Controller
                   name="services_offered"
                   control={methods.control}
                   rules={{ required: "Services offered is required" }}
@@ -920,20 +933,20 @@ const SignUp = () => {
                       error={error?.message}
                     />
                   )}
-                />
+                /> */}
               </FormField>
               <FormField className="half-width">
                 <Controller
-                  name="specialties"
+                  name="treatment_target"
                   control={methods.control}
-                  rules={{ required: "Specialties are required" }}
+                  rules={{ required: "Treatment target is required" }}
                   render={({ field, fieldState: { error } }) => (
                     <CustomMultiSelect
                       {...field}
-                      label="Specialties*"
-                      placeholder="Select your specialties"
+                      label="Treatment Target"
+                      placeholder="Select your Treatment Target"
                       isMulti={true}
-                      options={servicesDropdown}
+                      options={TREATMENT_TARGET}
                       error={error?.message}
                     />
                   )}
@@ -1194,9 +1207,7 @@ const SignUp = () => {
   const getProfileData = async () => {
     try {
       const { data, status } = await CommonServices.getCounselorProfile(userId);
-      console.log(data);
-      if (data && status === 200) 
-        {
+      if (data && status === 200) {
         setOnBoardingDetails(data?.rec[0]);
       }
     } catch (error) {
@@ -1251,9 +1262,9 @@ const SignUp = () => {
           <FormProvider {...methods}>
             <form>
               {type
-                ? renderStepContent(getStepFromType(type))
+                ? renderStepContent(getStepFromType(currentStep))
                 : renderStepContent()}
-              {type && (
+              {/* {type && (
                 <CustomButton
                   title="Submit"
                   type="button"
@@ -1261,8 +1272,8 @@ const SignUp = () => {
                   className="primary-button"
                   disabled={loading}
                 />
-              )}
-              {!type && (
+              )} */}
+              {type && (
                 <ButtonContainer>
                   {currentStep > 1 && (
                     <CustomButton

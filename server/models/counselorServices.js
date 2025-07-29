@@ -94,4 +94,18 @@ export default class CounselorService {
       return { message: 'Error deleting counselor service', error: -1 };
     }
   }
+
+  async deleteAllCounselorServicesByProfileId(counselor_profile_id) {
+    try {
+      const result = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('counselor_services')
+        .where('counselor_profile_id', counselor_profile_id)
+        .delete();
+      return { message: 'All counselor services deleted successfully' };
+    } catch (error) {
+      logger.error('Error deleting all counselor services:', error);
+      return { message: 'Error deleting all counselor services', error: -1 };
+    }
+  }
 } 

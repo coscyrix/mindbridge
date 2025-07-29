@@ -54,7 +54,6 @@ function OverallSession({ overallSessionsData }) {
       const clientData = overallSessionsData.find(
         (item) => item.client_id === client.value
       );
-      console.log(clientData, "clientData");
       if (clientData) {
         setAxisX([client]);
         setTotalSessionsData([{ value: clientData.total_session_count }]);

@@ -269,7 +269,7 @@ export default class UserProfile {
         return postConsentForm;
       }
 
-      return { message: 'User profile created successfully' };
+      return { message: 'User profile created successfully', tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id };
     } catch (error) {
       console.log(error);
       logger.error(error);

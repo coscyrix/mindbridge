@@ -29,9 +29,31 @@ export default class ServerConfig {
     this.app.use('/uploads', Express.static(path.join(__dirname, '../../uploads')));
 
     this.app.use(cors({
-      origin: 'http://localhost:3000',
+      origin: process.env.ALLOWED_ORIGINS || '*', // Allow all origins from env or default to *
       credentials: true, // if you use cookies or authorization headers
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'ngrok-skip-browser-warning'],
+      exposedHeaders: ['Content-Length', 'X-Requested-With'],
+      preflightContinue: false,
+      optionsSuccessStatus: 204
     }));
+
+    // Additional headers to allow all origins
+    this.app.use((req, res, next) => {
+      // Log CORS requests for debugging
+      console.log(`CORS Request: ${req.method} ${req.originalUrl} from ${req.get('Origin') || 'Unknown Origin'}`);
+      
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, ngrok-skip-browser-warning');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      
+      if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+      } else {
+        next();
+      }
+    });
 
     middlewares?.forEach((mdlw) => {
       this.registerMiddleware(mdlw);
@@ -39,6 +61,20 @@ export default class ServerConfig {
 
     this.app.get('/ping', (req, res) => {
       res.send('pong');
+    });
+
+    // Health check endpoint for CORS testing
+    this.app.get('/health', (req, res) => {
+      res.json({
+        status: 'OK',
+        message: 'Server is running and accepting requests from all origins',
+        timestamp: new Date().toISOString(),
+        cors: {
+          allowedOrigins: process.env.ALLOWED_ORIGINS || '*',
+          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+          allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'ngrok-skip-browser-warning']
+        }
+      });
     });
 
     routers?.forEach(({ baseUrl, router }) => {

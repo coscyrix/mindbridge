@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { InvoiceContainer, ModalButtons } from "../styles/invoice";
 import { api } from "../utils/auth";
 import CustomTable from "../components/CustomTable";
@@ -24,6 +24,7 @@ import Spinner from "../components/common/Spinner";
 import CustomPagination from "../components/CustomPagination";
 import { DOWNLOAD_OPTIONS, SERVICE_FEE_INFO } from "../utils/constants";
 import moment from "moment";
+import { useReferenceContext } from "../context/ReferenceContext";
 
 const Invoice = () => {
   const [invoices, setInvoices] = useState(null);
@@ -44,6 +45,91 @@ const Invoice = () => {
   const itemsPerPage = 9;
   const methods = useForm();
   const { setValue } = methods;
+  const monthRef = useRef(null);
+  const [allManagers, setAllManagers] = useState(null);
+  const { allCounselors } = useReferenceContext();
+  const uniqueManagersMap = new Map();
+
+  allManagers?.forEach((user) => {
+    if (!uniqueManagersMap.has(user.user_id)) {
+      uniqueManagersMap.set(user.user_id, {
+        label: `${user.user_first_name} ${user.user_last_name}`,
+        value: user.user_id,
+        tenant_id: user.tenant_id,
+      });
+    }
+  });
+
+  const managerOptions = Array.from(uniqueManagersMap.values());
+
+  const [selectedManager, setSelectedManager] = useState(null);
+  const [filteredCounselors, setFilteredCounselors] = useState([]);
+  const handleSelectManager = (selected) => {
+    setSelectedManager(selected);
+    //match 
+    const matchingCounselors = allCounselors?.filter(
+      (c) => c.tenant_id === selected.tenant_id
+    );
+    const uniqueCounselorsMap = new Map();
+    matchingCounselors?.forEach((user) => {
+      if (!uniqueCounselorsMap.has(user.user_id)) {
+        uniqueCounselorsMap.set(user.user_id, {
+          label: `${user.user_first_name} ${user.user_last_name}`,
+          value: user.user_id,
+          tenant_id: user.tenant_id,
+        });
+      }
+    });
+    const counselorOptions = Array.from(uniqueCounselorsMap.values());
+    setCounselors(counselorOptions);
+    setFilteredCounselors(matchingCounselors);
+
+    const counselorId = selected?.value;
+    setSelectCounselor(counselorId);
+  };
+  const formatDate = (date) => date.toLocaleDateString("en-CA");
+
+  const setDefaultDates = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    setStartDate(formatDate(start));
+    setEndDate(formatDate(end));
+    monthRef.current = now.getMonth();
+  };
+
+  useEffect(() => {
+    setDefaultDates();
+  }, []);
+
+  useEffect(() => {
+    const now = new Date();
+    const nextMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      1,
+      0,
+      0,
+      0
+    ); 
+    const timeUntilNextMonth = nextMonth.getTime() - now.getTime(); 
+
+    const timeout = setTimeout(() => {
+      setDefaultDates(); 
+      fetchFilteredInvoices({
+        counselorId: selectCounselor,
+        startDate: formatDate(
+          new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1)
+        ),
+        endDate: formatDate(
+          new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0)
+        ),
+      });
+    }, timeUntilNextMonth);
+
+    return () => clearTimeout(timeout);
+  }, [selectCounselor, user, roleId]);
+  
 
   const handleAddInvoiceNumber = (row) => {
     setOpen(true);
@@ -124,7 +210,7 @@ const Invoice = () => {
         <div
           style={{
             color:
-              row.session_status?.toLowerCase() == "show" ? "green" : "red",
+              row.session_status?.toLowerCase() === "show" ? "green" : "red",
             pointerEvents: "none",
           }}
         >
@@ -136,7 +222,6 @@ const Invoice = () => {
     {
       name: "Total Amount",
       selector: (row) =>
-        // `$${Number(row.session_price + row.session_gst).toFixed(2)}`
         `$${(
           Number(row.session_counselor_amt) + Number(row.session_system_amt)
         ).toFixed(2)}`,
@@ -160,7 +245,8 @@ const Invoice = () => {
       selectorId: "session_system_amt",
     },
   ];
-
+  if (invoiceTableData && invoiceTableData.length > 0) {
+  }
   const [visibleColumns, setVisibleColumns] = useState(
     columns?.map((col) => ({ ...col, omit: false }))
   );
@@ -240,6 +326,11 @@ const Invoice = () => {
       const response = await CommonServices.getClients();
       if (response.status === 200) {
         const { data } = response;
+        const filteredManagers = response?.data?.rec?.filter(
+          (manager) => manager.role_id === 3
+        );
+        setAllManagers(filteredManagers);
+
         const allCounselors = data?.rec?.filter(
           (client) =>
             client?.role_id === 2 && client?.tenant_id === user?.tenant_id
@@ -258,7 +349,12 @@ const Invoice = () => {
       // setClientsLoading(false);
     }
   };
-  const fetchFilteredInvoices = async ({ counselorId, startDate, endDate }) => {
+  const fetchFilteredInvoices = async ({
+    counselorId,
+    startDate,
+    endDate,
+    tenant_id,
+  }) => {
     try {
       setLoading("tableData");
       const params = new URLSearchParams();
@@ -274,6 +370,7 @@ const Invoice = () => {
 
       if (startDate) params.append("start_dte", startDate);
       if (endDate) params.append("end_dte", endDate);
+      if (tenant_id) params.append("tenant_id", tenant_id);
 
       const response = await api.get(`/invoice/multi?${params.toString()}`);
 
@@ -291,7 +388,9 @@ const Invoice = () => {
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
     setSelectCounselor(counselorId);
-    fetchFilteredInvoices({ counselorId, startDate, endDate });
+    const counselor = allCounselors.find((c) => c.user_id === counselorId);
+    const tenant_id = counselor?.tenant_id;
+    fetchFilteredInvoices({ counselorId, startDate, endDate, tenant_id });
   };
 
   const handleStartDateChange = (e) => {
@@ -368,14 +467,6 @@ const Invoice = () => {
       toggleIcon: true,
     }));
 
-  let columnOptions = [];
-
-  // Add column titles to subHeadings
-  columnOptions.push({
-    heading: "Show/Hide Columns",
-    subHeadings: columnTitles,
-  });
-
   const renderFooter = () => (
     <div
       style={{
@@ -442,10 +533,18 @@ const Invoice = () => {
     (currentPage + 1) * itemsPerPage
   );
 
+  const columnOptions = [];
+
+  if (paginatedData && paginatedData.length > 0) {
+    columnOptions.push({
+      heading: "Show/Hide Columns",
+      subHeadings: columnTitles,
+    });
+  }
+
   if (roleId === null) {
     return null;
   }
-
   return (
     <InvoiceContainer>
       <div className="top-section-wrapper">
@@ -494,13 +593,24 @@ const Invoice = () => {
             />
             <CustomTab heading="Service Fees" lines={SERVICE_FEE_INFO} />
           </div>
-          <div  className="search-container">
+          <div className="search-container">
             <div className="search-and-select">
               <div className="custom-select-container">
                 {[3, 4].includes(roleId) ? (
-                  <div  key="counselor-select">
-                    <label>Counselor</label>
-                    {/* <CustomSelect
+                  <>
+                    <div key="counselor-select">
+                      <label>Managers</label>
+                      <CustomMultiSelect
+                        options={managerOptions}
+                        placeholder="Select manager"
+                        isMulti={false}
+                        onChange={handleSelectManager}
+                        value={selectedManager}
+                      />
+                    </div>
+                    <div key="counselor-select">
+                      <label>Counselor</label>
+                      {/* <CustomSelect
                       name="counselor"
                       options={counselors}
                       value={selectCounselor}
@@ -510,16 +620,17 @@ const Invoice = () => {
                       }
                       placeholder="Select a counselor"
                     /> */}
-                    <CustomMultiSelect
-                      options={counselors}
-                      placeholder="Select a counselor"
-                      isMulti={false}
-                      onChange={handleSelectCounselor}
-                      value={counselors.find(
-                        (option) => option.value === selectCounselor
-                      )}
-                    />
-                  </div>
+                      <CustomMultiSelect
+                        options={counselors}
+                        placeholder="Select a counselor"
+                        isMulti={false}
+                        onChange={handleSelectCounselor}
+                        value={counselors.find(
+                          (option) => option.value === selectCounselor
+                        )}
+                      />
+                    </div>
+                  </>
                 ) : null}
                 <div>
                   <label>Start Date</label>
@@ -569,9 +680,8 @@ const Invoice = () => {
           </div>
         </div>
       </div>
-
       <CustomTable
-        columns={visibleColumns}
+        columns={columns}
         data={paginatedData || []}
         onRowclick={(row) => handleEdit(row)}
         loading={loading === "tableData"}

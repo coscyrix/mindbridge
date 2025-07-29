@@ -2,6 +2,19 @@ import styled from "styled-components";
 
 export const CustomInputContainer = styled.div`
   margin-bottom: 16px;
+  .textbox {
+    position: relative;
+  }
+  .textbox input {
+    padding-left: 73px;
+  }
+  .https {
+    position: absolute;
+    top: 0px;
+    left: 17px;
+    color: #767676;
+  }
+
   input {
     width: 100%;
     height: 45px;
@@ -12,7 +25,7 @@ export const CustomInputContainer = styled.div`
     font-size: 14px;
     font-weight: 400;
     line-height: 24px;
-    margin: 0p;
+    margin-top: 10px;
     border-radius: 6px;
     &::placeholder {
       color: #000000;

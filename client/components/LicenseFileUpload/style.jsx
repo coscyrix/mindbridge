@@ -2,20 +2,23 @@ import styled from "styled-components";
 
 export const UploadContainer = styled.div`
   margin-top: 24px;
-  border: 2px dashed #E0E0E0;
+  border: 2px dashed #e0e0e0;
   border-radius: 8px;
   padding: 24px;
-  background: #FAFAFA;
+  background: #fafafa;
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: #2196F3;
-    background: #F5F9FF;
+    border-color: #2196f3;
+    background: #f5f9ff;
   }
 
+  &.errorContainer {
+    border-color: red;
+  }
   &.dragging {
-    border-color: #2196F3;
-    background: #F5F9FF;
+    border-color: #2196f3;
+    background: #f5f9ff;
   }
 `;
 
@@ -26,7 +29,7 @@ export const FileInput = styled.input`
 export const UploadButton = styled.button`
   background: none;
   border: none;
-  color: #2196F3;
+  color: #2196f3;
   cursor: pointer;
   font-size: 16px;
   padding: 8px 16px;
@@ -34,7 +37,7 @@ export const UploadButton = styled.button`
   text-decoration: underline;
 
   &:hover {
-    color: #1976D2;
+    color: #1976d2;
   }
 `;
 
@@ -61,7 +64,7 @@ export const FileInfo = styled.div`
   }
 
   .file-url {
-    color: #2196F3;
+    color: #2196f3;
     font-size: 12px;
     word-break: break-all;
     margin-top: 4px;
@@ -70,19 +73,19 @@ export const FileInfo = styled.div`
   .remove-button {
     background: none;
     border: none;
-    color: #FF5252;
+    color: #ff5252;
     cursor: pointer;
     padding: 4px 8px;
     font-size: 18px;
-    
+
     &:hover {
-      color: #D32F2F;
+      color: #d32f2f;
     }
   }
 `;
 
 export const ErrorMessage = styled.div`
-  color: #FF5252;
+  color: #ff5252;
   font-size: 14px;
   margin-top: 8px;
 `;

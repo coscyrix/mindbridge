@@ -1,36 +1,34 @@
 import React from "react";
 
 import { MindbridgeJourneyWrapper } from "../style";
-import {
-  AnalyticsIcon,
-  HomeworkIcon,
-  LoginIcon,
-  SessionTrackingIcon,
-} from "../assets/icons";
 import CustomButton from "../../CustomButton";
 import journeyMainImage from "../assets/images/mindbridge-journey-main-image.jpeg";
-
+import ButtonRow from "../../CustomButton/CustomButtonRow";
+import LoginIcon from "../assets/icons/LoginIcon.svg";
+import AnalyticsIcon from "../assets/icons/AnalyticsIcon.svg";
+import HomeworkIcon from "../assets/icons/HomeworkIcon.svg";
+import SessionTrackingIcon from "../assets/icons/SessionTrackingIcon.svg";
 const MindbridgeJourney = () => {
   // import { useRouter } from "next/router";
-  
+
   const steps = [
     {
-      icon: <LoginIcon />,
+      icon: LoginIcon,
       title: "STEP 1",
       description: "Create Your Account",
     },
     {
-      icon: <HomeworkIcon />,
+      icon: HomeworkIcon,
       title: "STEP 2",
       description: "Add your clients or import data",
     },
     {
-      icon: <SessionTrackingIcon />,
+      icon: SessionTrackingIcon,
       title: "STEP 3",
       description: "Start logging sessions and sending assessments",
     },
     {
-      icon: <AnalyticsIcon />,
+      icon: AnalyticsIcon,
       title: "STEP 4",
       description: "Monitor progress and metrics via the dashboard",
     },
@@ -40,9 +38,9 @@ const MindbridgeJourney = () => {
     <MindbridgeJourneyWrapper>
       <div className="top-content-container">
         <div
-          className="text-content-container"
+          className="text-content-container text-content-container-Journey"
           style={{
-            width: "50%",
+            // width: "50%",
             display: "flex",
             flexDirection: "column",
             // alignItems: "center",
@@ -60,17 +58,17 @@ const MindbridgeJourney = () => {
             <br />
             to tracking progress effortlessly.
           </p>
-          <CustomButton
-          // onClick={handlege}
-            title="Get started -pay only when you earn"
-            customClass="get-started-button"
-          />
+          <ButtonRow marginBottom="40px" />
+          {/* <div className="explore-feature-core-button">
+          </div> */}
         </div>
-        <div className="image-container">
+        <div className="image-container image-container-journey">
           <img
+            width={668}
+            height={319}
             src={journeyMainImage.src}
             alt="journey-image"
-            className="image-placeholder"
+            className="image-placeholder image-journey"
           />
         </div>
       </div>
@@ -79,7 +77,7 @@ const MindbridgeJourney = () => {
       <div className="steps-container">
         {steps.map((step, index) => (
           <div key={index} className="step-item">
-            <div className="step-icon-container">{step.icon}</div>
+            <img className="step-icon-container" src={step.icon.src}></img>
             <h5 className="step-title">{step.title}</h5>
             <p className="step-description">{step.description}</p>
           </div>

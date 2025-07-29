@@ -96,24 +96,24 @@ export const CreateSessionFormWrapper = styled.div`
     }
 
     .discharge-delete-button {
-      color: var(--error-color);
-      padding: 0px;
+      color: #FFFFFF;
+      padding: 10px;
       border: none;
       box-shadow: none;
       font-size: 15px;
       &:hover {
-        color: var(--error-hover-color);
+        color: #ff9;
       }
       &_disabled {
         opacity: 0.5;
-        color: var(--error-color);
-        padding: 0px;
+        color: #FFFFFF;
+        padding: 10px;
         border: none;
         box-shadow: none;
         cursor: auto;
         font-size: 15px;
         &:hover {
-          color: var(--error-color);
+          color: #FF9;
         }
       }
     }

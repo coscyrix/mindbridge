@@ -416,7 +416,6 @@ function CurrentSession() {
   useEffect(() => {
     const userData = Cookies.get("user");
     const userObj = JSON.parse(userData);
-    console.log(userObj);
     setUserData(userObj);
     userObj?.role_id == 4 || userObj?.role_id == 3
       ? fetchCounsellor()

@@ -141,7 +141,9 @@ function CreateSessionForm({
     setLoader("scheduledSessionLoading");
     try {
       const response = await api.get(
-        `/thrpyReq/?req_id=${initialData?.req_id}&role_id=${userObj?.role_id==3?2:userObj?.role_id}&user_profile_id=${initialData?.counselor_id}` // use counselor_id for admin and counselor
+        `/thrpyReq/?req_id=${initialData?.req_id}&role_id=${
+          userObj?.role_id == 3 ? 2 : userObj?.role_id
+        }&user_profile_id=${initialData?.counselor_id}` // use counselor_id for admin and counselor
       );
       if (response?.status === 200) {
         const scheduledSession = response?.data[0]?.session_obj;
@@ -732,7 +734,8 @@ function CreateSessionForm({
     } catch (error) {
       console.error("Error generating schedule:", error);
       toast.error(
-        error?.response?.data?.message || "Failed to generate schedule. Please try again.",
+        error?.response?.data?.message ||
+          "Failed to generate schedule. Please try again.",
         {
           position: "top-right",
         }
@@ -1183,10 +1186,8 @@ function CreateSessionForm({
                   )}
                 </div>
               )}
-{console.log("main::::::::::::", additionalSessions,sessionTableColumns)}
               {initialData && loader !== "scheduledSessionLoading" && (
                 <CustomTable
-
                   columns={sessionTableColumns}
                   data={additionalSessions}
                   defaultSortFieldId="schedule_date"
@@ -1305,8 +1306,8 @@ function CreateSessionForm({
           setActiveRow("");
           setShowStatusConfirmationModal(false);
         }}
-        affirmativeAction="Yes"
-        discardAction="No"
+        affirmativeAction="Confirm"
+        discardAction="Cancel"
         content={showStatusModalContent}
         handleAffirmativeAction={() => handleShowStatus(activeRow)}
         loading={loader == "showStatusLoader"}
