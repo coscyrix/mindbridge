@@ -37,31 +37,54 @@ export default class ServerConfig {
     }
     this.app.use('/uploads', Express.static(uploadsPath));
 
-    this.app.use(cors({
-      origin: process.env.ALLOWED_ORIGINS || '*', // Allow all origins from env or default to *
-      credentials: true, // if you use cookies or authorization headers
+    // CORS configuration
+    const corsOptions = {
+      origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Allow all origins for development
+        if (process.env.NODE_ENV === 'development' || process.env.ALLOWED_ORIGINS === '*') {
+          return callback(null, true);
+        }
+        
+        // Check if origin is in allowed list
+        const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['*'];
+        if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        
+        return callback(new Error('Not allowed by CORS'));
+      },
+      credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'ngrok-skip-browser-warning'],
       exposedHeaders: ['Content-Length', 'X-Requested-With'],
       preflightContinue: false,
       optionsSuccessStatus: 204
-    }));
+    };
 
-    // Additional headers to allow all origins
+    this.app.use(cors(corsOptions));
+
+    // Additional CORS headers for better compatibility
     this.app.use((req, res, next) => {
       // Log CORS requests for debugging
       console.log(`CORS Request: ${req.method} ${req.originalUrl} from ${req.get('Origin') || 'Unknown Origin'}`);
       
+      // Set CORS headers
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
       res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, ngrok-skip-browser-warning');
       res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Max-Age', '86400'); // 24 hours
       
+      // Handle preflight requests
       if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-      } else {
-        next();
+        res.status(200).end();
+        return;
       }
+      
+      next();
     });
 
     middlewares?.forEach((mdlw) => {
@@ -90,6 +113,25 @@ export default class ServerConfig {
           allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
           allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'ngrok-skip-browser-warning']
         }
+      });
+    });
+
+    // CORS test endpoint
+    this.app.get('/api/cors-test', (req, res) => {
+      res.json({
+        message: 'CORS is working!',
+        timestamp: new Date().toISOString(),
+        origin: req.get('Origin'),
+        method: req.method
+      });
+    });
+
+    // Auth test endpoint
+    this.app.post('/api/auth/test', (req, res) => {
+      res.json({
+        message: 'Auth endpoint is accessible',
+        timestamp: new Date().toISOString(),
+        body: req.body
       });
     });
 
