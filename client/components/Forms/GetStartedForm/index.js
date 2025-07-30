@@ -95,10 +95,10 @@ const GetStartedFormTemplate = ({ onClose, open }) => {
   const onSubmit = async (data) => {
     try {
       setIsLoading(true);
-      //   const combinedDateTime =
-      //     data.demodate && data.demotime
-      //       ? `${data.demodate}T${data.demotime}`
-      //       : null;
+      const combinedDateTime =
+        data.demodate && data.demotime
+          ? `${data.demodate}T${data.demotime}`
+          : null;
       const featuresString = data.features
         .map((feature) => feature.value)
         .join(", ");
@@ -109,14 +109,13 @@ const GetStartedFormTemplate = ({ onClose, open }) => {
           data.website?.startsWith("https://")
             ? data.website
             : `https://${data.website}`,
-        // demoTime: combinedDateTime,
+        demoTime: combinedDateTime,
         features: featuresString,
       };
       delete payload.demodate;
       delete payload.demotime;
       delete payload.confirmInfo;
       delete payload.agreeTerms;
-      // delete payload.
       const response = await CommonServices.submitOnboardingform(payload);
       if (response) {
         toast.success(response?.message);

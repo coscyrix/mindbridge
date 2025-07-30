@@ -621,6 +621,8 @@ export default class Common {
 
   async getTenantByTenantGeneratedId(tenant_generated_id) {
     try {
+      console.log('tenant_generated_id', tenant_generated_id);
+      
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select()

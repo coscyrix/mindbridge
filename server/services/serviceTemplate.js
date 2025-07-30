@@ -35,7 +35,7 @@ export default class ServiceTemplateService {
     if (templateRes.error) return templateRes;
     const template = templateRes.rec;
     // Fetch tenant for admin_fee and tax_percent
-    const tenantRes = await this.common.getTenantByTenantGeneratedId(tenant_id);
+    const tenantRes = await this.common.getTenantByTenantId(tenant_id);
     if (tenantRes.error) return tenantRes;
     const tenant = tenantRes[0];
     // Use provided price as basePrice
@@ -51,7 +51,7 @@ export default class ServiceTemplateService {
       service_code: template.service_code || (template.name || template.service_name || 'SERVICE').replace(/\s+/g, '_').toUpperCase(),
       total_invoice: finalPrice,
       gst: taxPercent,
-      tenant_id: tenant_id,
+      tenant_id: tenant.tenant_generated_id,
       template_service_id: template_service_id,
     };
     // Remove/override fields that should not be copied or are not relevant for the service table
