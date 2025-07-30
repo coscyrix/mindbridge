@@ -155,7 +155,7 @@ export default class UserProfile {
         password: clientPassword,
         role_id: data.role_id,
         // if tenantId is not provided, use the tenant_id from the user_profile_id
-        tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id,
+        tenant_id: tenantId ? tenantId[0].tenant_generated_id : data.tenant_id,
       });
 
       if (postUser.error) {
