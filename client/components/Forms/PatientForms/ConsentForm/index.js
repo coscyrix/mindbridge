@@ -7,6 +7,7 @@ import CustomButton from "../../../CustomButton";
 import { api } from "../../../../utils/auth";
 import { toast } from "react-toastify";
 import { useRouter } from "next/router";
+import CommonServices from "../../../../services/CommonServices";
 import CustomInputField from "../../../CustomInputField";
 import Spinner from "../../../common/Spinner";
 import SignatureField from "../../../SignatureCanvas";
@@ -63,7 +64,7 @@ const ConsentForm = ({ initialData, loader }) => {
         setLoading(false);
         return;
       }
-      const response = await api.post("/feedback/consent", payload);
+      const response = await CommonServices.submitConsentForm(payload);
       if (response.status === 200) {
         toast.success(data?.message || "Consent form submitted successfully!");
         reset();

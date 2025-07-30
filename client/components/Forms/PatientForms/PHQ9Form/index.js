@@ -9,6 +9,7 @@ import { api } from "../../../../utils/auth";
 import { getBaseURL } from "../../../../utils/helper";
 import Spinner from "../../../common/Spinner";
 import { useRouter } from "next/router";
+import CommonServices from "../../../../services/CommonServices";
 
 const PHQ9Form = () => {
   const [loading, setLoading] = useState(false);
@@ -67,7 +68,7 @@ const PHQ9Form = () => {
         client_id: client_id,
         ...payloadData,
       };
-      const response = await api.post("/feedback/phq9", payload);
+      const response = await CommonServices.submitPHQ9Form(payload);
       if (response.status === 200) {
         toast.success(data?.message || "Form submitted successfully!");
         router.push("/patient-forms/form-submission");

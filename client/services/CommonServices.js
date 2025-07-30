@@ -159,6 +159,62 @@ const CommonServices = {
       throw error;
     }
   },
+  submitPCL5Form: async (payload) => {
+    try {
+      const response = await api.post(ApiConfig.feedback.submitPCL5Form, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  submitPHQ9Form: async (payload) => {
+    try {
+      const response = await api.post(ApiConfig.feedback.submitPHQ9Form, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  submitGAD7Form: async (payload) => {
+    try {
+      const response = await api.post(ApiConfig.feedback.submitGAD7Form, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  submitIPFForm: async (payload) => {
+    try {
+      const response = await api.post(ApiConfig.feedback.submitIPFForm, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  submitWHODASForm: async (payload) => {
+    try {
+      const response = await api.post(ApiConfig.feedback.submitWHODASForm, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  submitSMARTGoalForm: async (payload) => {
+    try {
+      const response = await api.post(ApiConfig.feedback.submitSMARTGoalForm, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  submitConsentForm: async (payload) => {
+    try {
+      const response = await api.post(ApiConfig.feedback.submitConsentForm, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
 
 export default CommonServices;

@@ -6,6 +6,7 @@ import CustomButton from "../../../CustomButton";
 import { toast } from "react-toastify";
 import { api } from "../../../../utils/auth";
 import { useRouter } from "next/router";
+import CommonServices from "../../../../services/CommonServices";
 import { useState } from "react";
 import CustomMultiSelect from "../../../CustomMultiSelect";
 import CustomTextArea from "../../../CustomTextArea";
@@ -68,7 +69,7 @@ const SMARTGoalForms = ({ formData }) => {
         client_id: client_id,
         ...payloadData,
       };
-      const response = await api.post("/feedback/smart-goal", payload);
+      const response = await CommonServices.submitSMARTGoalForm(payload);
       if (response.status === 200) {
         toast.success(
           response?.data?.message || "Form submitted successfully!"
