@@ -225,7 +225,10 @@ export default class User {
           console.log('User is a tenant, tenant_id:', usr.tenant_id);
           
           // Get complete tenant information
-          const tenantResult = await this.common.getTenantByTenantGeneratedId(usr.tenant_id);
+          let tenantResult = await this.common.getTenantByTenantGeneratedId(usr.tenant_id);
+          if(tenantResult.error){
+            tenantResult = await this.common.getTenantByTenantId(usr.tenant_id);
+          }
           console.log('Tenant result:', tenantResult);
           
           if (!tenantResult.error && tenantResult.length > 0) {
