@@ -61,6 +61,21 @@ export default class UserService {
     return user.passwordReset(data);
   }
 
+  async checkManagerServices(tenant_id) {
+    const schema = joi.object({
+      tenant_id: joi.number().required(),
+    });
+
+    const { error } = schema.validate({ tenant_id });
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const user = new User();
+    return user.checkManagerServices(tenant_id);
+  }
+
   //////////////////////////////////////////
 
   async sendOTPforVerification(data) {

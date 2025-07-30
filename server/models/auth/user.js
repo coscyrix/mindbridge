@@ -16,6 +16,7 @@ import {
 import UserProfile from '../userProfile.js';
 import dotenv from 'dotenv';
 import CounselorProfile from '../counselorProfile.js';
+import Service from '../service.js';
 
 dotenv.config();
 
@@ -218,6 +219,14 @@ export default class User {
             usr.counselor_profile_id = counselorProfile.rec[0].counselor_profile_id;
           }
         }
+        
+        // If user is a manager (role_id === 3), check if they have any services
+        if (usr.role_id === 3) {
+          const service = new Service();
+          const servicesResult = await service.getServiceById({ tenant_id: usr.tenant_id });
+          usr.has_services = !servicesResult.error && servicesResult.rec && servicesResult.rec.length > 0;
+          usr.services_count = servicesResult.rec ? servicesResult.rec.length : 0;
+        }
       }
 
       const sendOTP = this.sendOTPforVerification({ email: data.email });
@@ -392,6 +401,28 @@ export default class User {
     } catch (error) {
       logger.error(error);
       return { message: 'Something went wrong', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async checkManagerServices(tenant_id) {
+    try {
+      const service = new Service();
+      const servicesResult = await service.getServiceById({ tenant_id });
+      
+      const has_services = !servicesResult.error && servicesResult.rec && servicesResult.rec.length > 0;
+      const services_count = servicesResult.rec ? servicesResult.rec.length : 0;
+      
+      return {
+        message: 'Manager services check completed',
+        has_services,
+        services_count,
+        services: servicesResult.rec || []
+      };
+    } catch (error) {
+      logger.error(error);
+      return { message: 'Error checking manager services', error: -1 };
     }
   }
 }

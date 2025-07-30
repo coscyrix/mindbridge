@@ -72,4 +72,61 @@ export default class ServiceTemplateService {
 
     return this.service.postService(serviceData);
   }
+
+  async copyMultipleTemplatesToTenant(service_templates, tenant_id) {
+    if (!Array.isArray(service_templates) || service_templates.length === 0) {
+      return { message: 'service_templates must be a non-empty array', error: -1 };
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const svc of service_templates) {
+      // Validate each service template
+      if (!svc.template_service_id || typeof svc.price !== 'number') {
+        errors.push({ 
+          template_service_id: svc.template_service_id, 
+          message: 'Each service_template must have template_service_id and price' 
+        });
+        continue;
+      }
+
+      try {
+        const result = await this.copyTemplateToTenantService(svc.template_service_id, tenant_id, svc.price);
+        if (result.error) {
+          errors.push({ 
+            template_service_id: svc.template_service_id, 
+            message: result.message,
+            details: result 
+          });
+        } else {
+          results.push({ 
+            template_service_id: svc.template_service_id, 
+            success: true,
+            service_id: result.service_id 
+          });
+        }
+      } catch (error) {
+        errors.push({ 
+          template_service_id: svc.template_service_id, 
+          message: 'Unexpected error occurred',
+          details: error.message 
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      return { 
+        message: 'Some service templates failed to copy', 
+        error: -1, 
+        results,
+        errors 
+      };
+    }
+
+    return { 
+      message: 'All service templates copied successfully', 
+      results 
+    };
+  }
 } 
