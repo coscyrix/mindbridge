@@ -220,18 +220,26 @@ export default class User {
           }
         }
         
-        // If user is a manager (role_id === 3), check if they have any services and get tenant details
+        // If user is a tenant (role_id === 3), get tenant details and check services
         if (usr.role_id === 3) {
+          console.log('User is a tenant, tenant_id:', usr.tenant_id);
+          
+          // Get complete tenant information
+          const tenantResult = await this.common.getTenantByTenantGeneratedId(usr.tenant_id);
+          console.log('Tenant result:', tenantResult);
+          
+          if (!tenantResult.error && tenantResult.length > 0) {
+            usr.tenant = tenantResult[0];
+            console.log('Tenant object added to user:', usr.tenant);
+          } else {
+            console.log('Failed to get tenant info:', tenantResult);
+          }
+          
+          // Check if tenant has any services
           const service = new Service();
           const servicesResult = await service.getServiceById({ tenant_id: usr.tenant_id });
           usr.has_services = !servicesResult.error && servicesResult.rec && servicesResult.rec.length > 0;
           usr.services_count = servicesResult.rec ? servicesResult.rec.length : 0;
-          
-          // Get complete tenant information
-          const tenantResult = await this.common.getTenantByTenantId(usr.tenant_id);
-          if (!tenantResult.error && tenantResult.length > 0) {
-            usr.tenant = tenantResult[0];
-          }
         }
       }
 

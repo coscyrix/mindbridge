@@ -602,19 +602,25 @@ export default class Common {
 
   async getTenantByTenantId(tenant_id) {
     try {
+      console.log('Looking for tenant with ID:', tenant_id);
+      
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select()
         .where('tenant_id', tenant_id)
         .from('tenant');
 
+      console.log('Tenant query result:', rec);
+
       if (!rec || rec.length === 0) {
+        console.log('Tenant not found for ID:', tenant_id);
         return { message: 'Tenant not found', error: -1 };
       }
 
+      console.log('Found tenant:', rec[0]);
       return rec;
     } catch (error) {
-      console.error(error);
+      console.error('Error in getTenantByTenantId:', error);
       return { message: 'Error getting tenant', error: -1 };
     }
   }
