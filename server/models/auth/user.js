@@ -220,12 +220,18 @@ export default class User {
           }
         }
         
-        // If user is a manager (role_id === 3), check if they have any services
+        // If user is a manager (role_id === 3), check if they have any services and get tenant details
         if (usr.role_id === 3) {
           const service = new Service();
           const servicesResult = await service.getServiceById({ tenant_id: usr.tenant_id });
           usr.has_services = !servicesResult.error && servicesResult.rec && servicesResult.rec.length > 0;
           usr.services_count = servicesResult.rec ? servicesResult.rec.length : 0;
+          
+          // Get complete tenant information
+          const tenantResult = await this.common.getTenantByTenantId(usr.tenant_id);
+          if (!tenantResult.error && tenantResult.length > 0) {
+            usr.tenant = tenantResult[0];
+          }
         }
       }
 
@@ -414,11 +420,16 @@ export default class User {
       const has_services = !servicesResult.error && servicesResult.rec && servicesResult.rec.length > 0;
       const services_count = servicesResult.rec ? servicesResult.rec.length : 0;
       
+      // Get complete tenant information
+      const tenantResult = await this.common.getTenantByTenantId(tenant_id);
+      const tenant = !tenantResult.error && tenantResult.length > 0 ? tenantResult[0] : null;
+      
       return {
         message: 'Manager services check completed',
         has_services,
         services_count,
-        services: servicesResult.rec || []
+        services: servicesResult.rec || [],
+        tenant: tenant
       };
     } catch (error) {
       logger.error(error);
