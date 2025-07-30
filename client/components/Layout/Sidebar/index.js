@@ -16,7 +16,6 @@ import ProfileOptionsModal from "../../ProfileOptionModal";
 function Sidebar({ showSideBar, setShowSideBar }) {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [userData, setUserData] = useState(null);
-  console.log(userData)
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const router = useRouter();
@@ -153,7 +152,6 @@ function Sidebar({ showSideBar, setShowSideBar }) {
               return true;
             }).map((heading, index) => (
               <div key={heading.title || index}>
-                {console.log(userData?.counselor_profile_id)}
                 <div
                   // href={heading?.url}
                   style={{ cursor: "pointer" }}

@@ -11,7 +11,7 @@ import CustomButton from "../../components/CustomButton";
 import { zodResolver } from "@hookform/resolvers/zod";
 import ApiConfig from "../../config/apiConfig";
 import Cookies from "js-cookie";
-import { ServiceManagementWrapper } from "./style";
+import ServiceManagementWrapper from "./style";
 import { useRouter } from "next/router";
 const ServiceManagement = () => {
   const [serviceTemplates, setServiceTemplates] = useState([]);

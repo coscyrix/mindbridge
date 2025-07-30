@@ -212,11 +212,19 @@ export default class User {
           tenant_id: usrPro[0].tenant_id,
           tenant_name: usrPro[0].tenant_name,
         };
-        // If user is a counselor, add counselor_profile_id
+        // If user is a counselor, add complete counselor profile data
         if (usr.role_id === 2) {
+          console.log('User is a counselor, user_profile_id:', usr.user_profile_id);
+          
           const counselorProfile = await this.counselorProfile.getCounselorProfile({ user_profile_id: usr.user_profile_id });
+          console.log('Counselor profile result:', counselorProfile);
+          
           if (counselorProfile.rec && counselorProfile.rec.length > 0) {
+            usr.counselor_profile = counselorProfile.rec[0];
             usr.counselor_profile_id = counselorProfile.rec[0].counselor_profile_id;
+            console.log('Counselor profile added to user:', usr.counselor_profile);
+          } else {
+            console.log('No counselor profile found for user_profile_id:', usr.user_profile_id);
           }
         }
         

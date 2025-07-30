@@ -294,8 +294,7 @@ const SignUp = () => {
             userObj.user_profile_id
           );
           if (response.status === 200 && response.data?.rec?.length > 0) {
-            console.log(response.data, "response.data");
-
+            console.log(response, "response.data");
             // router.push('/dashboard');
           }
         } catch (error) {
@@ -411,7 +410,6 @@ const SignUp = () => {
       const response = type
         ? await updateProfile(profileData, userId)
         : await onBoarding(profileData);
-      // const response = {id:'abc'};
       if (response?.id || userId) {
         const idToUpdate = response?.id ? response?.id : userId;
 
@@ -424,17 +422,12 @@ const SignUp = () => {
           try {
             const formData = new FormData();
             formData.append("image", profilePictureFile);
-            await CommonServices.uploadProfileImage(
-              idToUpdate || response.counselor_profile_id,
-              formData
-            );
+            await CommonServices.uploadProfileImage(idToUpdate, formData);
           } catch (error) {
             profileImageSuccess = false;
             console.error("Error uploading profile picture:", error);
             toast.error("Failed to upload profile picture");
           }
-        } else {
-          console.log("No profile picture to upload.");
         }
 
         // Upload license file if selected
@@ -442,22 +435,15 @@ const SignUp = () => {
           try {
             const formData = new FormData();
             formData.append("license", licenseFile);
-            await CommonServices.uploadLicenseFile(
-              idToUpdate || response.counselor_profile_id,
-              formData
-            );
+            await CommonServices.uploadLicenseFile(idToUpdate, formData);
           } catch (error) {
             licenseFileSuccess = false;
             console.error("Error uploading license file:", error);
             toast.error("Failed to upload license file");
           }
-        } else {
-          console.log(
-            "No new license file uploaded, using existing license_file_url."
-          );
         }
 
-        // Upload all additional documents
+        // Upload additional documents
         if (documentFiles.length > 0) {
           const documentUploadPromises = documentFiles.map(
             async (file, index) => {
@@ -465,10 +451,7 @@ const SignUp = () => {
                 try {
                   const formData = new FormData();
                   formData.append("document", file);
-                  formData.append(
-                    "counselor_profile_id",
-                    idToUpdate || response.counselor_profile_id
-                  );
+                  formData.append("counselor_profile_id", idToUpdate);
                   formData.append("document_type", "other");
                   formData.append("document_name", documentNames[index]);
                   formData.append("expiry_date", documentExpiryDates[index]);
@@ -492,16 +475,22 @@ const SignUp = () => {
           if (!documentsSuccess) {
             toast.warning("Some documents failed to upload");
           }
-        } else {
-          console.log("No additional documents to upload.");
         }
-
-        // Only redirect if all uploads succeeded
         if (profileImageSuccess && licenseFileSuccess && documentsSuccess) {
-          toast.success("Profile created/updated successfully", {
-            position: "top-right",
-          });
-          router.push("/dashboard");
+          toast.success(
+            type
+              ? "Profile updated successfully"
+              : "Profile created successfully",
+            { position: "top-right" }
+          );
+
+          if (!type) {
+            toast.success("Onboarding Success Please login again")
+            logout()
+
+          } else {
+            router.push("/dashboard");
+          }
         }
       } else if (
         response?.message === "Counselor profile updated successfully"
@@ -520,6 +509,7 @@ const SignUp = () => {
       setLoading(false);
     }
   };
+  
 
   const nextStep = async () => {
     const isValid = await validateStep(currentStep);
