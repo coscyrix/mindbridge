@@ -630,7 +630,7 @@ const SignUp = () => {
   // Add new useEffect for form prefilling
   useEffect(() => {
     if (onBoardingDetails) {
-      const servicesOffered = onBoardingDetails.services_offered.map(
+      const servicesOffered = onBoardingDetails?.services_offered?.map(
         (service) => ({
           value: service.service_id,
           label: service.service_name,
@@ -1273,7 +1273,7 @@ const SignUp = () => {
                   disabled={loading}
                 />
               )} */}
-              {type && (
+              {(
                 <ButtonContainer>
                   {currentStep > 1 && (
                     <CustomButton

@@ -41,6 +41,10 @@ const ApiConfig = {
   consentFormSubmittion: {
     consentForm: "/consent-description",
   },
+  submitServiceTemplate: {
+    submitAndCopyServiceTemplates:
+      "/service-templates/copy-multiple-to-tenant",
+  },
 };
 
 export default ApiConfig;

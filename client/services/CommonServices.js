@@ -9,8 +9,16 @@ const CommonServices = {
   getAllCounselors(roleId = 2) {
     return api.get(ApiConfig.getAllCounselors(roleId));
   },
-  getServices() {
-    return api.get(ApiConfig.services.getServices);
+  getServices(tenant_id) {
+    if(tenant_id || tenant_id !== undefined){
+      return api.get(
+        `${ApiConfig.services.getServices}?tenant_id=${tenant_id}`
+      );
+    }
+    else{
+      return api.get(`${ApiConfig.services.getServices}`);
+    }
+    
   },
   getClients(params) {
     return api.get(ApiConfig.clients.getClients, { params });

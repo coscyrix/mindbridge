@@ -21,6 +21,12 @@ export const ServiceTemplateSchema = z.object({
   ),
 });
 
+export const services = z.object({
+  services: z
+    .array(ServiceTemplateSchema)
+    .min(1, "At least one service is required"),
+});
+
 export const ClientValidationSchema = z
   .object({
     clam_num: z
@@ -59,7 +65,7 @@ export const ClientValidationSchema = z
       .string()
       .nonempty("Email is required")
       .email("Invalid email address"),
-    service: z.array(ServiceTemplateSchema).optional(),
+    
     role_id: z
       .preprocess(
         (value) => Number(value),

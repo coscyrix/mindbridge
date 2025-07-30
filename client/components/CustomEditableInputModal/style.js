@@ -61,22 +61,23 @@ export const CustomEditableInputModalWrapper = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 30px;
+    margin-top: 25px;
     width: 50px;
+    height: 40px;
     @media (max-width: 768px) {
       width: 100px;
       //   margin-top: 0px;
     }
   }
 
-  .delete {
-    background-color: var(--error-color, #f44336);
-    color: white;
-  }
+  // .delete {
+  //   background-color: var(--error-color, #f44336);
+  //   color: white;
+  // }
 
-  .delete:hover {
-    background-color: #d32f2f;
-  }
+  // .delete:hover {
+  //   background-color: #d32f2f;
+  // }
 
   .restore {
     background-color: #4caf50;

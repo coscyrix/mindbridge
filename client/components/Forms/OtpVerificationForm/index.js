@@ -12,6 +12,7 @@ const OtpVerificationForm = ({ email }) => {
   const userData = Cookies.get("user");
   const userObj = userData && JSON.parse(userData);
   const [otp, setOtp] = useState("");
+  const [hasService,setHasService] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [userDetails, setUserDetails] = useState({});
@@ -21,8 +22,10 @@ const OtpVerificationForm = ({ email }) => {
     if (userData) {
       const details = JSON.parse(userData);
       setUserDetails(details);
+      setHasService(details.has_services);
     }
   }, []);
+
 
   const handleVerifyOtp = async () => {
     try {
@@ -33,6 +36,15 @@ const OtpVerificationForm = ({ email }) => {
       }
       setError("");
       await otpVerication({ email, otp });
+
+      if(userObj?.role_id === 3){
+        if(hasService){
+          return router.push("/dashboard");
+        }
+        else{
+          return router.push("/service-templates");
+        }
+      }
 
       if (userObj?.role_id === 2) {
         const profileResponse = await CommonServices.getCounselorProfile(
@@ -51,7 +63,6 @@ const OtpVerificationForm = ({ email }) => {
       setLoading(false);
       return router.push("/dashboard");
     } catch (error) {
-      
       toast.error(error?.message || "Error while verifying the OTP!");
       setLoading(false);
     }

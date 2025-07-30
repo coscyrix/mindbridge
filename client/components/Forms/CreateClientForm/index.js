@@ -43,8 +43,8 @@ function CreateClientForm({
     ?.filter((roledetail) => {
       if (initialData) return true;
       if (Counselor) return roledetail?.role_id === 1;
-      if (admin) return roledetail?.role_id !== 1;
-      if (manager) return roledetail?.role_id != 1 && roledetail?.role_id != 4;
+      if (admin) return roledetail?.role_id === 3;
+      if (manager) return roledetail?.role_id ===2;
       return true;
     })
     .map((roledetail) => ({
@@ -57,28 +57,28 @@ function CreateClientForm({
     value: service?.service_code,
   }));
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const fetchServiceTemplates = async () => {
-      try {
-        const res = await api.get("/service-templates");
-        if (res.status === 200 && res.data.rec) {
-          setServiceTemplates(res.data.rec);
-          if (methods.getValues("role_id") === 3 && !initialData) {
-            const allServices = res.data.rec.map((template) => ({
-              service_id: template.template_service_id,
-              service_price: parseFloat(template.price),
-              name: template.name,
-            }));
-            methods.setValue("service", allServices);
-          }
-        }
-      } catch (error) {
-        toast.error(error?.response?.data?.message);
-      }
-    };
-    fetchServiceTemplates();
-  }, [isOpen]);
+  // useEffect(() => {
+  //   if (!isOpen) return;
+  //   const fetchServiceTemplates = async () => {
+  //     try {
+  //       const res = await api.get("/service-templates");
+  //       if (res.status === 200 && res.data.rec) {
+  //         setServiceTemplates(res.data.rec);
+  //         if (methods.getValues("role_id") === 3 && !initialData) {
+  //           const allServices = res.data.rec.map((template) => ({
+  //             service_id: template.template_service_id,
+  //             service_price: parseFloat(template.price),
+  //             name: template.name,
+  //           }));
+  //           methods.setValue("service", allServices);
+  //         }
+  //       }
+  //     } catch (error) {
+  //       toast.error(error?.response?.data?.message);
+  //     }
+  //   };
+  //   fetchServiceTemplates();
+  // }, [isOpen]);
 
   const defaultValues = {
     user_first_name: "",
@@ -98,12 +98,31 @@ function CreateClientForm({
     tax: "",
     service: [],
     description: "",
-    service: serviceTemplates,
+    // service: serviceTemplates,
   };
   const methods = useForm({
     resolver: zodResolver(ClientValidationSchema),
     defaultValues: defaultValues,
   });
+
+  const messagefortoast = [
+    {
+      role: 1,
+      text: "Client created/updated successfuly",
+    },
+    {
+      role: 2,
+      text: "Counsellor created/updated successfuly",
+    },
+    {
+      role: 3,
+      text: "Manager created/updated successfuly",
+    },
+    {
+      role: 4,
+      text: "Admin created/updated successfuly",
+    },
+  ];
 
   const handleCreateClient = async (data) => {
   
@@ -133,13 +152,7 @@ function CreateClientForm({
       };
     }
     else if(role === 3){
-      const processed_service_template =
-        role === 3 && Array.isArray(data.service)
-          ? data.service.map((item) => ({
-              template_service_id: item.service_id,
-              price: item.service_price,
-            }))
-          : [];
+      
     
       processedData = {
         user_profile_id: user?.user_profile_id,
@@ -151,7 +164,7 @@ function CreateClientForm({
         tenant_name: data?.tenant_name,
         admin_fee: data.admin_fee,
         tax_percent: data.tax,
-        service_templates: processed_service_template,
+        
       };
     }else{
       processedData = {
@@ -171,9 +184,17 @@ function CreateClientForm({
         processedData
       );
       if (res.status === 200) {
-        toast.success("New Client Created Successfully", {
-          position: "top-right",
-        });
+        const messageObj = messagefortoast.find((item) => item.role === role);
+        if (messageObj) {
+          toast.success(messageObj.text, {
+            position: "top-right",
+          });
+        } else {
+          toast.info("User updated successfully", {
+            position: "top-right",
+          });
+        }
+      
         // setTableData((prev) => [processedData, ...prev]);
         fetchClients();
         methods.reset(defaultValues);
@@ -200,13 +221,7 @@ function CreateClientForm({
       tax,
       admin_fee,
     } = data;
-    const processed_service_template =
-      role === 3 && Array.isArray(data.service)
-        ? data.service.map((item) => ({
-            template_service_id: item.service_id,
-            price: item.service_price,
-          }))
-        : [];
+   
     const processedData = {
       user_first_name,
       user_last_name,
@@ -218,7 +233,7 @@ function CreateClientForm({
         tenant_name: tenant_name || "",
         admin_fee,
         tax,
-        service_templates: processed_service_template,
+       
         tenant_name,
       }),
       ...(role_id === 2 && {
@@ -241,9 +256,17 @@ function CreateClientForm({
               : item
           )
         );
-        toast.success("Client Updated Successfully", {
-          position: "top-right",
-        });
+        const messageObj = messagefortoast.find((item) => item.role === role);
+        if (messageObj) {
+          toast.success(messageObj.text, {
+            position: "top-right",
+          });
+        } else {
+          toast.info("User updated successfully", {
+            position: "top-right",
+          });
+        }
+      
         fetchClients();
         setIsOpen(false);
         methods.reset(defaultValues);
@@ -296,23 +319,23 @@ function CreateClientForm({
   }, [role]);
 
   // Auto-fill service field for manager (role 3) as soon as both role and templates are ready, even on first open
-  useEffect(() => {
-    if (
-      isOpen &&
-      role === 3 &&
-      !initialData &&
-      serviceTemplates.length > 0 &&
-      (!methods.getValues("service") ||
-        methods.getValues("service").length === 0)
-    ) {
-      const allServices = serviceTemplates.map((template) => ({
-        service_id: template.template_service_id,
-        service_price: parseFloat(template.total_invoice ?? template.price),
-        name: template.service_name ?? template.name,
-      }));
-      methods.setValue("service", allServices);
-    }
-  }, [isOpen, role, serviceTemplates, initialData]);
+  // useEffect(() => {
+  //   if (
+  //     isOpen &&
+  //     role === 3 &&
+  //     not initialData &&
+  //     serviceTemplates.length > 0 &&
+  //     (!methods.getValues("service") ||
+  //       methods.getValues("service").length === 0)
+  //   ) {
+  //     const allServices = serviceTemplates.map((template) => ({
+  //       service_id: template.template_service_id,
+  //       service_price: parseFloat(template.total_invoice ?? template.price),
+  //       name: template.service_name ?? template.name,
+  //     }));
+  //     methods.setValue("service", allServices);
+  //   }
+  // }, [isOpen, role, serviceTemplates, initialData]);
 
   return (
 
@@ -482,7 +505,7 @@ function CreateClientForm({
                     type="number"
                   />
                 </div>
-                <div className="select-field-wrapper">
+                {/* <div className="select-field-wrapper">
                   <label>Services*</label>
                   {serviceTemplates.length === 0 ? (
                     <Spinner width="25px" height="25px" />
@@ -504,7 +527,7 @@ function CreateClientForm({
                       {methods.formState.errors?.service.message}
                     </p>
                   )}
-                </div>
+                </div> */}
               </>
             )}
           </div>

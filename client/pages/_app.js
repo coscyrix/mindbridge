@@ -15,14 +15,20 @@ const ROUTES = {
   ],
   AUTH_PAGES: ["/login", "/reset-password"],
   ONBOARDING: "/onboarding",
+  SERVICE_TEMPLATES: "/service-templates",
 };
 
-const AppLayout = ({ children, isLandingPage, isOnboardingPage }) => {
+const AppLayout = ({
+  children,
+  isLandingPage,
+  isOnboardingPage,
+  isServiceTemplatesPage,
+}) => {
   if (isLandingPage) {
     return <LandingPageLayout>{children}</LandingPageLayout>;
   }
 
-  if (isOnboardingPage) {
+  if (isOnboardingPage || isServiceTemplatesPage) {
     return <ReferenceContextProvider>{children}</ReferenceContextProvider>;
   }
 
@@ -41,6 +47,7 @@ function MyApp({ Component, pageProps }) {
   const isLandingPageRoute = ROUTES.LANDING_PAGES.includes(pathname);
   const isAuthPage = ROUTES.AUTH_PAGES.includes(pathname);
   const isOnboardingPage = pathname === ROUTES.ONBOARDING;
+  const isServiceTemplatesPage = pathname === ROUTES.SERVICE_TEMPLATES;
   const isPatientFormsPage = pathname.startsWith("/patient-forms");
 
   const shouldUseDefaultLayout = isAuthPage || isPatientFormsPage;
@@ -53,6 +60,7 @@ function MyApp({ Component, pageProps }) {
         <AppLayout
           isLandingPage={isLandingPageRoute}
           isOnboardingPage={!type && isOnboardingPage}
+          isServiceTemplatesPage={isServiceTemplatesPage}
         >
           <Component {...pageProps} />
         </AppLayout>
