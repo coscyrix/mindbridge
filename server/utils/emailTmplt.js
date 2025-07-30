@@ -484,7 +484,7 @@ export const onboardingAdminEmail = (data) => {
     signatureHtml = 'N/A';
   }
   return {
-    to: 'aashish@deliverable.services',
+    to: 'admin-rasham@mindbridge.solutions',
     subject: 'New MindBridge Onboarding/Demo Request',
     html: `
       <h2>New Onboarding/Demo Request Submitted</h2>
