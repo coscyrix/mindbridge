@@ -73,6 +73,21 @@ export default class UserProfile {
         var tenantId = await this.common.getUserTenantId({
           user_profile_id: data.user_profile_id,
         });
+        
+        // Add debugging to see what tenantId contains
+        console.log('tenantId result:', tenantId);
+        
+        // Check if getUserTenantId returned an error
+        if (tenantId.error) {
+          logger.error('Error getting tenant ID:', tenantId.message);
+          return { message: tenantId.message, error: -1 };
+        }
+        
+        // Check if tenantId is empty or undefined
+        if (!tenantId || tenantId.length === 0) {
+          logger.error('No tenant found for user_profile_id:', data.user_profile_id);
+          return { message: 'No tenant found for the specified user profile', error: -1 };
+        }
       }
       if (checkEmail.length > 0) {
         logger.error('Email already exists');
@@ -155,7 +170,7 @@ export default class UserProfile {
         password: clientPassword,
         role_id: data.role_id,
         // if tenantId is not provided, use the tenant_id from the user_profile_id
-        tenant_id: tenantId ? tenantId[0].tenant_generated_id : data.tenant_id,
+        tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id,
       });
 
       if (postUser.error) {

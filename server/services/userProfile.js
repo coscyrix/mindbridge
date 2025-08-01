@@ -49,7 +49,21 @@ export default class UserProfileService {
       const tenantId = await this.common.getUserTenantId({
         user_profile_id: data.user_profile_id,
       });
+      
+      console.log('Service layer - tenantId result:', tenantId);
+      
+      // Check if getUserTenantId returned an error
+      if (tenantId.error) {
+        return { message: tenantId.message, error: -1 };
+      }
+      
+      // Check if tenantId is empty or undefined
+      if (!tenantId || tenantId.length === 0) {
+        return { message: 'No tenant found for the specified user profile', error: -1 };
+      }
+      
       data.tenant_id = Number(tenantId[0].tenant_id);
+      console.log('Service layer - assigned tenant_id:', data.tenant_id);
     }
 
     if (data.role_id === 3) {

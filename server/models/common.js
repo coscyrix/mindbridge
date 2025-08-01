@@ -138,6 +138,8 @@ export default class Common {
 
   async postUserCOMMON(data) {
     try {
+      console.log('postUserCOMMON called with data:', data);
+      
       const checkEmail = await this.getUserByEmail(data.email);
       if (checkEmail.length > 0) {
         logger.error('Email already exists');
@@ -151,10 +153,14 @@ export default class Common {
         tenant_id: data.tenant_id,
       };
 
+      console.log('Creating user with data:', tmpUsr);
+
       const postUsr = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('users')
         .insert(tmpUsr);
+
+      console.log('User created with result:', postUsr);
 
       if (!postUsr) {
         logger.error('Error creating user');
@@ -514,6 +520,8 @@ export default class Common {
 
   async getUserTenantId(data) {
     try {
+      console.log('getUserTenantId called with data:', data);
+      
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select()
@@ -528,14 +536,17 @@ export default class Common {
       }
 
       const rec = await query;
+      console.log('getUserTenantId query result:', rec);
 
       if (!rec || rec.length === 0) {
+        console.log('No user found for the given criteria');
         return { message: 'User not found', error: -1 };
       }
 
+      console.log('Returning user data:', rec);
       return rec;
     } catch (error) {
-      console.error(error);
+      console.error('Error in getUserTenantId:', error);
       return { message: 'Error getting user tenant id', error: -1 };
     }
   }
