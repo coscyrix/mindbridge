@@ -45,10 +45,19 @@ function ClientSession() {
       setSessionsLoading(true);
       let response;
       if (userObj?.role_id === 3) {
+        if(counselorId== "allCounselors"){
+          response = await CommonServices.getSessionsByCounselor({
+            role_id:3,
+            tenant_id:userObj?.tenant?.tenant_generated_id
+          })
+        }
         // Always fetch with role_id: 3 for role 3 users
-        response = await CommonServices.getSessionsByCounselor({
-          role_id: 3,
-        });
+        else{
+          response = await CommonServices.getSessionsByCounselor({
+            role_id: 3,
+            counselor_id: counselorId,
+          });
+        }
       } else if (userObj?.role_id !== 4) {
         response = await CommonServices.getSessionsByCounselor({
           role_id: userObj?.role_id,

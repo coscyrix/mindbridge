@@ -44,6 +44,7 @@ export const LeftPanel = styled.div`
     list-style-image: url("/assets/images/check_mark_img.svg");
     padding-left: 20px;
     font-size: 1rem;
+    display: block;
   }
 
   span {

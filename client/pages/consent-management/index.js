@@ -67,7 +67,7 @@ const ConsentManagement = () => {
       description: data.consent_Editor_Values,
       tenant_id: isAdmin
         ? data?.counselorSelect?.tenant_id
-        : userData?.tenant_id || "",
+        : userData?.tenant?.tenant_generated_id || "",
       ...(!isAdmin && { counselor_id: userData?.counselor_profile_id }),
     };
     try {

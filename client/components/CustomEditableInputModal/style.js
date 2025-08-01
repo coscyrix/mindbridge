@@ -63,7 +63,7 @@ export const CustomEditableInputModalWrapper = styled.div`
     justify-content: center;
     margin-top: 25px;
     width: 50px;
-    height: 40px;
+    height: 40px;background: white;
     @media (max-width: 768px) {
       width: 100px;
       //   margin-top: 0px;

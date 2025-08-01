@@ -300,13 +300,13 @@ function ClientDetails() {
                   dropdownOptions={columnOptions}
                   renderFooter={renderFooter}
                 />
-                {!admin && (
+                {/* {!admin && (
                   <CustomButton
                     onClick={handleOpenWorkModal}
                     icon={<SettingsIcon />}
                     title="Upload and Send Homework"
                   />
-                )}
+                )} */}
                 {!admin && (
                   <CustomButton
                     onClick={handleOpenConfirmationModal}
@@ -372,7 +372,7 @@ function ClientDetails() {
           fixedHeaderScrollHeight="650px"
         />
       </div>
-      <HomeworkModal isOpen={isWorkModalOpen} onClose={handleCloseWorkModal} />
+      {/* <HomeworkModal isOpen={isWorkModalOpen} onClose={handleCloseWorkModal} /> */}
       <ConfirmationModal
         isOpen={showConfirmationModal}
         onClose={handleCloseConfirmationModal}

@@ -198,7 +198,7 @@ const CustomEditableInputModal = ({
                 onClick={() => handleDelete(index)}
                 title="Delete"
               >
-                <DeleteIcon/>
+                <DeleteIcon height={40} width={40} />
               </button>
             </div>
           </div>

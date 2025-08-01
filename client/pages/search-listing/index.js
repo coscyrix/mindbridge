@@ -455,7 +455,7 @@ const SearchListing = () => {
                 availability={counselor?.availability}
                 contact={counselor.public_phone}
                 email={counselor.email}
-                services={counselor.services_offered.join(", ")}
+                services={counselor.services_offered?.join(", ")}
                 available={counselor.service_modalities}
                 counselorId={counselor.counselor_profile_id}
               />

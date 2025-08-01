@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import styles from "../../styles/Layout.module.css";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import NeedHelpWrapper from "../NeedHelp/NeedHelpWrapper";
 
 function Layout({ children }) {
   const [showSideBar, setShowSideBar] = useState(false);
@@ -27,6 +28,7 @@ function Layout({ children }) {
           <Header showSideBar={showSideBar} setShowSideBar={setShowSideBar} />
           {children}
         </main>
+       <NeedHelpWrapper/>
       </div>
     </>
   );
