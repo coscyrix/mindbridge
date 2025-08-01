@@ -215,6 +215,14 @@ const CommonServices = {
       throw error;
     }
   },
+  submitGASForm: async (payload) => {
+    try {
+      const response = await api.post(ApiConfig.feedback.submitGASForm, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
 
 export default CommonServices;

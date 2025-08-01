@@ -13,9 +13,12 @@ import "react-circular-progressbar/dist/styles.css";
 import { createGasSchema } from "../../../../utils/validationSchema/validationSchema";
 import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import CommonServices from "../../../../services/CommonServices";
 
 const GasForm = () => {
   const [goalValue, setGoalValue] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const schema = useMemo(() => {
     if (!goalValue) return null;
@@ -66,22 +69,41 @@ const GasForm = () => {
     return sum + (val ? Number(val) : 0);
   }, 0);
 
-  const onSubmit = (data) => {
-    const payload = {
-      goal: data.goal?.value,
-      responses: questions.map((q) => {
-        const numericValue = data[q.name];
-        const selectedOption = q.options.find(
-          (opt) => opt.value === numericValue
-        );
-        return {
-          question: q.question,
-          selectedLabel: selectedOption?.label || null,
-          score: numericValue,
-        };
-      }),
-    };
-    console.log("Submitted Payload", payload);
+  const onSubmit = async (data) => {
+    try {
+      setIsSubmitting(true);
+      setSubmitError(null);
+      
+      const payload = {
+        goal: data.goal?.value,
+        responses: questions.map((q) => {
+          const numericValue = data[q.name];
+          const selectedOption = q.options.find(
+            (opt) => opt.value === numericValue
+          );
+          return {
+            question: q.question,
+            selectedLabel: selectedOption?.label || null,
+            score: numericValue,
+          };
+        }),
+        session_id: 1, // This should be passed as a prop or from context
+        client_id: 1, // This should be passed as a prop or from context
+      };
+      
+      const response = await CommonServices.submitGASForm(payload);
+      console.log("Form submitted successfully", response);
+      
+      // Reset form after successful submission
+      reset();
+      setGoalValue(null);
+      
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setSubmitError(error.message || "Failed to submit form");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -184,12 +206,18 @@ const GasForm = () => {
                 ))}
               </div>
 
+              {submitError && (
+                <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+                  {submitError}
+                </div>
+              )}
               <div className="button-group">
                 <CustomButton title="Cancel" type="button" />
                 <CustomButton
                   customClass="blue"
                   type="submit"
-                  title="Submit"
+                  title={isSubmitting ? "Submitting..." : "Submit"}
+                  disabled={isSubmitting}
                 />
               </div>
             </form>

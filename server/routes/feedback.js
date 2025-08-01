@@ -54,4 +54,10 @@ router.post(
   AsyncWrapper(feedbackController.postCONSENTFeedback),
 );
 
+router.post(
+  '/gas',
+
+  AsyncWrapper(feedbackController.postGASFeedback),
+);
+
 export const feedbackRouter = { baseUrl: '/api/feedback', router };

@@ -32,6 +32,7 @@ const ApiConfig = {
     submitWHODASForm: "/feedback/whodas",
     submitSMARTGoalForm: "/feedback/smart-goal",
     submitConsentForm: "/feedback/consent",
+    submitGASForm: "/feedback/gas",
   },
   onboarding: {
     uploadDocuments: "/counselor-documents",
