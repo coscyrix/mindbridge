@@ -625,6 +625,28 @@ export default class Common {
         }
       }
 
+      // Create default fee split management entry
+      try {
+        const defaultFeeSplitData = {
+          tenant_id: tenantRecord.tenant_id,
+          counselor_user_id: null, // Default configuration for all counselors
+          is_fee_split_enabled: 0, // Disabled by default
+          tenant_share_percentage: 0, // 0% for tenant
+          counselor_share_percentage: 100, // 100% for counselor
+          status_yn: 1
+        };
+
+        await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('fee_split_management')
+          .insert(defaultFeeSplitData);
+
+        console.log(`Default fee split management created for tenant ${tenantRecord.tenant_id}`);
+      } catch (feeSplitError) {
+        // Log the error but don't fail the tenant creation
+        console.warn(`Warning: Could not create default fee split management for tenant ${tenantRecord.tenant_id}:`, feeSplitError.message);
+      }
+
       return tenantRecord.tenant_id;
     } catch (error) {
       console.error(error);
@@ -711,6 +733,40 @@ export default class Common {
           // Log the error but don't fail the operation
           console.warn(`Warning: Could not create tenant configuration for ${config.feature_name}:`, configError.message);
         }
+      }
+
+      // Create default fee split management entry if it doesn't exist
+      try {
+        const existingFeeSplit = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('fee_split_management')
+          .where('tenant_id', tenant_id)
+          .whereNull('counselor_user_id')
+          .andWhere('status_yn', 1)
+          .first();
+
+        if (!existingFeeSplit) {
+          const defaultFeeSplitData = {
+            tenant_id: tenant_id,
+            counselor_user_id: null, // Default configuration for all counselors
+            is_fee_split_enabled: 0, // Disabled by default
+            tenant_share_percentage: 0, // 0% for tenant
+            counselor_share_percentage: 100, // 100% for counselor
+            status_yn: 1
+          };
+
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('fee_split_management')
+            .insert(defaultFeeSplitData);
+
+          console.log(`Default fee split management created for existing tenant ${tenant_id}`);
+        } else {
+          console.log(`Fee split management already exists for tenant ${tenant_id}`);
+        }
+      } catch (feeSplitError) {
+        // Log the error but don't fail the operation
+        console.warn(`Warning: Could not create default fee split management for tenant ${tenant_id}:`, feeSplitError.message);
       }
 
       return { message: 'Default tenant configurations created successfully' };

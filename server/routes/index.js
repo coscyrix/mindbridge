@@ -20,3 +20,4 @@ export { onboardingRouter } from './onboarding.js';
 export { serviceTemplateRouter } from './serviceTemplate.js';
 export { consentDescriptionRouter } from './consentDescription.js';
 export { tenantConfigurationRouter } from './tenantConfiguration.js';
+export { feeSplitManagementRouter } from './feeSplitManagement.js';

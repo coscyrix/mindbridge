@@ -44,7 +44,6 @@ export default class Homework {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('homework')
         .where('session_id', session_id)
-        .andWhere('status_yn', 1)
         .orderBy('created_at', 'desc');
 
       if (!rec) {
