@@ -24,6 +24,7 @@ import {
   onboardingRouter,
   serviceTemplateRouter,
   consentDescriptionRouter,
+  tenantConfigurationRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -56,6 +57,7 @@ async function main() {
         onboardingRouter,
         serviceTemplateRouter,
         consentDescriptionRouter,
+        tenantConfigurationRouter,
       ],
     });
 

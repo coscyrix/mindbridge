@@ -602,6 +602,29 @@ export default class Common {
         return { message: 'Error creating ref_fees entry', error: -1 };
       }
 
+      // Create default tenant configuration entries
+      const defaultConfigs = [
+        {
+          tenant_id: tenantRecord.tenant_id,
+          feature_name: 'homework_upload_enabled',
+          feature_value: 'true',
+          is_enabled: 1
+        }
+        // Add more default configurations here as needed
+      ];
+
+      for (const config of defaultConfigs) {
+        try {
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('tenant_configuration')
+            .insert(config);
+        } catch (configError) {
+          // Log the error but don't fail the tenant creation
+          console.warn(`Warning: Could not create tenant configuration for ${config.feature_name}:`, configError.message);
+        }
+      }
+
       return tenantRecord.tenant_id;
     } catch (error) {
       console.error(error);
@@ -654,6 +677,46 @@ export default class Common {
     } catch (error) {
       console.error(error);
       return { message: 'Error getting tenant', error: -1 };
+    }
+  }
+
+  ///////////////////////////////////////////
+
+  async createDefaultTenantConfigurations(tenant_id) {
+    try {
+      const defaultConfigs = [
+        {
+          tenant_id: tenant_id,
+          feature_name: 'homework_upload_enabled',
+          feature_value: 'true',
+          is_enabled: 1
+        }
+        // Add more default configurations here as needed
+        // Example:
+        // {
+        //   tenant_id: tenant_id,
+        //   feature_name: 'email_notifications_enabled',
+        //   feature_value: 'true',
+        //   is_enabled: 1
+        // }
+      ];
+
+      for (const config of defaultConfigs) {
+        try {
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('tenant_configuration')
+            .insert(config);
+        } catch (configError) {
+          // Log the error but don't fail the operation
+          console.warn(`Warning: Could not create tenant configuration for ${config.feature_name}:`, configError.message);
+        }
+      }
+
+      return { message: 'Default tenant configurations created successfully' };
+    } catch (error) {
+      console.error('Error creating default tenant configurations:', error);
+      return { message: 'Error creating default tenant configurations', error: -1 };
     }
   }
 }
