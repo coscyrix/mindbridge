@@ -17,7 +17,8 @@ export function middleware(request) {
     "/session-history",
     "/services",
     "/invoice",
-    "/consent-management"
+    "/consent-management",
+    "/fee-split-management",
   ];
 
   const authRoutes = [

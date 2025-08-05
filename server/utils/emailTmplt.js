@@ -504,8 +504,7 @@ export const onboardingAdminEmail = (data) => {
         <li><strong>Typed Name:</strong> ${data.typedName}</li>
         <li><strong>Signature:</strong> ${signatureHtml}</li>
         <li><strong>Date:</strong> ${data.date}</li>
-        <li><strong>Contact Number:</strong> ${data.contact_number}</li>
-        <li><strong>Description:</strong> ${data.description}</li>
+        <li><strong>Contact Number:</strong> ${data.phone}</li>
       </ul>
       <p>Submitted at: ${new Date().toLocaleString()}</p>
     `,

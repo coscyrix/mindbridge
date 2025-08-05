@@ -10,6 +10,8 @@ import CreateServiceForm from "../../components/Forms/CreateServiceForm";
 import CustomClientDetails from "../../components/CustomClientDetails";
 import { toast } from "react-toastify";
 import CommonServices from "../../services/CommonServices";
+import { useReferenceContext } from "../../context/ReferenceContext";
+import Cookies from "js-cookie";
 function Services() {
   const [showCreateFlyout, setShowCreateFlyout] = useState(false);
   const [activeData, setActiveData] = useState();
@@ -17,11 +19,17 @@ function Services() {
   const actionDropdownRef = useRef(null);
   const [servicesData, setServicesData] = useState(null);
   const [servicesDataLoading, setServicesDataLoading] = useState(false);
+  const { userObj } = useReferenceContext();
+  const isManager = userObj?.role_id === 3;
+  const userData = Cookies.get("user");
+  const user = userData ? JSON.parse(userData) : null;
+  const tenant_id = user?.tenant?.tenant_generated_id;
+  console.log(user)
 
   const fetchServices = async () => {
     try {
       setServicesDataLoading(true);
-      const response = await CommonServices.getServices();
+      const response = await CommonServices.getServices(tenant_id);
 
       if (response.status === 200) {
         const { data } = response;
@@ -155,6 +163,7 @@ function Services() {
         setIsOpen={setShowCreateFlyout}
       >
         <CreateServiceForm
+          isManager={isManager}
           isOpen={showCreateFlyout}
           setIsOpen={setShowCreateFlyout}
           initialData={activeData}

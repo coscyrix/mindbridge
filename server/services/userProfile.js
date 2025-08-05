@@ -49,20 +49,34 @@ export default class UserProfileService {
       const tenantId = await this.common.getUserTenantId({
         user_profile_id: data.user_profile_id,
       });
+      
+      console.log('Service layer - tenantId result:', tenantId);
+      
+      // Check if getUserTenantId returned an error
+      if (tenantId.error) {
+        return { message: tenantId.message, error: -1 };
+      }
+      
+      // Check if tenantId is empty or undefined
+      if (!tenantId || tenantId.length === 0) {
+        return { message: 'No tenant found for the specified user profile', error: -1 };
+      }
+      
       data.tenant_id = Number(tenantId[0].tenant_id);
+      console.log('Service layer - assigned tenant_id:', data.tenant_id);
     }
 
     if (data.role_id === 3) {
       // if the user is manager create tenant
-      const postTenantName = await this.common.postTenant({
+      const postTenantResult = await this.common.postTenant({
         tenant_name: data.tenant_name,
         admin_fee: data.admin_fee,
         tax_percent: data.tax_percent
       });
-      if (postTenantName.error) {
-        return { message: postTenantName.message, error: -1 };
+      if (postTenantResult.error) {
+        return { message: postTenantResult.message, error: -1 };
       }
-      data.tenant_id = Number(postTenantName);
+      data.tenant_id = Number(postTenantResult);
     }
 
     delete data.tenant_name;
@@ -84,7 +98,6 @@ export default class UserProfileService {
       tenant_id: joi.number().required(),
       admin_fee: joi.number().precision(2).optional(),
       tax_percent: joi.number().precision(2).optional(),
-      service_templates: joi.array().optional(),
     });
 
     console.log('//////////////////////////////////////////');
@@ -105,26 +118,7 @@ export default class UserProfileService {
       return userProfileResult;
     }
 
-    // If service_templates are provided, copy them for the new tenant (after user profile creation)
-    if (data.role_id === 3 && Array.isArray(data.service_templates) && data.service_templates.length > 0) {
-      const ServiceTemplateService = (await import('./serviceTemplate.js')).default;
-      const serviceTemplateService = new ServiceTemplateService();
-      for (const svc of data.service_templates) {
-        // svc should have template_service_id and price
-        if (!svc.template_service_id || typeof svc.price !== 'number') {
-          return { message: 'Each service_template must have template_service_id and price', error: -1 };
-        }
-        console.log(userProfileResult.tenant_id, 'userProfileResult.tenant_id');
-        
-        // Copy template to tenant's service table with provided price
-        const result = await serviceTemplateService.copyTemplateToTenantService(svc.template_service_id, userProfileResult.tenant_id, svc.price);
-        console.log(result, 'result');
-        
-        if (result.error) {
-          return { message: `Failed to copy service template: ${svc.template_service_id}`, error: -1, details: result };
-        }
-      }
-    }
+
 
     return userProfileResult;
   }

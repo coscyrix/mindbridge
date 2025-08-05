@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CreateSessionFormWrapper } from "./style";
+import { CreateSessionFormWrapper, HomeworkButtonWrapper } from "./style";
 import CustomInputField from "../../CustomInputField";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import CustomTable from "../../CustomTable";
@@ -7,7 +7,7 @@ import CustomButton from "../../CustomButton";
 import { toast } from "react-toastify";
 import moment from "moment";
 import { useReferenceContext } from "../../../context/ReferenceContext";
-import { AddIcon, InfoIcon } from "../../../public/assets/icons";
+import { AddIcon, InfoIcon, SettingsIcon } from "../../../public/assets/icons";
 import { api } from "../../../utils/auth";
 import CustomModal from "../../CustomModal";
 import AdditionalServicesForm from "../../SessionFormComponents/AdditionalServices";
@@ -31,6 +31,9 @@ import {
   convertUTCToLocalTime,
 } from "../../../utils/helper";
 import { useRouter } from "next/router";
+import HomeworkModal from "../../HomeworkModalContent";
+import { ToggleButton } from "@mui/material";
+import ToggleSwitch from "../../CustomButton/ToggleButton";
 
 function CreateSessionForm({
   isOpen,
@@ -886,6 +889,21 @@ function CreateSessionForm({
       setSessionTableData([]);
     }
   };
+  const [isEnabled, setIsEnabled] = useState(false);
+  const handleToggle = (newState) => {
+    setIsEnabled(newState);
+    console.log("Toggled:", newState);
+  };
+
+  const counselor = userObj?.role_id == 2;
+  const manager = userObj?.role_id == 3;
+  const [isWorkModalOpen, setIsWorkModalOpen] = useState(false);
+  const handleOpenWorkModal = () => {
+    setIsWorkModalOpen(true);
+  };
+  const handleCloseWorkModal = () => {
+    setIsWorkModalOpen(false);
+  };
 
   return (
     <CreateSessionFormWrapper>
@@ -1130,6 +1148,24 @@ function CreateSessionForm({
                       : "Generate Session Schedule"}
                   </button>
                 )}
+              {initialData && counselor && (
+                <HomeworkButtonWrapper>
+                  <CustomButton
+                    onClick={handleOpenWorkModal}
+                    icon={<SettingsIcon />}
+                    title="Upload and Send Homework"
+                    type="button"
+                  />
+                </HomeworkButtonWrapper>
+              )}
+
+              {initialData && manager && (
+                <ToggleSwitch
+                  isOn={isEnabled}
+                  title={"Enable Homwork upload for this counselor"}
+                  onToggle={handleToggle}
+                />
+              )}
               {/* session Table  */}
               {(initialData || sessionTableData) && (
                 <CustomTable
@@ -1328,6 +1364,13 @@ function CreateSessionForm({
           selectedSessionId={selectedSessionId}
           showVerification={showVerification}
           setShowVerification={setShowVerification}
+        />
+      )}
+
+      {isWorkModalOpen && (
+        <HomeworkModal
+          isOpen={isWorkModalOpen}
+          onClose={handleCloseWorkModal}
         />
       )}
 

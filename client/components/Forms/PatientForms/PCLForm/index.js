@@ -7,6 +7,7 @@ import Spinner from "../../../common/Spinner";
 import { api } from "../../../../utils/auth";
 import { getBaseURL } from "../../../../utils/helper";
 import { useRouter } from "next/router";
+import CommonServices from "../../../../services/CommonServices";
 
 const questions = [
   {
@@ -96,7 +97,7 @@ const PCL5Form = () => {
         client_id: client_id,
         ...data,
       };
-      const response = await api.post("/feedback/pcl5", payload);
+      const response = await CommonServices.submitPCL5Form(payload);
       if (response.status === 200) {
         toast.success("Form submitted successfully!");
         router.push("/patient-forms/form-submission");

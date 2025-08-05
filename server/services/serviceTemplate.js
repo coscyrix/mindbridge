@@ -35,7 +35,7 @@ export default class ServiceTemplateService {
     if (templateRes.error) return templateRes;
     const template = templateRes.rec;
     // Fetch tenant for admin_fee and tax_percent
-    const tenantRes = await this.common.getTenantByTenantGeneratedId(tenant_id);
+    const tenantRes = await this.common.getTenantByTenantId(tenant_id);
     if (tenantRes.error) return tenantRes;
     const tenant = tenantRes[0];
     // Use provided price as basePrice
@@ -51,7 +51,7 @@ export default class ServiceTemplateService {
       service_code: template.service_code || (template.name || template.service_name || 'SERVICE').replace(/\s+/g, '_').toUpperCase(),
       total_invoice: finalPrice,
       gst: taxPercent,
-      tenant_id: tenant_id,
+      tenant_id: tenant.tenant_generated_id,
       template_service_id: template_service_id,
     };
     // Remove/override fields that should not be copied or are not relevant for the service table
@@ -71,5 +71,62 @@ export default class ServiceTemplateService {
     
 
     return this.service.postService(serviceData);
+  }
+
+  async copyMultipleTemplatesToTenant(service_templates, tenant_id) {
+    if (!Array.isArray(service_templates) || service_templates.length === 0) {
+      return { message: 'service_templates must be a non-empty array', error: -1 };
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const svc of service_templates) {
+      // Validate each service template
+      if (!svc.template_service_id || typeof svc.price !== 'number') {
+        errors.push({ 
+          template_service_id: svc.template_service_id, 
+          message: 'Each service_template must have template_service_id and price' 
+        });
+        continue;
+      }
+
+      try {
+        const result = await this.copyTemplateToTenantService(svc.template_service_id, tenant_id, svc.price);
+        if (result.error) {
+          errors.push({ 
+            template_service_id: svc.template_service_id, 
+            message: result.message,
+            details: result 
+          });
+        } else {
+          results.push({ 
+            template_service_id: svc.template_service_id, 
+            success: true,
+            service_id: result.service_id 
+          });
+        }
+      } catch (error) {
+        errors.push({ 
+          template_service_id: svc.template_service_id, 
+          message: 'Unexpected error occurred',
+          details: error.message 
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      return { 
+        message: 'Some service templates failed to copy', 
+        error: -1, 
+        results,
+        errors 
+      };
+    }
+
+    return { 
+      message: 'All service templates copied successfully', 
+      results 
+    };
   }
 } 

@@ -15,6 +15,8 @@ export default class OnboardingController {
     }
     // Send email to admin
     const emailTempl = onboardingAdminEmail(data);
+    console.log('emailTempl', emailTempl);
+    
     const sendEmail = new SendEmail();
     await sendEmail.sendMail(emailTempl);
     res.status(200).json(result);

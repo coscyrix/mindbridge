@@ -3,23 +3,26 @@ import React, { useEffect, useRef, useState } from "react";
 import CustomModal from "../CustomModal";
 import { HomeWorkModalWrapper } from "./style";
 import CustomInputField from "../CustomInputField/index";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, Controller } from "react-hook-form";
 import CustomButton from "../CustomButton";
 import { CrossIcon, UploadIcon } from "../../public/assets/icons";
 const HomeworkModal = ({ isOpen, onClose }) => {
   const [selectedFile, setSelectedFile] = useState("Upload file");
   const methods = useForm();
 
-  const handleSelectFile = () => {
-    const file = methods.getValues("homework")?.[0];
+  const handleSelectFile = (e) => {
+    const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file.name);
     }
   };
+  
 
   const handleUploadHomeWork = (data) => {
-    console.log(data);
+    console.log("Title:", data.homework_title);
+    console.log("File:", data.homework); 
   };
+  
 
   const handleReset = () => {
     methods.setValue("homework", null);
@@ -49,11 +52,20 @@ const HomeworkModal = ({ isOpen, onClose }) => {
               <label>Homework Document:</label>
               <div className="icon-input-container">
                 <div className="upload-input-field">
-                  <input
-                    {...methods.register("homework")}
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleSelectFile}
+                  <Controller
+                    control={methods.control}
+                    name="homework"
+                    defaultValue={null}
+                    render={({ field }) => (
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          field.onChange(e.target.files[0]);
+                          handleSelectFile(e);
+                        }}
+                      />
+                    )}
                   />
                 </div>
                 <div className="svg-text">
@@ -74,7 +86,7 @@ const HomeworkModal = ({ isOpen, onClose }) => {
                 title="Cancel"
               />
               {/* currently closing the modal on the the upload button */}
-              <div onClick={onClose}>
+              <div>
                 <button className="save-button" type="submit">
                   Upload & Send
                 </button>

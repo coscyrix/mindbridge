@@ -25,6 +25,14 @@ const ApiConfig = {
   },
   feedback: {
     getFeedbackFormDetails: "/feedback",
+    submitPCL5Form: "/feedback/pcl5",
+    submitPHQ9Form: "/feedback/phq9",
+    submitGAD7Form: "/feedback/gad7",
+    submitIPFForm: "/feedback/ipf",
+    submitWHODASForm: "/feedback/whodas",
+    submitSMARTGoalForm: "/feedback/smart-goal",
+    submitConsentForm: "/feedback/consent",
+    submitGASForm: "/feedback/gas",
   },
   onboarding: {
     uploadDocuments: "/counselor-documents",
@@ -37,6 +45,13 @@ const ApiConfig = {
   getstartedsubmittion: {
     getstarted: "/get-started-form",
     submitgetstartedform: "/onboarding",
+  },
+  consentFormSubmittion: {
+    consentForm: "/consent-description",
+  },
+  submitServiceTemplate: {
+    submitAndCopyServiceTemplates:
+      "/service-templates/copy-multiple-to-tenant",
   },
 };
 

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { CustomEditableInputModalWrapper } from "./style";
 import { MdDelete } from "react-icons/md";
 import Spinner from "../common/Spinner";
-
+import { DeleteIcon } from "../../public/assets/icons";
 const sanitizeService = (service) => {
   const id =
     service.service_id ??
@@ -103,7 +103,6 @@ const CustomEditableInputModal = ({
 
   return (
     <CustomEditableInputModalWrapper>
-      {/* Restore deleted */}
       {deletedServices.length > 0 && (
         <div className="restore-row">
           <label className="restore-label" htmlFor="restore-select">
@@ -199,7 +198,7 @@ const CustomEditableInputModal = ({
                 onClick={() => handleDelete(index)}
                 title="Delete"
               >
-                <MdDelete size={20} />
+                <DeleteIcon height={40} width={40} />
               </button>
             </div>
           </div>

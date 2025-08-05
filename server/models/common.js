@@ -138,6 +138,8 @@ export default class Common {
 
   async postUserCOMMON(data) {
     try {
+      console.log('postUserCOMMON called with data:', data);
+      
       const checkEmail = await this.getUserByEmail(data.email);
       if (checkEmail.length > 0) {
         logger.error('Email already exists');
@@ -151,10 +153,14 @@ export default class Common {
         tenant_id: data.tenant_id,
       };
 
+      console.log('Creating user with data:', tmpUsr);
+
       const postUsr = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('users')
         .insert(tmpUsr);
+
+      console.log('User created with result:', postUsr);
 
       if (!postUsr) {
         logger.error('Error creating user');
@@ -514,6 +520,8 @@ export default class Common {
 
   async getUserTenantId(data) {
     try {
+      console.log('getUserTenantId called with data:', data);
+      
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select()
@@ -528,14 +536,17 @@ export default class Common {
       }
 
       const rec = await query;
+      console.log('getUserTenantId query result:', rec);
 
       if (!rec || rec.length === 0) {
+        console.log('No user found for the given criteria');
         return { message: 'User not found', error: -1 };
       }
 
+      console.log('Returning user data:', rec);
       return rec;
     } catch (error) {
-      console.error(error);
+      console.error('Error in getUserTenantId:', error);
       return { message: 'Error getting user tenant id', error: -1 };
     }
   }
@@ -562,7 +573,81 @@ export default class Common {
         return { message: 'Error creating tenant', error: -1 };
       }
 
-      return generated_id;
+      // Get the tenant_id from the inserted record
+      const tenantRecord = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('tenant_id')
+        .from('tenant')
+        .where('tenant_generated_id', generated_id)
+        .first();
+
+      if (!tenantRecord) {
+        return { message: 'Error retrieving tenant after creation', error: -1 };
+      }
+
+      // Create entry in ref_fees table
+      const refFeesData = {
+        tenant_id: tenantRecord.tenant_id,
+        tax_pcnt: data.tax_percent || 0,
+        counselor_pcnt: 0.600, // Default 60% for counselor
+        system_pcnt: data.admin_fee || 0
+      };
+
+      const postRefFees = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('ref_fees')
+        .insert(refFeesData);
+
+      if (!postRefFees) {
+        return { message: 'Error creating ref_fees entry', error: -1 };
+      }
+
+      // Create default tenant configuration entries
+      const defaultConfigs = [
+        {
+          tenant_id: tenantRecord.tenant_id,
+          feature_name: 'homework_upload_enabled',
+          feature_value: 'true',
+          is_enabled: 1
+        }
+        // Add more default configurations here as needed
+      ];
+
+      for (const config of defaultConfigs) {
+        try {
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('tenant_configuration')
+            .insert(config);
+        } catch (configError) {
+          // Log the error but don't fail the tenant creation
+          console.warn(`Warning: Could not create tenant configuration for ${config.feature_name}:`, configError.message);
+        }
+      }
+
+      // Create default fee split management entry
+      try {
+        const defaultFeeSplitData = {
+          tenant_id: tenantRecord.tenant_id,
+          counselor_user_id: null, // Default configuration for all counselors
+          is_fee_split_enabled: 0, // Disabled by default
+          tenant_share_percentage: 0, // 0% for tenant
+          counselor_share_percentage: 100, // 100% for counselor
+          status_yn: 1
+        };
+
+        await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('fee_split_management')
+          .insert(defaultFeeSplitData);
+
+        console.log(`Default fee split management created for tenant ${tenantRecord.tenant_id}`);
+      } catch (feeSplitError) {
+        // Log the error but don't fail the tenant creation
+        console.warn(`Warning: Could not create default fee split management for tenant ${tenantRecord.tenant_id}:`, feeSplitError.message);
+      }
+
+      return tenantRecord.tenant_id;
     } catch (error) {
       console.error(error);
       return { message: 'Error creating tenant', error: -1 };
@@ -573,25 +658,33 @@ export default class Common {
 
   async getTenantByTenantId(tenant_id) {
     try {
+      console.log('Looking for tenant with ID:', tenant_id);
+      
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select()
         .where('tenant_id', tenant_id)
         .from('tenant');
 
+      console.log('Tenant query result:', rec);
+
       if (!rec || rec.length === 0) {
+        console.log('Tenant not found for ID:', tenant_id);
         return { message: 'Tenant not found', error: -1 };
       }
 
+      console.log('Found tenant:', rec[0]);
       return rec;
     } catch (error) {
-      console.error(error);
+      console.error('Error in getTenantByTenantId:', error);
       return { message: 'Error getting tenant', error: -1 };
     }
   }
 
   async getTenantByTenantGeneratedId(tenant_generated_id) {
     try {
+      console.log('tenant_generated_id', tenant_generated_id);
+      
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select()
@@ -606,6 +699,80 @@ export default class Common {
     } catch (error) {
       console.error(error);
       return { message: 'Error getting tenant', error: -1 };
+    }
+  }
+
+  ///////////////////////////////////////////
+
+  async createDefaultTenantConfigurations(tenant_id) {
+    try {
+      const defaultConfigs = [
+        {
+          tenant_id: tenant_id,
+          feature_name: 'homework_upload_enabled',
+          feature_value: 'true',
+          is_enabled: 1
+        }
+        // Add more default configurations here as needed
+        // Example:
+        // {
+        //   tenant_id: tenant_id,
+        //   feature_name: 'email_notifications_enabled',
+        //   feature_value: 'true',
+        //   is_enabled: 1
+        // }
+      ];
+
+      for (const config of defaultConfigs) {
+        try {
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('tenant_configuration')
+            .insert(config);
+        } catch (configError) {
+          // Log the error but don't fail the operation
+          console.warn(`Warning: Could not create tenant configuration for ${config.feature_name}:`, configError.message);
+        }
+      }
+
+      // Create default fee split management entry if it doesn't exist
+      try {
+        const existingFeeSplit = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('fee_split_management')
+          .where('tenant_id', tenant_id)
+          .whereNull('counselor_user_id')
+          .andWhere('status_yn', 1)
+          .first();
+
+        if (!existingFeeSplit) {
+          const defaultFeeSplitData = {
+            tenant_id: tenant_id,
+            counselor_user_id: null, // Default configuration for all counselors
+            is_fee_split_enabled: 0, // Disabled by default
+            tenant_share_percentage: 0, // 0% for tenant
+            counselor_share_percentage: 100, // 100% for counselor
+            status_yn: 1
+          };
+
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('fee_split_management')
+            .insert(defaultFeeSplitData);
+
+          console.log(`Default fee split management created for existing tenant ${tenant_id}`);
+        } else {
+          console.log(`Fee split management already exists for tenant ${tenant_id}`);
+        }
+      } catch (feeSplitError) {
+        // Log the error but don't fail the operation
+        console.warn(`Warning: Could not create default fee split management for tenant ${tenant_id}:`, feeSplitError.message);
+      }
+
+      return { message: 'Default tenant configurations created successfully' };
+    } catch (error) {
+      console.error('Error creating default tenant configurations:', error);
+      return { message: 'Error creating default tenant configurations', error: -1 };
     }
   }
 }

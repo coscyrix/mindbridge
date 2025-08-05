@@ -38,7 +38,7 @@ const SwiperCard = ({ imagePlaceholder, title }) => (
 const FeatureCard = ({ iconPlaceholder, title, description }) => (
   <FeatureCardWrapper>
     <div className="feature-card">
-      <img src={iconPlaceholder} />
+      <img src={iconPlaceholder} alt={title} />
       {/* <div className="feature-card-icon">{iconPlaceholder}</div> */}
       <h4 className="feature-card-title">{title}</h4>
       <p className="feature-card-description">{description}</p>

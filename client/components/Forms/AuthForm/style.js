@@ -5,7 +5,7 @@ export const Wrapper = styled.div`
   grid-template-columns: 1fr 1fr;
   min-height: 100vh;
 
-  @media only screen and (max-width: 520px) {
+  @media only screen and (max-width: 775px) {
     display: block;
   }
 `;
@@ -25,17 +25,17 @@ export const LeftPanel = styled.div`
     padding-top: 120px;
   }
 
-  @media only screen and (max-width: 520px) {
+  @media only screen and (max-width: 775px) {
     display: none;
   }
 
   h1 {
-    font-size: 4rem;
+    font-size: 3rem;
     margin-bottom: 1rem;
   }
 
   p {
-    font-size: 1.2rem;
+    font-size: 1rem;
     margin-bottom: 2rem;
     max-width: 660px;
   }
@@ -43,7 +43,8 @@ export const LeftPanel = styled.div`
   ul {
     list-style-image: url("/assets/images/check_mark_img.svg");
     padding-left: 20px;
-    font-size: 1.2rem;
+    font-size: 1rem;
+    display: block;
   }
 
   span {
@@ -56,13 +57,13 @@ export const LeftPanel = styled.div`
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    margin-top: 120px;
+    // margin-top: 120px;
 
     img {
       max-width: 400px;
       object-fit: cover;
       @media only screen and (max-width: 1023px) {
-        max-width: 300px;
+        max-width: 200px;
       }
       @media only screen and (max-width: 768px) {
         max-width: 230px;
@@ -188,5 +189,9 @@ export const FormContainer = styled.div`
     a {
       margin-left: 2px;
     }
+  }
+  .back-to-home {
+    margin-top: 1rem;
+    text-align: center;
   }
 `;

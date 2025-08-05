@@ -95,10 +95,10 @@ const GetStartedFormTemplate = ({ onClose, open }) => {
   const onSubmit = async (data) => {
     try {
       setIsLoading(true);
-      //   const combinedDateTime =
-      //     data.demodate && data.demotime
-      //       ? `${data.demodate}T${data.demotime}`
-      //       : null;
+      const combinedDateTime =
+        data.demodate && data.demotime
+          ? `${data.demodate}T${data.demotime}`
+          : null;
       const featuresString = data.features
         .map((feature) => feature.value)
         .join(", ");
@@ -109,14 +109,13 @@ const GetStartedFormTemplate = ({ onClose, open }) => {
           data.website?.startsWith("https://")
             ? data.website
             : `https://${data.website}`,
-        // demoTime: combinedDateTime,
+        demoTime: combinedDateTime,
         features: featuresString,
       };
       delete payload.demodate;
       delete payload.demotime;
       delete payload.confirmInfo;
       delete payload.agreeTerms;
-      // delete payload.
       const response = await CommonServices.submitOnboardingform(payload);
       if (response) {
         toast.success(response?.message);
@@ -149,15 +148,15 @@ const GetStartedFormTemplate = ({ onClose, open }) => {
         <header className="form-header">
           <div className="arrow-parent">
             <span>
-            <GoArrowLeft
-              size={30}
-              className="back-button"
-              onClick={() => {
-                router.back();
-              }}
-              aria-label="Close Get Started Form"
-              type="button"
-            ></GoArrowLeft>
+              <GoArrowLeft
+                size={30}
+                className="back-button"
+                onClick={() => {
+                  router.back();
+                }}
+                aria-label="Close Get Started Form"
+                type="button"
+              ></GoArrowLeft>
             </span>
             <h1>MindBridge Demo & Onboarding Form</h1>
           </div>
@@ -212,7 +211,8 @@ const GetStartedFormTemplate = ({ onClose, open }) => {
                     ))}
                   </select>
                   <CustomInputField
-                    // customClass={`phone-number-input ${
+                    customClass={`phone-number-input`}
+                    //${
                     //   errors?.[name] ? "error-input" : ""
                     // }`}
                     label="Phone Number"

@@ -1,5 +1,21 @@
 import styled from "styled-components";
 
+export const HomeworkButtonWrapper = styled.div`
+  display: flex;
+  justify-content: flex-end; /* or center, or flex-start */
+  align-items: center;
+  margin-bottom: 20px;
+
+  button {
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    gap: 8px;
+    display: flex;
+    align-items: center;
+  }
+`;
+
 export const CreateSessionFormWrapper = styled.div`
   height: 100%;
 

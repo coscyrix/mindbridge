@@ -73,6 +73,25 @@ export default class UserController {
     res.status(200).json(rec);
   }
 
+  async checkManagerServices(req, res) {
+    const { user_profile_id } = req.query;
+    const { tenant_id } = req.decoded || {};
+
+    if (!user_profile_id && !tenant_id) {
+      res.status(400).json({ message: 'Missing user_profile_id or tenant_id' });
+      return;
+    }
+
+    const user = new UserService();
+    const rec = await user.checkManagerServices(user_profile_id || tenant_id);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+    res.status(200).json(rec);
+  }
+
   //////////////////////////////////////////
 
   async sendOTPforVerification(req, res) {

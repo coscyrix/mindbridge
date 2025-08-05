@@ -132,10 +132,10 @@ const CounselorCard = ({
 
           <div className="card-body">
             <div className="services-list">
-              <div className="servicesDetails">
+              {/* <div className="servicesDetails">
                 <h6>Types of Services</h6>
                 <p>{services}</p>
-              </div>
+              </div> */}
               <div className="servicesDetails" style={{ marginTop: "20px" }}>
                 <h6>Treatment target</h6>
                 {TREATMENT_TARGET.map((specialties, index) => (

@@ -394,6 +394,39 @@ export default class FeedbackService {
 
   //////////////////////////////////////////
 
+  async postGASFeedback(data) {
+    const sessionId = await this.common.getSessionById(data.session_id);
+    const tenantId = await this.common.getUserTenantId({
+      user_profile_id: sessionId[0].counselor_id,
+    });
+    data.tenant_id = Number(tenantId[0].tenant_id);
+    
+    const schema = joi.object({
+      goal: joi.string().required(),
+      responses: joi.array().items(
+        joi.object({
+          question: joi.string().required(),
+          selectedLabel: joi.string().allow(null),
+          score: joi.number().min(-2).max(2).required(),
+        })
+      ).required(),
+      session_id: joi.number().required(),
+      client_id: joi.number().required(),
+      tenant_id: joi.number().required(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const feedback = new Feedback();
+    return feedback.postGASFeedback(data);
+  }
+
+  //////////////////////////////////////////
+
   async postCONSENTFeedback(data) {
     const schema = joi.object({
       client_id: joi.number().required(),

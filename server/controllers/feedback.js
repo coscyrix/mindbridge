@@ -179,6 +179,22 @@ export default class FeedbackController {
 
   //////////////////////////////////////////
 
+  async postGASFeedback(req, res) {
+    const data = req.body;
+
+    const feedback = new FeedbackService();
+    const rec = await feedback.postGASFeedback(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
   async postATTENDANCEFeedback(req, res) {
     const data = req.body;
 
