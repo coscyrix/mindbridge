@@ -976,7 +976,7 @@ export default class Feedback {
 
       const checkFeedBackSessionId = await this.getFeedbackById({
         session_id: data.session_id,
-        form_id: 24, // Assuming form_id 24 for GAS form
+        form_id: 25, // GAS form uses form_id 25
       });
 
       if (checkFeedBackSessionId.length > 0) {
@@ -990,7 +990,7 @@ export default class Feedback {
         session_id: data.session_id,
         client_id: data.client_id,
         feedback_json: data,
-        form_id: 24, // Assuming form_id 24 for GAS form
+        form_id: 25, // GAS form uses form_id 25
         tenant_id: data.tenant_id,
       });
 
