@@ -10,6 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { api } from "../../../../utils/auth";
 import CustomInputField from "../../../CustomInputField";
+import CommonServices from "../../../../services/CommonServices";
 
 const allQuestions = [
   {
@@ -287,7 +288,7 @@ const WHODASForm = () => {
         toast.error("Required parameters are missing from the route.");
         return;
       }
-      const response = await api.post("/feedback/whodas", payload);
+      const response = await CommonServices.submitWHODASForm(payload);
       if (response.status === 200) {
         toast.success("Form submitted successfully!");
         router.push("/patient-forms/form-submission");

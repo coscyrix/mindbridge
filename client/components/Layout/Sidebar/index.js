@@ -123,7 +123,12 @@ function Sidebar({ showSideBar, setShowSideBar }) {
       >
         <div className="headings-container">
           <div className="sidebar-header">
-            <div className="app-logo">
+            <div
+              onClick={() => {
+                router.push("/");
+              }}
+              className="app-logo"
+            >
               <Image
                 src="/assets/images/Mindbridge_logo.svg"
                 alt="company-logo"
@@ -139,7 +144,10 @@ function Sidebar({ showSideBar, setShowSideBar }) {
             {SIDEBAR_HEADINGS.filter((item) => {
               if ((isManager || isAdmin) && item.title === "Profile")
                 return false;
-              if (!isAdmin && item.title === "Consent Management") return false;
+              if (!isManager && item.title === "Consent Management") return false;
+              if (!isManager && item.title === "Fee Split Management") {
+                return false;
+              }
 
               return true;
             }).map((heading, index) => (
@@ -195,12 +203,12 @@ function Sidebar({ showSideBar, setShowSideBar }) {
             <div className="profile-details">
               {userData?.role_id !== 2 && (
                 <h4>
-                  [
+                  
                   {userData?.role_id === 4
                     ? "Mindbridge"
                     : userData?.tenant_name &&
                       userData?.tenant_name.slice(0, 20).toUpperCase()}
-                  ]
+                  
                 </h4>
               )}
 

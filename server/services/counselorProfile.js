@@ -191,8 +191,10 @@ export default class CounselorProfileService {
       counselor_profile_id: joi.number().required(),
       customer_name: joi.string().required(),
       customer_email: joi.string().email().required(),
+      contact_number: joi.string().required(),
       service: joi.string().required(),
       appointment_date: joi.date().iso().required(),
+      description: joi.string().optional(),
     });
     const { error } = schema.validate(data);
     if (error) {
@@ -218,8 +220,10 @@ export default class CounselorProfileService {
           <ul>
             <li><strong>Customer Name:</strong> ${data.customer_name}</li>
             <li><strong>Customer Email:</strong> ${data.customer_email}</li>
+            <li><strong>Customer Phone:</strong> ${data.contact_number}</li>
             <li><strong>Service:</strong> ${data.service}</li>
             <li><strong>Appointment Date:</strong> ${new Date(data.appointment_date).toDateString()}</li>
+            ${data.description ? `<li><strong>Description:</strong> ${data.description}</li>` : ''}
           </ul>
           <p>Please reach out to the customer to confirm the details.</p>
           <p>Thank you,</p>

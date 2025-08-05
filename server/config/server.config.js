@@ -26,33 +26,65 @@ export default class ServerConfig {
     this.app.use('/', Express.static(path.join(__dirname, 'public')));
     
     // Serve static files from uploads directory
-    this.app.use('/uploads', Express.static(path.join(__dirname, '../../uploads')));
+    const uploadsPath = path.join(process.cwd(), 'uploads');
+    // Ensure uploads directory exists before serving static files
+    if (!fs.existsSync(uploadsPath)) {
+      try {
+        fs.mkdirSync(uploadsPath, { recursive: true });
+      } catch (error) {
+        console.error('Warning: Could not create uploads directory:', error.message);
+      }
+    }
+    this.app.use('/uploads', Express.static(uploadsPath));
 
-    this.app.use(cors({
-      origin: process.env.ALLOWED_ORIGINS || '*', // Allow all origins from env or default to *
-      credentials: true, // if you use cookies or authorization headers
+    // CORS configuration
+    const corsOptions = {
+      origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Allow all origins for development
+        if (process.env.NODE_ENV === 'development' || process.env.ALLOWED_ORIGINS === '*') {
+          return callback(null, true);
+        }
+        
+        // Check if origin is in allowed list
+        const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['*'];
+        if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        
+        return callback(new Error('Not allowed by CORS'));
+      },
+      credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'ngrok-skip-browser-warning'],
       exposedHeaders: ['Content-Length', 'X-Requested-With'],
       preflightContinue: false,
       optionsSuccessStatus: 204
-    }));
+    };
 
-    // Additional headers to allow all origins
+    this.app.use(cors(corsOptions));
+
+    // Additional CORS headers for better compatibility
     this.app.use((req, res, next) => {
       // Log CORS requests for debugging
       console.log(`CORS Request: ${req.method} ${req.originalUrl} from ${req.get('Origin') || 'Unknown Origin'}`);
       
+      // Set CORS headers
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
       res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, ngrok-skip-browser-warning');
       res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Max-Age', '86400'); // 24 hours
       
+      // Handle preflight requests
       if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-      } else {
-        next();
+        res.status(200).end();
+        return;
       }
+      
+      next();
     });
 
     middlewares?.forEach((mdlw) => {
@@ -60,7 +92,12 @@ export default class ServerConfig {
     });
 
     this.app.get('/ping', (req, res) => {
-      res.send('pong');
+      res.json({
+        message: 'pong',
+        timestamp: new Date().toISOString(),
+        port: this.port,
+        processId: process.pid
+      });
     });
 
     // Health check endpoint for CORS testing
@@ -69,11 +106,32 @@ export default class ServerConfig {
         status: 'OK',
         message: 'Server is running and accepting requests from all origins',
         timestamp: new Date().toISOString(),
+        port: this.port,
+        processId: process.pid,
         cors: {
           allowedOrigins: process.env.ALLOWED_ORIGINS || '*',
           allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
           allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'ngrok-skip-browser-warning']
         }
+      });
+    });
+
+    // CORS test endpoint
+    this.app.get('/api/cors-test', (req, res) => {
+      res.json({
+        message: 'CORS is working!',
+        timestamp: new Date().toISOString(),
+        origin: req.get('Origin'),
+        method: req.method
+      });
+    });
+
+    // Auth test endpoint
+    this.app.post('/api/auth/test', (req, res) => {
+      res.json({
+        message: 'Auth endpoint is accessible',
+        timestamp: new Date().toISOString(),
+        body: req.body
       });
     });
 
@@ -166,8 +224,8 @@ export default class ServerConfig {
   async listen() {
     try {
       const options = {
-        key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
-        cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
+        // key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
+        // cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
       };
 
       const { default: knex } = await import('knex');
@@ -190,15 +248,21 @@ export default class ServerConfig {
       
       this.app.locals.knex = db;
 
-      // Create an HTTP/HTTPS server
-      const httpServer =
-        process.env.NODE_ENV === 'local_development'
-          ? http.createServer(options, this.app)
-          : https.createServer(options, this.app);
+      // Create an HTTP server (simplified for Docker)
+      const httpServer = http.createServer(this.app);
 
-      process.env.NODE_ENV === 'development'
-        ? https.createServer(options, this.app)
-        : https.createServer(options, this.app);
+      // Add graceful shutdown handling
+      const gracefulShutdown = (signal) => {
+        this.console.info(`Received ${signal}. Starting graceful shutdown...`);
+        httpServer.close(() => {
+          this.console.info('HTTP server closed.');
+          process.exit(0);
+        });
+      };
+
+      // Listen for shutdown signals
+      process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+      process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
       httpServer.listen(this.port, () => {
         this.console.info(`🚀..Server running on port: ${this.port}`);

@@ -24,4 +24,10 @@ router.post(
   AsyncWrapper(userController.changePassword),
 );
 
+router.get(
+  '/check-manager-services',
+  authenticate,
+  AsyncWrapper(userController.checkManagerServices),
+);
+
 export const userRouter = { baseUrl: '/api/auth', router };

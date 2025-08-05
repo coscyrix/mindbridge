@@ -191,6 +191,12 @@ export const SIDEBAR_HEADINGS = [
     url: "/consent-management",
     title: "Consent Management",
   },
+  {
+    id: 9,
+    icon: <DashboardIcon />,
+    url: "/fee-split-management",
+    title: "Fee Split Management",
+  },
 ];
 
 export const TABLE_DATA = (handleCellClick, handleEdit, handleDelete) => {

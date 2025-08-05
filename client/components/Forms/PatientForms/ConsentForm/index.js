@@ -7,12 +7,16 @@ import CustomButton from "../../../CustomButton";
 import { api } from "../../../../utils/auth";
 import { toast } from "react-toastify";
 import { useRouter } from "next/router";
+import CommonServices from "../../../../services/CommonServices";
 import CustomInputField from "../../../CustomInputField";
 import Spinner from "../../../common/Spinner";
 import SignatureField from "../../../SignatureCanvas";
+import ApiConfig from "../../../../config/apiConfig";
+
 const ConsentForm = ({ initialData, loader }) => {
   const signaturePadRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [consentBody,setConsentBody] = useState(null);
   const methods = useForm({
     defaultValues: {
       client_name: "",
@@ -60,7 +64,7 @@ const ConsentForm = ({ initialData, loader }) => {
         setLoading(false);
         return;
       }
-      const response = await api.post("/feedback/consent", payload);
+      const response = await CommonServices.submitConsentForm(payload);
       if (response.status === 200) {
         toast.success(data?.message || "Consent form submitted successfully!");
         reset();
@@ -83,6 +87,28 @@ const ConsentForm = ({ initialData, loader }) => {
       });
     }
   }, [initialData, reset]);
+
+  const getConsentBody = async()=>{
+    try {
+      const {tenant_id } = router.query;
+      console.log(tenant_id)
+      const result = await api.get(
+        `${ApiConfig.consentFormSubmittion.consentForm}?tenant_id=${tenant_id}`
+      );
+      console.log(result);
+      if(result.status ===201){
+        console.log(result)
+
+      }
+
+    } catch (error) {
+      toast.error(error?.response?.data?.message)
+      console.log(error);
+    }
+  }
+  useEffect(()=>{
+    getConsentBody();
+  },[router.query]);
 
   return (
     <>

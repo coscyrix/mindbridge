@@ -955,4 +955,72 @@ export default class Feedback {
       return { message: 'Error creating feedback', error: -1 };
     }
   }
+
+  //////////////////////////////////////////
+
+  async postGASFeedback(data) {
+    try {
+      // Calculate total score from responses
+      let totalScore = 0;
+      data.responses.forEach(response => {
+        totalScore += response.score;
+      });
+
+      const checkSession = await this.session.getSessionById({
+        session_id: data.session_id,
+      });
+
+      if (checkSession.length === 0) {
+        return { message: 'Session not found', error: -1 };
+      }
+
+      const checkFeedBackSessionId = await this.getFeedbackById({
+        session_id: data.session_id,
+        form_id: 25, // GAS form uses form_id 25
+      });
+
+      if (checkFeedBackSessionId.length > 0) {
+        return {
+          message: 'Feedback already exists for this session',
+          error: -1,
+        };
+      }
+
+      const recFeedback = await this.postFeedback({
+        session_id: data.session_id,
+        client_id: data.client_id,
+        feedback_json: data,
+        form_id: 25, // GAS form uses form_id 25
+        tenant_id: data.tenant_id,
+      });
+
+      if (recFeedback.error) {
+        return recFeedback;
+      }
+
+      const tmpGASFeedback = {
+        goal: data.goal,
+        total_score: totalScore,
+        responses_json: JSON.stringify(data.responses),
+        feedback_id: recFeedback.rec[0],
+        tenant_id: data.tenant_id,
+      };
+
+      const postGASFeedback = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('feedback_gas')
+        .insert(tmpGASFeedback);
+
+      if (!postGASFeedback) {
+        logger.error('Error creating feedback');
+        return { message: 'Error creating feedback', error: -1 };
+      }
+
+      return { message: 'Feedback created successfully' };
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error creating feedback', error: -1 };
+    }
+  }
 }

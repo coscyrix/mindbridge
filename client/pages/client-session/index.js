@@ -12,6 +12,8 @@ import CustomTab from "../../components/CustomTab";
 import CustomButton from "../../components/CustomButton";
 import { AddIcon } from "../../public/assets/icons";
 import { useReferenceContext } from "../../context/ReferenceContext";
+import Skeleton from "@mui/material/Skeleton";
+
 
 function ClientSession() {
   const [showFlyout, setShowFlyout] = useState(false);
@@ -27,6 +29,7 @@ function ClientSession() {
   const [selectCounselor, setSelectCounselor] = useState("allCounselors");
   const [activeTab, setActiveTab] = useState(0);
   const { userObj } = useReferenceContext();
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   const tabLabels = [
     { id: 0, label: "Current Session", value: "currentSession" },
@@ -42,10 +45,19 @@ function ClientSession() {
       setSessionsLoading(true);
       let response;
       if (userObj?.role_id === 3) {
+        if(counselorId== "allCounselors"){
+          response = await CommonServices.getSessionsByCounselor({
+            role_id:3,
+            tenant_id:userObj?.tenant?.tenant_generated_id
+          })
+        }
         // Always fetch with role_id: 3 for role 3 users
-        response = await CommonServices.getSessionsByCounselor({
-          role_id: 3,
-        });
+        else{
+          response = await CommonServices.getSessionsByCounselor({
+            role_id: 3,
+            counselor_id: counselorId,
+          });
+        }
       } else if (userObj?.role_id !== 4) {
         response = await CommonServices.getSessionsByCounselor({
           role_id: userObj?.role_id,
@@ -102,8 +114,9 @@ function ClientSession() {
     const counselorId = data?.value;
     setSelectCounselor(counselorId);
     fetchSessions(counselorId);
-    getInvoice();
+    getInvoice(counselorId);
   };
+  
 
   const handleClickOutside = (e) => {
     if (
@@ -183,17 +196,18 @@ function ClientSession() {
     setShowFlyout(true);
   };
 
-  const getInvoice = async () => {
+  const getInvoice = async (counselorIdParam) => {
+    setSummaryLoading(true); 
     try {
       let response;
-      if (userObj?.role_id == 2) {
+      if (userObj?.role_id === 2) {
         response = await api.get(
           `/invoice/multi?counselor_id=${userObj?.user_profile_id}&role_id=${userObj?.role_id}`
         );
       } else {
         let url = `/invoice/multi?role_id=${userObj?.role_id}`;
-        if (selectCounselor && selectCounselor !== "allCounselors") {
-          url += `&counselor_id=${selectCounselor}`;
+        if (counselorIdParam && counselorIdParam !== "allCounselors") {
+          url += `&counselor_id=${counselorIdParam}`;
         }
         response = await api.get(url);
       }
@@ -202,8 +216,11 @@ function ClientSession() {
       }
     } catch (error) {
       console.log(":: Invoice.getInvoice()", error);
+    }finally{
+      setSummaryLoading(false); 
     }
   };
+  
 
   useEffect(() => {
     window.addEventListener("mousedown", handleClickOutside);
@@ -265,44 +282,75 @@ function ClientSession() {
             /> */}
             <CustomTab
               heading={"Total Amount For A Month"}
-              value={`$${
-                summaryData
-                  ? (Number(summaryData?.sum_session_system_amt) + Number(summaryData?.sum_session_counselor_amt)).toFixed(2) || 0
-                  : 0
-              }`}
+              value={
+                summaryLoading ? (
+                  <Skeleton width={120} height={40} />
+                ) : (
+                  `$${
+                    summaryData
+                      ? (
+                          Number(summaryData?.sum_session_system_amt) +
+                          Number(summaryData?.sum_session_counselor_amt)
+                        ).toFixed(2) || 0
+                      : 0
+                  }`
+                )
+              }
             />
             <CustomTab
               heading={"Total Amount to Associate for a Month: "}
-              value={`$${
-                summaryData
-                  ? 
-                      Number(summaryData?.sum_session_counselor_amt).toFixed(2)
-                    || 0
-                  : 0
-              }`}
+              value={
+                summaryLoading ? (
+                  <Skeleton width={120} height={40} />
+                ) : (
+                  `$${
+                    summaryData
+                      ? Number(summaryData?.sum_session_counselor_amt).toFixed(
+                          2
+                        ) || 0
+                      : 0
+                  }`
+                )
+              }
             />
             <CustomTab
               heading={"Total Amount to Vapendama for a Month:"}
-              value={`$${
-                summaryData
-                  ? Number(summaryData?.sum_session_system_amt).toFixed(2) || 0
-                  : 0
-              }`}
+              value={
+                summaryLoading ? (
+                  <Skeleton width={120} height={40} />
+                ) : (
+                  `$${
+                    summaryData
+                      ? Number(summaryData?.sum_session_system_amt).toFixed(
+                          2
+                        ) || 0
+                      : 0
+                  }`
+                )
+              }
             />
             <CustomTab
               heading={"Total Amount of Units:"}
-              value={summaryData?.sum_session_system_units || 0}
+              value={
+                summaryLoading ? (
+                  <Skeleton width={120} height={40} />
+                ) : (
+                  summaryData?.sum_session_system_units || 0
+                )
+              }
             />
           </div>
         }
-        
         tableCaption="Client Session List"
         tableData={{
           columns: sessionsDataColumns,
           data: sessions,
         }}
-        
-        primaryButton={userObj?.role_id !== 4 && "Add Client Session"}
+        primaryButton={
+          userObj?.role_id !== 4 &&
+          userObj?.role_id !== 3 &&
+          "Add Client Session"
+        }
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
         counselors={counselors}

@@ -6,6 +6,7 @@ import { api } from "../../../../utils/auth";
 import { toast } from "react-toastify";
 import Spinner from "../../../common/Spinner";
 import { useRouter } from "next/router";
+import CommonServices from "../../../../services/CommonServices";
 
 const anxietyQuestions = [
   { id: "nervous", label: "Feeling nervous, anxious, or on edge?" },
@@ -73,7 +74,7 @@ const AnxietyDisorderForm = () => {
         client_id,
         ...payloadData,
       };
-      const response = await api.post("/feedback/gad7", payload);
+      const response = await CommonServices.submitGAD7Form(payload);
       if (response.status === 200) {
         toast.success("Form submitted successfully!");
         router.push("/patient-forms/form-submission");

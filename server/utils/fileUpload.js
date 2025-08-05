@@ -7,13 +7,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+const uploadsDir = path.join(process.cwd(), 'uploads');
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    logger.info('Created uploads directory:', uploadsDir);
+  }
+} catch (error) {
+  logger.warn('Could not create uploads directory during module load:', error.message);
+  // Continue execution - the directory will be created when needed
 }
 
 export const saveFile = async (file, subdirectory = '') => {
   try {
+    // Ensure uploads directory exists first
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    
     // Create subdirectory if it doesn't exist
     const targetDir = path.join(uploadsDir, subdirectory);
     if (!fs.existsSync(targetDir)) {
@@ -38,7 +49,7 @@ export const saveFile = async (file, subdirectory = '') => {
 
 export const deleteFile = async (filepath) => {
   try {
-    const absolutePath = path.join(__dirname, '../..', filepath);
+    const absolutePath = path.join(process.cwd(), filepath);
     if (fs.existsSync(absolutePath)) {
       await fs.promises.unlink(absolutePath);
     }

@@ -16,6 +16,7 @@ import {
 import UserProfile from '../userProfile.js';
 import dotenv from 'dotenv';
 import CounselorProfile from '../counselorProfile.js';
+import Service from '../service.js';
 
 dotenv.config();
 
@@ -211,12 +212,45 @@ export default class User {
           tenant_id: usrPro[0].tenant_id,
           tenant_name: usrPro[0].tenant_name,
         };
-        // If user is a counselor, add counselor_profile_id
+        // If user is a counselor, add complete counselor profile data
         if (usr.role_id === 2) {
+          console.log('User is a counselor, user_profile_id:', usr.user_profile_id);
+          
           const counselorProfile = await this.counselorProfile.getCounselorProfile({ user_profile_id: usr.user_profile_id });
+          console.log('Counselor profile result:', counselorProfile);
+          
           if (counselorProfile.rec && counselorProfile.rec.length > 0) {
+            usr.counselor_profile = counselorProfile.rec[0];
             usr.counselor_profile_id = counselorProfile.rec[0].counselor_profile_id;
+            console.log('Counselor profile added to user:', usr.counselor_profile);
+          } else {
+            console.log('No counselor profile found for user_profile_id:', usr.user_profile_id);
           }
+        }
+        
+        // If user is a tenant (role_id === 3), get tenant details and check services
+        if (usr.role_id === 3) {
+          console.log('User is a tenant, tenant_id:', usr.tenant_id);
+          
+          // Get complete tenant information
+          let tenantResult = await this.common.getTenantByTenantGeneratedId(usr.tenant_id);
+          if(tenantResult.error){
+            tenantResult = await this.common.getTenantByTenantId(usr.tenant_id);
+          }
+          console.log('Tenant result:', tenantResult);
+          
+          if (!tenantResult.error && tenantResult.length > 0) {
+            usr.tenant = tenantResult[0];
+            console.log('Tenant object added to user:', usr.tenant);
+          } else {
+            console.log('Failed to get tenant info:', tenantResult);
+          }
+          
+          // Check if tenant has any services
+          const service = new Service();
+          const servicesResult = await service.getServiceById({ tenant_id: usr.tenant_id });
+          usr.has_services = !servicesResult.error && servicesResult.rec && servicesResult.rec.length > 0;
+          usr.services_count = servicesResult.rec ? servicesResult.rec.length : 0;
         }
       }
 
@@ -392,6 +426,33 @@ export default class User {
     } catch (error) {
       logger.error(error);
       return { message: 'Something went wrong', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async checkManagerServices(tenant_id) {
+    try {
+      const service = new Service();
+      const servicesResult = await service.getServiceById({ tenant_id });
+      
+      const has_services = !servicesResult.error && servicesResult.rec && servicesResult.rec.length > 0;
+      const services_count = servicesResult.rec ? servicesResult.rec.length : 0;
+      
+      // Get complete tenant information
+      const tenantResult = await this.common.getTenantByTenantId(tenant_id);
+      const tenant = !tenantResult.error && tenantResult.length > 0 ? tenantResult[0] : null;
+      
+      return {
+        message: 'Manager services check completed',
+        has_services,
+        services_count,
+        services: servicesResult.rec || [],
+        tenant: tenant
+      };
+    } catch (error) {
+      logger.error(error);
+      return { message: 'Error checking manager services', error: -1 };
     }
   }
 }

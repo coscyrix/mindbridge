@@ -115,8 +115,11 @@ export default class EmailTmplt {
             );
 
             let attendanceEmail;
-            if (arry === 24) {
+            let isAttendanceForm = false;
+            
+            if (arry === 24 && form_name === 'ATTENDANCE') {
               // 24 is the form_id for attendance
+              isAttendanceForm = true;
               const sessions = recThrpy[0].session_obj;
               const sortedSessions = sessions.sort(
                 (a, b) => a.session_id - b.session_id,
@@ -177,7 +180,7 @@ export default class EmailTmplt {
             }
 
             const email = await this.sendEmail.sendMail(
-              arry === 24 ? attendanceEmail : toolsEmail,
+              isAttendanceForm ? attendanceEmail : toolsEmail,
             );
 
             if (email.error) {

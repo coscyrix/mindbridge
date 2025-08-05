@@ -7,6 +7,7 @@ import CustomButton from "../../../CustomButton";
 import { toast } from "react-toastify";
 import { api } from "../../../../utils/auth";
 import { useRouter } from "next/router";
+import CommonServices from "../../../../services/CommonServices";
 
 const options = [
   { label: "0", value: 0 },
@@ -47,7 +48,7 @@ const IPFForm = () => {
         client_id: client_id,
         ...payloadData,
       };
-      const response = await api.post("/feedback/ipf", payload);
+      const response = await CommonServices.submitIPFForm(payload);
       if (response.status === 200) {
         toast.success("Form submitted successfully!");
         router.push("/patient-forms/form-submission");
