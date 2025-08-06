@@ -223,10 +223,26 @@ export default class ServerConfig {
 
   async listen() {
     try {
-      const options = {
-        // key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
-        // cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
-      };
+      // Check if SSL should be disabled
+      const disableSSL = process.env.DISABLE_SSL;
+      
+      let options = {};
+      
+      // Only include SSL certificates if DISABLE_SSL is not true
+      if (!disableSSL) {
+        try {
+          options = {
+            key: fs.readFileSync(process.env.SLS_DOT_COM_KEY),
+            cert: fs.readFileSync(process.env.SLS_DOT_COM_CERT),
+          };
+          this.console.info('🔒 SSL certificates loaded successfully');
+        } catch (sslError) {
+          this.console.warn('⚠️ SSL certificates not found or invalid, falling back to HTTP');
+          this.console.warn(`SSL Error: ${sslError.message}`);
+        }
+      } else {
+        this.console.info('🔓 SSL disabled via DISABLE_SSL environment variable');
+      }
 
       const { default: knex } = await import('knex');
       const db = knex(DbConfig.dbConn.development);
@@ -248,14 +264,23 @@ export default class ServerConfig {
       
       this.app.locals.knex = db;
 
-      // Create an HTTP server (simplified for Docker)
-      const httpServer = http.createServer(this.app);
+      // Create server based on SSL configuration
+      let server;
+      if (!disableSSL && options.key && options.cert) {
+        // Use HTTPS with SSL certificates
+        server = https.createServer(options, this.app);
+        this.console.info('🔒 Creating HTTPS server with SSL certificates');
+      } else {
+        // Use HTTP server (fallback or when SSL is disabled)
+        server = http.createServer(this.app);
+        this.console.info('🔓 Creating HTTP server (no SSL)');
+      }
 
       // Add graceful shutdown handling
       const gracefulShutdown = (signal) => {
         this.console.info(`Received ${signal}. Starting graceful shutdown...`);
-        httpServer.close(() => {
-          this.console.info('HTTP server closed.');
+        server.close(() => {
+          this.console.info('Server closed.');
           process.exit(0);
         });
       };
@@ -264,8 +289,9 @@ export default class ServerConfig {
       process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
       process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-      httpServer.listen(this.port, () => {
-        this.console.info(`🚀..Server running on port: ${this.port}`);
+      server.listen(this.port, () => {
+        const protocol = !disableSSL && options.key && options.cert ? 'HTTPS' : 'HTTP';
+        this.console.info(`🚀 Server running on port: ${this.port} (${protocol})`);
       });
     } catch (error) {
       this.console.error(`Error: ${error.message}`);
