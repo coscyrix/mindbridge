@@ -212,7 +212,7 @@ export default class User {
           tenant_id: usrPro[0].tenant_id,
           tenant_name: usrPro[0].tenant_name,
         };
-        // If user is a counselor, add complete counselor profile data
+        // If user is a counselor, add complete counselor profile data and tenant object
         if (usr.role_id === 2) {
           console.log('User is a counselor, user_profile_id:', usr.user_profile_id);
           
@@ -225,6 +225,22 @@ export default class User {
             console.log('Counselor profile added to user:', usr.counselor_profile);
           } else {
             console.log('No counselor profile found for user_profile_id:', usr.user_profile_id);
+          }
+          
+          // Get complete tenant information for counselor
+          console.log('Getting tenant info for counselor, tenant_id:', usr.tenant_id);
+          
+          let tenantResult = await this.common.getTenantByTenantGeneratedId(usr.tenant_id);
+          if(tenantResult.error){
+            tenantResult = await this.common.getTenantByTenantId(usr.tenant_id);
+          }
+          console.log('Tenant result for counselor:', tenantResult);
+          
+          if (!tenantResult.error && tenantResult.length > 0) {
+            usr.tenant = tenantResult[0];
+            console.log('Tenant object added to counselor user:', usr.tenant);
+          } else {
+            console.log('Failed to get tenant info for counselor:', tenantResult);
           }
         }
         
