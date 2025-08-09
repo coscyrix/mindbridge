@@ -52,6 +52,8 @@ function CreateClientForm({
       value: roledetail?.role_id,
     }));
 
+
+
   const Services = servicesData?.map((service) => ({
     label: service?.service_name,
     value: service?.service_code,
@@ -125,7 +127,7 @@ function CreateClientForm({
   ];
 
   const handleCreateClient = async (data) => {
-  
+    const role = methods.watch("role_id");
     let processedData;
     if (role == 1) {
       processedData = {
@@ -296,6 +298,7 @@ function CreateClientForm({
       setFormButton("Create");
       methods.reset(defaultValues);
     }
+
   }, [isOpen]);
 
   const handleDiscard = (e) => {

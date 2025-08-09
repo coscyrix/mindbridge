@@ -74,6 +74,11 @@ function CustomClientDetails({
   };
 
   const currentData = tableData?.data?.filter((row) => {
+    // If no filter text, include all rows
+    if (!filterText || filterText.trim() === "") {
+      return true;
+    }
+    
     return Object.keys(row).some((columnKey) => {
       const value = row[columnKey];
 
@@ -168,6 +173,8 @@ function CustomClientDetails({
     currentPage * itemsPerPage,
     (currentPage + 1) * itemsPerPage
   );
+
+
 
   const handlePageChange = ({ selected }) => {
     setCurrentPage(selected);
@@ -278,19 +285,6 @@ function CustomClientDetails({
                 {children && <div className="children-wrapper">{children}</div>}
               </div> */}
               <div>
-                {[3, 4].includes(user?.role_id) && handleSelectCounselor ? (
-                  <div
-                    key="counselor-select"
-                    className="custom-select-container"
-                  >
-                    <CustomMultiSelect
-                      options={counselors}
-                      onChange={handleSelectCounselor}
-                      isMulti={false}
-                      placeholder="Select a counselor"
-                    />
-                  </div>
-                ) : null}
                 <div className="mobile-button-group">
                   <div className="search">
                     <CustomSearch
@@ -347,7 +341,7 @@ function CustomClientDetails({
                   ) : null}
                   {[4].includes(user?.role_id) ? (
                     <div
-                      key="counselor-select"
+                      key="manager-select"
                       className="custom-select-container"
                     >
                       <CustomMultiSelect

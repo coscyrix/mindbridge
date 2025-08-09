@@ -31,8 +31,8 @@ export const ClientValidationSchema = z
   .object({
     clam_num: z
       .preprocess(
-        (value) => Number(value),
-        z.number().min(1, { message: "Serial Number is required" })
+        (value) => value === "" || value === undefined ? undefined : Number(value),
+        z.number().min(1, { message: "Serial Number is required" }).optional()
       )
       .optional(),
     tenant_name: z
@@ -80,7 +80,8 @@ export const ClientValidationSchema = z
           z.number().min(1, { message: "Target Outcomes is required" })
         ),
       })
-      .optional(),
+      .optional()
+      .nullable(),
     tax: z.preprocess((val) => {
       const num = Number(val);
       return isNaN(num) ? undefined : num;
@@ -92,6 +93,22 @@ export const ClientValidationSchema = z
     }, z.number().nullable().optional()),
     description: z.string().nullable().optional(),
   })
+  .refine(
+    (data) => {
+      // Check if role_id is 1 (client) - require clam_num and target_outcome_id
+      if (data.role_id === 1) {
+        const clamNumValid = data.clam_num && data.clam_num > 0;
+        const targetOutcomeValid = data.target_outcome_id && typeof data.target_outcome_id === 'object' && data.target_outcome_id.value;
+        return clamNumValid && targetOutcomeValid;
+      }
+      // If role_id is not 1, skip validation for clam_num and target_outcome_id
+      return true;
+    },
+    {
+      message: "Serial Number and Target Outcomes are required for clients",
+      path: ["clam_num", "target_outcome_id"],
+    }
+  )
   .refine(
     (data) => {
       // Check if role_id is 2
