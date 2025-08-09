@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import { api } from "../../../../utils/auth";
 import CustomInputField from "../../../CustomInputField";
 import CommonServices from "../../../../services/CommonServices";
+import FormHeader from "../../../FormsHeader";
 
 const allQuestions = [
   {
@@ -300,6 +301,7 @@ const WHODASForm = () => {
   };
   return (
     <WHODasFormContainer>
+      <FormHeader tittle={"WHODAS Tracker Questionnaire"} />
       <h1>WHODAS</h1>
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(onSubmit)}>

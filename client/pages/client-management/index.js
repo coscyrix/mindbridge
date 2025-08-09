@@ -290,7 +290,6 @@ function ClientManagement() {
           setActiveTab={setActiveTab}
         />
       </CreateSessionLayout>
-      {console.log(userObj)}
       <CustomClientDetails
         title="Client List"
         overview="Your Clients at a Glance: Explore, Manage, and Stay Connected with Your Entire Client List in One Place!"

@@ -2,8 +2,11 @@ import styled from "styled-components";
 
 export const Wrapper = styled.div`
   display: flex;
-  min-height: 100vh;
+  // min-height: 100vh;
   justify-content: space-between;
+  .skip-add-more-documents {
+    margin-bottom: 20px;
+  }
 `;
 
 export const LeftPanel = styled.div`
@@ -53,8 +56,8 @@ export const LeftPanel = styled.div`
 
 export const RightPanel = styled.div`
   max-height: 100vh;
-  margin:auto;
-  width: 55%;
+  margin: auto;
+  // max-width: 55%;
 `;
 
 export const FormContainer = styled.div`
@@ -205,6 +208,33 @@ export const FormContainer = styled.div`
   }
 
   @media (max-width: 768px) {
-    padding: 1rem;
+    padding: 2rem;
+  }
+`;
+export const StepContent = styled.div`
+  // width: 100vw;
+  // max-width: 1000px;
+  margin: 0 auto;
+  padding: 0px 24px;
+
+  h2 {
+    font-size: clamp(20px, 5vw, 26px);
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 12px;
+  }
+
+  p {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 24px;
+  }
+
+  .weekly-availability-wrapper {
+    margin-top: 24px;
+
+    @media (max-width: 480px) {
+      margin-top: 16px;
+    }
   }
 `;

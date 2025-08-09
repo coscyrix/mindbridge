@@ -84,7 +84,7 @@ function CreateClientForm({
     user_first_name: "",
     user_last_name: "",
     email: "",
-    role_id: Counselor ? 1 : "",
+    role_id: Counselor ? 1 : manager ? 2 : admin ? 3 : "",
     clam_num: "",
     tenant_name: "",
     target_outcome_id: initialData
@@ -360,7 +360,7 @@ function CreateClientForm({
                   <CustomSelect
                     {...field}
                     options={RoleIds}
-                    disable={Counselor || initialData}
+                    disable={Counselor || manager ||admin|| initialData}
                     dropdownIcon={
                       <ArrowIcon style={{ transform: "rotate(90deg)" }} />
                     }

@@ -1,0 +1,1188 @@
+{
+  "info": {
+    "name": "Treatment Target Feedback Configuration API",
+    "description": "Complete API collection for testing the Treatment Target Feedback Configuration module. This collection includes all CRUD operations, session checking, bulk operations, and error testing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "treatment-target-feedback-config-api",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+
+  "auth": {
+    "type": "noauth"
+  },
+  "item": [
+    {
+      "name": "1. Create Configurations",
+      "item": [
+        {
+          "name": "Create Anxiety GAD-7 Configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\",\n  \"service_name\": \"Individual Therapy\",\n  \"purpose\": \"Measure anxiety severity and track treatment progress\",\n  \"sessions\": [1, 5, 10, 15, 20],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Create a new configuration for Anxiety treatment with GAD-7 form and specific service"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Anxiety WHODAS Configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"WHODAS\",\n  \"purpose\": \"Assess functional impairment due to anxiety\",\n  \"sessions\": [1, 10, 20],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Create a configuration for Anxiety treatment with WHODAS form"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Depression PHQ-9 Configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Depression\",\n  \"form_name\": \"PHQ-9\",\n  \"purpose\": \"Measure depression severity and monitor treatment response\",\n  \"sessions\": [1, 5, 10, 15, 20],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Create a configuration for Depression treatment with PHQ-9 form"
+          },
+          "response": []
+        },
+        {
+          "name": "Create PTSD PCL-5 Configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"PTSD\",\n  \"form_name\": \"PCL-5\",\n  \"purpose\": \"Assess PTSD symptoms and treatment progress\",\n  \"sessions\": [1, 5, 10, 15, 20],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Create a configuration for PTSD treatment with PCL-5 form"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Special Session Values Configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"General Mental Health\",\n  \"form_name\": \"GAS\",\n  \"purpose\": \"Goal Attainment Scaling for treatment goal tracking\",\n  \"sessions\": [\"Trans 1\", \"Trans last\"],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Create a configuration with special session values (Trans 1, Trans last)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Mixed Session Types Configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Complex Case\",\n  \"form_name\": \"Comprehensive Assessment\",\n  \"purpose\": \"Mixed session types for complex cases\",\n  \"sessions\": [1, 5, \"Trans 1\", \"OTR\", 10, \"-OTR\", 15, \"Trans last\"],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Create a configuration with mixed session types (numbers and special values)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create OTR Values Configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"General Mental Health\",\n  \"form_name\": \"SMART Goals\",\n  \"purpose\": \"Track progress on specific treatment goals\",\n  \"sessions\": [\"OTR\", \"-OTR\"],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Create a configuration with OTR values"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Tenant-Specific Configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"Custom Form\",\n  \"purpose\": \"Tenant-specific anxiety assessment\",\n  \"sessions\": [1, 5, 10],\n  \"tenant_id\": 123\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Create a tenant-specific configuration"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Anxiety GAD-7 Configuration (No Service)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\",\n  \"purpose\": \"Measure anxiety severity and track treatment progress (no service)\",\n  \"sessions\": [1, 5, 10, 15, 20],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Create a new configuration for Anxiety treatment with GAD-7 form without service_name"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Anxiety GAD-7 Configuration (Group Therapy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\",\n  \"service_name\": \"Group Therapy\",\n  \"purpose\": \"Measure anxiety severity in group therapy setting\",\n  \"sessions\": [1, 5, 10, 15, 20],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Create a new configuration for Anxiety treatment with GAD-7 form for group therapy"
+          },
+          "response": []
+        }
+      ],
+      "description": "Create various treatment target feedback configurations"
+    },
+    {
+      "name": "2. Read Operations",
+      "item": [
+        {
+          "name": "Get All Configurations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Retrieve all treatment target feedback configurations"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Configurations by Treatment Target",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config?treatment_target=Anxiety",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"],
+              "query": [
+                {
+                  "key": "treatment_target",
+                  "value": "Anxiety"
+                }
+              ]
+            },
+            "description": "Get configurations filtered by treatment target"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Configurations by Form Name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config?form_name=GAD-7",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"],
+              "query": [
+                {
+                  "key": "form_name",
+                  "value": "GAD-7"
+                }
+              ]
+            },
+            "description": "Get configurations filtered by form name"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Configurations by Tenant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config?tenant_id=123",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"],
+              "query": [
+                {
+                  "key": "tenant_id",
+                  "value": "123"
+                }
+              ]
+            },
+            "description": "Get configurations filtered by tenant ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Configurations by Service Name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config?service_name=Individual Therapy",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"],
+              "query": [
+                {
+                  "key": "service_name",
+                  "value": "Individual Therapy"
+                }
+              ]
+            },
+            "description": "Get configurations filtered by service name"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Configurations by Service Name (Null)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config?service_name=null",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"],
+              "query": [
+                {
+                  "key": "service_name",
+                  "value": "null"
+                }
+              ]
+            },
+            "description": "Get configurations where service_name is null"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Configuration by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/1",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "1"]
+            },
+            "description": "Get a specific configuration by its ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Treatment Targets List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/treatment-targets/list",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "treatment-targets", "list"]
+            },
+            "description": "Get all unique treatment targets"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Form Names List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/form-names/list",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "form-names", "list"]
+            },
+            "description": "Get all unique form names"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Service Names List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/service-names/list",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "service-names", "list"]
+            },
+            "description": "Get all unique service names"
+          },
+          "response": []
+        }
+      ],
+      "description": "Read operations for retrieving configurations and lists"
+    },
+    {
+      "name": "3. Session Checking",
+      "item": [
+        {
+          "name": "Check Session 1 - Anxiety",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"session_number\": 1,\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Check which forms should be sent for Anxiety treatment at session 1"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Session 5 - Anxiety",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"session_number\": 5,\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Check which forms should be sent for Anxiety treatment at session 5"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Session 10 - Anxiety",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"session_number\": 10,\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Check which forms should be sent for Anxiety treatment at session 10"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Session 3 - Anxiety (No Forms)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"session_number\": 3,\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Check which forms should be sent for Anxiety treatment at session 3 (should return no forms)"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Session 1 - Depression",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Depression\",\n  \"session_number\": 1,\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Check which forms should be sent for Depression treatment at session 1"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Session 5 - Depression",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Depression\",\n  \"session_number\": 5,\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Check which forms should be sent for Depression treatment at session 5"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Session 1 - PTSD",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"PTSD\",\n  \"session_number\": 1,\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Check which forms should be sent for PTSD treatment at session 1"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Trans 1 - General Mental Health",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"General Mental Health\",\n  \"session_number\": \"Trans 1\",\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Check which forms should be sent for General Mental Health at Trans 1"
+          },
+          "response": []
+        },
+        {
+          "name": "Check OTR - General Mental Health",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"General Mental Health\",\n  \"session_number\": \"OTR\",\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Check which forms should be sent for General Mental Health at OTR"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Complex Case - Mixed Session Types",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Complex Case\",\n  \"session_number\": 5,\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Check which forms should be sent for Complex Case at session 5"
+          },
+          "response": []
+        }
+      ],
+      "description": "Test session checking functionality for different treatment targets and session numbers"
+    },
+    {
+      "name": "4. Update Operations",
+      "item": [
+        {
+          "name": "Update Configuration by ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\",\n  \"purpose\": \"Updated: Measure anxiety severity and track treatment progress\",\n  \"sessions\": [1, 5, 10, 15, 20, 25],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/1",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "1"]
+            },
+            "description": "Update an existing configuration by ID"
+          },
+          "response": []
+        }
+      ],
+      "description": "Update operations for modifying existing configurations"
+    },
+    {
+      "name": "5. Bulk Operations",
+      "item": [
+        {
+          "name": "Bulk Create Configurations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"configs\": [\n    {\n      \"treatment_target\": \"Bipolar Disorder\",\n      \"form_name\": \"YMRS\",\n      \"purpose\": \"Young Mania Rating Scale for bipolar assessment\",\n      \"sessions\": [1, 5, 10, 15, 20],\n      \"tenant_id\": null\n    },\n    {\n      \"treatment_target\": \"Bipolar Disorder\",\n      \"form_name\": \"MADRS\",\n      \"purpose\": \"Montgomery-Asberg Depression Rating Scale\",\n      \"sessions\": [1, 5, 10, 15, 20],\n      \"tenant_id\": null\n    },\n    {\n      \"treatment_target\": \"OCD\",\n      \"form_name\": \"Y-BOCS\",\n      \"purpose\": \"Yale-Brown Obsessive Compulsive Scale\",\n      \"sessions\": [1, 5, 10, 15, 20],\n      \"tenant_id\": null\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/bulk",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "bulk"]
+            },
+            "description": "Bulk create multiple configurations at once"
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Create - With Duplicate Combinations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"configs\": [\n    {\n      \"treatment_target\": \"Anxiety\",\n      \"form_name\": \"GAD-7\",\n      \"purpose\": \"First configuration - should succeed\",\n      \"sessions\": [1, 5, 10],\n      \"tenant_id\": null\n    },\n    {\n      \"treatment_target\": \"Anxiety\",\n      \"form_name\": \"GAD-7\",\n      \"purpose\": \"Duplicate configuration - should fail\",\n      \"sessions\": [1, 5, 10],\n      \"tenant_id\": null\n    },\n    {\n      \"treatment_target\": \"Depression\",\n      \"form_name\": \"PHQ-9\",\n      \"purpose\": \"Third configuration - should succeed\",\n      \"sessions\": [1, 5, 10],\n      \"tenant_id\": null\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/bulk",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "bulk"]
+            },
+            "description": "Test bulk create with duplicate combinations (should show which ones failed)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Bulk operations for creating multiple configurations"
+    },
+    {
+      "name": "6. Delete Operations",
+      "item": [
+        {
+          "name": "Delete Configuration by ID",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/1",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "1"]
+            },
+            "description": "Delete a configuration by its ID"
+          },
+          "response": []
+        }
+      ],
+      "description": "Delete operations for removing configurations"
+    },
+    {
+      "name": "7. Error Testing",
+      "item": [
+        {
+          "name": "Create Configuration - Missing Fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Test error handling for missing required fields"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Configuration - Invalid Sessions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\",\n  \"purpose\": \"Test invalid sessions\",\n  \"sessions\": \"not an array\",\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Test error handling for invalid sessions format"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Session - Missing Fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Test error handling for missing session_number"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Session - Invalid Session Number",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"session_number\": -1,\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Test error handling for invalid session number"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Configuration - Invalid ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/999999",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "999999"]
+            },
+            "description": "Test error handling for non-existent configuration ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Configuration - Invalid ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\",\n  \"purpose\": \"Test update with invalid ID\",\n  \"sessions\": [1, 5, 10],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/999999",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "999999"]
+            },
+            "description": "Test error handling for updating non-existent configuration"
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Create - Invalid Configs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"configs\": \"not an array\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/bulk",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "bulk"]
+            },
+            "description": "Test error handling for invalid bulk create format"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Configuration - Duplicate Combination (Global)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\",\n  \"purpose\": \"Duplicate test - should fail\",\n  \"sessions\": [1, 5, 10],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Test validation for duplicate combination of treatment_target and form_name (global)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Configuration - Duplicate Combination (Tenant)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"Consent Form\",\n  \"purpose\": \"Duplicate test for tenant - should fail\",\n  \"sessions\": [1, 5, 10],\n  \"tenant_id\": 123\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Test validation for duplicate combination of treatment_target and form_name (tenant-specific)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Configuration - Duplicate Combination",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\",\n  \"purpose\": \"Update duplicate test - should fail\",\n  \"sessions\": [1, 5, 10],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/2",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "2"]
+            },
+            "description": "Test validation for duplicate combination when updating (should fail if another record with same combination exists)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Configuration - Duplicate Combination with Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\",\n  \"service_name\": \"Individual Therapy\",\n  \"purpose\": \"Duplicate test with service - should fail\",\n  \"sessions\": [1, 5, 10],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Test validation for duplicate combination including service_name"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Configuration - Same Treatment/Form Different Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"form_name\": \"GAD-7\",\n  \"service_name\": \"Online Therapy\",\n  \"purpose\": \"Same treatment/form but different service - should succeed\",\n  \"sessions\": [1, 5, 10],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Test that same treatment_target + form_name with different service_name is allowed"
+          },
+          "response": []
+        }
+      ],
+      "description": "Test error handling for various invalid inputs and edge cases"
+    },
+    {
+      "name": "8. JSON Column Testing",
+      "item": [
+        {
+          "name": "Create Configuration - JSON Array",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"JSON Test\",\n  \"form_name\": \"Test Form\",\n  \"purpose\": \"Testing JSON column functionality\",\n  \"sessions\": [1, 2, 3, 4, 5],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Test creating configuration with JSON array sessions"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Configuration - Verify JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config?treatment_target=JSON Test",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"],
+              "query": [
+                {
+                  "key": "treatment_target",
+                  "value": "JSON Test"
+                }
+              ]
+            },
+            "description": "Verify that sessions is returned as JSON array"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Configuration - JSON Array",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"JSON Test\",\n  \"form_name\": \"Test Form\",\n  \"purpose\": \"Updated: Testing JSON column functionality\",\n  \"sessions\": [1, 2, 3, 4, 5, 6, 7],\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/1",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "1"]
+            },
+            "description": "Test updating configuration with JSON array sessions"
+          },
+          "response": []
+        }
+      ],
+      "description": "Test JSON column functionality for sessions field"
+    },
+    {
+      "name": "9. Performance Testing",
+      "item": [
+        {
+          "name": "Get All Configurations - Performance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config"]
+            },
+            "description": "Test performance of getting all configurations"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Session - Multiple Requests",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatment_target\": \"Anxiety\",\n  \"session_number\": 1,\n  \"tenant_id\": null\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/treatment-target-feedback-config/check-session",
+              "host": ["http://localhost:5000"],
+              "path": ["api", "treatment-target-feedback-config", "check-session"]
+            },
+            "description": "Test performance of session checking (run multiple times)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Performance testing for various operations"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Pre-request script to set up any required variables",
+          "console.log('Starting request to: ' + pm.request.url);"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Test script to validate responses",
+          "pm.test('Status code is 200 or 201', function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+          "});",
+          "",
+          "pm.test('Response has required fields', function () {",
+          "    const response = pm.response.json();",
+          "    pm.expect(response).to.have.property('message');",
+          "});",
+          "",
+          "// Log response for debugging",
+          "console.log('Response:', pm.response.json());"
+        ]
+      }
+    }
+  ]
+} 

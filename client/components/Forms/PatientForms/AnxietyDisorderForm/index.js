@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import Spinner from "../../../common/Spinner";
 import { useRouter } from "next/router";
 import CommonServices from "../../../../services/CommonServices";
+import FormHeader from "../../../FormsHeader";
 
 const anxietyQuestions = [
   { id: "nervous", label: "Feeling nervous, anxious, or on edge?" },
@@ -90,6 +91,7 @@ const AnxietyDisorderForm = () => {
 
   return (
     <AnxietyDisorderFormContainer>
+      <FormHeader tittle={"GAD 7 Tracker Questionnaire"} />
       <FormProvider {...methods}>
         <div className="anxiety-content">
           <form onSubmit={handleSubmit(onSubmit)}>

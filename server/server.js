@@ -26,6 +26,7 @@ import {
   consentDescriptionRouter,
   tenantConfigurationRouter,
   feeSplitManagementRouter,
+  treatmentTargetFeedbackConfigRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -60,6 +61,7 @@ async function main() {
         consentDescriptionRouter,
         tenantConfigurationRouter,
         feeSplitManagementRouter,
+        treatmentTargetFeedbackConfigRouter,
       ],
     });
 

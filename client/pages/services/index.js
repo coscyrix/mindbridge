@@ -24,23 +24,83 @@ function Services() {
   const userData = Cookies.get("user");
   const user = userData ? JSON.parse(userData) : null;
   const tenant_id = user?.tenant?.tenant_generated_id;
-  console.log(user)
-
+  const [allManagers, setAllManagers] = useState([]);
+  const [allServices, setAllServices] = useState([]);
+  const [tenantManagerOptions, setTenantManagerOptions] = useState([]);
   const fetchServices = async () => {
     try {
       setServicesDataLoading(true);
-      const response = await CommonServices.getServices(tenant_id);
+      const response = await CommonServices.getServices();
 
       if (response.status === 200) {
         const { data } = response;
-        setServicesData(data?.rec || []);
+        const serviceList = data?.rec || [];
+        setServicesData(serviceList);
+        if (Array.isArray(allManagers) && allManagers.length > 0) {
+          combineManagersWithServices(serviceList, allManagers);
+        }
       }
     } catch (err) {
-      console.error("Error fetching references:", err);
+      console.error("Error fetching services:", err);
       setServicesData([]);
     } finally {
       setServicesDataLoading(false);
     }
+  };
+  const handleSelectService = async (data) => {
+    try {
+      const tenant_id = data?.value;
+      setServicesDataLoading(true);
+      let response;
+      if (tenant_id == "allManager") {
+        response = await CommonServices.getServices();
+      } else {
+        response = await CommonServices.getServices(tenant_id);
+      }
+      if (response.status === 200) {
+        const { data } = response;
+        setServicesData(data?.rec || []);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+      console.error("Error fetching references:", error);
+      setServicesData([]);
+    } finally {
+      setServicesDataLoading(false);
+    }
+  };
+  const fetchManager = async () => {
+    try {
+      const response = await CommonServices.getClients();
+      if (response.status === 200) {
+        const { data } = response;
+        const filteredManagers = data?.rec?.filter(
+          (manager) => manager.role_id === 3
+        );
+        setAllManagers(filteredManagers);
+        if (Array.isArray(servicesData) && servicesData.length > 0) {
+          combineManagersWithServices(servicesData, filteredManagers);
+        }
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+      console.log("Error fetching clients", error);
+    }
+  };
+  const combineManagersWithServices = (services, managers) => {
+    const serviceTenantIds = new Set(services.map((s) => s.tenant_id));
+
+    const mergedOptions = managers
+      ?.filter((m) => m?.user_first_name && serviceTenantIds.has(m.tenant_id))
+      .map((m) => ({
+        label: `${m.user_first_name} ${m.user_last_name}`,
+        value: m.tenant_id,
+      }));
+    mergedOptions.push({
+      label: "All Manager",
+      value: "allManager",
+    });
+    setTenantManagerOptions(mergedOptions);
   };
 
   const handleClickOutside = (e) => {
@@ -68,6 +128,17 @@ function Services() {
   }, []);
 
   useEffect(() => {
+    if (
+      Array.isArray(servicesData) &&
+      servicesData.length > 0 &&
+      Array.isArray(allManagers) &&
+      allManagers.length > 0
+    ) {
+      combineManagersWithServices(servicesData, allManagers);
+    }
+  }, [allManagers]);
+  useEffect(() => {
+    fetchManager();
     fetchServices();
   }, []);
 
@@ -186,6 +257,8 @@ function Services() {
             data: servicesData,
           }}
           actionButton={ClientManagementTableActionButton}
+          handleSelectService={handleSelectService}
+          serviceOptions={tenantManagerOptions}
           primaryButton="Create Service"
           handleCreate={() => setShowCreateFlyout(true)}
           loading={servicesDataLoading}

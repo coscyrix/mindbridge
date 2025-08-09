@@ -10,6 +10,7 @@ import { getBaseURL } from "../../../../utils/helper";
 import Spinner from "../../../common/Spinner";
 import { useRouter } from "next/router";
 import CommonServices from "../../../../services/CommonServices";
+import FormHeader from "../../../FormsHeader";
 
 const PHQ9Form = () => {
   const [loading, setLoading] = useState(false);
@@ -83,6 +84,7 @@ const PHQ9Form = () => {
   };
   return (
     <PHQFormContainer>
+      <FormHeader tittle={"Phq9 Tracker Questionnaire"} />
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="phq9-form">
           <h1>Patient Health Questionnaire (PHQ-9)</h1>

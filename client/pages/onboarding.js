@@ -14,6 +14,7 @@ import {
   RightPanel,
   Wrapper,
   LeftPanel,
+  StepContent,
 } from "../styles/onboarding";
 import { toast } from "react-toastify";
 import { api, onBoarding, updateProfile } from "../utils/auth";
@@ -31,6 +32,9 @@ const StepIndicator = styled.div`
   justify-content: space-between;
   margin-bottom: 32px;
   position: relative;
+  @media (max-width: 800px) {
+    margin: 10px;
+  }
 
   &::before {
     content: "";
@@ -92,8 +96,9 @@ const StepIndicator = styled.div`
 
 const ButtonContainer = styled.div`
   display: flex;
-  justify-content: space-between;
-  margin-top: 32px;
+  justify-content: space-evenly;
+  margin: 0px 64px;
+  gap: 20px;
   button {
     min-width: 120px;
   }
@@ -191,7 +196,7 @@ const DocumentUpload = styled.div`
 `;
 
 const FormField = styled.div`
-  margin-bottom: 24px;
+  margin-bottom: 14px;
   width: 100%;
 
   &.half-width {
@@ -202,7 +207,7 @@ const FormField = styled.div`
 const FormRow = styled.div`
   display: flex;
   gap: 24px;
-  margin-bottom: 24px;
+  // margin-bottom: 24px;
   width: 100%;
 `;
 
@@ -785,45 +790,23 @@ const SignUp = () => {
                 />
               </FormField>
               <FormField className="half-width">
-              <label>License File</label>
                 <Controller
-                  name="license_file_url"
+                  name="license_provider"
                   control={methods.control}
-                  rules={{ required: "License file is required" }}
+                  rules={{ required: "License provider is required" }}
                   render={({ field, fieldState: { error } }) => (
-                    <LicenseFileUpload
-                      counselorProfileId={123}
-                      onUploadComplete={handleUploadComplete}
-                      errormsg={error?.message}
-                      label="License Number"
-                      onFileSelect={handleLicenseFileSelect}
-                      hideUploadButton={true}
-                      licenseFile={licenseFile}
-                      value={field.value}
-                      onChange={field.onChange}
+                    <CustomInputField
+                      {...field}
+                      label="License Provider*"
+                      required
+                      customClass="license-provider-input"
+                      placeholder="Enter your license provider"
+                      error={error?.message}
                     />
                   )}
                 />
               </FormField>
             </FormRow>
-            <FormField className="half-width">
-              <Controller
-                name="license_provider"
-                control={methods.control}
-                rules={{ required: "License provider is required" }}
-                render={({ field, fieldState: { error } }) => (
-                  <CustomInputField
-                    {...field}
-                    label="License Provider*"
-                    required
-                    customClass="license-provider-input"
-                    placeholder="Enter your license provider"
-                    error={error?.message}
-                  />
-                )}
-              />
-            </FormField>
-
             <FormField>
               <Controller
                 name="location"
@@ -907,9 +890,9 @@ const SignUp = () => {
               />
             </FormField>
 
-            <FormRow>
+            {/* <FormRow>
               <FormField className="half-width">
-                {/* <Controller
+                <Controller
                   name="services_offered"
                   control={methods.control}
                   rules={{ required: "Services offered is required" }}
@@ -923,26 +906,9 @@ const SignUp = () => {
                       error={error?.message}
                     />
                   )}
-                /> */}
-              </FormField>
-              <FormField className="half-width">
-                <Controller
-                  name="treatment_target"
-                  control={methods.control}
-                  rules={{ required: "Treatment target is required" }}
-                  render={({ field, fieldState: { error } }) => (
-                    <CustomMultiSelect
-                      {...field}
-                      label="Treatment Target"
-                      placeholder="Select your Treatment Target"
-                      isMulti={true}
-                      options={TREATMENT_TARGET}
-                      error={error?.message}
-                    />
-                  )}
                 />
               </FormField>
-            </FormRow>
+            </FormRow> */}
 
             <FormRow>
               <FormField className="half-width">
@@ -995,6 +961,46 @@ const SignUp = () => {
                       isMulti={true}
                       options={modalityOptions}
                       error={error?.message}
+                    />
+                  )}
+                />
+              </FormField>
+              <FormField className="half-width">
+                <Controller
+                  name="treatment_target"
+                  control={methods.control}
+                  rules={{ required: "Treatment target is required" }}
+                  render={({ field, fieldState: { error } }) => (
+                    <CustomMultiSelect
+                      {...field}
+                      label="Treatment Target"
+                      placeholder="Select Treatment Target"
+                      isMulti={true}
+                      options={TREATMENT_TARGET}
+                      error={error?.message}
+                    />
+                  )}
+                />
+              </FormField>
+            </FormRow>
+            <FormRow>
+              <FormField>
+                <label>License File</label>
+                <Controller
+                  name="license_file_url"
+                  control={methods.control}
+                  rules={{ required: "License file is required" }}
+                  render={({ field, fieldState: { error } }) => (
+                    <LicenseFileUpload
+                      counselorProfileId={123}
+                      onUploadComplete={handleUploadComplete}
+                      errormsg={error?.message}
+                      label="License Number"
+                      onFileSelect={handleLicenseFileSelect}
+                      hideUploadButton={true}
+                      licenseFile={licenseFile}
+                      value={field.value}
+                      onChange={field.onChange}
                     />
                   )}
                 />
@@ -1111,7 +1117,7 @@ const SignUp = () => {
                   </div>
                 ))}
               </div>
-              <div className="add-more-documents">
+              <div className="add-more-documents skip-add-more-documents">
                 <CustomButton
                   title="Add More Documents"
                   type="button"
@@ -1124,7 +1130,7 @@ const SignUp = () => {
                 />
               </div>
             </DocumentUpload>
-            <ButtonContainer>
+            <div className="skip-add-more-documents">
               <CustomButton
                 title="Skip Documents"
                 type="button"
@@ -1136,14 +1142,14 @@ const SignUp = () => {
                 }}
                 className="secondary-button"
               />
-            </ButtonContainer>
+            </div>
           </>
         );
       case 3:
         return (
-          <div className="step-content">
+          <StepContent>
             <h2>Availability</h2>
-            <p>Please set your weekly availability for sessions.</p>
+            {/* <p>Please set your weekly availability for sessions.</p> */}
             <Controller
               name="availability"
               control={methods.control}
@@ -1155,7 +1161,7 @@ const SignUp = () => {
                 />
               )}
             />
-          </div>
+          </StepContent>
         );
       default:
         return null;
@@ -1263,7 +1269,7 @@ const SignUp = () => {
                   disabled={loading}
                 />
               )} */}
-              {(
+              {
                 <ButtonContainer>
                   {currentStep > 1 && (
                     <CustomButton
@@ -1291,7 +1297,7 @@ const SignUp = () => {
                     />
                   )}
                 </ButtonContainer>
-              )}
+              }
             </form>
           </FormProvider>
         </FormContainer>

@@ -32,7 +32,19 @@ class MyDocument extends Document {
   render() {
     return (
       <Html lang="en">
-        <Head />
+        <Head>
+          <meta
+            name="description"
+            content="Get personalized health support and expert counseling with certified professionals. Book wellness consultations, mental health sessions, and customer service help—anytime, anywhere."
+          />
+          <link
+            rel="icon"
+            type="image/x-icon"
+            href="/assets/images/Mindbridge_logo.png"
+          />
+          <title>Mind-Bridge</title>
+        </Head>
+
         <body>
           <Main />
           <NextScript />

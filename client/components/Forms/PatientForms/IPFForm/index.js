@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import { api } from "../../../../utils/auth";
 import { useRouter } from "next/router";
 import CommonServices from "../../../../services/CommonServices";
+import FormHeader from "../../../FormsHeader";
 
 const options = [
   { label: "0", value: 0 },
@@ -62,6 +63,7 @@ const IPFForm = () => {
 
   return (
     <FormWrapper>
+      <FormHeader tittle={"IPF Tracker Questionnaire"} />
       <h1>IPF</h1>
       <h4>
         INSTRUCTIONS: Answer the questions at the beginning of each section to

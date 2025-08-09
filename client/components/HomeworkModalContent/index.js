@@ -6,7 +6,10 @@ import CustomInputField from "../CustomInputField/index";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import CustomButton from "../CustomButton";
 import { CrossIcon, UploadIcon } from "../../public/assets/icons";
-const HomeworkModal = ({ isOpen, onClose }) => {
+import ApiConfig from "../../config/apiConfig";
+import { api } from "../../utils/auth";
+import { toast } from "react-toastify";
+const HomeworkModal = ({ isOpen, id, onClose }) => {
   const [selectedFile, setSelectedFile] = useState("Upload file");
   const methods = useForm();
 
@@ -16,13 +19,51 @@ const HomeworkModal = ({ isOpen, onClose }) => {
       setSelectedFile(file.name);
     }
   };
-  
-
-  const handleUploadHomeWork = (data) => {
-    console.log("Title:", data.homework_title);
-    console.log("File:", data.homework); 
+  const fetchHomeworkDetails = async () => {
+    try {
+      const response = await api.get(
+        `${ApiConfig.homeworkUpload.gethomeworkdetail}/14`
+      );
+      if (response.status == 200) {
+        console.log(response);
+        setSelectedFile(response?.data[0]?.homework_filename);
+        methods.setValue("homework_title", response?.data[0]?.homework_title);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
   };
-  
+  useEffect(() => {
+    fetchHomeworkDetails();
+  }, []);
+  const handleUploadHomeWork = async (data) => {
+    try {
+     
+      let payload = {
+        homework_file:data.homework,
+        homework_title:data.homework_title,
+        tenant_id:"108",
+        session_id:"14"
+
+      };
+      console.log(data);
+      const response = await api.post(
+        ApiConfig.homeworkUpload.submitHomeworkdetails,
+        payload,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      if (response.status == 200) {
+        toast.success(response?.data?.message);
+        onClose();
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
+  };
 
   const handleReset = () => {
     methods.setValue("homework", null);
@@ -41,7 +82,9 @@ const HomeworkModal = ({ isOpen, onClose }) => {
       isOpen={isOpen}
       onRequestClose={onClose}
     >
+
       <FormProvider {...methods}>
+        {console.log(methods.getValues("homework"))}
         <form onSubmit={methods.handleSubmit(handleUploadHomeWork)}>
           <HomeWorkModalWrapper>
             <div className="field">

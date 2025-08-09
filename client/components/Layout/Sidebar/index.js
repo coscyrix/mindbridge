@@ -142,13 +142,16 @@ function Sidebar({ showSideBar, setShowSideBar }) {
           </div>
           <div className="headings">
             {SIDEBAR_HEADINGS.filter((item) => {
+              // if (!isAdmin && item.title === "Logo Managment") {
+              //   return false;
+              // }
               if ((isManager || isAdmin) && item.title === "Profile")
                 return false;
-              if (!isManager && item.title === "Consent Management") return false;
+              if (!isManager && item.title === "Consent Management")
+                return false;
               if (!isManager && item.title === "Fee Split Management") {
                 return false;
               }
-
               return true;
             }).map((heading, index) => (
               <div key={heading.title || index}>

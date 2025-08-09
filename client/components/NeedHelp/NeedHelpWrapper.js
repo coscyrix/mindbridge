@@ -5,7 +5,6 @@ import NeedHelp from ".";
 const NeedHelpWrapper = () => {
   const { userObj } = useReferenceContext();
   const [isClient, setIsClient] = useState(false);
-  console.log(userObj)
   useEffect(() => {
     setIsClient(true);
   }, []);

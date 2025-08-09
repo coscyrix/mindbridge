@@ -22,6 +22,70 @@ import moment from "moment";
 import { TooltipButton, TooltipContainer } from "../components/Tooltip";
 import { convertUTCToLocalTime } from "./helper";
 import { CgProfile } from "react-icons/cg";
+import React, { useState, useRef } from "react";
+import {
+  IconButton,
+  Popover,
+  List,
+  ListItem,
+  ListItemText,
+} from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+
+
+const ActionMenu = ({ row, handleEdit, handleDelete }) => {
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+
+  return (
+    <>
+      <IconButton onClick={handleClick}>
+        <MoreVertIcon />
+      </IconButton>
+
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        transformOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <List dense>
+          <ListItem
+            button
+            onClick={() => {
+              handleEdit(row);
+              handleClose();
+            }}
+          >
+            <EditIcon fontSize="small" sx={{ mr: 1 }} />
+            <ListItemText primary="Edit" />
+          </ListItem>
+          <ListItem
+            button
+            onClick={() => {
+              handleDelete(row);
+              handleClose();
+            }}
+          >
+            <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+            <ListItemText primary="Delete" />
+          </ListItem>
+        </List>
+      </Popover>
+    </>
+  );
+};
+
 
 function exportToCSV(columns, data, tableCaption) {
   const headings = columns
@@ -197,6 +261,12 @@ export const SIDEBAR_HEADINGS = [
     url: "/fee-split-management",
     title: "Fee Split Management",
   },
+  // {
+  //   id: 10,
+  //   icon: <DashboardIcon />,
+  //   url: "/logo-management",
+  //   title: "Logo Managment",
+  // },
 ];
 
 export const TABLE_DATA = (handleCellClick, handleEdit, handleDelete) => {
@@ -749,10 +819,8 @@ export const SERVICES_TABLE_COLUMNS = (
   {
     name: "",
     cell: (row) => (
-      <Dropdown
-        ref={dropdownRef} // Pass the ref to the Dropdown component
+      <ActionMenu
         row={row}
-        handleCellClick={handleCellClick}
         handleEdit={handleEdit}
         handleDelete={handleDelete}
       />

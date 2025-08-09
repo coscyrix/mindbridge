@@ -1,6 +1,9 @@
 import styled from "styled-components";
 
 export const CustomTableContainer = styled.div`
+  .custom-data-table {
+    white-space: nowrap;
+  }
   .rdt_Table {
     background: transparent;
 
@@ -68,6 +71,10 @@ export const CustomTableContainer = styled.div`
         line-height: 19.2px;
         letter-spacing: -0.02em;
         text-align: left;
+
+        div {
+          overflow: hidden;
+        }
       }
     }
   }

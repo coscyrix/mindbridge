@@ -358,7 +358,7 @@ const Invoice = () => {
     try {
       setLoading("tableData");
       const params = new URLSearchParams();
-      params.append("role_id", roleId);
+      params.append("role_id", Number(roleId));
 
       // Only append counselor_id if it's not "allCounselors"
       if (counselorId && counselorId !== "allCounselors") {

@@ -4,6 +4,7 @@ import styled from "styled-components";
 const ToggleContainer = styled.div`
   display: flex;
   align-items: center;
+  justify-content:space-between;
   gap: 12px;
 `;
 
@@ -30,7 +31,7 @@ const Slider = styled.span`
   right: 0;
   bottom: 0;
   transition: 0.4s;
-
+  min-width: 50px;
   &::before {
     content: "";
     height: 20px;
@@ -46,6 +47,7 @@ const Slider = styled.span`
 
 const CheckedSlider = styled(Slider)`
   background-color: #4caf50;
+  min-width: 50px;
 
   &::before {
     transform: translateX(24px);

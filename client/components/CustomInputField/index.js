@@ -39,6 +39,7 @@ const CustomInputField = ({
           <span class="textbox">
             <span className="https">https://</span>
             <input
+              onWheel={(e) => e.target.blur()}
               id={name}
               type={type}
               lang="en-GB"
@@ -56,6 +57,12 @@ const CustomInputField = ({
         ) : (
           <input
             step="any"
+            onWheel={(e) => e.target.blur()}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                e.preventDefault();
+              }
+            }}
             id={name}
             type={type}
             lang="en-GB"

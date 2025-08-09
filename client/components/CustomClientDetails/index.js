@@ -19,20 +19,29 @@ import { useReferenceContext } from "../../context/ReferenceContext";
 import CommonServices from "../../services/CommonServices";
 import CustomMultiSelect from "../CustomMultiSelect";
 import Cookies from "js-cookie";
+import { toast } from "react-toastify";
+import ToggleSwitch from "../CustomButton/ToggleButton";
+import ApiConfig from "../../config/apiConfig";
+import { api } from "../../utils/auth";
+import { useRouter } from "next/router";
 
 function CustomClientDetails({
   title,
   overview,
-  itemsPerPage = 13,
+  itemsPerPage = 10,
   tableData = TABLE_DATA(),
   children,
   primaryButton,
   handleCreate,
   selectCounselor,
   handleSelectCounselor,
+  handleSelectService,
+  serviceOptions,
   tableCaption = "",
   loading,
   customTab,
+  isHomeworkUpload,
+  setHomeWorkUpload,
   ...props
 }) {
   const [currentPage, setCurrentPage] = useState(0);
@@ -42,6 +51,7 @@ function CustomClientDetails({
     allCounselors?.map((counselor) => ({
       label: counselor.user_first_name + " " + counselor.user_last_name,
       value: counselor.user_profile_id,
+      tenant_id: counselor.tenant_id,
     })) || [];
 
   const counselors = [
@@ -221,6 +231,28 @@ function CustomClientDetails({
     setUser(JSON.parse(userData));
   }, []);
 
+  const manager = userObj?.role_id == 3;
+  const handleToggle = async (newState) => {
+    try {
+      let payload = {
+        tenant_id: userObj?.tenant?.tenant_id,
+        feature_name: "homework_upload_enabled",
+        feature_value: newState.toString(),
+      };
+      const response = await api.put(
+        `${ApiConfig.homeworkUpload.enableAndDisableUpload}`,
+        payload
+      );
+      if (response?.status == 200) {
+        setHomeWorkUpload(newState);
+      }
+      toast.success(response.data?.message);
+    } catch (error) {
+      console.log(error);
+      toast.error(error?.response?.data?.message);
+    }
+  };
+  const router = useRouter();
   return (
     <>
       <ClientDetailsContainer icon={<SearchIcon />}>
@@ -313,6 +345,19 @@ function CustomClientDetails({
                       />
                     </div>
                   ) : null}
+                  {[4].includes(user?.role_id) ? (
+                    <div
+                      key="counselor-select"
+                      className="custom-select-container"
+                    >
+                      <CustomMultiSelect
+                        options={serviceOptions}
+                        onChange={handleSelectService}
+                        isMulti={false}
+                        placeholder="Select a manager"
+                      />
+                    </div>
+                  ) : null}
                   <CustomButton
                     icon={<DownloadIcon />}
                     title="Download"
@@ -339,6 +384,13 @@ function CustomClientDetails({
                 </div>
               </div>
             </div>
+            {manager && router.pathname === "/client-session" && (
+              <ToggleSwitch
+                isOn={isHomeworkUpload}
+                title={"Enable Homwork upload for this counselor"}
+                onToggle={handleToggle}
+              />
+            )}
           </div>
 
           <div className="table-filter">

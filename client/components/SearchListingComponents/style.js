@@ -358,3 +358,42 @@ export const SearchListingWrapper = styled.div`
     }
   }
 `;
+
+export const SearchWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  border: 1px solid #dcdcdc;
+  border-radius: 12px;
+  padding: 8px 12px;
+  background-color: white;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 24px;
+
+  .search-icon {
+    font-size: 18px;
+    color: #555;
+    margin-right: 8px;
+  }
+
+  .search-input {
+    border: none;
+    outline: none;
+    flex: 1;
+    font-size: 16px;
+    color: #333;
+
+    &::placeholder {
+      color: #aaa;
+    }
+  }
+
+  .search-button {
+    background: none;
+    border: none;
+    color: #3973B7;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 16px;
+  }
+`;

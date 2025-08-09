@@ -45,6 +45,8 @@ function CreateSessionForm({
   userProfileId,
   fetchCounselorClient,
   fetchSessions,
+  isHomeworkUpload,
+  setHomeWorkUpload,
 }) {
   const methods = useForm();
   const { servicesData, userObj } = useReferenceContext();
@@ -97,7 +99,7 @@ function CreateSessionForm({
     has_schedule: client.has_schedule,
     user_target_outcome: client.user_target_outcome,
   }));
-
+  console.log(initialData);
   const infoTooltipContent =
     methods?.watch("client_first_name")?.user_target_outcome;
 
@@ -889,11 +891,6 @@ function CreateSessionForm({
       setSessionTableData([]);
     }
   };
-  const [isEnabled, setIsEnabled] = useState(false);
-  const handleToggle = (newState) => {
-    setIsEnabled(newState);
-    console.log("Toggled:", newState);
-  };
 
   const counselor = userObj?.role_id == 2;
   const manager = userObj?.role_id == 3;
@@ -1158,14 +1155,6 @@ function CreateSessionForm({
                   />
                 </HomeworkButtonWrapper>
               )}
-
-              {initialData && manager && (
-                <ToggleSwitch
-                  isOn={isEnabled}
-                  title={"Enable Homwork upload for this counselor"}
-                  onToggle={handleToggle}
-                />
-              )}
               {/* session Table  */}
               {(initialData || sessionTableData) && (
                 <CustomTable
@@ -1369,6 +1358,7 @@ function CreateSessionForm({
 
       {isWorkModalOpen && (
         <HomeworkModal
+          id={initialData}
           isOpen={isWorkModalOpen}
           onClose={handleCloseWorkModal}
         />

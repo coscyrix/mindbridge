@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import CounselorCard from "../../components/SearchListingComponents/CounselorCard";
-import { SearchListingWrapper } from "../../components/SearchListingComponents/style";
+import { SearchListingWrapper, SearchWrapper } from "../../components/SearchListingComponents/style";
 import CommonServices from "../../services/CommonServices";
 import { useForm } from "react-hook-form";
 import axios from "axios";
@@ -9,6 +9,7 @@ import CustomLoader from "../../components/Loader/CustomLoader";
 import CustomButton from "../../components/CustomButton";
 import { GoArrowLeft } from "react-icons/go";
 import { TREATMENT_TARGET } from "../../utils/constants";
+import { FiSearch } from "react-icons/fi";
 const SearchListing = () => {
   const [isloading, setIsLoading] = useState(false);
   const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
@@ -348,10 +349,18 @@ const SearchListing = () => {
           size={30}
         />
       </div>
-
       <div className="results-section">
         <div className="filters-section">
           <div className="price-range">
+            <SearchWrapper>
+              <FiSearch className="search-icon" />
+              <input
+                className="search-input"
+                type="text"
+                placeholder="Search"
+              />
+              <button className="search-button">Search</button>
+            </SearchWrapper>
             <div className="wrapperRange">
               <h3>Price Range</h3>
               <div className="price-display">

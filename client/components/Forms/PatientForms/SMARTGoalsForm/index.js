@@ -10,6 +10,7 @@ import CommonServices from "../../../../services/CommonServices";
 import { useState } from "react";
 import CustomMultiSelect from "../../../CustomMultiSelect";
 import CustomTextArea from "../../../CustomTextArea";
+import FormHeader from "../../../FormsHeader";
 
 const questions = [
   { id: "client_name", label: "Client Name: ", type: "string" },
@@ -87,6 +88,7 @@ const SMARTGoalForms = ({ formData }) => {
 
   return (
     <SMARTGoalsContainer>
+      <FormHeader tittle={"Smart Goal Tracker Questionnaire"} />
       <h1>Smart Goals</h1>
       <h3>Client Info</h3>
 

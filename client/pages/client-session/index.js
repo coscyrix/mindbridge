@@ -13,6 +13,7 @@ import CustomButton from "../../components/CustomButton";
 import { AddIcon } from "../../public/assets/icons";
 import { useReferenceContext } from "../../context/ReferenceContext";
 import Skeleton from "@mui/material/Skeleton";
+import ApiConfig from "../../config/apiConfig";
 
 
 function ClientSession() {
@@ -238,6 +239,26 @@ function ClientSession() {
     getInvoice();
   }, [userObj]);
 
+   const [isHomeworkUpload, setHomeWorkUpload] = useState(false);
+  const fetchHomeWorkUploadStatus = async () => {
+    try {
+      const response = await api.get(
+        `${ApiConfig.homeworkUpload.fetchHomeworkUploadStatus}?tenant_id=${userObj?.tenant?.tenant_id}&feature_name=homework_upload_enabled`
+      );
+      console.log(response);
+      if (response?.status == 200) {
+        console.log(response?.data[0]?.feature_value);
+        setHomeWorkUpload(response?.data[0]?.feature_value);
+        toast.success(response.data?.message);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
+  };
+  useEffect(() => {
+    fetchHomeWorkUploadStatus();
+  }, []);
+
   return (
     <ClientSessionWrapper>
       <div className="client-session-heading">
@@ -262,6 +283,8 @@ function ClientSession() {
         setConfirmationModal={setConfirmationModal}
       >
         <CreateSessionForm
+          isHomeworkUpload={isHomeworkUpload}
+          setHomeWorkUpload={setHomeWorkUpload}
           isOpen={showFlyout}
           setIsOpen={setShowFlyout}
           initialData={activeData}
@@ -274,6 +297,8 @@ function ClientSession() {
         />
       </CreateSessionLayout>
       <CustomClientDetails
+        isHomeworkUpload={isHomeworkUpload}
+        setHomeWorkUpload={setHomeWorkUpload}
         customTab={
           <div className="tab-container">
             {/* <CustomTab

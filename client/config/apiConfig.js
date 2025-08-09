@@ -50,8 +50,17 @@ const ApiConfig = {
     consentForm: "/consent-description",
   },
   submitServiceTemplate: {
-    submitAndCopyServiceTemplates:
-      "/service-templates/copy-multiple-to-tenant",
+    submitAndCopyServiceTemplates: "/service-templates/copy-multiple-to-tenant",
+  },
+  homeworkUpload: {
+    enableAndDisableUpload: "/tenant-configuration",
+    fetchHomeworkUploadStatus: "/tenant-configuration",
+    gethomeworkdetail: "/homework/session",
+    submitHomeworkdetails: "/homework",
+  },
+  feeSplitManagment: {
+    getAllfeesSplit: "/fee-split-management/configuration",
+    
   },
 };
 

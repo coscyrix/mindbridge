@@ -62,6 +62,7 @@ const GetStartedFormTemplateWrapper = styled.div`
       text-align: center;
       font-family: Playfair Display;
       margin-left: 10px;
+      margin-top: 68px;
     }
   }
 

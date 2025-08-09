@@ -12,6 +12,7 @@ import CustomInputField from "../../../CustomInputField";
 import Spinner from "../../../common/Spinner";
 import SignatureField from "../../../SignatureCanvas";
 import ApiConfig from "../../../../config/apiConfig";
+import FormHeader from "../../../FormsHeader";
 
 const ConsentForm = ({ initialData, loader }) => {
   const signaturePadRef = useRef(null);
@@ -125,6 +126,7 @@ const ConsentForm = ({ initialData, loader }) => {
         </div>
       ) : (
         <ConsentFormContainer>
+          <FormHeader tittle={"Consent Form"}/>
           <div>
             <img
               src="/assets/images/consent_form_img.png"

@@ -14,8 +14,9 @@ import { createGasSchema } from "../../../../utils/validationSchema/validationSc
 import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import CommonServices from "../../../../services/CommonServices";
-
-const GasForm = () => {
+import { toast } from "react-toastify";
+import FormHeader from "../../../FormsHeader";
+const GasForm = ({ client_id, session_id, goal }) => {
   const [goalValue, setGoalValue] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -28,7 +29,10 @@ const GasForm = () => {
   const methods = useForm({
     resolver: schema ? zodResolver(schema) : undefined,
     defaultValues: {
-      goal: null,
+      goal: {
+        label: treatment_goals.find((g) => g.value === goal)?.label,
+        value: goal,
+      },
     },
     mode: "onSubmit",
   });
@@ -42,24 +46,23 @@ const GasForm = () => {
     formState: { errors },
   } = methods;
 
-  const selectedGoal = useWatch({ control, name: "goal" })?.value || "";
+  const selectedGoal = goalValue || goal;
   useEffect(() => {
-    if (selectedGoal && selectedGoal !== goalValue) {
-      const newQuestions = gasQuestionBank[selectedGoal] || [];
+    if (goal && goal !== goalValue) {
+      const newQuestions = gasQuestionBank[goal] || [];
       const newDefaults = {
         goal: {
-          label: treatment_goals.find((g) => g.value === selectedGoal)?.label,
-          value: selectedGoal,
+          label: treatment_goals.find((g) => g.value === goal)?.label,
+          value: goal,
         },
       };
       newQuestions.forEach((q) => {
         newDefaults[q.name] = undefined;
       });
-      reset(newDefaults); 
-      setGoalValue(selectedGoal);
+      reset(newDefaults);
+      setGoalValue(goal);
     }
-  }, [selectedGoal]);
-  
+  }, [goal]);
 
   const questions = gasQuestionBank[selectedGoal] || [];
   const answers = useWatch({ control });
@@ -87,19 +90,19 @@ const GasForm = () => {
             score: numericValue,
           };
         }),
-        session_id: 1, // This should be passed as a prop or from context
-        client_id: 1, // This should be passed as a prop or from context
+        session_id: Number(client_id), // This should be passed as a prop or from context
+        client_id: Number(session_id), // This should be passed as a prop or from context
       };
       
       const response = await CommonServices.submitGASForm(payload);
       console.log("Form submitted successfully", response);
-      
-      // Reset form after successful submission
+      toast.success(response?.data?.message);
       reset();
       setGoalValue(null);
       
     } catch (error) {
       console.error("Error submitting form:", error);
+      toast.error(error?.response?.data?.message);
       setSubmitError(error.message || "Failed to submit form");
     } finally {
       setIsSubmitting(false);
@@ -110,43 +113,7 @@ const GasForm = () => {
     <FormProvider {...methods}>
       <GasFormWrapper key={goalValue || "initial"}>
         <div className="main-bg">
-          <div className="Image-wrapper">
-            <img
-              height={200}
-              width={200}
-              src="/assets/images/Mindbridge_logo.svg"
-              alt="MindBridge Logo"
-            />
-            <div className="Heading-description">
-              <h2>Goal Progress Tracker Questionnaire</h2>
-              <div>
-                Structured -2 to +2 scale questionnaire to monitor client
-                progress, support therapy adjustments, and visualize weekly
-                mental health changes.
-              </div>
-            </div>
-          </div>
-
-          <div className="select-options">
-            <Controller
-              name="goal"
-              control={control}
-              render={({ field }) => (
-                <>
-                  <CustomMultiSelect
-                    {...field}
-                    options={treatment_goals}
-                    isMulti={false}
-                    placeholder="Select a treatment goal"
-                    error={errors?.goal?.message}
-                  />
-                  {errors.goal && (
-                    <p className="error-text">{errors.goal.message}</p>
-                  )}
-                </>
-              )}
-            />
-          </div>
+          <FormHeader tittle={"Gas Form Tracker Questionnaire"} />
 
           {questions.length > 0 && (
             <div className="score-box">
@@ -177,7 +144,9 @@ const GasForm = () => {
               <div className="questions-wrapper">
                 {questions.map(({ question, name, options }, ind) => (
                   <div key={name} className="question-block">
-                    <label className="question-label">{`Q${ind + 1}. ${question}`}</label>
+                    <label className="question-label">{`Q${
+                      ind + 1
+                    }. ${question}`}</label>
                     <Controller
                       name={name}
                       control={control}
@@ -207,7 +176,10 @@ const GasForm = () => {
               </div>
 
               {submitError && (
-                <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+                <div
+                  className="error-message"
+                  style={{ color: "red", marginBottom: "10px" }}
+                >
                   {submitError}
                 </div>
               )}

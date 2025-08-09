@@ -8,6 +8,7 @@ import { api } from "../../../../utils/auth";
 import { getBaseURL } from "../../../../utils/helper";
 import { useRouter } from "next/router";
 import CommonServices from "../../../../services/CommonServices";
+import FormHeader from "../../../FormsHeader";
 
 const questions = [
   {
@@ -113,6 +114,7 @@ const PCL5Form = () => {
 
   return (
     <PCL5FormContainer>
+      <FormHeader tittle={"PCL Tracker Questionnaire"} />
       <h1>PCL-5</h1>
       <p>
         Instructions: Below is a list of problems that people sometimes have in

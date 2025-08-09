@@ -27,6 +27,7 @@ function CustomTable({
     <>
       <CustomTableContainer>
         <DataTable
+          className="custom-data-table"
           columns={columns}
           data={data}
           sortIcon={<TableDownArrowIcon />}
