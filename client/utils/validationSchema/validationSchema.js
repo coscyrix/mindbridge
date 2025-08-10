@@ -73,13 +73,17 @@ export const ClientValidationSchema = z
       )
       .optional(),
     target_outcome_id: z
-      .object({
-        label: z.string(),
-        value: z.preprocess(
-          (val) => Number(val),
-          z.number().min(1, { message: "Target Outcomes is required" })
-        ),
-      })
+      .union([
+        z.object({
+          label: z.string(),
+          value: z.preprocess(
+            (val) => Number(val),
+            z.number().min(1, { message: "Target Outcomes is required" })
+          ),
+        }),
+        z.string().optional(),
+        z.number().optional()
+      ])
       .optional()
       .nullable(),
     tax: z.preprocess((val) => {
@@ -98,15 +102,25 @@ export const ClientValidationSchema = z
       // Check if role_id is 1 (client) - require clam_num and target_outcome_id
       if (data.role_id === 1) {
         const clamNumValid = data.clam_num && data.clam_num > 0;
-        const targetOutcomeValid = data.target_outcome_id && typeof data.target_outcome_id === 'object' && data.target_outcome_id.value;
+        const targetOutcomeValid = data.target_outcome_id && (
+          (typeof data.target_outcome_id === 'object' && data.target_outcome_id.value) ||
+          (typeof data.target_outcome_id === 'string' && data.target_outcome_id.length > 0) ||
+          (typeof data.target_outcome_id === 'number' && data.target_outcome_id > 0)
+        );
         return clamNumValid && targetOutcomeValid;
       }
-      // If role_id is not 1, skip validation for clam_num and target_outcome_id
+      // If role_id is 3 (manager) - require admin_fee and tax
+      if (data.role_id === 3) {
+        const adminFeeValid = data.admin_fee && data.admin_fee > 0;
+        const taxValid = data.tax && data.tax >= 0;
+        return adminFeeValid && taxValid;
+      }
+      // For other roles, skip validation for clam_num and target_outcome_id
       return true;
     },
     {
-      message: "Serial Number and Target Outcomes are required for clients",
-      path: ["clam_num", "target_outcome_id"],
+      message: "Serial Number and Target Outcomes are required for clients, Admin Fees and Tax are required for managers",
+      path: ["clam_num", "target_outcome_id", "admin_fee", "tax"],
     }
   )
   .refine(

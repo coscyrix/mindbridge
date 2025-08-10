@@ -86,7 +86,7 @@ function CreateClientForm({
     user_first_name: "",
     user_last_name: "",
     email: "",
-    role_id: Counselor ? 1 : manager ? 2 : admin ? 3 : "",
+    role_id: Counselor ? 1 : manager ? 2 : admin ? 3 : 3, // Default to 3 (Manager) for admin
     clam_num: "",
     tenant_name: "",
     target_outcome_id: initialData
@@ -346,7 +346,11 @@ function CreateClientForm({
       <FormProvider {...methods}>
         <form
           onSubmit={methods.handleSubmit(
-            initialData ? handleUpdateClient : handleCreateClient
+            initialData ? handleUpdateClient : handleCreateClient,
+            (errors) => {
+              console.log("Form validation errors:", errors);
+              console.log("Form values:", methods.getValues());
+            }
           )}
         >
           <div>

@@ -7,6 +7,18 @@ import {
 
 dotenv.config();
 
+// Email disclaimer for all communications
+const EMAIL_DISCLAIMER = `
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; line-height: 1.4;">
+  <p><strong>DISCLAIMER:</strong></p>
+  <p>Assessment tools are used with proper author permissions for clinical purposes.<br/>
+  Emails and attachments may contain confidential and legally protected information.<br/>
+  Email transmission is not guaranteed to be secure or error-free. The sender assumes no liability for issues arising from electronic delivery.<br/>
+  Unauthorized access, use, or distribution is prohibited.<br/>
+  If received in error, please notify the sender and delete the message immediately.</p>
+</div>
+`;
+
 export const forgetPasswordEmail = (email, newPassword) => {
   return {
     to: email,
@@ -20,6 +32,7 @@ export const forgetPasswordEmail = (email, newPassword) => {
       <p>If you did not request this password reset, please contact our support team immediately.</p>
       <p>Thank you,</p>
       <p>MindBridge</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -37,6 +50,7 @@ export const otpEmail = (email, otp) => {
       <p>If you did not request this OTP, please contact our support team immediately to secure your account.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -54,6 +68,7 @@ export const clientWelcomeEmail = (email, password) => {
       <p> <strong>We recommend you change your password once you log in. </strong></p>
       <p>Thank you for choosing MindBridge!</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -71,6 +86,7 @@ export const accountRestoredEmail = (email, newPassword) => {
       <p> <strong>We recommend you change your password once you log in. </strong></p>
       <p>Thank you for choosing MindBridge!</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -85,6 +101,7 @@ export const emailUpdateEmail = (email) => {
       <p>Your email address has been successfully updated. If you did not make this change, please contact our support team immediately.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -100,6 +117,7 @@ export const accountVerificationEmail = (email) => {
       <p>If you have any questions or need assistance, please contact our support team.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -114,6 +132,7 @@ export const accountDeactivatedEmail = (email) => {
       <p>Your account is currently deactivated. If you want to restore your account, please contact our support team.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -128,6 +147,7 @@ export const changePasswordEmail = (email) => {
       <p>Your password has been successfully changed. If you did not make this change, please contact our support team immediately.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -154,6 +174,7 @@ export const treatmentToolsEmail = (
       <p>If you have any questions or concerns, feel free to reach out. We're here to support you.</p>
       <p>Thank you,</p>
       <p>The Counselling Team Member</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -173,6 +194,7 @@ export const attendanceSummaryEmail = (
       <p>Let us know if you have any questions.</p>
       <p>Thank you,</p>
       <p>The Counselling Team Member</p>
+      ${EMAIL_DISCLAIMER}
     `,
     attachments: [
       { filename: 'attendance-record.pdf', content: pdfAttachment },
@@ -194,6 +216,7 @@ export const consentFormEmail = (email, clientName, consentFormLink) => {
       <p>If you have any concerns or need assistance, don't hesitate to reach out.</p>
       <p>Thank you,</p>
       <p>The Counselling Team Member</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -293,6 +316,7 @@ export const welcomeAccountDetailsEmail = (
     <p>We're here to support you every step of the way.</p>
     <p>Thank you,</p>
     <p>The Counselling Team Member</p>
+    ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -394,6 +418,7 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
         
         <p style="text-align: left;">Thank you,</p>
         <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>
+        ${EMAIL_DISCLAIMER}
       </div>
     `,
   };
@@ -411,6 +436,7 @@ export const dischargeEmail = (email, clientName) => {
         <p>Thank you for trusting me to be part of your journey. I wish you continued strength, growth, and fulfillment in the path ahead.</p>
         <p style="text-align: left;">Thank you,</p>
         <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>
+        ${EMAIL_DISCLAIMER}
       </div>
     `,
   };
@@ -449,6 +475,7 @@ export const additionalServiceEmail = (
         <p>If you have any questions or need to reschedule, please contact your assigned counselor or us at <strong>${process.env.SUPPORT_EMAIL}</strong> or <strong>${process.env.SUPPORT_PHONE}</strong>.</p>
         <p>Thank you,</p>
         <p><strong>The MindBridge Team</strong></p>
+        ${EMAIL_DISCLAIMER}
       </div>
     `,
   };
@@ -468,6 +495,7 @@ export const homeworkEmailAttachment = (
         <p>Please find attached the homework assignment for your review and completion.</p>
         <p>Thank you,</p>
         <p>The Counselling Team Member</p>
+        ${EMAIL_DISCLAIMER}
       `,
     attachments: [{ filename: fileName, content: fileBuffer }],
   };
@@ -507,6 +535,7 @@ export const onboardingAdminEmail = (data) => {
         <li><strong>Contact Number:</strong> ${data.phone}</li>
       </ul>
       <p>Submitted at: ${new Date().toLocaleString()}</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
