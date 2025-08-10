@@ -241,6 +241,11 @@ function ClientSession() {
 
    const [isHomeworkUpload, setHomeWorkUpload] = useState(false);
   const fetchHomeWorkUploadStatus = async () => {
+    // Skip API call for admin users (role_id === 4)
+    if (userObj?.role_id === 4) {
+      return;
+    }
+    
     try {
       const response = await api.get(
         `${ApiConfig.homeworkUpload.fetchHomeworkUploadStatus}?tenant_id=${userObj?.tenant?.tenant_id}&feature_name=homework_upload_enabled`
