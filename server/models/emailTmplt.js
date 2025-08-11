@@ -5,6 +5,7 @@ import Common from './common.js';
 import Feedback from '../services/feedback.js';
 import Form from './form.js';
 import SendEmail from '../middlewares/sendEmail.js';
+import UserTargetOutcome from './userTargetOutcome.js';
 import {
   therapyRequestDetailsEmail,
   treatmentToolsEmail,
@@ -34,6 +35,7 @@ export default class EmailTmplt {
     this.form = new Form();
     this.sendEmail = new SendEmail();
     this.feedback = new Feedback();
+    this.userTargetOutcome = new UserTargetOutcome();
   }
 
   //////////////////////////////////////////
@@ -105,6 +107,22 @@ export default class EmailTmplt {
             const client_full_name =
               recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
             const client_id = recUser[0].user_profile_id;
+            
+            // Get client's target outcome ID
+            let clientTargetOutcomeId = null;
+            try {
+              const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
+                user_profile_id: client_id,
+              });
+              
+              if (clientTargetOutcome && clientTargetOutcome.length > 0) {
+                clientTargetOutcomeId = clientTargetOutcome[0].target_outcome_id;
+              }
+            } catch (error) {
+              logger.error('Error retrieving client target outcome:', error);
+              // Continue without target outcome ID if there's an error
+            }
+            
             const toolsEmail = treatmentToolsEmail(
               recUser[0].email,
               client_full_name,
@@ -112,6 +130,7 @@ export default class EmailTmplt {
               form_id,
               client_id,
               data.session_id,
+              clientTargetOutcomeId, // Add target outcome ID parameter
             );
 
             let attendanceEmail;

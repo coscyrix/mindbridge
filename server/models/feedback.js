@@ -3,6 +3,7 @@ import knex from 'knex';
 import logger from '../config/winston.js';
 import Session from './session.js';
 import UserForm from './userForm.js';
+import UserTargetOutcome from './userTargetOutcome.js';
 
 const db = knex(DBconn.dbConn.development);
 
@@ -11,6 +12,7 @@ export default class Feedback {
   constructor() {
     this.session = new Session();
     this.userForm = new UserForm();
+    this.userTargetOutcome = new UserTargetOutcome();
   }
   //////////////////////////////////////////
 
@@ -986,6 +988,18 @@ export default class Feedback {
         };
       }
 
+      // Get client's target outcome ID - use from request if provided, otherwise fetch from database
+      let clientTargetOutcomeId = data.target_outcome_id || null;
+      if (!clientTargetOutcomeId && data.client_id) {
+        const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
+          user_profile_id: data.client_id,
+        });
+        
+        if (clientTargetOutcome && clientTargetOutcome.length > 0) {
+          clientTargetOutcomeId = clientTargetOutcome[0].target_outcome_id;
+        }
+      }
+
       const recFeedback = await this.postFeedback({
         session_id: data.session_id,
         client_id: data.client_id,
@@ -1004,6 +1018,7 @@ export default class Feedback {
         responses_json: JSON.stringify(data.responses),
         feedback_id: recFeedback.rec[0],
         tenant_id: data.tenant_id,
+        client_target_outcome_id: clientTargetOutcomeId, // Add client target outcome ID
       };
 
       const postGASFeedback = await db
