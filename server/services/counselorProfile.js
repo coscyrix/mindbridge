@@ -18,6 +18,8 @@ export default class CounselorProfileService {
     // Validate the input data
     const schema = joi.object({
       user_profile_id: joi.number().required(),
+      counselor_profile_id: joi.number().optional(),
+      user_profile_id: joi.number().optional(),
       profile_picture_url: joi.string().optional(),
       license_number: joi.string().optional(),
       license_provider: joi.string().optional(),
