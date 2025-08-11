@@ -267,6 +267,7 @@ export default class UserProfile {
           client_name: `${data.user_first_name} ${data.user_last_name}`,
           client_id: postUsrProfile[0],
           tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id,
+          counselor_id: data.user_profile_id,
         });
       }
 

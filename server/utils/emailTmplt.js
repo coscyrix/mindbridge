@@ -204,7 +204,7 @@ export const attendanceSummaryEmail = (
 };
 
 // This function sends an email to the client with the consent form for their review and submission.
-export const consentFormEmail = (email, clientName, consentFormLink) => {
+export const consentFormEmail = (email, clientName, consentFormLink, counselor_id, tenant_id) => {
   return {
     to: email,
     subject: 'Consent Form for Your Review and Submission',

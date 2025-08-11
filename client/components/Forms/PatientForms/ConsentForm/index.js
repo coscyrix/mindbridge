@@ -52,15 +52,16 @@ const ConsentForm = ({ initialData, loader }) => {
 
   const onSubmit = async (data) => {
     const { client_name, date, imgBase64 } = data;
-    const { client_id, form_id, tenant_id } = router.query;
+    const { client_id, form_id, tenant_id, counselor_id } = router.query;
     try {
       setLoading(true);
       const payload = {
         client_id: client_id,
         imgBase64,
         tenant_id,
+        counselor_id: counselor_id,
       };
-      if (!client_id || !form_id || !tenant_id) {
+      if (!client_id || !form_id || !tenant_id || !counselor_id) {
         toast.error("Required parameters are missing from the route.");
         setLoading(false);
         return;
