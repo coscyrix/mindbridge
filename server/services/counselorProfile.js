@@ -23,6 +23,10 @@ export default class CounselorProfileService {
         joi.number(),
         joi.string()
       ).optional(),
+      location_lng: joi.alternatives().try(
+        joi.number(),
+        joi.string()
+      ).optional(),
       profile_picture_url: joi.string().optional(),
       license_number: joi.string().optional(),
       license_provider: joi.string().optional(),
