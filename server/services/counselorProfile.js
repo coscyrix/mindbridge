@@ -19,6 +19,10 @@ export default class CounselorProfileService {
     const schema = joi.object({
       user_profile_id: joi.number().optional(),
       counselor_profile_id: joi.number().optional(),
+      location_lat: joi.alternatives().try(
+        joi.number(),
+        joi.string()
+      ).optional(),
       profile_picture_url: joi.string().optional(),
       license_number: joi.string().optional(),
       license_provider: joi.string().optional(),
