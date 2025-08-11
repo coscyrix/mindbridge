@@ -31,7 +31,7 @@ import {
   ListItemText,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-
+import { Direction } from "react-data-table-component";
 
 const ActionMenu = ({ row, handleEdit, handleDelete }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -59,7 +59,7 @@ const ActionMenu = ({ row, handleEdit, handleDelete }) => {
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         transformOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <List dense>
+        <List dense style={{ flexDirection: "column" }}>
           <ListItem
             button
             onClick={() => {
@@ -85,7 +85,6 @@ const ActionMenu = ({ row, handleEdit, handleDelete }) => {
     </>
   );
 };
-
 
 function exportToCSV(columns, data, tableCaption) {
   const headings = columns

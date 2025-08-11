@@ -17,7 +17,7 @@ import {
   StepContent,
 } from "../styles/onboarding";
 import { toast } from "react-toastify";
-import { api, onBoarding, updateProfile } from "../utils/auth";
+import { api, logout, onBoarding, updateProfile } from "../utils/auth";
 import styled from "styled-components";
 import LicenseFileUpload from "../components/LicenseFileUpload";
 import CommonServices from "../services/CommonServices";
@@ -380,8 +380,8 @@ const SignUp = () => {
     setLoading(true);
     try {
       const profileData = {
-        user_profile_id: userObj?.user_profile_id,
-        counselor_profile_id: onBoardingDetails?.counselor_profile_id,
+        // user_profile_id: userObj?.user_profile_id,
+        // counselor_profile_id: onBoardingDetails?.counselor_profile_id,
         license_number: formData.license_number,
         license_provider: formData.license_provider,
         license_expiry_date: formData.license_expiry_date,
@@ -490,9 +490,8 @@ const SignUp = () => {
           );
 
           if (!type) {
-            toast.success("Onboarding Success Please login again")
-            logout()
-
+            toast.success("Onboarding Success Please login again");
+            logout();
           } else {
             router.push("/dashboard");
           }
@@ -514,7 +513,6 @@ const SignUp = () => {
       setLoading(false);
     }
   };
-  
 
   const nextStep = async () => {
     const isValid = await validateStep(currentStep);
@@ -637,10 +635,16 @@ const SignUp = () => {
         label: specialty.service_name,
       }));
 
-      const serviceModalities = onBoardingDetails.service_modalities.map(
+      const serviceModalities = onBoardingDetails.service_modalities?.map(
         (modality) => ({
           value: modality.toLowerCase().replace(" ", "_"),
           label: modality,
+        })
+      );
+      const treatment_target = onBoardingDetails.target_outcomes?.map(
+        (item) => ({
+          label: item.target_name,
+          value: item.target_outcome_id,
         })
       );
 
@@ -666,9 +670,10 @@ const SignUp = () => {
           label: onBoardingDetails.race,
         },
         license_number: onBoardingDetails.license_number,
-
+        license_provider: onBoardingDetails.license_provider,
         license_file_url: onBoardingDetails.license_file_url,
         availability: onBoardingDetails.availability || {},
+        treatment_target: treatment_target || [],
       });
 
       const fetchProfileImage = async () => {

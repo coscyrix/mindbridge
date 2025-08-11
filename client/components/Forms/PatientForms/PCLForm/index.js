@@ -114,7 +114,12 @@ const PCL5Form = () => {
 
   return (
     <PCL5FormContainer>
-      <FormHeader tittle={"PCL Tracker Questionnaire"} />
+      <FormHeader
+        tittle={"PCL Tracker Questionnaire"}
+        description={
+          " Structured -2 to +2 scale questionnaire to monitor client progresssupport therapy adjustments and visualize weekly mental health changes"
+        }
+      />
       <h1>PCL-5</h1>
       <p>
         Instructions: Below is a list of problems that people sometimes have in

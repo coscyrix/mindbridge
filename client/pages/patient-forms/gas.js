@@ -42,13 +42,13 @@ const AnxietyDisorderFormPage = () => {
     fetchFormSubmissionDetails();
   }, [session_id]);
 
-  if (loading) {
-    return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center" }}>
-        <Spinner color="#525252" />
-      </div>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <div style={{ height: "100vh", display: "flex", alignItems: "center" }}>
+  //       <Spinner color="#525252" />
+  //     </div>
+  //   );
+  // }
   return formAlreadySubmitted ? (
     <FormSubmission alreadySubmitted />
   ) : (

@@ -41,6 +41,7 @@ export const otpVerication = async (credentials) => {
       Cookies.set("token", loginToken);
       toast.success(data?.message || "OTP is verified!");
     }
+    return response;
   } catch (error) {
     console.log(error, "error");
     toast.error(

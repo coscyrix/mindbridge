@@ -35,9 +35,9 @@ const OtpVerificationForm = ({ email }) => {
         return;
       }
       setError("");
-      await otpVerication({ email, otp });
+      const response = await otpVerication({ email, otp });
 
-      if(userObj?.role_id === 3){
+      if(userObj?.role_id === 3&&response.status ==200  ){
         if(hasService){
           return router.push("/dashboard");
         }

@@ -155,10 +155,12 @@ const SearchListing = () => {
 
   const fetchAllProfilePictures = async () => {
     const pictureMap = {};
+    console.log()
 
     await Promise.all(
       counselorsData?.map(async (counselor) => {
         try {
+          console.log(counselor.profile_picture_url)
           const response = await axios.get(
             `${imageBaseUrl}${counselor.profile_picture_url}`,
             {
@@ -447,6 +449,7 @@ const SearchListing = () => {
           </div>
         </div>
         {/* {console.log(counselorsData)} */}
+        
         <div className="wrapperCardShow">
           {counselorsData?.length !== 0 ? (
             counselorsData.map((counselor) => (

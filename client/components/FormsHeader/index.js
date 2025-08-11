@@ -1,6 +1,6 @@
 import { FormHeaderWrapper } from "./style";
 
-const FormHeader = ({tittle}) => {
+const FormHeader = ({ tittle, description }) => {
   return (
     <FormHeaderWrapper>
       <div className="Image-wrapper">
@@ -13,9 +13,7 @@ const FormHeader = ({tittle}) => {
         <div className="Heading-description">
           <h2>{tittle}</h2>
           <div>
-            Structured -2 to +2 scale questionnaire to monitor client progress,
-            support therapy adjustments, and visualize weekly mental health
-            changes.
+           {description}
           </div>
         </div>
       </div>

@@ -84,7 +84,12 @@ const PHQ9Form = () => {
   };
   return (
     <PHQFormContainer>
-      <FormHeader tittle={"Phq9 Tracker Questionnaire"} />
+      <FormHeader
+        tittle={"Phq9 Tracker Questionnaire"}
+        description={
+          " Structured -2 to +2 scale questionnaire to monitor client progresssupport therapy adjustments and visualize weekly mental health changes"
+        }
+      />
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="phq9-form">
           <h1>Patient Health Questionnaire (PHQ-9)</h1>

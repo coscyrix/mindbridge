@@ -339,7 +339,8 @@ function CustomClientDetails({
                       />
                     </div>
                   ) : null}
-                  {[4].includes(user?.role_id) ? (
+                  {router.pathname === "/services" &&
+                  [4].includes(user?.role_id) ? (
                     <div
                       key="manager-select"
                       className="custom-select-container"

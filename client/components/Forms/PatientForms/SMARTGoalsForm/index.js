@@ -88,7 +88,12 @@ const SMARTGoalForms = ({ formData }) => {
 
   return (
     <SMARTGoalsContainer>
-      <FormHeader tittle={"Smart Goal Tracker Questionnaire"} />
+      <FormHeader
+        tittle={"Smart Goal Tracker Questionnaire"}
+        description={
+          " Structured -2 to +2 scale questionnaire to monitor client progresssupport therapy adjustments and visualize weekly mental health changes"
+        }
+      />
       <h1>Smart Goals</h1>
       <h3>Client Info</h3>
 

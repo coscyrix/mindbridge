@@ -63,7 +63,12 @@ const IPFForm = () => {
 
   return (
     <FormWrapper>
-      <FormHeader tittle={"IPF Tracker Questionnaire"} />
+      <FormHeader
+        tittle={"IPF Tracker Questionnaire"}
+        description={
+          " Structured -2 to +2 scale questionnaire to monitor client progresssupport therapy adjustments and visualize weekly mental health changes"
+        }
+      />
       <h1>IPF</h1>
       <h4>
         INSTRUCTIONS: Answer the questions at the beginning of each section to

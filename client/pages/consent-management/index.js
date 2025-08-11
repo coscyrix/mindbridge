@@ -20,7 +20,22 @@ const ConsentManagement = () => {
   const [counselors, setCounselors] = useState([]);
 
   const { userObj, allCounselors } = useReferenceContext();
+  const [consentBody, setConsentBody] = useState(null);
+  const methods = useForm({
+    resolver: zodResolver(getConsentManagementSchema(userData)),
+    defaultValues: {
+      agreeTerms: false,
+      consent_Editor_Values: "",
+      counselorSelect: null,
+    },
+    mode: "onSubmit",
+  });
 
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = methods;
   useEffect(() => {
     if (userObj) setUserData(userObj);
     if (allCounselors) setCounselors(allCounselors);
@@ -37,30 +52,37 @@ const ConsentManagement = () => {
       setCounselors(formattedCounselors);
     }
   }, [allCounselors]);
-  console.log(allCounselors);
-  const methods = useForm({
-    resolver: zodResolver(getConsentManagementSchema(userData)),
-    defaultValues: {
-      agreeTerms: false,
-      consent_Editor_Values: "",
-      counselorSelect: null,
-    },
-    mode: "onSubmit",
-  });
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = methods;
-
+  const getConsentBody = async () => {
+    try {
+      const tenant_id = userObj?.tenant_id;
+      const result = await api.get(
+        `${ApiConfig.consentFormSubmittion.consentForm}?tenant_id=${tenant_id}`
+      );
+      if (result.status === 200) {
+        setConsentBody(result?.data?.description);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+      console.log(error);
+    }
+  };
+  const { reset } = methods;
+  useEffect(() => {
+    getConsentBody();
+  }, []);
+  useEffect(() => {
+    if (consentBody) {
+      reset((prev) => ({
+        ...prev,
+        consent_Editor_Values: consentBody,
+      }));
+    }
+  }, [consentBody, reset]);
   const handleToggle = (event) => {
     setIsEnabled(event.target.checked);
   };
 
   const onSubmit = async (data) => {
-    
-
     console.log(data);
     const isAdmin = userData?.role_id === 4;
     const payload = {
@@ -91,11 +113,8 @@ const ConsentManagement = () => {
         <Typography variant="h6" mb={1}>
           Consent Management & Form Editor
         </Typography>
-        {console.log(methods.formState.errors)}
         <div className="description-text">
-          Lorem Ipsum is simply dummy text of the printing and typesetting
-          industry. Lorem Ipsum has been the industry’s standard dummy text ever
-          since the 1500s.
+          Update your consent details as per your convenience
         </div>
 
         <div className="toggle-section">

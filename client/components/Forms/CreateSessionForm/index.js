@@ -99,7 +99,6 @@ function CreateSessionForm({
     has_schedule: client.has_schedule,
     user_target_outcome: client.user_target_outcome,
   }));
-  console.log(initialData);
   const infoTooltipContent =
     methods?.watch("client_first_name")?.user_target_outcome;
 

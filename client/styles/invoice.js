@@ -116,7 +116,7 @@ export const InvoiceContainer = styled.div`
             gap: 8px;
             align-items: start;
             position: relative;
-            z-index: 1000;
+            z-index: 0;
             .custom-select {
               width: max-content;
               margin-bottom: 0px;

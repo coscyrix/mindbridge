@@ -301,7 +301,12 @@ const WHODASForm = () => {
   };
   return (
     <WHODasFormContainer>
-      <FormHeader tittle={"WHODAS Tracker Questionnaire"} />
+      <FormHeader
+        tittle={"WHODAS Tracker Questionnaire"}
+        description={
+          " Structured -2 to +2 scale questionnaire to monitor client progresssupport therapy adjustments and visualize weekly mental health changes"
+        }
+      />
       <h1>WHODAS</h1>
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(onSubmit)}>

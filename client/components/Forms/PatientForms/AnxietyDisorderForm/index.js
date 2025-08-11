@@ -91,7 +91,12 @@ const AnxietyDisorderForm = () => {
 
   return (
     <AnxietyDisorderFormContainer>
-      <FormHeader tittle={"GAD 7 Tracker Questionnaire"} />
+      <FormHeader
+        tittle={"GAD 7 Tracker Questionnaire"}
+        description={
+          " Structured -2 to +2 scale questionnaire to monitor client progresssupport therapy adjustments and visualize weekly mental health changes"
+        }
+      />
       <FormProvider {...methods}>
         <div className="anxiety-content">
           <form onSubmit={handleSubmit(onSubmit)}>

@@ -75,25 +75,43 @@ const ChangePasswordModal = ({ open, onClose }) => {
               icon={showNewPassword ? <OpenEyeIcon /> : <ClosedEyeIcon />}
               handleShowPassword={handleNewPassword}
             />
-
-            <CustomButton
-              className="button"
-              title={
-                isLoading ? (
-                  <CircularProgress size={"20px"} color="white" />
-                ) : (
-                  "Change Password"
-                )
-              }
-              type="submit"
+            <div
               style={{
-                background: "#2b5efc",
-                color: "white",
-                width: "100%",
-                height: "44px",
-                fontSize: "16px",
+                display: "flex",
+                justifyContent: "space-between",
+                gap: "10px",
               }}
-            />
+            >
+              <CustomButton
+                title="Cancel"
+                type="button"
+                onClick={onClose}
+                style={{
+                  color: "black",
+                  width: "100%",
+                  height: "44px",
+                  fontSize: "16px",
+                }}
+              />
+              <CustomButton
+                className="button"
+                title={
+                  isLoading ? (
+                    <CircularProgress size={"20px"} color="white" />
+                  ) : (
+                    "Change Password"
+                  )
+                }
+                type="submit"
+                style={{
+                  background: "#2b5efc",
+                  color: "white",
+                  width: "100%",
+                  height: "44px",
+                  fontSize: "16px",
+                }}
+              />
+            </div>
           </form>
         </FormProvider>
       </DialogContent>

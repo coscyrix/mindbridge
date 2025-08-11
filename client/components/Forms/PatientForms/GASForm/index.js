@@ -16,11 +16,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import CommonServices from "../../../../services/CommonServices";
 import { toast } from "react-toastify";
 import FormHeader from "../../../FormsHeader";
-const GasForm = ({ client_id, session_id, goal }) => {
+const GasForm = ({
+  client_id,
+  session_id,
+  goal = "Improving_Emotional_Regulation_in_Therapy",
+}) => {
   const [goalValue, setGoalValue] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
-
   const schema = useMemo(() => {
     if (!goalValue) return null;
     return createGasSchema(goalValue);
@@ -76,7 +79,7 @@ const GasForm = ({ client_id, session_id, goal }) => {
     try {
       setIsSubmitting(true);
       setSubmitError(null);
-      
+
       const payload = {
         goal: data.goal?.value,
         responses: questions.map((q) => {
@@ -93,13 +96,12 @@ const GasForm = ({ client_id, session_id, goal }) => {
         session_id: Number(client_id), // This should be passed as a prop or from context
         client_id: Number(session_id), // This should be passed as a prop or from context
       };
-      
+
       const response = await CommonServices.submitGASForm(payload);
       console.log("Form submitted successfully", response);
       toast.success(response?.data?.message);
       reset();
       setGoalValue(null);
-      
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error(error?.response?.data?.message);
@@ -113,7 +115,12 @@ const GasForm = ({ client_id, session_id, goal }) => {
     <FormProvider {...methods}>
       <GasFormWrapper key={goalValue || "initial"}>
         <div className="main-bg">
-          <FormHeader tittle={"Gas Form Tracker Questionnaire"} />
+          <FormHeader
+            tittle={"Gas Form Tracker Questionnaire"}
+            description={
+              " Structured -2 to +2 scale questionnaire to monitor client progresssupport therapy adjustments and visualize weekly mental health changes"
+            }
+          />
 
           {questions.length > 0 && (
             <div className="score-box">
