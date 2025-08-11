@@ -264,7 +264,7 @@ export default class User {
           
           // Check if tenant has any services
           const service = new Service();
-          const servicesResult = await service.getServiceById({ tenant_id: usr.tenant_id });
+          const servicesResult = await service.getServiceById({ tenant_id: usr.tenant_generated_id });
           usr.has_services = !servicesResult.error && servicesResult.rec && servicesResult.rec.length > 0;
           usr.services_count = servicesResult.rec ? servicesResult.rec.length : 0;
         }
