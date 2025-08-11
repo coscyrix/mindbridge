@@ -15,11 +15,72 @@ export default class CounselorProfileService {
   }
 
   async createCounselorProfile(data) {
+    // Validate the input data
+    const schema = joi.object({
+      user_profile_id: joi.number().required(),
+      profile_picture_url: joi.string().optional(),
+      license_number: joi.string().optional(),
+      license_provider: joi.string().optional(),
+      license_file_url: joi.string().optional(),
+      profile_notes: joi.string().optional(),
+      location: joi.string().optional(),
+      service_modalities: joi.string().optional(),
+      availability: joi.string().optional(),
+      is_verified: joi.boolean().optional(),
+      patients_seen: joi.number().optional(),
+      gender: joi.string().optional(),
+      race: joi.string().optional(),
+      public_phone: joi.string().optional(),
+      treatment_target: joi.alternatives().try(
+        joi.number(),
+        joi.array().items(joi.number())
+      ).optional(),
+      target_outcome_id: joi.alternatives().try(
+        joi.number(),
+        joi.array().items(joi.number())
+      ).optional()
+    });
+
+    const { error } = schema.validate(data);
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
     // Directly pass to model, which now handles multiple target outcomes
     return this.counselorProfile.createCounselorProfile(data);
   }
 
   async updateCounselorProfile(counselor_profile_id, data) {
+    // Validate the input data
+    const schema = joi.object({
+      profile_picture_url: joi.string().optional(),
+      license_number: joi.string().optional(),
+      license_provider: joi.string().optional(),
+      license_file_url: joi.string().optional(),
+      profile_notes: joi.string().optional(),
+      location: joi.string().optional(),
+      service_modalities: joi.string().optional(),
+      availability: joi.string().optional(),
+      is_verified: joi.boolean().optional(),
+      patients_seen: joi.number().optional(),
+      gender: joi.string().optional(),
+      race: joi.string().optional(),
+      public_phone: joi.string().optional(),
+      treatment_target: joi.alternatives().try(
+        joi.number(),
+        joi.array().items(joi.number())
+      ).optional(),
+      target_outcome_id: joi.alternatives().try(
+        joi.number(),
+        joi.array().items(joi.number())
+      ).optional()
+    });
+
+    const { error } = schema.validate(data);
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
     // Directly pass to model, which now handles multiple target outcomes
     return this.counselorProfile.updateCounselorProfile(counselor_profile_id, data);
   }

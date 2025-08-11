@@ -37,6 +37,7 @@ export default class CounselorProfile {
           user_profile_id: data.user_profile_id,
           profile_picture_url: data.profile_picture_url,
           license_number: data.license_number,
+          license_provider: data.license_provider,
           license_file_url: data.license_file_url,
           profile_notes: data.profile_notes,
           location: data.location,
@@ -51,19 +52,31 @@ export default class CounselorProfile {
 
       const counselor_profile_id = result[0];
 
-      // Add target outcome mappings if provided (array)
+      // Handle treatment_target mapping to target_outcome_id
+      let targetOutcomeIds = [];
+      
+      // If treatment_target is provided, use it as target_outcome_id
+      if (data.treatment_target && Array.isArray(data.treatment_target)) {
+        targetOutcomeIds = data.treatment_target;
+      } else if (data.treatment_target) {
+        targetOutcomeIds = [data.treatment_target];
+      }
+      
+      // If target_outcome_id is provided, use it (for backward compatibility)
       if (data.target_outcome_id && Array.isArray(data.target_outcome_id)) {
-        for (const tid of data.target_outcome_id) {
+        targetOutcomeIds = data.target_outcome_id;
+      } else if (data.target_outcome_id) {
+        targetOutcomeIds = [data.target_outcome_id];
+      }
+
+      // Add target outcome mappings if provided
+      if (targetOutcomeIds.length > 0) {
+        for (const tid of targetOutcomeIds) {
           await this.counselorTargetOutcome.addCounselorTargetOutcome({
             counselor_profile_id,
             target_outcome_id: tid
           });
         }
-      } else if (data.target_outcome_id) {
-        await this.counselorTargetOutcome.addCounselorTargetOutcome({
-          counselor_profile_id,
-          target_outcome_id: data.target_outcome_id
-        });
       }
 
       return { message: 'Counselor profile created successfully', id: counselor_profile_id };
@@ -84,6 +97,7 @@ export default class CounselorProfile {
       const updateData = {};
       if (data.profile_picture_url) updateData.profile_picture_url = data.profile_picture_url;
       if (data.license_number) updateData.license_number = data.license_number;
+      if (data.license_provider) updateData.license_provider = data.license_provider;
       if (data.license_file_url) updateData.license_file_url = data.license_file_url;
       if (data.profile_notes) updateData.profile_notes = data.profile_notes;
       if (data.location) updateData.location = data.location;
@@ -101,8 +115,25 @@ export default class CounselorProfile {
         .where('counselor_profile_id', counselor_profile_id)
         .update(updateData);
 
-      // Update or add target outcome mappings if provided (array)
-      if (data.target_outcome_id) {
+      // Handle treatment_target mapping to target_outcome_id
+      let targetOutcomeIds = [];
+      
+      // If treatment_target is provided, use it as target_outcome_id
+      if (data.treatment_target && Array.isArray(data.treatment_target)) {
+        targetOutcomeIds = data.treatment_target;
+      } else if (data.treatment_target) {
+        targetOutcomeIds = [data.treatment_target];
+      }
+      
+      // If target_outcome_id is provided, use it (for backward compatibility)
+      if (data.target_outcome_id && Array.isArray(data.target_outcome_id)) {
+        targetOutcomeIds = data.target_outcome_id;
+      } else if (data.target_outcome_id) {
+        targetOutcomeIds = [data.target_outcome_id];
+      }
+
+      // Update or add target outcome mappings if provided
+      if (targetOutcomeIds.length > 0) {
         // Remove all existing mappings first
         const existing = await this.counselorTargetOutcome.getCounselorTargetOutcome({ counselor_profile_id });
         if (existing.rec && existing.rec.length > 0) {
@@ -110,17 +141,12 @@ export default class CounselorProfile {
             await this.counselorTargetOutcome.deleteCounselorTargetOutcome(row.id);
           }
         }
-        if (Array.isArray(data.target_outcome_id)) {
-          for (const tid of data.target_outcome_id) {
-            await this.counselorTargetOutcome.addCounselorTargetOutcome({
-              counselor_profile_id,
-              target_outcome_id: tid
-            });
-          }
-        } else {
+        
+        // Add new mappings
+        for (const tid of targetOutcomeIds) {
           await this.counselorTargetOutcome.addCounselorTargetOutcome({
             counselor_profile_id,
-            target_outcome_id: data.target_outcome_id
+            target_outcome_id: tid
           });
         }
       }
