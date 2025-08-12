@@ -258,4 +258,24 @@ export default class CounselorProfileController {
       res.status(500).json({ message: 'Internal server error', error: -1 });
     }
   }
+
+  async getAppointmentEmailHistory(req, res) {
+    try {
+      const { counselor_profile_id } = req.params;
+      const { limit } = req.query;
+      
+      const result = await this.counselorProfileService.getAppointmentEmailHistory(
+        parseInt(counselor_profile_id), 
+        limit ? parseInt(limit) : 10
+      );
+      
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error('Error getting appointment email history:', error);
+      res.status(500).json({ message: 'Internal server error', error: -1 });
+    }
+  }
 } 
