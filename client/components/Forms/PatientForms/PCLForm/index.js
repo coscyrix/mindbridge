@@ -117,7 +117,7 @@ const PCL5Form = () => {
       <FormHeader
         tittle={"PCL Tracker Questionnaire"}
         description={
-          " Structured -2 to +2 scale questionnaire to monitor client progresssupport therapy adjustments and visualize weekly mental health changes"
+          "The PCL-5 is a 20-item self-report questionnaire designrd to assess the symptoms of Post-Traumatic Stress Disorder (PTSD) based on the DSM-5 Criteria"
         }
       />
       <h1>PCL-5</h1>

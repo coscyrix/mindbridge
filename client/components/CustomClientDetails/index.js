@@ -42,6 +42,7 @@ function CustomClientDetails({
   customTab,
   isHomeworkUpload,
   setHomeWorkUpload,
+  session,
   ...props
 }) {
   const [currentPage, setCurrentPage] = useState(0);

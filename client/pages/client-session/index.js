@@ -297,6 +297,7 @@ function ClientSession() {
           confirmationModal={confirmationModal}
           setConfirmationModal={setConfirmationModal}
           setSessions={setSessions}
+          session={activeData}
           fetchSessions={fetchSessions}
           fetchCounselorClient={fetchSessions}
         />

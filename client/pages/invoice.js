@@ -75,7 +75,7 @@ const Invoice = () => {
       if (!uniqueCounselorsMap.has(user.user_id)) {
         uniqueCounselorsMap.set(user.user_id, {
           label: `${user.user_first_name} ${user.user_last_name}`,
-          value: user.user_id,
+          value: user.user_profile_id,
           tenant_id: user.tenant_id,
         });
       }
@@ -370,10 +370,9 @@ const Invoice = () => {
 
       if (startDate) params.append("start_dte", startDate);
       if (endDate) params.append("end_dte", endDate);
-      if (tenant_id) params.append("tenant_id", tenant_id);
+      // if (tenant_id) params.append("tenant_id", tenant_id);
 
-      const response = await api.get(`/invoice/multi?${params.toString()}`);
-
+      const response = await api.get(`/invoice/multi?${params}`);
       if (response?.status === 200) {
         setInvoices(response?.data?.rec);
         setInvoiceTableData(response?.data?.rec?.rec_list);
@@ -598,16 +597,20 @@ const Invoice = () => {
               <div className="custom-select-container">
                 {[3, 4].includes(roleId) ? (
                   <>
-                    <div key="counselor-select">
-                      <label>Managers</label>
-                      <CustomMultiSelect
-                        options={managerOptions}
-                        placeholder="Select manager"
-                        isMulti={false}
-                        onChange={handleSelectManager}
-                        value={selectedManager}
-                      />
-                    </div>
+                    {[4].includes(roleId) ? (
+                      <div key="counselor-select">
+                        <label>Managers</label>
+                        <CustomMultiSelect
+                          options={managerOptions}
+                          placeholder="Select manager"
+                          isMulti={false}
+                          onChange={handleSelectManager}
+                          value={selectedManager}
+                        />
+                      </div>
+                    ) : (
+                      <></>
+                    )}
                     <div key="counselor-select">
                       <label>Counselor</label>
                       {/* <CustomSelect

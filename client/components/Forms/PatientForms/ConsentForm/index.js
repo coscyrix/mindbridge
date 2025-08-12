@@ -139,10 +139,98 @@ const ConsentForm = ({ initialData, loader }) => {
             />
             <h4>VAPENDAMA Counseling Services</h4>
           </div>
-          <div
-            className="content"
-            dangerouslySetInnerHTML={{ __html: consentBody }}
-          />
+
+          {consentBody ? (
+            <>
+              <div
+                className="content"
+                dangerouslySetInnerHTML={{ __html: consentBody }}
+              />
+            </>
+          ) : (
+            <div className="content">
+              <h3>INFORMED CONSENT</h3>
+              <p>Welcome to VAPENDAMA Counseling Services.</p>
+              <p>
+                We serve as contracted counselors in partnership with
+                WorkSafeBC, aligning our practices with the standards
+                established by the Canadian Counselling and Psychotherapy
+                Association and The BC Association of Clinical Counsellors
+                (BCACC) as clinical counselors.
+              </p>
+              <p>
+                Our primary emphasis lies in assisting injured workers by
+                employing evidence-based treatment models designed to address
+                mental health concerns and support a smooth return-to-work
+                transition. In order to enhance the quality of care provided, we
+                embrace a collaborative team approach.
+              </p>
+              <p>
+                This involves working closely with various healthcare
+                professionals, as recommended by your case manager, which may
+                include Occupational Therapists, Vocational Rehabilitation
+                Consultants, Physiotherapists, and occasionally, your
+                physicians. This collaborative effort ensures a comprehensive
+                and coordinated approach to your well-being and a successful
+                return to work.
+              </p>
+              <h4>**Counseling & Confidentiality:**</h4>
+              <p>
+                The counseling process is conducted with the utmost
+                confidentiality. While the team approach has - limitations, only
+                information relevant to treatment will be shared
+              </p>
+              <p>
+                The counselor is legally obligated to disclose confidentiality:
+              </p>
+              <ul>
+                <li>
+                  if there is an imminent danger of self-harm, harm to another
+                  person,
+                </li>
+                <li>if there is an imminent danger to harm another person</li>
+                <li>
+                  or if there is abuse of a child (age 0-18), elderly abuse, or
+                  abuse of a person with a disability.
+                </li>
+              </ul>
+              <p>
+                The counseling process is subject to legal processes; the
+                client&apos;s record can be subpoenaed by a judge.
+              </p>
+              <p>
+                In such cases, the counselor is responsible for informing the
+                client. WorkSafeBC retains rights and ownership of counseling
+                documents, which can be requested through WorkSafeBC. At the
+                conclusion of counseling, a report will be generated, accessible
+                to the client through the WorkSafeBC portal. Counseling
+                documents will be securely stored for up to 7 years in a locked
+                filing cabinet.
+              </p>
+              <h4>**Session Model and Communication:**</h4>
+              <p>
+                Sessions can be conducted in person or online with approval from
+                a WorkSafeBC case manager. Online sessions are facilitated
+                through Doxy.me, a secure platform. Communication may occur via
+                the telephone number on file, and at times, through text
+                messaging and email for scheduling purposes. Please note that
+                email is not entirely confidential; any emails exchanged will be
+                printed and stored in your
+              </p>
+              <p>
+                To ensure best practices, counselors may seek consultation and
+                supervision from qualified counseling supervisors. Clients are
+                encouraged to adhere to the 24-hour cancellation policy.
+              </p>
+              <p>
+                Please sign below to indicate that you have read the Counseling
+                Informed Consent document, had sufficient time for
+                consideration, asked questions for clarification, and understand
+                the content.
+              </p>
+              remove all html tags
+            </div>
+          )}
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)}>
               <div className="client-details-container">

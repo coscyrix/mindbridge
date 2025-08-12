@@ -68,7 +68,7 @@ export default function CreateServiceForm({
       total_invoice: parseFloat(data.total_invoice),
       gst: data.gst,
       tenant_id: userDetails?.tenant_id,
-      user_profile_id: userDetails?.user_profile_id,
+      // user_profile_id: userDetails?.user_profile_id,
     };
     
     const payload = {
@@ -79,10 +79,10 @@ export default function CreateServiceForm({
       // svc_formula: svcFormulaArray || [],
       total_invoice: parseFloat(data.total_invoice),
       gst: data.gst,
-      tenant_id: userDetails?.tenant_id,
-      user_profile_id:userDetails?.user_profile_id,
+      // tenant_id: userDetails?.tenant_id,
+      // user_profile_id:userDetails?.user_profile_id,
       discount_pcnt: data.discount_pcnt,
-      total_invoice_and_taxes: data.totalInvoiceTaxes,
+      // total_invoice_and_taxes: data.totalInvoiceTaxes,
     };
 
     if (initialData) {
@@ -295,6 +295,7 @@ export default function CreateServiceForm({
                       label="Discount"
                       placeholder="Enter discount"
                       type="number"
+                      disabled={true}
                     />
                   </div>
                   <div className="fields">
@@ -303,6 +304,7 @@ export default function CreateServiceForm({
                       label="Total invoice + taxes"
                       placeholder="Enter total invoice + taxes"
                       type="number"
+                      disabled={true}
                     />
                   </div>
                 </>

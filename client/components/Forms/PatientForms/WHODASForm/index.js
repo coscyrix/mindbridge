@@ -304,7 +304,7 @@ const WHODASForm = () => {
       <FormHeader
         tittle={"WHODAS Tracker Questionnaire"}
         description={
-          " Structured -2 to +2 scale questionnaire to monitor client progresssupport therapy adjustments and visualize weekly mental health changes"
+          "The WHODAS 2.0 is a Patient-Reported-Outcome (PRO) instrument that uses 36 question to asses the global health status of patients across 6 health domains, independent of disease"
         }
       />
       <h1>WHODAS</h1>

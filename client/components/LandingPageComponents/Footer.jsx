@@ -42,7 +42,7 @@ const Footer = () => {
           <div className="footer-contact-info">
             <div className="contact-column">
               <p className="contact-label">Email Id</p>
-              <p className="contact-value">mindbridge45@gmail.com</p>
+              <p className="contact-value">info@mindbridge.solutions</p>
             </div>
             <div className="contact-column">
               <p className="contact-label">Phone Number</p>

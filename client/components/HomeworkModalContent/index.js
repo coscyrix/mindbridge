@@ -9,7 +9,8 @@ import { CrossIcon, UploadIcon } from "../../public/assets/icons";
 import ApiConfig from "../../config/apiConfig";
 import { api } from "../../utils/auth";
 import { toast } from "react-toastify";
-const HomeworkModal = ({ isOpen, id, onClose }) => {
+import { useReferenceContext } from "../../context/ReferenceContext";
+const HomeworkModal = ({ isOpen, id, onClose, session_id }) => {
   const [selectedFile, setSelectedFile] = useState("Upload file");
   const methods = useForm();
 
@@ -19,10 +20,11 @@ const HomeworkModal = ({ isOpen, id, onClose }) => {
       setSelectedFile(file.name);
     }
   };
+  const { userObj } = useReferenceContext();
   const fetchHomeworkDetails = async () => {
     try {
       const response = await api.get(
-        `${ApiConfig.homeworkUpload.gethomeworkdetail}/14`
+        `${ApiConfig.homeworkUpload.gethomeworkdetail}/662`
       );
       if (response.status == 200) {
         console.log(response);
@@ -38,13 +40,11 @@ const HomeworkModal = ({ isOpen, id, onClose }) => {
   }, []);
   const handleUploadHomeWork = async (data) => {
     try {
-     
       let payload = {
-        homework_file:data.homework,
-        homework_title:data.homework_title,
-        tenant_id:"108",
-        session_id:"14"
-
+        homework_file: data.homework,
+        homework_title: data.homework_title,
+        tenant_id: userObj?.tenant_id,
+        session_id: session_id,
       };
       console.log(data);
       const response = await api.post(

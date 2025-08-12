@@ -93,8 +93,8 @@ const GasForm = ({
             score: numericValue,
           };
         }),
-        session_id: Number(client_id), // This should be passed as a prop or from context
-        client_id: Number(session_id), // This should be passed as a prop or from context
+        session_id: Number(session_id), // This should be passed as a prop or from context
+        client_id: Number(client_id), // This should be passed as a prop or from context
       };
 
       const response = await CommonServices.submitGASForm(payload);
@@ -191,7 +191,7 @@ const GasForm = ({
                 </div>
               )}
               <div className="button-group">
-                <CustomButton title="Cancel" type="button" />
+                {/* <CustomButton title="Cancel" type="button" /> */}
                 <CustomButton
                   customClass="blue"
                   type="submit"

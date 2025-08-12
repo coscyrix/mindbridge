@@ -103,6 +103,7 @@ function CreateClientForm({
     // service: serviceTemplates,
   };
   const methods = useForm({
+    mode: "onSubmit",
     resolver: zodResolver(ClientValidationSchema),
     defaultValues: defaultValues,
   });
@@ -230,7 +231,9 @@ function CreateClientForm({
       email,
       role_id,
       user_phone_nbr,
-      target_outcome_id: target_outcome_id?.value,
+      ...(role_id === 1 && {
+        target_outcome_id: target_outcome_id?.value,
+      }),
       ...(role_id === 3 && {
         tenant_name: tenant_name || "",
         admin_fee,
@@ -238,9 +241,10 @@ function CreateClientForm({
        
         tenant_name,
       }),
-      ...(role_id === 2 && {
-        // description: description,
-      }),
+      ...(role_id === 2 &&
+        {
+          // description: description,
+        }),
     };
 
     try {
@@ -394,7 +398,7 @@ function CreateClientForm({
                 />
               </div>
             )}
-            {role == 2 && user?.role_id == 4 && (
+            {/* {role == 2 && user?.role_id == 4 && (
               <div className="fields">
                 <CustomInputField
                   name="description"
@@ -403,7 +407,7 @@ function CreateClientForm({
                   type="text"
                 />
               </div>
-            )}
+            )} */}
             <div className="fields-wrapper-name">
               <div className="fields">
                 <CustomInputField

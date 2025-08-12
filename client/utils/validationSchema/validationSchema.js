@@ -54,12 +54,13 @@ export const ClientValidationSchema = z
           required_error: "Number is required",
           invalid_type_error: "Please enter phone number",
         })
-        .min(1, { message: "Phone number is required" })
+        .min(10, { message: "Phone must be equal to 10 dizit" })
+        .max(10,{message:"Phone must be equal to 10 dizit"})
         .regex(/^[\d\s\(\)\-\+]+$/, { message: "Invalid phone number format" })
         .transform((value) => value.replace(/[\D]/g, ""))
-        .refine((value) => value.length >= 10 && value.length <= 15, {
-          message: "Phone number must be between 10 and 15 digits",
-        })
+        // .refine((value) => value.length!==10, {
+        //   message: "Phone number must be 10 digit",
+        // })
     ),
     email: z
       .string()
@@ -75,12 +76,12 @@ export const ClientValidationSchema = z
     target_outcome_id: z
       .union([
         z.object({
-          label: z.string(),
+          label: z.string().optional(),
           value: z.preprocess(
             (val) => Number(val),
             z.number().min(1, { message: "Target Outcomes is required" })
-          ),
-        }),
+          ).optional()
+        }).optional(),
         z.string().optional(),
         z.number().optional()
       ])

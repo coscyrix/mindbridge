@@ -380,8 +380,8 @@ const SignUp = () => {
     setLoading(true);
     try {
       const profileData = {
-        // user_profile_id: userObj?.user_profile_id,
-        // counselor_profile_id: onBoardingDetails?.counselor_profile_id,
+        user_profile_id: userObj?.user_profile_id,
+        counselor_profile_id: onBoardingDetails?.counselor_profile_id,
         license_number: formData.license_number,
         license_provider: formData.license_provider,
         license_expiry_date: formData.license_expiry_date,
@@ -1276,6 +1276,17 @@ const SignUp = () => {
               )} */}
               {
                 <ButtonContainer>
+                  {currentStep === 1 && (
+                    <CustomButton
+                      title="Back"
+                      type="button"
+                      onClick={() => {
+                        router.push("/dashboard");
+                      }}
+                      customClass="secondary-button"
+                      onboardingStep={true}
+                    />
+                  )}
                   {currentStep > 1 && (
                     <CustomButton
                       title="Previous"

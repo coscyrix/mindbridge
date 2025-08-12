@@ -99,20 +99,26 @@ const FeeSplitManagement = () => {
           />
         )}
         {isEnabled && activeTab === 0 && (
-          <FeeSplitForm fetchAllSplit={fetchAllSplit} share_percentage={managerSplitDetails} />
+          <FeeSplitForm
+            fetchAllSplit={fetchAllSplit}
+            share_percentage={managerSplitDetails}
+          />
         )}
         {isEnabled && activeTab === 1 && (
           <div className="card-main">
             <h2> All Counselor share details: </h2>
             <CardListWrapper>
-              {counselorConfiguration &&
+              {counselorConfiguration && counselorConfiguration.length > 0 ? (
                 counselorConfiguration.map((config) => (
                   <FeeSplitCard
-                  fetchAllSplit={fetchAllSplit}
+                    fetchAllSplit={fetchAllSplit}
                     key={config.counselor_user_id}
                     config={config}
                   />
-                ))}
+                ))
+              ) : (
+                <h2 style={{ textAlign: "center" }}>No Counselor Available</h2>
+              )}
             </CardListWrapper>
           </div>
         )}

@@ -61,6 +61,7 @@ const ActionMenu = ({ row, handleEdit, handleDelete }) => {
       >
         <List dense style={{ flexDirection: "column" }}>
           <ListItem
+            style={{ gap: "10px" }}
             button
             onClick={() => {
               handleEdit(row);
@@ -71,6 +72,7 @@ const ActionMenu = ({ row, handleEdit, handleDelete }) => {
             <ListItemText primary="Edit" />
           </ListItem>
           <ListItem
+            style={{ gap: "10px" }}
             button
             onClick={() => {
               handleDelete(row);

@@ -45,6 +45,7 @@ function CreateSessionForm({
   userProfileId,
   fetchCounselorClient,
   fetchSessions,
+  session,
   isHomeworkUpload,
   setHomeWorkUpload,
 }) {
@@ -1354,15 +1355,14 @@ function CreateSessionForm({
           setShowVerification={setShowVerification}
         />
       )}
-
       {isWorkModalOpen && (
         <HomeworkModal
+          session_id={session?.session_obj[0]?.session_id}
           id={initialData}
           isOpen={isWorkModalOpen}
           onClose={handleCloseWorkModal}
         />
       )}
-
       <NotesModalContent
         noteData={noteData}
         setNoteData={setNoteData}
