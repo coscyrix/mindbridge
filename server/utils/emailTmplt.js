@@ -162,6 +162,9 @@ export const treatmentToolsEmail = (
   session_id,
   target_outcome_id = null,
 ) => {
+  // Encode client name for URL parameter
+  const encodedClientName = encodeURIComponent(client_full_name);
+  
   return {
     to: email,
     subject: `${tools_name} Assessment`,
@@ -171,7 +174,7 @@ export const treatmentToolsEmail = (
       <p>As part of our commitment to providing personalized care, we invite you to participate in the ${tools_name} assessment. This brief questionnaire will help us tailor our approach to your unique needs.</p>
       <p>Participation is completely voluntary, and all information remains confidential. Your input will be invaluable in enhancing the quality of care we provide.</p>
       <p>Please click the link below to complete the assessment:</p>
-      <p><a href="${process.env.BASE_URL}${process.env.FORMS}${tools_name.toLowerCase()}?form_id=${form_id}&client_id=${client_id}&session_id=${session_id}${target_outcome_id ? `&target_outcome_id=${target_outcome_id}` : ''}">Complete ${tools_name} Assessment</a></p>
+      <p><a href="${process.env.BASE_URL}${process.env.FORMS}${tools_name.toLowerCase()}?form_id=${form_id}&client_id=${client_id}&session_id=${session_id}&client_name=${encodedClientName}${target_outcome_id ? `&target_outcome_id=${target_outcome_id}` : ''}">Complete ${tools_name} Assessment</a></p>
       <p>If you have any questions or concerns, feel free to reach out. We're here to support you.</p>
       <p>Thank you,</p>
       <p>The Counselling Team Member</p>

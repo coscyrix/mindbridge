@@ -303,10 +303,13 @@ export default class EmailTmplt {
 
   async sendClientConsentEmail(data) {
     try {
+      // Encode client name for URL parameter
+      const encodedClientName = encodeURIComponent(data.client_name);
+      
       const sendClientConsentForm = consentFormEmail(
         data.email,
         data.client_name,
-        `${process.env.BASE_URL}${process.env.FORMS}consent?client_id=${data.client_id}&form_id=23&tenant_id=${data.tenant_id}&counselor_id=${data.counselor_id}`,
+        `${process.env.BASE_URL}${process.env.FORMS}consent?client_id=${data.client_id}&form_id=23&tenant_id=${data.tenant_id}&counselor_id=${data.counselor_id}&client_name=${encodedClientName}`,
         data.counselor_id,
         data.tenant_id,
       );

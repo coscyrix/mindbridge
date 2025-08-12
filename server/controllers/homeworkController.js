@@ -46,13 +46,35 @@ export default class HomeworkController {
     // Send email with the file attachment if email is provided
     if (data.email && req.file) {
       try {
+        // Get client name if session_id is provided
+        let clientName = null;
+        if (data.session_id) {
+          try {
+            const common = new Common();
+            const sessionInfo = await common.getSessionById(data.session_id);
+            if (sessionInfo && sessionInfo.length > 0) {
+              const therapyRequest = await common.getThrpyReqById(sessionInfo[0].thrpy_req_id);
+              if (therapyRequest && therapyRequest.length > 0) {
+                const clientInfo = await common.getUserProfileByUserProfileId(therapyRequest[0].client_id);
+                if (clientInfo && clientInfo.length > 0) {
+                  clientName = `${clientInfo[0].user_first_name} ${clientInfo[0].user_last_name}`;
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error getting client name:', error);
+            // Continue without client name if there's an error
+          }
+        }
+
         // Read the file from disk for email attachment
         const fileBuffer = fs.readFileSync(req.file.path);
         const emailTempl = homeworkEmailAttachment(
           data.email,
           data.homework_title,
           fileBuffer,
-          req.file.originalname
+          req.file.originalname,
+          clientName
         );
         const sendEmail = new SendEmail();
         const homeworkEmail = await sendEmail.sendMail(emailTempl);
