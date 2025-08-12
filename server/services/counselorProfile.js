@@ -327,8 +327,9 @@ export default class CounselorProfileService {
         `,
       };
       const emailResult = await this.sendEmail.sendMail(emailMsg);
-      if (emailResult.error) {
-        logger.error('Error sending appointment email to counselor:', emailResult.message);
+      if (!emailResult || emailResult.error) {
+        const errorMessage = emailResult?.message || 'Failed to send appointment email';
+        logger.error('Error sending appointment email to counselor:', errorMessage);
         return { message: 'Failed to send appointment email', error: -1 };
       }
 
