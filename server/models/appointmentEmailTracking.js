@@ -1,59 +1,67 @@
-import Common from './common.js';
+import DBconn from '../config/db.config.js';
+import knex from 'knex';
+import logger from '../config/winston.js';
 
-export default class AppointmentEmailTracking extends Common {
+const db = knex(DBconn.dbConn.development);
+
+export default class AppointmentEmailTracking {
   constructor() {
-    super();
+    this.db = db;
     this.tableName = 'appointment_email_tracking';
   }
 
   async checkEmailAlreadySent(counselor_profile_id, customer_email) {
     try {
-      const query = `
-        SELECT id FROM ${this.tableName} 
-        WHERE counselor_profile_id = ? AND customer_email = ?
-        LIMIT 1
-      `;
-      const [rows] = await this.pool.execute(query, [counselor_profile_id, customer_email]);
-      return rows.length > 0;
+      const result = await this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('id')
+        .from(this.tableName)
+        .where({
+          counselor_profile_id: counselor_profile_id,
+          customer_email: customer_email
+        })
+        .first();
+      
+      return !!result;
     } catch (error) {
-      console.error('Error checking if email already sent:', error);
+      logger.error('Error checking if email already sent:', error);
       throw error;
     }
   }
 
   async recordEmailSent(data) {
     try {
-      const query = `
-        INSERT INTO ${this.tableName} 
-        (counselor_profile_id, customer_email, customer_name, service, appointment_date)
-        VALUES (?, ?, ?, ?, ?)
-      `;
-      const [result] = await this.pool.execute(query, [
-        data.counselor_profile_id,
-        data.customer_email,
-        data.customer_name,
-        data.service,
-        data.appointment_date
-      ]);
-      return result.insertId;
+      const result = await this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from(this.tableName)
+        .insert({
+          counselor_profile_id: data.counselor_profile_id,
+          customer_email: data.customer_email,
+          customer_name: data.customer_name,
+          service: data.service,
+          appointment_date: data.appointment_date
+        });
+      
+      return result[0];
     } catch (error) {
-      console.error('Error recording email sent:', error);
+      logger.error('Error recording email sent:', error);
       throw error;
     }
   }
 
   async getEmailHistory(counselor_profile_id, limit = 10) {
     try {
-      const query = `
-        SELECT * FROM ${this.tableName} 
-        WHERE counselor_profile_id = ?
-        ORDER BY sent_at DESC
-        LIMIT ?
-      `;
-      const [rows] = await this.pool.execute(query, [counselor_profile_id, limit]);
-      return rows;
+      const result = await this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('*')
+        .from(this.tableName)
+        .where('counselor_profile_id', counselor_profile_id)
+        .orderBy('sent_at', 'desc')
+        .limit(limit);
+      
+      return result;
     } catch (error) {
-      console.error('Error getting email history:', error);
+      logger.error('Error getting email history:', error);
       throw error;
     }
   }
