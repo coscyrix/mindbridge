@@ -201,6 +201,13 @@ export default class User {
         const usrPro = await this.common.getUserProfileByUserId(
           checkEmail[0].user_id,
         );
+        
+        // Check if user has role_id = 1 and prevent login
+        if (usrPro[0].role_id === 1) {
+          logger.warn('User with role_id = 1 is not allowed to login');
+          return { message: 'Access denied. This account type is not allowed to login.', error: -1 };
+        }
+        
         var usr = {
           user_profile_id: usrPro[0].user_profile_id,
           user_first_name: usrPro[0].user_first_name,

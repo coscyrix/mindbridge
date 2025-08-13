@@ -123,7 +123,13 @@ export default class SessionController {
   async getSessionTodayAndTomorrow(req, res) {
     const data = req.query;
 
-    if (!data.role_id || !data.counselor_id) {
+    if (!data.role_id) {
+      res.status(400).json({ message: 'Missing mandatory fields' });
+      return;
+    }
+
+    // For non-admin roles (role_id !== 4), counselor_id is required
+    if (Number(data.role_id) !== 4 && !data.counselor_id) {
       res.status(400).json({ message: 'Missing mandatory fields' });
       return;
     }

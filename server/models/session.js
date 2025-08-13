@@ -165,14 +165,16 @@ export default class Session {
 
   async putSessionById(data) {
     try {
+      console.log('data', data);
       // Check if session is ongoing
       const checkSessionIfOngoing = await this.checkSessionONGOING(
         data.session_id,
       );
 
       if (!data.invoice_nbr) {
-        if (data.role_id != 4) {
+        if (data.role_id != 4 && data.role_id != 3) {
           if (checkSessionIfOngoing.rec.length > 0) {
+            console.log('checkSessionIfOngoing', checkSessionIfOngoing);
             logger.error('Session is ongoing');
             return { message: 'Session is ongoing', error: -1 };
           }
@@ -592,15 +594,18 @@ export default class Session {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
         .where('intake_date_formatted', formattedCurrentDate)
-        .andWhere('counselor_id', data.counselor_id)
         .andWhere('thrpy_status', 'ONGOING');
 
-      if (data.counselor_id && data.role_id === 2) {
+      // Apply role-based filtering
+      if (data.role_id === 2 && data.counselor_id) {
         query.andWhere('counselor_id', data.counselor_id);
-      } else if (data.counselor_id && data.role_id === 3 && data.tenant_id) {
+      } else if (data.role_id === 3 && data.tenant_id) {
         query.andWhere('tenant_id', data.tenant_id);
-      } else if (data.counselor_id && data.role_id === 4) {
-        // No additional filtering needed for admin role
+      } else if (data.role_id === 4) {
+        // No additional filtering needed for admin role - show all sessions
+      } else if (data.counselor_id) {
+        // Default case: filter by counselor_id if provided
+        query.andWhere('counselor_id', data.counselor_id);
       }
       const recToday = await query;
 
@@ -613,15 +618,18 @@ export default class Session {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
         .where('intake_date_formatted', formattedTomorrowDate)
-        .andWhere('counselor_id', data.counselor_id)
         .andWhere('thrpy_status', 'ONGOING');
 
-      if (data.counselor_id && data.role_id === 2) {
-        query.andWhere('counselor_id', data.counselor_id);
-      } else if (data.counselor_id && data.role_id === 3 && data.tenant_id) {
-        query.andWhere('tenant_id', data.tenant_id);
-      } else if (data.counselor_id && data.role_id === 4) {
-        // No additional filtering needed for admin role
+      // Apply role-based filtering for tomorrow's sessions
+      if (data.role_id === 2 && data.counselor_id) {
+        query2.andWhere('counselor_id', data.counselor_id);
+      } else if (data.role_id === 3 && data.tenant_id) {
+        query2.andWhere('tenant_id', data.tenant_id);
+      } else if (data.role_id === 4) {
+        // No additional filtering needed for admin role - show all sessions
+      } else if (data.counselor_id) {
+        // Default case: filter by counselor_id if provided
+        query2.andWhere('counselor_id', data.counselor_id);
       }
       const recTomorrow = await query2;
 

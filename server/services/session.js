@@ -103,7 +103,7 @@ export default class SessionService {
   //////////////////////////////////////////
 
   async getSessionTodayAndTomorrow(data) {
-    if (Number(data.role_id) === 3) {
+    if (Number(data.role_id) === 3 && data.counselor_id) {
       const tenantId = await this.common.getUserTenantId({
         user_profile_id: data.counselor_id,
       });
