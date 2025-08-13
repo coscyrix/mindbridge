@@ -15,7 +15,6 @@ import { useReferenceContext } from "../../context/ReferenceContext";
 import Skeleton from "@mui/material/Skeleton";
 import ApiConfig from "../../config/apiConfig";
 
-
 function ClientSession() {
   const [showFlyout, setShowFlyout] = useState(false);
   const [activeData, setActiveData] = useState();
@@ -36,7 +35,8 @@ function ClientSession() {
     { id: 0, label: "Current Session", value: "currentSession" },
     { id: 1, label: "All Sessions", value: "allSessions" },
   ];
-
+  const [counselorConfiguration, setCounselorConfiguration] = useState(null);
+  const [managerSplitDetails, setManagerSplitDetails] = useState(null);
   const handleFilterData = () => {
     console.log("handleFilterData has been called");
   };
@@ -46,14 +46,14 @@ function ClientSession() {
       setSessionsLoading(true);
       let response;
       if (userObj?.role_id === 3) {
-        if(counselorId== "allCounselors"){
+        if (counselorId == "allCounselors") {
           response = await CommonServices.getSessionsByCounselor({
-            role_id:3,
-            tenant_id:userObj?.tenant?.tenant_generated_id
-          })
+            role_id: 3,
+            tenant_id: userObj?.tenant_id,
+          });
         }
         // Always fetch with role_id: 3 for role 3 users
-        else{
+        else {
           response = await CommonServices.getSessionsByCounselor({
             role_id: 3,
             counselor_id: counselorId,
@@ -99,25 +99,30 @@ function ClientSession() {
           (client) =>
             client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
         );
-        
+
         const counselorOptions = allCounselors?.map((item) => ({
           label: item?.user_first_name + " " + item?.user_last_name,
           value: item?.user_profile_id,
+          tenant_id: item?.tenant_id,
         }));
-        setCounselors([{ label: "All counselors", value: "allCounselors" }, ...counselorOptions]);
+        setCounselors([
+          { label: "All counselors", value: "allCounselors" },
+          ...counselorOptions,
+        ]);
       }
     } catch (error) {
       console.log("Error fetching clients", error);
     }
   };
-
+  const [selectTenantId, setSelectTenantId] = useState(null);
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
+    const tenant_id = data?.tenant_id;
+    setSelectTenantId(tenant_id);
     setSelectCounselor(counselorId);
     fetchSessions(counselorId);
     getInvoice(counselorId);
   };
-  
 
   const handleClickOutside = (e) => {
     if (
@@ -198,7 +203,7 @@ function ClientSession() {
   };
 
   const getInvoice = async (counselorIdParam) => {
-    setSummaryLoading(true); 
+    setSummaryLoading(true);
     try {
       let response;
       if (userObj?.role_id === 2) {
@@ -206,7 +211,7 @@ function ClientSession() {
           `/invoice/multi?counselor_id=${userObj?.user_profile_id}&role_id=${userObj?.role_id}`
         );
       } else {
-        let url = `/invoice/multi?role_id=${userObj?.role_id}`;
+        let url = `/invoice/multi?role_id=${userObj?.role_id}&tenant_id=${userObj?.tenant_id}`;
         if (counselorIdParam && counselorIdParam !== "allCounselors") {
           url += `&counselor_id=${counselorIdParam}`;
         }
@@ -217,11 +222,10 @@ function ClientSession() {
       }
     } catch (error) {
       console.log(":: Invoice.getInvoice()", error);
-    }finally{
-      setSummaryLoading(false); 
+    } finally {
+      setSummaryLoading(false);
     }
   };
-  
 
   useEffect(() => {
     window.addEventListener("mousedown", handleClickOutside);
@@ -239,20 +243,20 @@ function ClientSession() {
     getInvoice();
   }, [userObj]);
 
-   const [isHomeworkUpload, setHomeWorkUpload] = useState(false);
+  const [isHomeworkUpload, setHomeWorkUpload] = useState(false);
   const fetchHomeWorkUploadStatus = async () => {
     // Skip API call for admin users (role_id === 4)
     if (userObj?.role_id === 4) {
       return;
     }
-    
+
     try {
       const response = await api.get(
         `${ApiConfig.homeworkUpload.fetchHomeworkUploadStatus}?tenant_id=${userObj?.tenant?.tenant_id}&feature_name=homework_upload_enabled`
       );
       console.log(response);
       if (response?.status == 200) {
-        console.log(response?.data[0]?.feature_value);
+        // console.log(response?.data[0]?.feature_value);
         setHomeWorkUpload(response?.data[0]?.feature_value);
         toast.success(response.data?.message);
       }
@@ -263,6 +267,31 @@ function ClientSession() {
   useEffect(() => {
     fetchHomeWorkUploadStatus();
   }, []);
+  const fetchAllSplit = async () => {
+    try {
+      console.log(selectCounselor);
+      const tenant_id =
+        userObj?.role_id === 2 ? userObj?.tenant_id : selectTenantId;
+      console.log(tenant_id);
+      const response = await api.get(
+        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}` // this is to be changed using 1 for dummy data
+      );
+      if (response.status == 200) {
+        console.log(response);
+        setCounselorConfiguration(
+          response?.data?.data?.counselor_specific_configurations
+        );
+        setManagerSplitDetails(response?.data?.data?.default_configuration);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
+  };
+  useEffect(() => {
+    if (userObj.role_id === 2) {
+      fetchAllSplit();
+    }
+  }, [selectCounselor]);
 
   return (
     <ClientSessionWrapper>
@@ -333,7 +362,7 @@ function ClientSession() {
               value={
                 summaryLoading ? (
                   <Skeleton width={120} height={40} />
-                ) : (
+                ) : userObj?.role_id === 4 ? (
                   `$${
                     summaryData
                       ? Number(summaryData?.sum_session_counselor_amt).toFixed(
@@ -341,9 +370,74 @@ function ClientSession() {
                         ) || 0
                       : 0
                   }`
+                ) : userObj?.role_id === 2 ? (
+                  (() => {
+                    const match = counselorConfiguration?.find(
+                      (item) =>
+                        item?.counselor_info?.email?.toLowerCase() ===
+                        userObj?.counselor_profile?.email?.toLowerCase()
+                    );
+
+                    const total = summaryData
+                      ? Number(summaryData?.sum_session_counselor_amt)
+                      : 0;
+                    if (match?.counselor_share_percentage) {
+                      const percentageAmount =
+                        (total * match.counselor_share_percentage) / 100;
+                      return `$${percentageAmount.toFixed(2)}`;
+                    }
+                    return "$0.00";
+                  })()
+                ) : (
+                  `$${
+                    summaryData
+                      ? Number(summaryData?.sum_session_tenant_amt).toFixed(
+                          2
+                        ) || 0
+                      : 0
+                  }`
                 )
               }
             />
+            {userObj?.role_id === 2 && (
+              <CustomTab
+                heading={"Detail breakdown"}
+                value={(() => {
+                  const match = counselorConfiguration?.find(
+                    (item) =>
+                      item?.counselor_info?.email?.toLowerCase() ===
+                      userObj?.counselor_profile?.email?.toLowerCase()
+                  );
+
+                  const total = summaryData
+                    ? Number(summaryData?.sum_session_counselor_amt) || 0
+                    : 0;
+
+                  const counselorShare = match?.counselor_share_percentage
+                    ? `$${(
+                        (total * match.counselor_share_percentage) /
+                        100
+                      ).toFixed(2)} (${match.counselor_share_percentage}%)`
+                    : "$0.00";
+
+                  const managerShare = match?.tenant_share_percentage
+                    ? `$${(
+                        (total * match.tenant_share_percentage) /
+                        100
+                      ).toFixed(2)} (${match.tenant_share_percentage}%)`
+                    : "$0.00";
+
+                  return (
+                    <>
+                      Total ${total.toFixed(2)} <br />
+                      Counselor Share: {counselorShare} <br />
+                      Manager Share: {managerShare}
+                    </>
+                  );
+                })()}
+              />
+            )}
+
             <CustomTab
               heading={"Total Amount to Vapendama for a Month:"}
               value={

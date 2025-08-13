@@ -81,7 +81,7 @@ function SessionHistory() {
         });
       } else {
         response = await CommonServices.getSessionsByCounselor({
-          role_id: 767565,
+          role_id: userObj?.role_id,
         });
       }
 

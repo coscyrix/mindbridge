@@ -45,8 +45,9 @@ const FeeSplitManagement = () => {
   ];
   const fetchAllSplit = async () => {
     try {
+      const tenant_id = userObj.tenant_id;
       const response = await api.get(
-        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${1}` // this is to be changed using 1 for dummy data
+        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}` // this is to be changed using 1 for dummy data
       );
       if (response.status == 200) {
         setCounselorConfiguration(
@@ -58,9 +59,9 @@ const FeeSplitManagement = () => {
       toast.error(error?.response?.data?.message);
     }
   };
-  const handleFilterData = (tab)=>{
-    return
-  }
+  const handleFilterData = (tab) => {
+    return;
+  };
   useEffect(() => {
     fetchAllSplit();
   }, []);

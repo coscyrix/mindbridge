@@ -39,7 +39,7 @@ const FeeSplitForm = ({
       let payload = {
         tenant_share_percentage: data?.tenant_share,
         counselor_share_percentage: data?.counselor_share,
-        tenant_id: 1, //userObj?.tenant?.tenant_id,
+        tenant_id:  userObj?.tenant?.tenant_id,
         is_fee_split_enabled: true,
         ...(is_counselor_update && {
           counselor_user_id: share_percentage?.counselor_info?.user_id,

@@ -123,7 +123,10 @@ function AssessmentResults({ assessmentResultsData }) {
         ? setLoading("consentData")
         : row?.form_cde == "ATTENDENCE"
         ? setLoading("attendanceData")
+        : row?.form_cde == "GAS"
+        ? setLoading("graphData")
         : setLoading("graphData");
+
       setShowReportDetails(true);
       setSmartGoalsData([]);
       setIpfData([]);
@@ -152,7 +155,46 @@ function AssessmentResults({ assessmentResultsData }) {
           setGraphDataHeading(
             `Attendence Details of ${row.client_first_name} ${row.client_last_name}`
           );
-        } else {
+        } else if (row.form_cde == "GAS") {
+          if (row.form_cde == "GAS") {
+            const responses = data[0]?.feedback_json?.responses || [];
+
+            setGraphDataHeading("Goal Attainment Scaling Results");
+
+            // Prepare labels and tooltips
+            const questionLabels = responses.map((r) => {
+              const q = r.question || "Untitled";
+              return q.length > 30 ? q.slice(0, 30) + "…" : q; // truncate for display
+            });
+
+            const scores = responses.map((r) => ({ value: r.score ?? 0 }));
+
+            // Attach full question to each data point for tooltip
+            const seriesWithTooltip = [
+              {
+                name: "Score",
+                type: "bar",
+                data: scores.map((s, i) => ({
+                  ...s,
+                  tooltipLabel: responses[i].question, // full question for tooltip
+                })),
+                itemStyle: { color: "#6fd0ef" },
+                label: {
+                  show: true,
+                  position: "top",
+                  fontSize: 12,
+                  color: "#333",
+                  formatter: (params) => params.value,
+                },
+              },
+            ];
+
+            setXAxisLabels(questionLabels);
+            setSeriesData(seriesWithTooltip);
+          }
+          
+        }
+         else {
           setXAxisLabels(data.map((item) => item.session_dte));
           const formattedFormName =
             row.form_cde === "GAD-7"
@@ -246,7 +288,6 @@ function AssessmentResults({ assessmentResultsData }) {
 
   return (
     <AssessmentResultsContainer>
-  
       <CustomCard title="Homework And Assessment Tools Results">
         <CustomClientDetails
           tableData={{
@@ -283,6 +324,36 @@ function AssessmentResults({ assessmentResultsData }) {
             <AttendanceGraph
               attendanceData={attendanceData}
               loading={loading == "attendanceData"}
+            />
+          ) : formName == "GAS" ? (
+            <BarGraph
+              xAxisTitle="Questions"
+              yAxisTitle="Score"
+              xAxisLabels={xAxisLabels}
+              seriesData={seriesData}
+              loading={loading === "graphData"}
+              formName={formName}
+              customOptions={{
+                xAxis: {
+                  axisLabel: {
+                    rotate: -45, 
+                    color: "red",
+                    formatter: (value) =>
+                      value.length > 50 ? value.slice(0, 50) + "…" : value, 
+                    interval: 0, 
+                    tooltip: { show: true },
+                  },
+                },
+                tooltip: {
+                  trigger: "axis",
+                  formatter: (params) => {
+                    const data = params[0];
+                    const fullQuestion =
+                      responses[data.dataIndex]?.question || data.name;
+                    return `<b>${fullQuestion}</b><br/>Score: ${data.value}`;
+                  },
+                },
+              }}
             />
           ) : (
             <BarGraph

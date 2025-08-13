@@ -46,7 +46,7 @@ function Dashboard() {
       if ([3, 4].includes(role_id))
         response = await CommonServices.getReportsTableData({
           role_id,
-          counselor_id: user_profile_id,
+          // counselor_id: user_profile_id,
         });
       else
         response = await CommonServices.getReportsTableData({
@@ -68,7 +68,7 @@ function Dashboard() {
       if ([3, 4].includes(role_id))
         response = await CommonServices.getAssessmentResults({
           role_id,
-          counselor_id: user_profile_id,
+          // counselor_id: user_profile_id,
         });
       else
         response = await CommonServices.getAssessmentResults({

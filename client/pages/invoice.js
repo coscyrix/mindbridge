@@ -60,13 +60,15 @@ const Invoice = () => {
     }
   });
 
-  const managerOptions = Array.from(uniqueManagersMap.values());
-
+  const managerOptions = [
+    { label: "All Manager", value: "allManager", tenant_id: 0 },
+    ...Array.from(uniqueManagersMap.values()),
+  ];
   const [selectedManager, setSelectedManager] = useState(null);
   const [filteredCounselors, setFilteredCounselors] = useState([]);
   const handleSelectManager = (selected) => {
     setSelectedManager(selected);
-    //match 
+    //match
     const matchingCounselors = allCounselors?.filter(
       (c) => c.tenant_id === selected.tenant_id
     );
@@ -83,7 +85,8 @@ const Invoice = () => {
     const counselorOptions = Array.from(uniqueCounselorsMap.values());
     setCounselors(counselorOptions);
     setFilteredCounselors(matchingCounselors);
-
+    const tenant_id = selected?.tenant_id;
+    fetchFilteredInvoices({ startDate, endDate, tenant_id });
     const counselorId = selected?.value;
     setSelectCounselor(counselorId);
   };
@@ -111,11 +114,11 @@ const Invoice = () => {
       0,
       0,
       0
-    ); 
-    const timeUntilNextMonth = nextMonth.getTime() - now.getTime(); 
+    );
+    const timeUntilNextMonth = nextMonth.getTime() - now.getTime();
 
     const timeout = setTimeout(() => {
-      setDefaultDates(); 
+      setDefaultDates();
       fetchFilteredInvoices({
         counselorId: selectCounselor,
         startDate: formatDate(
@@ -129,7 +132,6 @@ const Invoice = () => {
 
     return () => clearTimeout(timeout);
   }, [selectCounselor, user, roleId]);
-  
 
   const handleAddInvoiceNumber = (row) => {
     setOpen(true);
@@ -359,7 +361,16 @@ const Invoice = () => {
       setLoading("tableData");
       const params = new URLSearchParams();
       params.append("role_id", Number(roleId));
-
+      if (startDate) params.append("start_dte", startDate);
+      if (endDate) params.append("end_dte", endDate);
+      if (tenant_id || tenant_id !== undefined) {
+        if (tenant_id) params.append("tenant_id", tenant_id);
+        const response = await api.get(`/invoice/multi?${params}`);
+        if (response?.status === 200) {
+          setInvoices(response?.data?.rec);
+          setInvoiceTableData(response?.data?.rec?.rec_list);
+        }
+      }
       // Only append counselor_id if it's not "allCounselors"
       if (counselorId && counselorId !== "allCounselors") {
         params.append("counselor_id", counselorId);
@@ -367,11 +378,7 @@ const Invoice = () => {
         // If role is counselor (2), always send their own ID
         params.append("counselor_id", user?.user_profile_id);
       }
-
-      if (startDate) params.append("start_dte", startDate);
-      if (endDate) params.append("end_dte", endDate);
       // if (tenant_id) params.append("tenant_id", tenant_id);
-
       const response = await api.get(`/invoice/multi?${params}`);
       if (response?.status === 200) {
         setInvoices(response?.data?.rec);
@@ -586,21 +593,13 @@ const Invoice = () => {
                   : 0
               }`}
             />
-            {invoices?.summary?.sum_session_tenant_amt && (
-              <CustomTab
-                heading={"Total Amount to Tenant for a Month:"}
-                value={`$${
-                  invoices
-                    ? Number(invoices?.summary?.sum_session_tenant_amt).toFixed(2)
-                    : 0
-                }`}
-              />
-            )}
             <CustomTab
               heading={"Total Amount of Units:"}
               value={invoices?.summary?.sum_session_system_units || 0}
             />
-            <CustomTab heading="Service Fees" lines={SERVICE_FEE_INFO} />
+            {roleId != 4 && (
+              <CustomTab heading="Service Fees" lines={SERVICE_FEE_INFO} />
+            )}
           </div>
           <div className="search-container">
             <div className="search-and-select">
