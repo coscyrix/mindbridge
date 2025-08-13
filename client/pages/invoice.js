@@ -586,6 +586,16 @@ const Invoice = () => {
                   : 0
               }`}
             />
+            {invoices?.summary?.sum_session_tenant_amt && (
+              <CustomTab
+                heading={"Total Amount to Tenant for a Month:"}
+                value={`$${
+                  invoices
+                    ? Number(invoices?.summary?.sum_session_tenant_amt).toFixed(2)
+                    : 0
+                }`}
+              />
+            )}
             <CustomTab
               heading={"Total Amount of Units:"}
               value={invoices?.summary?.sum_session_system_units || 0}

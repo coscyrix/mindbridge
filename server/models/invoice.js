@@ -2,10 +2,15 @@
 
 import DBconn from '../config/db.config.js';
 import knex from 'knex';
+import FeeSplitManagement from './feeSplitManagement.js';
 
 const db = knex(DBconn.dbConn.development);
 
 export default class Invoice {
+  constructor() {
+    this.feeSplitManagement = new FeeSplitManagement();
+  }
+
   //////////////////////////////////////////
 
   async postInvoice(data) {
@@ -204,6 +209,56 @@ export default class Invoice {
       let totalPrice = 0;
       let totalCounselor = 0;
       let totalSystem = 0;
+      let totalTenant = 0;
+
+      // Check if we need to calculate tenant_amount (role_id=3 and tenant_id present)
+      const shouldCalculateTenantAmount = data.role_id === 3 && data.tenant_id;
+
+
+
+      if (shouldCalculateTenantAmount) {
+        // Group sessions by counselor to calculate tenant_amount based on fee splits
+        const sessionsByCounselor = {};
+        
+        rec.forEach((item) => {
+          const counselorId = item.counselor_id;
+          if (!sessionsByCounselor[counselorId]) {
+            sessionsByCounselor[counselorId] = [];
+          }
+          sessionsByCounselor[counselorId].push(item);
+        });
+
+        // Calculate tenant_amount for each counselor based on their fee split
+        for (const [counselorId, sessions] of Object.entries(sessionsByCounselor)) {
+          // Get the user_id from user_profile table using counselor_id
+          const userMapping = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('user_profile')
+            .where('user_profile_id', counselorId)
+            .select('user_id')
+            .first();
+
+          if (!userMapping) {
+            console.log(`No user mapping found for counselor_id ${counselorId}`);
+            continue;
+          }
+
+          // Get fee split configuration for this counselor using user_id
+          const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(data.tenant_id, userMapping.user_id);
+          
+          let counselorTotalAmount = 0;
+          sessions.forEach((session) => {
+            counselorTotalAmount += parseFloat(session.session_price) || 0;
+          });
+
+          // Calculate tenant_amount based on fee split percentage
+          // Only calculate if fee split is enabled and tenant share percentage > 0
+          if (feeSplitConfig.is_fee_split_enabled && feeSplitConfig.tenant_share_percentage > 0) {
+            const tenantAmount = (counselorTotalAmount * feeSplitConfig.tenant_share_percentage) / 100;
+            totalTenant += tenantAmount;
+          }
+        }
+      }
 
       rec.forEach((item) => {
         totalPrice += parseFloat(item.session_price) || 0;
@@ -218,6 +273,11 @@ export default class Invoice {
         sum_session_system_units: rec.length,
       };
 
+      // Add tenant_amount to summary if calculated
+      if (shouldCalculateTenantAmount) {
+        summary.sum_session_tenant_amt = totalTenant.toFixed(4);
+      }
+
       return {
         message: 'Requested invoice returned',
         rec: {
@@ -226,6 +286,7 @@ export default class Invoice {
         },
       };
     } catch (error) {
+      console.log(error);
       return { message: 'Error getting invoice', error: -1 };
     }
   }

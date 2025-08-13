@@ -25,6 +25,7 @@ export default class Report {
           'form_id',
           'form_cde',
           'thrpy_req_id',
+          'tenant_id',
           db.raw('MAX(updated_at) as date_sent'),
           db.raw(`
               COALESCE(
@@ -44,12 +45,21 @@ export default class Report {
           'client_id',
           'counselor_id',
           'thrpy_req_id',
+          'tenant_id',
         ])
         .orderBy('date_sent', 'desc');
 
       if (data.role_id === 2) {
         if (data.counselor_id) {
           query.where('counselor_id', data.counselor_id);
+          
+          // Get tenant_id for the counselor and filter by it
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            query.where('tenant_id', Number(tenantId[0].tenant_id));
+          }
         }
 
         if (data.client_id) {
@@ -67,6 +77,20 @@ export default class Report {
           user_profile_id: data.counselor_id,
         });
         query.where('tenant_id', Number(tenantId[0].tenant_id));
+      }
+
+      // Handle other role_ids (like role_id === 4) - always include tenant_id when counselor_id is provided
+      if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        if (tenantId && !tenantId.error && tenantId.length > 0) {
+          query.where('tenant_id', Number(tenantId[0].tenant_id));
+        } else {
+          // If we can't get tenant_id for the counselor, return an error
+          return { message: 'Invalid counselor_id or counselor not found', error: -1 };
+        }
+        query.where('counselor_id', data.counselor_id);
       }
 
       const rec = await query;
@@ -91,6 +115,7 @@ export default class Report {
           'client_first_name',
           'client_last_name',
           'counselor_id',
+          'tenant_id',
           db.raw('intake_date as due_date'),
           db.raw('service_name as report_name'),
           db.raw(`
@@ -109,6 +134,14 @@ export default class Report {
       if (data.role_id === 2) {
         if (data.counselor_id) {
           query.andWhere('counselor_id', data.counselor_id);
+          
+          // Get tenant_id for the counselor and filter by it
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            query.where('tenant_id', Number(tenantId[0].tenant_id));
+          }
         }
 
         if (data.client_id) {
@@ -134,6 +167,28 @@ export default class Report {
           user_profile_id: data.counselor_id,
         });
         query.where('tenant_id', Number(tenantId[0].tenant_id));
+        if (data.start_date) {
+          query.andWhere('intake_date', '>=', data.start_date);
+        }
+
+        if (data.end_date) {
+          query.andWhere('intake_date', '<=', data.end_date);
+        }
+      }
+
+      // Handle other role_ids (like role_id === 4) - always include tenant_id when counselor_id is provided
+      if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        if (tenantId && !tenantId.error && tenantId.length > 0) {
+          query.where('tenant_id', Number(tenantId[0].tenant_id));
+        } else {
+          // If we can't get tenant_id for the counselor, return an error
+          return { message: 'Invalid counselor_id or counselor not found', error: -1 };
+        }
+        query.where('counselor_id', data.counselor_id);
+        
         if (data.start_date) {
           query.andWhere('intake_date', '>=', data.start_date);
         }
@@ -175,6 +230,7 @@ export default class Report {
           'client_first_name',
           'client_last_name',
           'counselor_id',
+          'tenant_id',
           db.raw(`
             (SELECT COUNT(*) 
              FROM JSON_TABLE(
@@ -222,6 +278,14 @@ export default class Report {
       if (data.role_id === 2) {
         if (data.counselor_id) {
           query.where('counselor_id', data.counselor_id);
+          
+          // Get tenant_id for the counselor and filter by it
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            query.where('tenant_id', Number(tenantId[0].tenant_id));
+          }
         }
 
         if (data.client_id) {
@@ -245,6 +309,28 @@ export default class Report {
           user_profile_id: data.counselor_id,
         });
         query.where('tenant_id', Number(tenantId[0].tenant_id));
+        if (data.start_date) {
+          query.andWhere('intake_date', '>=', data.start_date);
+        }
+
+        if (data.end_date) {
+          query.andWhere('intake_date', '<=', data.end_date);
+        }
+      }
+
+      // Handle other role_ids (like role_id === 4) - always include tenant_id when counselor_id is provided
+      if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        if (tenantId && !tenantId.error && tenantId.length > 0) {
+          query.where('tenant_id', Number(tenantId[0].tenant_id));
+        } else {
+          // If we can't get tenant_id for the counselor, return an error
+          return { message: 'Invalid counselor_id or counselor not found', error: -1 };
+        }
+        query.where('counselor_id', data.counselor_id);
+        
         if (data.start_date) {
           query.andWhere('intake_date', '>=', data.start_date);
         }

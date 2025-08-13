@@ -288,6 +288,7 @@ export default class FeeSplitManagement {
       
       if (config.error) {
         return {
+          is_fee_split_enabled: false,
           tenant_share_percentage: 0,
           counselor_share_percentage: 100
         };
@@ -295,20 +296,33 @@ export default class FeeSplitManagement {
 
       // If counselor_user_id is provided, return counselor-specific configuration
       if (counselor_user_id) {
-        return {
-          tenant_share_percentage: config.counselor_specific_configurations.find(c => c.counselor_user_id === counselor_user_id).tenant_share_percentage,
-          counselor_share_percentage: config.counselor_specific_configurations.find(c => c.counselor_user_id === counselor_user_id).counselor_share_percentage
-        };
+        const counselorConfig = config.counselor_specific_configurations.find(c => c.counselor_user_id === counselor_user_id);
+        if (counselorConfig) {
+          return {
+            is_fee_split_enabled: counselorConfig.is_fee_split_enabled,
+            tenant_share_percentage: counselorConfig.tenant_share_percentage,
+            counselor_share_percentage: counselorConfig.counselor_share_percentage
+          };
+        } else {
+          // Fall back to default configuration if no counselor-specific config exists
+          return {
+            is_fee_split_enabled: config.default_configuration.is_fee_split_enabled,
+            tenant_share_percentage: config.default_configuration.tenant_share_percentage,
+            counselor_share_percentage: config.default_configuration.counselor_share_percentage
+          };
+        }
       }
 
       // Otherwise return default configuration
       return {
+        is_fee_split_enabled: config.default_configuration.is_fee_split_enabled,
         tenant_share_percentage: config.default_configuration.tenant_share_percentage,
         counselor_share_percentage: config.default_configuration.counselor_share_percentage
       };
     } catch (error) {
       logger.error('Error getting fee split percentages:', error);
       return {
+        is_fee_split_enabled: false,
         tenant_share_percentage: 0,
         counselor_share_percentage: 100
       };
