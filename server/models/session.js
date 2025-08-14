@@ -632,11 +632,11 @@ export default class Session {
         .andWhere('thrpy_status', 'ONGOING');
 
       // Apply role-based filtering for tomorrow's sessions
-      if (data.role_id === 2 && data.counselor_id) {
+      if (data.role_id == 2 && data.counselor_id) {
         query2.andWhere('counselor_id', data.counselor_id);
-      } else if (data.role_id === 3 && data.tenant_id) {
+      } else if (data.role_id == 3 && data.tenant_id) {
         query2.andWhere('tenant_id', data.tenant_id);
-      } else if (data.role_id === 4) {
+      } else if (data.role_id == 4) {
         // No additional filtering needed for admin role - show all sessions
       } else if (data.counselor_id) {
         // Default case: filter by counselor_id if provided
