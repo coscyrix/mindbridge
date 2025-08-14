@@ -14,7 +14,7 @@ import SignatureField from "../../../SignatureCanvas";
 import ApiConfig from "../../../../config/apiConfig";
 import FormHeader from "../../../FormsHeader";
 
-const ConsentForm = ({ initialData, loader }) => {
+const ConsentForm = ({ tenant_ID = "", initialData, loader }) => {
   const signaturePadRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [consentBody, setConsentBody] = useState(null);
@@ -23,6 +23,7 @@ const ConsentForm = ({ initialData, loader }) => {
       client_name: "",
       date: moment().format("DD/MM/YYYY"),
       signature: null,
+      acknowledged: false,
     },
   });
 
@@ -91,7 +92,12 @@ const ConsentForm = ({ initialData, loader }) => {
 
   const getConsentBody = async () => {
     try {
-      const { tenant_id } = router.query;
+      let tenant_id;
+      if (router.pathname === "/dashboard") {
+        tenant_id = tenant_ID;
+      } else {
+        tenant_id=router.query.tenant_id;
+      }
       const result = await api.get(
         `${ApiConfig.consentFormSubmittion.consentForm}?tenant_id=${tenant_id}`
       );
@@ -269,6 +275,34 @@ const ConsentForm = ({ initialData, loader }) => {
                     initialData={initialData}
                   />
                 </div>
+                <Controller
+                  name="acknowledged"
+                  control={control}
+                  rules={{
+                    required: "You must acknowledge before submitting",
+                  }}
+                  render={({ field, fieldState }) => (
+                    <div>
+                      <label className="acknowledgement-container">
+                        <input
+                          type="checkbox"
+                          {...field}
+                          checked={field.value || false}
+                          className="acknowledgement-checkbox"
+                        />
+                        <span className="acknowledgement-label">
+                          I have read, understood, and agree to the terms
+                          outlined in this consent form.
+                        </span>
+                      </label>
+                      {fieldState.error && (
+                        <div className="acknowledgement-error">
+                          {fieldState.error.message}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                />
               </div>
 
               {!initialData && (

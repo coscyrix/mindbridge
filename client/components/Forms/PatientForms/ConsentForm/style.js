@@ -106,8 +106,59 @@ export const ConsentFormContainer = styled.div`
 
     input {
       padding: 5px;
-      width: 100%;
+      // width: 100%;
       max-width: 300px;
     }
+  }
+  .acknowledgement-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+  }
+
+  .acknowledgement-container:hover {
+    border-color: #bbb;
+  }
+  .acknowledgement-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #999;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+  }
+  .acknowledgement-checkbox:checked {
+    background: #1976d2;
+    border-color: #1976d2;
+  }
+
+  .acknowledgement-checkbox:checked::after {
+    content: "✓";
+    position: absolute;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    top: 1px;
+    left: 4px;
+  }
+  .acknowledgement-label {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.4;
+  }
+  .acknowledgement-error {
+    font-size: 12px;
+    color: #d32f2f;
+    margin-top: 6px;
   }
 `;

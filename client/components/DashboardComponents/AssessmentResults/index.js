@@ -21,7 +21,7 @@ function AssessmentResults({ assessmentResultsData }) {
   const [consentFormData, setConsentFormData] = useState([]);
   const [graphDataHeading, setGraphDataHeading] = useState("");
   const [attendanceData, setAttendanceData] = useState([]);
-
+  const [tenant_id, setTenant_Id] = useState(null);
   const keyNameArr = [
     {
       formName: "gad",
@@ -113,6 +113,10 @@ function AssessmentResults({ assessmentResultsData }) {
   ];
 
   const handleTreatmentTools = async (row) => {
+    console.log(row);
+    if (row.form_cde === "CONSENT") {
+      setTenant_Id(row.tenant_id);
+    }
     try {
       setFormName(row.form_cde);
       row.form_cde == "SMART-GOAL"
@@ -192,9 +196,7 @@ function AssessmentResults({ assessmentResultsData }) {
             setXAxisLabels(questionLabels);
             setSeriesData(seriesWithTooltip);
           }
-          
-        }
-         else {
+        } else {
           setXAxisLabels(data.map((item) => item.session_dte));
           const formattedFormName =
             row.form_cde === "GAD-7"
@@ -317,6 +319,7 @@ function AssessmentResults({ assessmentResultsData }) {
             <IpfGraph ipfData={ipfData} loading={loading == "ipfData"} />
           ) : formName == "CONSENT" ? (
             <ConsentForm
+              tenant_ID={tenant_id}
               initialData={consentFormData}
               loader={loading == "consentData"}
             />
@@ -336,11 +339,11 @@ function AssessmentResults({ assessmentResultsData }) {
               customOptions={{
                 xAxis: {
                   axisLabel: {
-                    rotate: -45, 
+                    rotate: -45,
                     color: "red",
                     formatter: (value) =>
-                      value.length > 50 ? value.slice(0, 50) + "…" : value, 
-                    interval: 0, 
+                      value.length > 50 ? value.slice(0, 50) + "…" : value,
+                    interval: 0,
                     tooltip: { show: true },
                   },
                 },

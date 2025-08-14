@@ -56,14 +56,19 @@ function CurrentSession() {
       if (counselorId && counselorId !== "allCounselors") {
         response = await CommonServices.getCurrentSessions({
           counselor_id: counselorId,
-          role_id: role_id === 3 ? 4 : role_id,
+          role_id: role_id,
         });
       } else {
-        // console.log(counselors, "counselors");
-        response = await CommonServices.getCurrentSessions({
+        const payload = {
           // counselor_id: counselorId,
-          role_id: role_id === 3 ? 4 : role_id,
-        });
+          role_id: role_id,
+        };
+        if (role_id != 4) {
+          payload.tenant_id = userObj?.tenant_id;
+        }
+
+        // console.log(counselors, "counselors");
+        response = await CommonServices.getCurrentSessions(payload);
       }
       if (response?.status === 200) {
         setTodaySession(response?.data?.session_today);
@@ -405,7 +410,7 @@ function CurrentSession() {
     setSelectedCounselor(data);
     const counselorId = data?.value;
     if (userData.role_id === 4 || userData.role_id === 3) {
-      getCurrentSessionData(counselorId, 4);
+      getCurrentSessionData(counselorId, userData?.role_id);
     } else {
       getCurrentSessionData(counselorId);
     }

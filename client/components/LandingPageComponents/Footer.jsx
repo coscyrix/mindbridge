@@ -44,10 +44,10 @@ const Footer = () => {
               <p className="contact-label">Email Id</p>
               <p className="contact-value">info@mindbridge.solutions</p>
             </div>
-            <div className="contact-column">
+            {/* <div className="contact-column">
               <p className="contact-label">Phone Number</p>
               <p className="contact-value">+1 678 7889 789</p>
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="footer-cta-section">

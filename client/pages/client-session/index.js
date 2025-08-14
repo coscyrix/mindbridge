@@ -115,9 +115,11 @@ function ClientSession() {
     }
   };
   const [selectTenantId, setSelectTenantId] = useState(null);
+  const [userId, setUserId] = useState(null);
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
     const tenant_id = data?.tenant_id;
+    setUserId(data.user_id);
     setSelectTenantId(tenant_id);
     setSelectCounselor(counselorId);
     fetchSessions(counselorId);
@@ -210,6 +212,16 @@ function ClientSession() {
         response = await api.get(
           `/invoice/multi?counselor_id=${userObj?.user_profile_id}&role_id=${userObj?.role_id}`
         );
+      } else if (userObj.role_id === 4) {
+        let url = `/invoice/multi?role_id=${userObj?.role_id}`;
+        if (counselorIdParam && counselorIdParam !== "allCounselors") {
+          url += `&counselor_id=${counselorIdParam}`;
+        }
+        response = await api.get(url);
+
+        if (response.status === 200) {
+          setSummaryData(response?.data?.rec?.summary);
+        }
       } else {
         let url = `/invoice/multi?role_id=${userObj?.role_id}&tenant_id=${userObj?.tenant_id}`;
         if (counselorIdParam && counselorIdParam !== "allCounselors") {
@@ -268,6 +280,10 @@ function ClientSession() {
     fetchHomeWorkUploadStatus();
   }, []);
   const fetchAllSplit = async () => {
+    if (selectCounselor === "allCounselors" && userObj.role_id === 3) {
+      return;
+    }
+
     try {
       console.log(selectCounselor);
       const tenant_id =
@@ -288,7 +304,7 @@ function ClientSession() {
     }
   };
   useEffect(() => {
-    if (userObj.role_id === 2) {
+    if (userObj.role_id === 2 || userObj.role_id == 3) {
       fetchAllSplit();
     }
   }, [selectCounselor]);
@@ -388,7 +404,7 @@ function ClientSession() {
                     }
                     return "$0.00";
                   })()
-                ) : (
+                ) : selectCounselor === "allCounselors" ? (
                   `$${
                     summaryData
                       ? Number(summaryData?.sum_session_tenant_amt).toFixed(
@@ -396,7 +412,35 @@ function ClientSession() {
                         ) || 0
                       : 0
                   }`
+                ) : (
+                  (() => {
+                   const total = summaryData
+                     ? Number(summaryData?.sum_session_tenant_amt)
+                     : 0;
+                     const percentageAmount =
+                       (total * managerSplitDetails?.tenant_share_percentage) /
+                       100;
+                     return `$${percentageAmount.toFixed(2)}`;
+                    // const total = summaryData
+                    //   ? Number(summaryData?.sum_session_counselor_amt)
+                    //   : 0;
+                    // if (match?.tenant_share_percentage) {
+                    //   const percentageAmount =
+                    //     (total * match.tenant_share_percentage) / 100;
+                    //   return `$${percentageAmount.toFixed(2)}`;
+                    // }
+                    return "$0.00";
+                  })()
                 )
+                // (
+                //   `$${
+                //     summaryData
+                //       ? Number(summaryData?.sum_session_tenant_amt).toFixed(
+                //           2
+                //         ) || 0
+                //       : 0
+                //   }`
+                // )
               }
             />
             {userObj?.role_id === 2 && (
@@ -478,7 +522,8 @@ function ClientSession() {
         }
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
-        counselors={counselors}
+        counselor={counselors}
+
         handleCreate={handleShowAddClientSession}
         onRowClicked={handleEdit}
         loading={sessionsLoading}

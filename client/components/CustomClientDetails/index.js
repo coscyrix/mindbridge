@@ -43,22 +43,80 @@ function CustomClientDetails({
   isHomeworkUpload,
   setHomeWorkUpload,
   session,
+  counselor,
   ...props
 }) {
   const [currentPage, setCurrentPage] = useState(0);
   const { userObj } = useReferenceContext();
   const { allCounselors } = useReferenceContext();
-  const dropdownAdjustedCounselors =
-    allCounselors?.map((counselor) => ({
-      label: counselor.user_first_name + " " + counselor.user_last_name,
-      value: counselor.user_profile_id,
-      tenant_id: counselor.tenant_id,
-    })) || [];
 
-  const counselors = [
+  // const dropdownAdjustedCounselors =
+  //   allCounselors?.map((counselor) => ({
+  //     label: counselor.user_first_name + " " + counselor.user_last_name,
+  //     value: counselor.user_profile_id,
+  //     tenant_id: counselor.tenant_id,
+  //   })) || [];
+
+  const [counselors, setCounselors] = useState([
     { label: "All counselors", value: "allCounselors" },
-    ...dropdownAdjustedCounselors,
+  ]);
+  const uniqueManagersMap = new Map();
+  const [allManager, setAllManagers] = useState(null);
+  const [selectedManager, setSelectedManager] = useState(null);
+  allManager?.forEach((user) => {
+    if (!uniqueManagersMap.has(user.user_id)) {
+      uniqueManagersMap.set(user.user_id, {
+        label: `${user.user_first_name} ${user.user_last_name}`,
+        value: user.user_id,
+        tenant_id: user.tenant_id,
+      });
+    }
+  });
+
+  const managerOptions = [
+    { label: "All Manager", value: "allManager", tenant_id: 0 },
+    ...Array.from(uniqueManagersMap.values()),
   ];
+  const fetchManagers = async () => {
+    try {
+      // setClientsLoading(true);
+      const response = await CommonServices.getClients();
+      if (response.status === 200) {
+        const { data } = response;
+        const filteredManagers = response?.data?.rec?.filter(
+          (manager) => manager.role_id === 3
+        );
+
+        setAllManagers(filteredManagers);
+      }
+    } catch (error) {
+      console.log("Error fetching clients", error);
+    } finally {
+      // setClientsLoading(false);
+    }
+  };
+  const handleSelectManager = (selected) => {
+    setSelectedManager(selected);
+    const matchingCounselors = allCounselors?.filter(
+      (c) => c.tenant_id === selected.tenant_id
+    );
+    const uniqueCounselorsMap = new Map();
+    matchingCounselors?.forEach((user) => {
+      if (!uniqueCounselorsMap.has(user.user_id)) {
+        uniqueCounselorsMap.set(user.user_id, {
+          label: `${user.user_first_name} ${user.user_last_name}`,
+          value: user.user_profile_id,
+          tenant_id: user.tenant_id,
+        });
+      }
+    });
+    const counselorOptions = Array.from(uniqueCounselorsMap.values());
+    setCounselors([...counselors, ...counselorOptions]);
+  };
+  useEffect(() => {
+    fetchManagers();
+  }, []);
+
   const [visibleColumns, setVisibleColumns] = useState(
     tableData?.columns?.map((col) => ({ ...col, omit: false }))
   );
@@ -79,7 +137,7 @@ function CustomClientDetails({
     if (!filterText || filterText.trim() === "") {
       return true;
     }
-    
+
     return Object.keys(row).some((columnKey) => {
       const value = row[columnKey];
 
@@ -174,8 +232,6 @@ function CustomClientDetails({
     currentPage * itemsPerPage,
     (currentPage + 1) * itemsPerPage
   );
-
-
 
   const handlePageChange = ({ selected }) => {
     setCurrentPage(selected);
@@ -333,13 +389,28 @@ function CustomClientDetails({
                       className="custom-select-container"
                     >
                       <CustomMultiSelect
-                        options={counselors}
+                        options={userObj.role_id === 4 ? counselors : counselor}
                         onChange={handleSelectCounselor}
                         isMulti={false}
                         placeholder="Select a counselor"
                       />
                     </div>
                   ) : null}
+                  {[4].includes(user?.role_id) &&
+                    router.pathname === "/client-session" && (
+                      <div
+                        key="counselor-select"
+                        className="custom-select-container"
+                      >
+                        <CustomMultiSelect
+                          options={managerOptions}
+                          onChange={handleSelectManager}
+                          isMulti={false}
+                          value={selectedManager}
+                          placeholder="Select a manager"
+                        />
+                      </div>
+                    )}
                   {router.pathname === "/services" &&
                   [4].includes(user?.role_id) ? (
                     <div
