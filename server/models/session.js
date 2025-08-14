@@ -608,6 +608,12 @@ export default class Session {
       } else if (data.role_id == 3 && data.tenant_id) {
         query.andWhere('tenant_id', data.tenant_id);
         console.log('Filtering by tenant_id:', data.tenant_id);
+        
+        // If counselor_id is provided, also filter by specific counselor
+        if (data.counselor_id) {
+          query.andWhere('counselor_id', data.counselor_id);
+          console.log('Also filtering by counselor_id:', data.counselor_id);
+        }
       } else if (data.role_id == 4) {
         // No additional filtering needed for admin role - show all sessions
         console.log('No filtering for admin role');
@@ -636,6 +642,11 @@ export default class Session {
         query2.andWhere('counselor_id', data.counselor_id);
       } else if (data.role_id == 3 && data.tenant_id) {
         query2.andWhere('tenant_id', data.tenant_id);
+        
+        // If counselor_id is provided, also filter by specific counselor
+        if (data.counselor_id) {
+          query2.andWhere('counselor_id', data.counselor_id);
+        }
       } else if (data.role_id == 4) {
         // No additional filtering needed for admin role - show all sessions
       } else if (data.counselor_id) {

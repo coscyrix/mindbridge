@@ -77,6 +77,11 @@ export default class Report {
           user_profile_id: data.counselor_id,
         });
         query.where('tenant_id', Number(tenantId[0].tenant_id));
+        
+        // If counselor_id is provided, also filter by specific counselor
+        if (data.counselor_id) {
+          query.where('counselor_id', data.counselor_id);
+        }
       }
 
       // Handle other role_ids (like role_id === 4) - always include tenant_id when counselor_id is provided
@@ -167,6 +172,12 @@ export default class Report {
           user_profile_id: data.counselor_id,
         });
         query.where('tenant_id', Number(tenantId[0].tenant_id));
+        
+        // If counselor_id is provided, also filter by specific counselor
+        if (data.counselor_id) {
+          query.where('counselor_id', data.counselor_id);
+        }
+        
         if (data.start_date) {
           query.andWhere('intake_date', '>=', data.start_date);
         }
@@ -275,7 +286,7 @@ export default class Report {
         .where('thrpy_status', 'ONGOING')
         .andWhere('status_yn', 'y');
 
-      if (data.role_id === 2) {
+      if (data.role_id == 2) {
         if (data.counselor_id) {
           query.where('counselor_id', data.counselor_id);
           
@@ -303,12 +314,18 @@ export default class Report {
         }
       }
 
-      if (data.role_id === 3) {
+      if (data.role_id == 3) {
         // If the user is a manager, filter by tenant_id
         const tenantId = await this.common.getUserTenantId({
           user_profile_id: data.counselor_id,
         });
         query.where('tenant_id', Number(tenantId[0].tenant_id));
+        
+        // If counselor_id is provided, also filter by specific counselor
+        if (data.counselor_id) {
+          query.where('counselor_id', data.counselor_id);
+        }
+        
         if (data.start_date) {
           query.andWhere('intake_date', '>=', data.start_date);
         }
