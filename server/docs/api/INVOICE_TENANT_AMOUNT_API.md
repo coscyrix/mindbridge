@@ -8,6 +8,9 @@ The Invoice API has been enhanced to include tenant amount calculation when `rol
 ### When Tenant Amount is Calculated
 - **Condition**: `role_id=3` AND `tenant_id` is provided in the request
 - **Purpose**: Calculate the tenant's share of session fees based on counselor-specific fee split percentages
+- **Scope**: 
+  - If `counselor_id` is provided: Calculate for that specific counselor only
+  - If no `counselor_id` is provided: Calculate for ALL counselors in the specified tenant
 
 ### Calculation Logic
 1. **Group Sessions by Counselor**: Sessions are grouped by counselor to apply individual fee split percentages
@@ -25,6 +28,8 @@ GET /api/invoice/multi
 - `role_id` (required): User role ID
 - `tenant_id` (required for tenant amount calculation): Tenant ID
 - `counselor_id` (optional): Specific counselor ID
+  - When `role_id=3` and `tenant_id` is provided without `counselor_id`, shows data for ALL counselors in that tenant
+  - When `counselor_id` is provided, shows data for that specific counselor only
 - `start_dte` (optional): Start date filter
 - `end_dte` (optional): End date filter
 - Other optional filters...

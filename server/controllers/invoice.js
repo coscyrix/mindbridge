@@ -73,7 +73,13 @@ export default class InvoiceController {
     }
 
     if (data.role_id == 3 && !data.counselor_id) {
-      data.tenant_id = req.decoded.tenant_id;
+      // If tenant_id is provided, show data for all counselors in that tenant
+      // If no tenant_id, use the decoded tenant_id
+      if (!data.tenant_id) {
+        data.tenant_id = req.decoded.tenant_id;
+      }
+      // When role_id=3 and tenant_id is provided, we want to show all counselors' data
+      // So we don't filter by specific counselor_id
     }
 
     if (data.role_id === 4 && !data.counselor_id) {

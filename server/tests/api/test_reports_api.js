@@ -161,6 +161,84 @@ describe('Invoice API', () => {
       }
     });
 
+    it('should show data for all counselors when role_id=3 and tenant_id is provided without counselor_id', async () => {
+      const response = await request(app)
+        .get('/api/invoice/multi')
+        .query({
+          role_id: 3,
+          tenant_id: 121
+        })
+        .expect(200);
+
+      expect(response.status).to.equal(200);
+      
+      // Verify that the response has the expected structure
+      expect(response.body).to.have.property('rec');
+      expect(response.body.rec).to.have.property('rec_list');
+      
+      // Verify that we get data from multiple counselors (if they exist)
+      const sessions = response.body.rec.rec_list;
+      if (sessions && sessions.length > 0) {
+        // Get unique counselor IDs from the sessions
+        const counselorIds = [...new Set(sessions.map(session => session.counselor_id))];
+        
+        // Should have data from the tenant (could be multiple counselors)
+        expect(counselorIds.length).to.be.at.least(1);
+        
+        // All sessions should belong to the specified tenant
+        sessions.forEach(session => {
+          expect(session.tenant_id).to.equal(121);
+        });
+      }
+    });
+  });
+
+  describe('GET /api/session/today', () => {
+    it('should show data for all counselors when role_id=3 and tenant_id is provided without counselor_id', async () => {
+      const response = await request(app)
+        .get('/api/session/today')
+        .query({
+          role_id: 3,
+          tenant_id: 121
+        })
+        .expect(200);
+
+      expect(response.status).to.equal(200);
+      
+      // Verify that the response has the expected structure
+      expect(response.body).to.have.property('session_today');
+      expect(response.body).to.have.property('session_tomorrow');
+      
+      // Verify that we get data from the tenant (could be multiple counselors)
+      const todaySessions = response.body.session_today;
+      const tomorrowSessions = response.body.session_tomorrow;
+      
+      if (todaySessions && todaySessions.length > 0) {
+        // All sessions should belong to the specified tenant
+        todaySessions.forEach(session => {
+          expect(session.tenant_id).to.equal(121);
+        });
+      }
+      
+      if (tomorrowSessions && tomorrowSessions.length > 0) {
+        // All sessions should belong to the specified tenant
+        tomorrowSessions.forEach(session => {
+          expect(session.tenant_id).to.equal(121);
+        });
+      }
+    });
+
+    it('should return 400 when role_id=3 and no tenant_id or counselor_id is provided', async () => {
+      const response = await request(app)
+        .get('/api/session/today')
+        .query({
+          role_id: 3
+        })
+        .expect(400);
+
+      expect(response.body.message).to.equal('Missing mandatory fields');
+    });
+
     it('should not include tenant_amount in summary when role_id is not 3', async () => {
       const response = await request(app)
         .get('/api/invoice/multi')

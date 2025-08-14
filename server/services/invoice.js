@@ -85,11 +85,15 @@ export default class InvoiceService {
 
     if (data.role_id === 3) {
       if (data.counselor_id && data.counselor_id !== 'allCounselors') {
+        // If specific counselor is provided, get their tenant_id
         const tenantId = await this.common.getUserTenantId({
           user_profile_id: data.counselor_id,
         });
         data.tenant_id = Number(tenantId[0].tenant_id);
       }
+      // If no counselor_id is provided but tenant_id is provided, 
+      // we want to show all counselors for that tenant
+      // The model will handle filtering by tenant_id only
     }
 
     console.log(

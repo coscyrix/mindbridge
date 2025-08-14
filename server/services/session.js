@@ -104,11 +104,15 @@ export default class SessionService {
 
   async getSessionTodayAndTomorrow(data) {
     if (Number(data.role_id) === 3 && data.counselor_id) {
+      // If specific counselor is provided, get their tenant_id
       const tenantId = await this.common.getUserTenantId({
         user_profile_id: data.counselor_id,
       });
       data.tenant_id = Number(tenantId[0].tenant_id);
     }
+    // If role_id=3 and tenant_id is provided without counselor_id, 
+    // we want to show all counselors for that tenant
+    // The model will handle filtering by tenant_id only
 
     const schema = joi.object({
       counselor_id: joi.number().optional(),
