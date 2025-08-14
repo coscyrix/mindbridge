@@ -597,15 +597,26 @@ export default class Session {
         .andWhere('thrpy_status', 'ONGOING');
 
       // Apply role-based filtering
-      if (data.role_id === 2 && data.counselor_id) {
+      console.log('Session filtering - role_id:', data.role_id, 'tenant_id:', data.tenant_id, 'counselor_id:', data.counselor_id);
+      
+      console.log('data',{data});
+      
+
+      if (data.role_id == 2 && data.counselor_id) {
         query.andWhere('counselor_id', data.counselor_id);
-      } else if (data.role_id === 3 && data.tenant_id) {
+        console.log('Filtering by counselor_id:', data.counselor_id);
+      } else if (data.role_id == 3 && data.tenant_id) {
         query.andWhere('tenant_id', data.tenant_id);
-      } else if (data.role_id === 4) {
+        console.log('Filtering by tenant_id:', data.tenant_id);
+      } else if (data.role_id == 4) {
         // No additional filtering needed for admin role - show all sessions
+        console.log('No filtering for admin role');
       } else if (data.counselor_id) {
         // Default case: filter by counselor_id if provided
         query.andWhere('counselor_id', data.counselor_id);
+        console.log('Default filtering by counselor_id:', data.counselor_id);
+      } else {
+        console.log('No filtering applied');
       }
       const recToday = await query;
 

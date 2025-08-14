@@ -103,16 +103,28 @@ export default class SessionService {
   //////////////////////////////////////////
 
   async getSessionTodayAndTomorrow(data) {
+    console.log('SessionService - Input data:', data);
+    
     if (Number(data.role_id) === 3 && data.counselor_id) {
       // If specific counselor is provided, get their tenant_id
       const tenantId = await this.common.getUserTenantId({
         user_profile_id: data.counselor_id,
       });
       data.tenant_id = Number(tenantId[0].tenant_id);
+      console.log('SessionService - Set tenant_id from counselor:', data.tenant_id);
     }
+
+    if (Number(data.role_id) === 3 && data.tenant_id) {
+      // If tenant_id is provided, we want to show all counselors for that tenant
+      // The model will handle filtering by tenant_id only
+      console.log('SessionService - Set tenant_id from tenant:', data.tenant_id);
+    }
+
     // If role_id=3 and tenant_id is provided without counselor_id, 
     // we want to show all counselors for that tenant
     // The model will handle filtering by tenant_id only
+    
+    console.log('SessionService - Final data before model call:', data);
 
     const schema = joi.object({
       counselor_id: joi.number().optional(),
