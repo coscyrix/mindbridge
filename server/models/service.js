@@ -19,21 +19,21 @@ export default class Service {
           logger.error(
             'svc_formula and nbr_of_sessions are required when svc_formula_typ is "d"',
           );
-          return {
-            message:
-              'svc_formula and nbr_of_sessions are required when svc_formula_typ is "d"',
-            error: -1,
-          };
+          // return {
+          //   message:
+          //     'svc_formula and nbr_of_sessions are required when svc_formula_typ is "d"',
+          //   error: -1,
+          // };
         }
         if (data.svc_formula.length !== data.nbr_of_sessions - 1) {
           logger.error(
             'Service formula must be one less than the number of sessions',
           );
-          return {
-            message:
-              'Service formula must be one less than the number of sessions',
-            error: -1,
-          };
+          // return {
+          //   message:
+          //     'Service formula must be one less than the number of sessions',
+          //   error: -1,
+          // };
         }
       } else if (data.svc_formula_typ === 's') {
         const isReport = data.service_name.toLowerCase().includes('report');
@@ -42,10 +42,10 @@ export default class Service {
         } else {
           if (data.svc_formula.length !== 0 && data.svc_formula.length !== 1) {
             logger.error('Report service formula must be one or zero');
-            return {
-              message: 'Report service formula must be one or zero',
-              error: -1,
-            };
+            // return {
+            //   message: 'Report service formula must be one or zero',
+            //   error: -1,
+            // };
           }
         }
       }
@@ -53,10 +53,10 @@ export default class Service {
       if (data.position && data.service_id) {
         if (data.position.length !== data.service_id.length) {
           logger.error('Position and service_id must be the same length');
-          return {
-            message: 'Position and service_id must be the same length',
-            error: -1,
-          };
+          // return {
+          //   message: 'Position and service_id must be the same length',
+          //   error: -1,
+          // };
         }
       }
 
@@ -154,7 +154,7 @@ export default class Service {
         return { message: 'Error creating service', error: -1 };
       }
 
-      return { message: 'Service created successfully' };
+      return { message: 'Service created successfully', service: postSvc };
     } catch (error) {
       logger.error(error);
 
