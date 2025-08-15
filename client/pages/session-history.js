@@ -67,6 +67,8 @@ function SessionHistory() {
       let response;
 
       const isAdmin = userObj?.role_id === 4;
+      const isManager = userObj?.role_id === 3;
+      const isCounselor = userObj?.role_id === 2;
       const isSpecificCounselor =
         counselorId && counselorId !== "allCounselors";
 
@@ -78,6 +80,12 @@ function SessionHistory() {
       } else if (isAdmin && isSpecificCounselor) {
         response = await CommonServices.getSessionsByCounselor({
           counselor_id: counselorId,
+        });
+      } else if (isCounselor) {
+        console.log(userObj);
+        response = await CommonServices.getSessionsByCounselor({
+          role_id: 2,
+          counselor_id: userObj?.user_profile_id,
         });
       } else {
         response = await CommonServices.getSessionsByCounselor({

@@ -30,7 +30,7 @@ function Services() {
   const fetchServices = async () => {
     try {
       setServicesDataLoading(true);
-      const response = await CommonServices.getServices();
+      const response = await CommonServices.getServices(tenant_id);
 
       if (response.status === 200) {
         const { data } = response;

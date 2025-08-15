@@ -160,42 +160,73 @@ function AssessmentResults({ assessmentResultsData }) {
             `Attendence Details of ${row.client_first_name} ${row.client_last_name}`
           );
         } else if (row.form_cde == "GAS") {
-          if (row.form_cde == "GAS") {
-            const responses = data[0]?.feedback_json?.responses || [];
+          const gasEntries = data || [];
+          const gasLabels = {
+            "-2": "Much Worse (-2)",
+            "-1": "Worse (-1)",
+            0: "Expected (0)",
+            1: "Better (+1)",
+            2: "Much Better (+2)",
+          };
 
-            setGraphDataHeading("Goal Attainment Scaling Results");
+          const yAxisConfig = {
+            type: "value",
+            min: -2,
+            max: 2,
+            interval: 1,
+            axisLabel: {
+              formatter: (value) => gasLabels[value] || value,
+            },
+          };
 
-            // Prepare labels and tooltips
-            const questionLabels = responses.map((r) => {
-              const q = r.question || "Untitled";
-              return q.length > 30 ? q.slice(0, 30) + "…" : q; // truncate for display
-            });
+          setGraphDataHeading(
+            `Goal Attainment Scaling (GAS) - ${gasEntries[0]?.feedback_json?.goal?.replace(
+              /_/g,
+              " "
+            )}`
+          );
+          const lastWeeks = gasEntries.slice(-7);
 
-            const scores = responses.map((r) => ({ value: r.score ?? 0 }));
+          const xLabels = lastWeeks.map((_, i) => `Week ${i + 1}`);
 
-            // Attach full question to each data point for tooltip
-            const seriesWithTooltip = [
-              {
-                name: "Score",
-                type: "bar",
-                data: scores.map((s, i) => ({
-                  ...s,
-                  tooltipLabel: responses[i].question, // full question for tooltip
-                })),
-                itemStyle: { color: "#6fd0ef" },
-                label: {
-                  show: true,
-                  position: "top",
-                  fontSize: 12,
-                  color: "#333",
-                  formatter: (params) => params.value,
-                },
-              },
-            ];
+          const weekAverages = lastWeeks.map((entry) => {
+            const scores =
+              entry.feedback_json?.responses?.map((r) => r.score ?? 0) || [];
+            return scores.length > 0
+              ? scores.reduce((a, b) => a + b, 0) / scores.length
+              : 0;
+          });
 
-            setXAxisLabels(questionLabels);
-            setSeriesData(seriesWithTooltip);
-          }
+      const seriesWithTooltip = [
+        {
+          name: "Client Progress",
+          type: "line",
+          smooth: true,
+          data: weekAverages.map((avg, i) => ({
+            value: Number(avg.toFixed(2)),
+            tooltipLabel: `Week ${i + 1}`,
+          })),
+          lineStyle: { color: "#007bff", width: 2 },
+          itemStyle: { color: "#007bff" },
+          label: {
+            show: true,
+            position: "top",
+            fontSize: 12,
+            color: "#333",
+            formatter: (params) =>
+              gasLabels[Math.round(params.value)] || params.value,
+          },
+        },
+        {
+          name: "Expected Goal",
+          type: "line",
+          data: Array(lastWeeks.length).fill(0),
+          lineStyle: { color: "gray", type: "dashed" },
+          symbol: "none",
+        },
+      ];
+          setXAxisLabels(xLabels);
+          setSeriesData(seriesWithTooltip);
         } else {
           setXAxisLabels(data.map((item) => item.session_dte));
           const formattedFormName =

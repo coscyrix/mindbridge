@@ -27,6 +27,7 @@ function ClientSession() {
     { label: "All counselors", value: "allCounselors" },
   ]);
   const [selectCounselor, setSelectCounselor] = useState("allCounselors");
+  const [selectCounselorEmail, setSelectCounselorEmail] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   const { userObj } = useReferenceContext();
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -104,6 +105,7 @@ function ClientSession() {
           label: item?.user_first_name + " " + item?.user_last_name,
           value: item?.user_profile_id,
           tenant_id: item?.tenant_id,
+          email: item?.email,
         }));
         setCounselors([
           { label: "All counselors", value: "allCounselors" },
@@ -122,6 +124,7 @@ function ClientSession() {
     setUserId(data.user_id);
     setSelectTenantId(tenant_id);
     setSelectCounselor(counselorId);
+    setSelectCounselorEmail(data.email);
     fetchSessions(counselorId);
     getInvoice(counselorId);
   };
@@ -414,13 +417,20 @@ function ClientSession() {
                   }`
                 ) : (
                   (() => {
-                   const total = summaryData
-                     ? Number(summaryData?.sum_session_tenant_amt)
-                     : 0;
-                     const percentageAmount =
-                       (total * managerSplitDetails?.tenant_share_percentage) /
-                       100;
-                     return `$${percentageAmount.toFixed(2)}`;
+                    const match = counselorConfiguration?.find(
+                      (item) =>
+                        item?.counselor_info?.email?.toLowerCase() ===
+                        selectCounselorEmail?.toLowerCase()
+                    );
+
+                    const total = summaryData
+                      ? Number(summaryData?.sum_session_counselor_amt)
+                      : 0;
+                    if (match?.tenant_share_percentage) {
+                      const percentageAmount =
+                        (total * match.tenant_share_percentage) / 100;
+                      return `$${percentageAmount.toFixed(2)}`;
+                    }
                     // const total = summaryData
                     //   ? Number(summaryData?.sum_session_counselor_amt)
                     //   : 0;
@@ -443,6 +453,44 @@ function ClientSession() {
                 // )
               }
             />
+            {userObj?.role_id === 3 && selectCounselor != "allCounselors" && (
+              <CustomTab
+                heading={"Detail breakdown"}
+                value={(() => {
+                  const match = counselorConfiguration?.find(
+                    (item) =>
+                      item?.counselor_info?.email?.toLowerCase() ===
+                      selectCounselorEmail?.toLowerCase()
+                  );
+
+                  const total = summaryData
+                    ? Number(summaryData?.sum_session_counselor_amt) || 0
+                    : 0;
+
+                  const counselorShare = match?.counselor_share_percentage
+                    ? `$${(
+                        (total * match.counselor_share_percentage) /
+                        100
+                      ).toFixed(2)} (${match.counselor_share_percentage}%)`
+                    : "$0.00";
+
+                  const managerShare = match?.tenant_share_percentage
+                    ? `$${(
+                        (total * match.tenant_share_percentage) /
+                        100
+                      ).toFixed(2)} (${match.tenant_share_percentage}%)`
+                    : "$0.00";
+
+                  return (
+                    <>
+                      Total ${total.toFixed(2)} <br />
+                      Counselor Share: {counselorShare} <br />
+                      Manager Share: {managerShare}
+                    </>
+                  );
+                })()}
+              />
+            )}
             {userObj?.role_id === 2 && (
               <CustomTab
                 heading={"Detail breakdown"}
@@ -523,7 +571,6 @@ function ClientSession() {
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
         counselor={counselors}
-
         handleCreate={handleShowAddClientSession}
         onRowClicked={handleEdit}
         loading={sessionsLoading}

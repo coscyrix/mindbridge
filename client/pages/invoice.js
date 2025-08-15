@@ -25,8 +25,10 @@ import CustomPagination from "../components/CustomPagination";
 import { DOWNLOAD_OPTIONS, SERVICE_FEE_INFO } from "../utils/constants";
 import moment from "moment";
 import { useReferenceContext } from "../context/ReferenceContext";
+import ApiConfig from "../config/apiConfig";
 
 const Invoice = () => {
+  const { userObj } = useReferenceContext();
   const [invoices, setInvoices] = useState(null);
   const [roleId, setRoleId] = useState(null);
   const [user, setUser] = useState(null);
@@ -38,7 +40,7 @@ const Invoice = () => {
   const [filterText, setFilterText] = useState(null);
   const [loading, setLoading] = useState("tableData");
   const [counselors, setCounselors] = useState([
-    { label: "All counselors", value: "allCounselors" },
+    { label: "All counselors", value: "allCounselors", email: "" },
   ]);
   const [invoiceData, setInvoiceData] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -49,7 +51,9 @@ const Invoice = () => {
   const [allManagers, setAllManagers] = useState(null);
   const { allCounselors } = useReferenceContext();
   const uniqueManagersMap = new Map();
-
+  const [selectCounselorEmail, setSelectCounselorEmail] = useState(null);
+  const [counselorConfiguration, setCounselorConfiguration] = useState(null);
+  const [managerSplitDetails, setManagerSplitDetails] = useState(null);
   allManagers?.forEach((user) => {
     if (!uniqueManagersMap.has(user.user_id)) {
       uniqueManagersMap.set(user.user_id, {
@@ -89,6 +93,26 @@ const Invoice = () => {
     fetchFilteredInvoices({ startDate, endDate, tenant_id });
     const counselorId = selected?.value;
     setSelectCounselor(counselorId);
+  };
+  const fetchAllSplit = async () => {
+    if (selectCounselor === "allCounselors" && userObj.role_id === 3) {
+      return;
+    }
+    try {
+      const tenant_id = userObj?.tenant_id;
+      const response = await api.get(
+        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}` // this is to be changed using 1 for dummy data
+      );
+      if (response.status == 200) {
+        console.log(response);
+        setCounselorConfiguration(
+          response?.data?.data?.counselor_specific_configurations
+        );
+        setManagerSplitDetails(response?.data?.data?.default_configuration);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
   };
   const formatDate = (date) => date.toLocaleDateString("en-CA");
 
@@ -341,6 +365,7 @@ const Invoice = () => {
           return {
             label: item?.user_first_name + " " + item?.user_last_name,
             value: item?.user_profile_id,
+            email: item?.email,
           };
         });
         setCounselors([...counselors, ...counselorOptions]);
@@ -394,6 +419,7 @@ const Invoice = () => {
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
     setSelectCounselor(counselorId);
+    setSelectCounselorEmail(data.email);
     const counselor = allCounselors.find((c) => c.user_id === counselorId);
     const tenant_id = counselor?.tenant_id;
     fetchFilteredInvoices({ counselorId, startDate, endDate, tenant_id });
@@ -547,10 +573,13 @@ const Invoice = () => {
       subHeadings: columnTitles,
     });
   }
-
+  useEffect(() => {
+    fetchAllSplit();
+  }, [selectCounselorEmail]);
   if (roleId === null) {
     return null;
   }
+
   return (
     <InvoiceContainer>
       <div className="top-section-wrapper">
@@ -577,14 +606,94 @@ const Invoice = () => {
             />
             <CustomTab
               heading={"Total Amount to Associate for a Month: "}
-              value={`$${
-                invoices
-                  ? Number(
-                      invoices?.summary?.sum_session_counselor_amt
-                    ).toFixed(2)
-                  : 0
-              }`}
+              value={
+                userObj?.role_id === 3
+                  ? selectCounselor === "allCounselors"
+                    ? `Admin fees: ${
+                        invoices?.summary?.system_pcnt
+                      }% Total_amount: ${Number(
+                        invoices?.summary?.sum_session_counselor_amt || 0
+                      ).toFixed(2)}`
+                    : (() => {
+                        const match = counselorConfiguration?.find(
+                          (item) =>
+                            item?.counselor_info?.email?.toLowerCase() ===
+                            selectCounselorEmail?.toLowerCase()
+                        );
+                        const total = invoices
+                          ? Number(invoices?.summary?.sum_session_counselor_amt)
+                          : 0;
+                        if (match?.tenant_share_percentage) {
+                          const percentageAmount =
+                            (total * match.tenant_share_percentage) / 100;
+                          return `$${percentageAmount.toFixed(2)}`;
+                        }
+                        return "$0.00";
+                      })()
+                  : selectedManager === null || selectedManager === "allManager"
+                  ? `$${
+                      invoices
+                        ? Number(invoices?.summary?.sum_session_price).toFixed(
+                            2
+                          )
+                        : "0.00"
+                    }`
+                  : `${(() => {
+                      // `Admin fee: ${invoices?.summary?.system_pcnt}%`
+                      const fee =
+                        (Number(invoices?.summary?.sum_session_price) *
+                          Number(invoices?.summary?.system_pcnt)) /
+                        100;
+                      const toreturn =
+                        `Admin fee:${invoices?.summary?.system_pcnt}% ` +
+                        fee.toFixed(2) +
+                        "$";
+                      return isNaN(fee)
+                        ? Number(
+                            invoices?.summary?.sum_session_counselor_amt || 0
+                          ).toFixed(2)
+                        : toreturn;
+                    })()}`
+              }
             />
+            {userObj?.role_id === 3 && selectCounselor != "allCounselors" && (
+              <CustomTab
+                heading={"Detail breakdown"}
+                value={(() => {
+                  const match = counselorConfiguration?.find(
+                    (item) =>
+                      item?.counselor_info?.email?.toLowerCase() ===
+                      selectCounselorEmail?.toLowerCase()
+                  );
+
+                  const total = invoices
+                    ? Number(invoices?.summary?.sum_session_counselor_amt) || 0
+                    : 0;
+
+                  const counselorShare = match?.counselor_share_percentage
+                    ? `$${(
+                        (total * match.counselor_share_percentage) /
+                        100
+                      ).toFixed(2)} (${match.counselor_share_percentage}%)`
+                    : "$0.00";
+
+                  const managerShare = match?.tenant_share_percentage
+                    ? `$${(
+                        (total * match.tenant_share_percentage) /
+                        100
+                      ).toFixed(2)} (${match.tenant_share_percentage}%)`
+                    : "$0.00";
+
+                  return (
+                    <>
+                      Total ${total.toFixed(2)} <br />
+                      Counselor Share: {counselorShare} <br />
+                      Manager Share: {managerShare}
+                    </>
+                  );
+                })()}
+              />
+            )}
             <CustomTab
               heading={"Total Amount to Vapendama for a Month:"}
               value={`$${
@@ -597,9 +706,13 @@ const Invoice = () => {
               heading={"Total Amount of Units:"}
               value={invoices?.summary?.sum_session_system_units || 0}
             />
-            {roleId != 4 && (
+            {/* {roleId === 3 && selectCounselor != "allCounselors" && <CustomTab heading="Service Fees" value={
+
+             } />} */}
+
+            {/* {roleId != 4 && (
               <CustomTab heading="Service Fees" lines={SERVICE_FEE_INFO} />
-            )}
+            )} */}
           </div>
           <div className="search-container">
             <div className="search-and-select">

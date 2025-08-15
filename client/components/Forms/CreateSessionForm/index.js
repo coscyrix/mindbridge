@@ -50,7 +50,8 @@ function CreateSessionForm({
   setHomeWorkUpload,
 }) {
   const methods = useForm();
-  const { servicesData, userObj } = useReferenceContext();
+  const { userObj } = useReferenceContext();
+  const [servicesData, setServicesData] = useState(null);
   const [formButton, setFormButton] = useState("Submit");
   const [editSessionModal, setEditSessionModal] = useState(false);
   const [showAdditionalService, setShowAdditionalService] = useState(false);
@@ -100,6 +101,25 @@ function CreateSessionForm({
     has_schedule: client.has_schedule,
     user_target_outcome: client.user_target_outcome,
   }));
+  const fetchServices = async () => {
+    try {
+      let tenant_id = userObj?.tenant?.tenant_generated_id;
+      const response = await api.get(`/service?tenant_id=${tenant_id}`);
+      if (response.status === 200) {
+        const { data } = response;
+        const serviceList = data?.rec || [];
+        setServicesData(serviceList);
+        // if (Array.isArray(allManagers) && allManagers.length > 0) {
+        //   combineManagersWithServices(serviceList, allManagers);
+        // }
+      }
+    } catch (error) {
+      console.log(error?.response?.data?.message);
+    }
+  };
+  useEffect(() => {
+    fetchServices();
+  }, []);
   const infoTooltipContent =
     methods?.watch("client_first_name")?.user_target_outcome;
 
