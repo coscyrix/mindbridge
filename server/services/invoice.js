@@ -80,7 +80,8 @@ export default class InvoiceService {
     data.role_id = Number(data.role_id);
 
     if (data.role_id === 4) {
-      // delete data.counselor_id;
+      // For role_id=4, if tenant_id is provided, we'll include system_pcnt in response
+      // If no tenant_id is provided, no additional processing is needed
     }
 
     if (data.role_id === 3) {

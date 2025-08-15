@@ -88,6 +88,12 @@ export default class InvoiceController {
         .send({ message: 'Counselor ID is required for that specific role' });
     }
 
+    // Handle role_id=4 with tenant selection
+    if (data.role_id === 4 && data.tenant_id) {
+      // If tenant is selected for role_id=4, we'll include system_pcnt in the response
+      // The model will handle fetching system_pcnt from ref_fees table
+    }
+
 
     console.log('data----->',data);
   

@@ -213,6 +213,9 @@ export default class Invoice {
 
       // Check if we need to calculate tenant_amount (role_id=3 and tenant_id present)
       const shouldCalculateTenantAmount = data.role_id === 3 && data.tenant_id;
+      
+      // Check if we need to include system_pcnt for role_id=4 with tenant selection
+      const shouldIncludeSystemPcnt = data.role_id === 4 && data.tenant_id;
 
 
 
@@ -276,6 +279,24 @@ export default class Invoice {
       // Add tenant_amount to summary if calculated
       if (shouldCalculateTenantAmount) {
         summary.sum_session_tenant_amt = totalTenant.toFixed(4);
+      }
+
+      // Add system_pcnt to summary if role_id=4 and tenant is selected
+      if (shouldIncludeSystemPcnt) {
+        try {
+          const refFees = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('ref_fees')
+            .where('tenant_id', data.tenant_id)
+            .select('system_pcnt')
+            .first();
+
+          if (refFees && refFees.system_pcnt !== null && refFees.system_pcnt !== undefined) {
+            summary.system_pcnt = parseFloat(refFees.system_pcnt);
+          }
+        } catch (error) {
+          console.error('Error fetching system_pcnt from ref_fees:', error);
+        }
       }
 
       return {
