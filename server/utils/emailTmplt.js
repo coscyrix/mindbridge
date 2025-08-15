@@ -490,17 +490,64 @@ export const homeworkEmailAttachment = (
   homework_title,
   fileBuffer,
   fileName,
+  clientName = null,
 ) => {
+  const greeting = clientName ? `Hello ${capitalizeFirstLetter(clientName)},` : 'Hello,';
+  
   return {
     to: email,
-    subject: `${homework_title} Assignment`,
+    subject: `Homework Assignment: ${homework_title}`,
     html: `
-        <p>Hello,</p>
-        <p>Please find attached the homework assignment for your review and completion.</p>
-        <p>Thank you,</p>
-        <p>The Counselling Team Member</p>
-        ${EMAIL_DISCLAIMER}
-      `,
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Homework Assignment</h1>
+        </div>
+        
+        <div style="padding: 30px; background: #f9f9f9; border-radius: 0 0 8px 8px; border: 1px solid #ddd;">
+          <p style="font-size: 16px; margin-bottom: 20px;">${greeting}</p>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            I hope this message finds you well. As part of your ongoing therapy journey, I've prepared a homework assignment titled <strong>"${homework_title}"</strong> to support your progress and reinforce the skills we've been working on.
+          </p>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;">
+            <h3 style="color: #667eea; margin-top: 0;">📋 Assignment Details</h3>
+            <p style="margin-bottom: 15px;"><strong>Title:</strong> ${homework_title}</p>
+            <p style="margin-bottom: 15px;"><strong>File:</strong> ${fileName}</p>
+            <p style="margin-bottom: 0;"><strong>Instructions:</strong> Please review the attached document and complete the exercises as outlined. Take your time and be honest with your responses.</p>
+          </div>
+          
+          <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #2c5aa0; margin-top: 0;">💡 Tips for Success</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>Set aside dedicated time in a quiet, comfortable space</li>
+              <li>Be honest and authentic in your responses</li>
+              <li>Don't rush - take time to reflect on each question</li>
+              <li>Feel free to reach out if you have any questions</li>
+            </ul>
+          </div>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            This homework is designed to help you practice and integrate the therapeutic techniques we've discussed. Your engagement with these assignments plays a crucial role in your healing journey.
+          </p>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            Please complete this assignment before our next session so we can discuss your progress and address any challenges you may have encountered.
+          </p>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            If you have any questions about the assignment or need clarification on any part, please don't hesitate to reach out. I'm here to support you every step of the way.
+          </p>
+          
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <p style="margin-bottom: 10px; font-weight: bold; color: #667eea;">Warm regards,</p>
+            <p style="margin: 0; font-weight: bold;">Your Counselling Team</p>
+            <p style="margin: 5px 0; color: #666; font-size: 14px;">MindBridge</p>
+          </div>
+        </div>
+      </div>
+      ${EMAIL_DISCLAIMER}
+    `,
     attachments: [{ filename: fileName, content: fileBuffer }],
   };
 };

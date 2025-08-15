@@ -1,6 +1,7 @@
 import HomeworkService from '../services/homeworkService.js';
 import { homeworkEmailAttachment } from '../utils/emailTmplt.js';
 import SendEmail from '../middlewares/sendEmail.js';
+import Common from '../models/common.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -14,37 +15,28 @@ export default class HomeworkController {
       return;
     }
 
-    // Handle file upload if present
-    if (req.file) {
-      data.homework_filename = req.file.originalname;
-      data.homework_file_path = req.file.path; // Store the local file path
-      data.file_size = req.file.size;
-      data.file_type = req.file.mimetype;
-    } else {
-      data.homework_filename = '';
-      data.homework_file_path = '';
-      data.file_size = null;
-      data.file_type = null;
-    }
+    // Handle file upload (file is always present due to route validation)
+    data.homework_filename = req.file.originalname;
+    data.homework_file_path = req.file.path; // Store the local file path
+    data.file_size = req.file.size;
+    data.file_type = req.file.mimetype;
 
     const homework = new HomeworkService();
     const rec = await homework.createHomework(data);
 
     if (rec.error) {
-      // If homework creation failed and file was uploaded, delete the file
-      if (req.file && req.file.path) {
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (error) {
-          console.error('Error deleting file after failed homework creation:', error);
-        }
+      // If homework creation failed, delete the uploaded file
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (error) {
+        console.error('Error deleting file after failed homework creation:', error);
       }
       res.status(400).json(rec);
       return;
     }
 
     // Send email with the file attachment if email is provided
-    if (data.email && req.file) {
+    if (data.email) {
       try {
         // Get client name if session_id is provided
         let clientName = null;
@@ -78,9 +70,11 @@ export default class HomeworkController {
         );
         const sendEmail = new SendEmail();
         const homeworkEmail = await sendEmail.sendMail(emailTempl);
+        
+        console.log('Homework email sent successfully to:', data.email);
       } catch (error) {
         console.error('Error sending email with attachment:', error);
-        // Don't fail the request if email fails
+        // Don't fail the request if email fails, but log the error
       }
     }
 
