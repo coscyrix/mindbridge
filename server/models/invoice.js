@@ -214,8 +214,8 @@ export default class Invoice {
       // Check if we need to calculate tenant_amount (role_id=3 and tenant_id present)
       const shouldCalculateTenantAmount = data.role_id === 3 && data.tenant_id;
       
-      // Check if we need to include system_pcnt for role_id=4 with tenant selection
-      const shouldIncludeSystemPcnt = data.role_id === 4 && data.tenant_id;
+      // Check if we need to include system_pcnt for role_id=3 or role_id=4 with tenant selection
+      const shouldIncludeSystemPcnt = (data.role_id === 3 || data.role_id === 4) && data.tenant_id;
 
 
 
@@ -296,6 +296,46 @@ export default class Invoice {
           }
         } catch (error) {
           console.error('Error fetching system_pcnt from ref_fees:', error);
+        }
+      }
+
+      // Add fee_split_management keys if role_id=4 and counselor_id is selected
+      if (data.role_id === 4 && data.counselor_id && data.tenant_id) {
+        try {
+          // Get the user_id from user_profile table using counselor_id
+          const userMapping = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('user_profile')
+            .where('user_profile_id', data.counselor_id)
+            .select('user_id')
+            .first();
+
+          if (userMapping) {
+            // Get fee split configuration for this counselor
+            const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(data.tenant_id, userMapping.user_id);
+            
+            // Add fee split management keys to summary
+            summary.fee_split_management = {
+              is_fee_split_enabled: feeSplitConfig.is_fee_split_enabled,
+              tenant_share_percentage: feeSplitConfig.tenant_share_percentage,
+              counselor_share_percentage: feeSplitConfig.counselor_share_percentage
+            };
+          } else {
+            // If no user mapping found, return default configuration
+            summary.fee_split_management = {
+              is_fee_split_enabled: false,
+              tenant_share_percentage: 0,
+              counselor_share_percentage: 100
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching fee split configuration:', error);
+          // Return default configuration on error
+          summary.fee_split_management = {
+            is_fee_split_enabled: false,
+            tenant_share_percentage: 0,
+            counselor_share_percentage: 100
+          };
         }
       }
 
