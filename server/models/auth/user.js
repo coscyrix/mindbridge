@@ -271,9 +271,17 @@ export default class User {
           
           // Check if tenant has any services
           const service = new Service();
-          const servicesResult = await service.getServiceById({ tenant_id: usr.tenant_generated_id });
+          const servicesResult = await service.getServiceById({ tenant_id: usr.tenant.tenant_generated_id });
           usr.has_services = !servicesResult.error && servicesResult.rec && servicesResult.rec.length > 0;
           usr.services_count = servicesResult.rec ? servicesResult.rec.length : 0;
+          console.log('Services check result:', { has_services: usr.has_services, services_count: usr.services_count, tenant_id: usr.tenant.tenant_generated_id });
+          
+          // If there was an error checking services, default to false
+          if (servicesResult.error) {
+            console.log('Error checking services for tenant:', servicesResult.message);
+            usr.has_services = false;
+            usr.services_count = 0;
+          }
         }
       }
 
