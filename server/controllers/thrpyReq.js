@@ -41,6 +41,9 @@ export default class ThrpyReqController {
     const req_id = req.query.req_id;
     const role_id = req.query.role_id;
     const data = req.body;
+    if (!data.tenant_id) {
+      data.tenant_id = req.decoded.tenant_id;
+    }
     data.req_id = req_id;
     data.role_id = role_id;
     if (!data.req_id) {

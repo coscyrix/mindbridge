@@ -34,6 +34,21 @@ export default class ThrpyReq {
     this.emailTmplt = new EmailTmplt();
     this.common = new Common();
   }
+
+  // Helper function to calculate session amounts
+  calculateSessionAmounts(totalInvoice, refFees) {
+    const taxAmount = totalInvoice * (refFees.tax_pcnt / 100);
+    const systemAmount = (totalInvoice + taxAmount) * (refFees.system_pcnt / 100);
+    const counselorAmount = totalInvoice - taxAmount - systemAmount;
+    
+    return {
+      session_price: totalInvoice,
+      session_taxes: taxAmount,
+      session_system_amt: systemAmount,
+      session_counselor_amt: counselorAmount
+    };
+  }
+
   //////////////////////////////////////////
 
   async postThrpyReq(data) {
@@ -75,6 +90,10 @@ export default class ThrpyReq {
       const recClient = await this.userProfile.getUserProfileById({
         user_profile_id: data.client_id,
       });
+
+
+
+      console.log('recClient--------->', tenantId[0].tenant_id);
 
       if (!recClient || !recClient.rec || !recClient.rec[0]) {
         logger.error('Client profile not found');
@@ -132,7 +151,7 @@ export default class ThrpyReq {
 
       // Use the tenant ID for the next phase
 
-      const ref_fees = await this.common.getRefFeesByTenantId();
+      const ref_fees = await this.common.getRefFeesByTenantId(tenantId[0].tenant_id);
 
       if (!ref_fees) {
         logger.error('Error getting reference fees');
@@ -237,6 +256,7 @@ export default class ThrpyReq {
           const intakeDate = currentDate.toISOString().split('T')[0];
 
           // Prepare the session object
+          const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0]);
           const tmpSession = {
             thrpy_req_id: postThrpyReq[0],
             service_id: data.service_id,
@@ -246,18 +266,15 @@ export default class ThrpyReq {
             session_code: svc.service_code,
             session_description: svc.service_code,
             tenant_id: data.tenant_id,
-            session_price: Number(svc.total_invoice),
-            session_taxes:
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
-            session_counselor_amt:
-              (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-              Number(ref_fees[0].counselor_pcnt),
-            session_system_amt:
-              (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-              Number(ref_fees[0].system_pcnt),
+            ...sessionAmounts
           };
+
+          console.log('session_system_amt--------->1', {
+            total_invoice: Number(svc.total_invoice),
+            tax_pcnt: Number(ref_fees[0].tax_pcnt),
+            counselor_pcnt: Number(ref_fees[0].counselor_pcnt),
+            system_pcnt: Number(ref_fees[0].system_pcnt),
+          });
 
           // Handle reports based on svc_report_formula
           if (
@@ -304,6 +321,7 @@ export default class ThrpyReq {
         const dischargeDate = currentDate.toISOString().split('T')[0];
 
         // Prepare the discharge session object
+        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0]);
         const dischargeSession = {
           thrpy_req_id: postThrpyReq[0],
           service_id: drSvc.service_id,
@@ -314,18 +332,15 @@ export default class ThrpyReq {
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
           tenant_id: data.tenant_id,
-          session_price: Number(svc.total_invoice),
-          session_taxes:
-            Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
-          session_counselor_amt:
-            (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-            Number(ref_fees[0].counselor_pcnt),
-          session_system_amt:
-            (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-            Number(ref_fees[0].system_pcnt),
+          ...dischargeSessionAmounts
         };
+
+        console.log('session_system_amt--------->2', {
+          total_invoice: Number(svc.total_invoice),
+          tax_pcnt: Number(ref_fees[0].tax_pcnt),
+          counselor_pcnt: Number(ref_fees[0].counselor_pcnt),
+          system_pcnt: Number(ref_fees[0].system_pcnt),
+        });
 
         // Add the discharge session to the array
         tmpSessionObj.push(dischargeSession);
@@ -391,6 +406,7 @@ export default class ThrpyReq {
           const intakeDate = currentDate.toISOString().split('T')[0];
 
           // Prepare the session object
+          const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0]);
           const tmpSession = {
             thrpy_req_id: postThrpyReq[0],
             service_id: data.service_id,
@@ -400,18 +416,15 @@ export default class ThrpyReq {
             session_code: svc.service_code,
             session_description: svc.service_code,
             tenant_id: data.tenant_id,
-            session_price: Number(svc.total_invoice),
-            session_taxes:
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
-            session_counselor_amt:
-              (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-              Number(ref_fees[0].counselor_pcnt),
-            session_system_amt:
-              (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-              Number(ref_fees[0].system_pcnt),
+            ...sessionAmounts
           };
+
+          console.log('session_system_amt--------->3', {
+            total_invoice: Number(svc.total_invoice),
+            tax_pcnt: Number(ref_fees[0].tax_pcnt),
+            counselor_pcnt: Number(ref_fees[0].counselor_pcnt),
+            system_pcnt: Number(ref_fees[0].system_pcnt),
+          });
 
           // Handle reports based on svc_report_formula
           if (
@@ -455,6 +468,7 @@ export default class ThrpyReq {
         const dischargeDate = currentDate.toISOString().split('T')[0];
 
         // Prepare the discharge session object
+        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0]);
         const dischargeSession = {
           thrpy_req_id: postThrpyReq[0],
           service_id: drSvc.service_id,
@@ -465,18 +479,15 @@ export default class ThrpyReq {
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
           tenant_id: data.tenant_id,
-          session_price: Number(svc.total_invoice),
-          session_taxes:
-            Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
-          session_counselor_amt:
-            (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-            Number(ref_fees[0].counselor_pcnt),
-          session_system_amt:
-            (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-            Number(ref_fees[0].system_pcnt),
+          ...dischargeSessionAmounts
         };
+
+        console.log('session_system_amt--------->4', {
+          total_invoice: Number(svc.total_invoice),
+          tax_pcnt: Number(ref_fees[0].tax_pcnt),
+          counselor_pcnt: Number(ref_fees[0].counselor_pcnt),
+          system_pcnt: Number(ref_fees[0].system_pcnt),
+        });
 
         // Add the discharge session to the array
         tmpSessionObj.push(dischargeSession);

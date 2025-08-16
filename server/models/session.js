@@ -45,7 +45,7 @@ export default class Session {
       //   session_system_amt: data.session_system_amt,
       // };
       // console.log('data', data);
-      // console.log('tmpSession', tmpSession);
+      // console.log('tmpSession', tmpSession);      
 
       const postSession = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -119,8 +119,8 @@ export default class Session {
 
       const session_price = total_invoice;
       const session_taxes = total_invoice * (tax_pcnt / 100);
-      const session_counselor_amt = (total_invoice + session_taxes) * counselor_pcnt;
       const session_system_amt = (total_invoice + session_taxes) * system_pcnt;
+      const session_counselor_amt = total_invoice - session_taxes - session_system_amt;
 
       tmpSession = {
         thrpy_req_id: data.thrpy_req_id,
