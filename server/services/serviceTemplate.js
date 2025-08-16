@@ -250,32 +250,45 @@ export default class ServiceTemplateService {
     delete serviceData.created_at;
     delete serviceData.updated_at;
     
-    // Handle svc_formula properly - ensure it's copied from template
+    // Handle svc_formula properly - store as array directly (like svc_ids)
     if (template.svc_formula) {
-      // If svc_formula is already a string (JSON), keep it as is
-      if (typeof template.svc_formula === 'string') {
+      // If it's already an array, use it directly
+      if (Array.isArray(template.svc_formula)) {
         serviceData.svc_formula = template.svc_formula;
+      } else if (typeof template.svc_formula === 'string') {
+        // If it's a JSON string, parse it to array
+        try {
+          serviceData.svc_formula = JSON.parse(template.svc_formula);
+        } catch (error) {
+          console.log('Error parsing svc_formula string:', error);
+          serviceData.svc_formula = [];
+        }
       } else {
-        // If it's an array or object, stringify it
-        serviceData.svc_formula = JSON.stringify(template.svc_formula);
+        // If it's something else, default to empty array
+        serviceData.svc_formula = [];
       }
     }
     
-    // Handle svc_report_formula properly - it's a JSON field
+    // Handle svc_report_formula properly - store as object directly
     if (template.svc_report_formula) {
-      // If it's already a JSON string, keep it as is
-      if (typeof template.svc_report_formula === 'string') {
+      // If it's already an object, use it directly
+      if (typeof template.svc_report_formula === 'object' && !Array.isArray(template.svc_report_formula)) {
         serviceData.svc_report_formula = template.svc_report_formula;
+      } else if (typeof template.svc_report_formula === 'string') {
+        // If it's a JSON string, parse it to object
+        try {
+          serviceData.svc_report_formula = JSON.parse(template.svc_report_formula);
+        } catch (error) {
+          console.log('Error parsing svc_report_formula string:', error);
+          serviceData.svc_report_formula = { position: [], service_id: [] };
+        }
       } else {
-        // If it's an object/array, stringify it for JSON storage
-        serviceData.svc_report_formula = JSON.stringify(template.svc_report_formula);
+        // If it's something else, default to empty object
+        serviceData.svc_report_formula = { position: [], service_id: [] };
       }
     } else {
-      // Default empty JSON object if not provided (consistent with service model)
-      serviceData.svc_report_formula = JSON.stringify({
-        position: [],
-        service_id: []
-      });
+      // Default empty object if not provided
+      serviceData.svc_report_formula = { position: [], service_id: [] };
     }
     
     // Handle position and service_id fields if they exist in template
@@ -289,8 +302,8 @@ export default class ServiceTemplateService {
     // Ensure required fields for service
     if (!serviceData.nbr_of_sessions) serviceData.nbr_of_sessions = 1;
     if (!serviceData.svc_formula_typ) serviceData.svc_formula_typ = 's';
-    if (!serviceData.svc_formula) serviceData.svc_formula = JSON.stringify([7]);
-    if (!serviceData.svc_report_formula) serviceData.svc_report_formula = JSON.stringify({});
+    if (!serviceData.svc_formula) serviceData.svc_formula = [7];
+    if (!serviceData.svc_report_formula) serviceData.svc_report_formula = { position: [], service_id: [] };
     if (serviceData.is_report === undefined) serviceData.is_report = 0;
     if (serviceData.is_additional === undefined) serviceData.is_additional = 0;
     

@@ -118,7 +118,7 @@ export default class Session {
       const system_pcnt = Number(ref_fees[0].system_pcnt);
 
       const session_price = total_invoice;
-      const session_taxes = total_invoice * tax_pcnt;
+      const session_taxes = total_invoice * (tax_pcnt / 100);
       const session_counselor_amt = (total_invoice + session_taxes) * counselor_pcnt;
       const session_system_amt = (total_invoice + session_taxes) * system_pcnt;
 

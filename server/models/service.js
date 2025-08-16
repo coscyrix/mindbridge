@@ -315,6 +315,9 @@ export default class Service {
         .from('service')
         .where('status_yn', 1);
 
+        console.log('data', data);
+        
+
       if (data.service_id) {
         if (Array.isArray(data.service_id)) {
           query = query.whereIn('service_id', data.service_id);
