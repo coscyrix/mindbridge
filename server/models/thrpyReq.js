@@ -248,15 +248,15 @@ export default class ThrpyReq {
             tenant_id: data.tenant_id,
             session_price: Number(svc.total_invoice),
             session_taxes:
-              Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100),
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
             session_counselor_amt:
               (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100)) *
+                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
               Number(ref_fees[0].counselor_pcnt),
             session_system_amt:
               (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100)) *
-              Number(ref_fees[0].system_pcnt / 100),
+                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+              Number(ref_fees[0].system_pcnt),
           };
 
           // Handle reports based on svc_report_formula
@@ -316,15 +316,15 @@ export default class ThrpyReq {
           tenant_id: data.tenant_id,
           session_price: Number(svc.total_invoice),
           session_taxes:
-            Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100),
+            Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
           session_counselor_amt:
             (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100)) *
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
             Number(ref_fees[0].counselor_pcnt),
           session_system_amt:
             (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100)) *
-            Number(ref_fees[0].system_pcnt / 100),
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+            Number(ref_fees[0].system_pcnt),
         };
 
         // Add the discharge session to the array
@@ -402,15 +402,15 @@ export default class ThrpyReq {
             tenant_id: data.tenant_id,
             session_price: Number(svc.total_invoice),
             session_taxes:
-              Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100),
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
             session_counselor_amt:
               (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100)) *
+                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
               Number(ref_fees[0].counselor_pcnt),
             session_system_amt:
               (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100)) *
-              Number(ref_fees[0].system_pcnt / 100),
+                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+              Number(ref_fees[0].system_pcnt),
           };
 
           // Handle reports based on svc_report_formula
@@ -467,15 +467,15 @@ export default class ThrpyReq {
           tenant_id: data.tenant_id,
           session_price: Number(svc.total_invoice),
           session_taxes:
-            Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100),
+            Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
           session_counselor_amt:
             (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100)) *
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
             Number(ref_fees[0].counselor_pcnt),
           session_system_amt:
             (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * (Number(ref_fees[0].tax_pcnt) / 100)) *
-            Number(ref_fees[0].system_pcnt / 100),
+              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
+            Number(ref_fees[0].system_pcnt),
         };
 
         // Add the discharge session to the array
