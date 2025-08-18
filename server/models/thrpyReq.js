@@ -492,6 +492,7 @@ export default class ThrpyReq {
         // Add the discharge session to the array
         tmpSessionObj.push(dischargeSession);
       } else {
+        
         // Handle unexpected svc_formula_typ values
         logger.error(`Unsupported svc_formula_typ: ${svc.svc_formula_typ}`);
         return { message: 'Unsupported formula type', error: -1 };
@@ -1032,6 +1033,62 @@ export default class ThrpyReq {
 
       orderSessionObj(rec);
 
+      // Handle form mode selection based on environment variable
+      const formMode = process.env.FORM_MODE || 'auto';
+      
+      if (rec && Array.isArray(rec)) {
+        for (const thrpyReq of rec) {
+          if (thrpyReq.session_obj && Array.isArray(thrpyReq.session_obj)) {
+            for (const session of thrpyReq.session_obj) {
+              // Check if this session has treatment target forms
+              const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+              const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+              
+              const treatmentTargetForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
+                session_id: session.session_id,
+                tenant_id: thrpyReq.tenant_id
+              });
+              
+              const hasTreatmentTargetForms = !treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0;
+              
+              // Determine form mode based on environment variable
+              let sessionFormMode = 'service'; // default
+              let sessionFormsArray = session.forms_array || [];
+              
+              if (formMode === 'auto') {
+                // Auto mode: treatment target forms take precedence if they exist
+                if (hasTreatmentTargetForms) {
+                  sessionFormMode = 'treatment_target';
+                  sessionFormsArray = treatmentTargetForms.rec.map(form => form.form_id);
+                } else {
+                  sessionFormMode = 'service';
+                  // Keep existing service-based forms
+                }
+              } else if (formMode === 'treatment_target') {
+                // Force treatment target mode
+                if (hasTreatmentTargetForms) {
+                  sessionFormMode = 'treatment_target';
+                  sessionFormsArray = treatmentTargetForms.rec.map(form => form.form_id);
+                } else {
+                  sessionFormMode = 'service';
+                  // Fallback to service-based forms if no treatment target forms exist
+                }
+              } else if (formMode === 'service') {
+                // Force service mode
+                sessionFormMode = 'service';
+                // Get original service-based forms for this session
+                const originalServiceForms = await this.getOriginalServiceForms(session.session_id, thrpyReq.service_id);
+                sessionFormsArray = originalServiceForms.length > 0 ? originalServiceForms : session.forms_array || [];
+              }
+              
+              // Update session with determined form mode
+              session.forms_array = sessionFormsArray;
+              session.form_mode = sessionFormMode;
+            }
+          }
+        }
+      }
+
       if (!rec) {
         logger.error('Error getting therapy request');
         return { message: 'Error getting therapy request', error: -1 };
@@ -1042,6 +1099,58 @@ export default class ThrpyReq {
       console.error(error);
       logger.error(error);
       return { message: 'Error getting therapy request', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getThrpyReqByIdWithTreatmentTargetForms(data) {
+    try {
+      // First get the regular therapy request data
+      const rec = await this.getThrpyReqById(data);
+      
+      if (rec.error) {
+        return rec;
+      }
+
+      // Enhance with treatment target forms information
+      if (rec && Array.isArray(rec)) {
+        for (const thrpyReq of rec) {
+          if (thrpyReq.session_obj && Array.isArray(thrpyReq.session_obj)) {
+            const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+            const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+            
+            for (const session of thrpyReq.session_obj) {
+              // Get treatment target forms for this session
+              const treatmentTargetForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
+                session_id: session.session_id,
+                tenant_id: thrpyReq.tenant_id
+              });
+              
+              // Add treatment target forms information to session
+              if (!treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0) {
+                session.treatment_target_forms = treatmentTargetForms.rec.map(form => ({
+                  form_id: form.form_id,
+                  form_name: form.form_name,
+                  treatment_target: form.treatment_target,
+                  purpose: form.purpose,
+                  session_number: form.session_number,
+                  is_sent: form.is_sent,
+                  sent_at: form.sent_at
+                }));
+              } else {
+                session.treatment_target_forms = [];
+              }
+            }
+          }
+        }
+      }
+
+      return rec;
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error getting therapy request with treatment target forms', error: -1 };
     }
   }
 
@@ -1410,4 +1519,184 @@ export default class ThrpyReq {
       };
     }
   }
+
+  //////////////////////////////////////////
+
+  /**
+   * Load session forms with mode selection (service-based or treatment target-based)
+   * @param {Object} data - Request data
+   * @param {number} data.req_id - Therapy request ID
+   * @param {string} data.mode - Form attachment mode ('service' or 'treatment_target')
+   * @param {string} data.treatment_target - Treatment target (required when mode is 'treatment_target')
+   * @param {number} data.tenant_id - Tenant ID
+   */
+  async loadSessionFormsWithMode(data) {
+    try {
+      const { req_id, mode, treatment_target, tenant_id } = data;
+
+      if (!req_id) {
+        logger.error('Missing required field: req_id');
+        return { message: 'Missing required field: req_id', error: -1 };
+      }
+
+      // Always use environment variable for form mode (no frontend control)
+      const envFormMode = process.env.FORM_MODE || 'auto';
+      const effectiveMode = mode || envFormMode;
+
+      // Validate mode
+      if (!['service', 'treatment_target', 'auto'].includes(effectiveMode)) {
+        logger.error('Invalid mode specified');
+        return { message: 'Invalid mode specified. Must be "service", "treatment_target", or "auto"', error: -1 };
+      }
+
+      // For treatment_target mode, we need to get the treatment target from the therapy request
+      let effectiveTreatmentTarget = treatment_target;
+      if (effectiveMode === 'treatment_target' && !effectiveTreatmentTarget) {
+        // Get therapy request to find the treatment target
+        const query = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('v_thrpy_req')
+          .where('req_id', req_id);
+
+        const [rec] = await query;
+        
+        if (rec && rec.treatment_target) {
+          effectiveTreatmentTarget = rec.treatment_target;
+        } else {
+          logger.error('Treatment target not found for therapy request');
+          return { message: 'Treatment target not found for therapy request', error: -1 };
+        }
+      }
+
+      if (effectiveMode === 'service') {
+        // Use existing service-based form loading
+        return await this.loadSessionForms(req_id);
+      } else if (effectiveMode === 'treatment_target') {
+        // Use treatment target-based form loading
+        const TreatmentTargetFeedbackConfig = (await import('./treatmentTargetFeedbackConfig.js')).default;
+        const treatmentTargetConfig = new TreatmentTargetFeedbackConfig();
+        
+        return await treatmentTargetConfig.loadSessionFormsByTreatmentTarget({
+          req_id,
+          treatment_target: effectiveTreatmentTarget,
+          tenant_id
+        });
+      } else if (effectiveMode === 'auto') {
+        // Auto mode: check if treatment target forms exist, otherwise use service-based
+        const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+        const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+        
+        // Get therapy request to check sessions
+        const query = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('v_thrpy_req')
+          .where('req_id', req_id);
+
+        const [rec] = await query;
+        
+        if (!rec) {
+          logger.error('Therapy request not found');
+          return { message: 'Therapy request not found', error: -1 };
+        }
+
+        // Check if any session has treatment target forms
+        let hasTreatmentTargetForms = false;
+        for (const session of rec.session_obj) {
+          const treatmentTargetForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
+            session_id: session.session_id,
+            tenant_id: tenant_id
+          });
+          
+          if (!treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0) {
+            hasTreatmentTargetForms = true;
+            break;
+          }
+        }
+
+        if (hasTreatmentTargetForms) {
+          // Use treatment target-based form loading
+          // Get the actual treatment target from the therapy request
+          const TreatmentTargetFeedbackConfig = (await import('./treatmentTargetFeedbackConfig.js')).default;
+          const treatmentTargetConfig = new TreatmentTargetFeedbackConfig();
+          
+          // Get the treatment target from the therapy request
+          const actualTreatmentTarget = rec.treatment_target || 'Anxiety'; // Default fallback
+          
+          return await treatmentTargetConfig.loadSessionFormsByTreatmentTarget({
+            req_id,
+            treatment_target: actualTreatmentTarget,
+            tenant_id
+          });
+        } else {
+          // Use service-based form loading
+          return await this.loadSessionForms(req_id);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error loading session forms with mode', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Get original service-based forms for a session
+   * @param {number} session_id - Session ID
+   * @param {number} service_id - Service ID
+   */
+  async getOriginalServiceForms(session_id, service_id) {
+    try {
+      // Get service-based forms for this service
+      const recForm = await this.form.getFormForSessionById({
+        service_id: service_id,
+      });
+
+      if (!recForm || recForm.length === 0) {
+        return [];
+      }
+
+      // Get session to determine session position
+      const session = await this.session.getSessionById({
+        session_id: session_id,
+      });
+
+      if (!session || !Array.isArray(session) || session.length === 0) {
+        return [];
+      }
+
+      // Find session position in therapy request
+      const query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_thrpy_req')
+        .where('req_id', session[0].thrpy_req_id);
+
+      const [rec] = await query;
+      
+      if (!rec || !rec.session_obj) {
+        return [];
+      }
+
+      // Find session position (1-based index)
+      const sessionIndex = rec.session_obj.findIndex(s => s.session_id === session_id);
+      const sessionPosition = sessionIndex + 1;
+
+      // Get forms for this session position
+      const sessionForms = [];
+      recForm.forEach((form) => {
+        if (form.frequency_typ === 'static' && form.session_position.includes(sessionPosition)) {
+          sessionForms.push(form.form_id);
+        }
+      });
+
+      return sessionForms;
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return [];
+    }
+  }
+
+  //////////////////////////////////////////
 }

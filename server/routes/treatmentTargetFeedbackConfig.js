@@ -35,4 +35,7 @@ router.get('/service-names/list', AsyncWrapper(treatmentTargetFeedbackConfigCont
 // Bulk create treatment target feedback configurations
 router.post('/bulk', AsyncWrapper(treatmentTargetFeedbackConfigController.bulkCreateTreatmentTargetFeedbackConfigs.bind(treatmentTargetFeedbackConfigController)));
 
+// Load session forms based on treatment target
+router.post('/load-session-forms', AsyncWrapper(treatmentTargetFeedbackConfigController.loadSessionFormsByTreatmentTarget.bind(treatmentTargetFeedbackConfigController)));
+
 export const treatmentTargetFeedbackConfigRouter = { baseUrl: '/api/treatment-target-feedback-config', router }; 
