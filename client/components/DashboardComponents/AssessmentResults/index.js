@@ -361,7 +361,7 @@ function AssessmentResults({ assessmentResultsData }) {
             />
           ) : formName == "GAS" ? (
             <BarGraph
-              xAxisTitle="Questions"
+              xAxisTitle="Period"
               yAxisTitle="Score"
               xAxisLabels={xAxisLabels}
               seriesData={seriesData}
