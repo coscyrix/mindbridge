@@ -15,6 +15,8 @@ The Treatment Target Form Attachment feature extends the existing session form a
 - **Treatment Target Configuration**: Configure which forms should be sent at specific session numbers for different treatment targets
 - **Multi-Tenant Support**: Support for tenant-specific configurations
 - **Flexible Session Scheduling**: Support for various session number patterns and special values
+- **Template Management**: Comprehensive template system for managing form configurations across tenants
+- **Automatic Tenant Setup**: New tenants automatically receive all treatment target form templates upon creation
 
 ## Architecture
 
@@ -121,7 +123,23 @@ const response = await api.post('/api/thrpyReq/load-session-forms', {
 
 ## Configuration
 
-### Setting Up Treatment Target Configurations
+### Automatic Tenant Setup
+
+When a new tenant is created in the system, the following happens automatically:
+
+1. **Template Copying**: All active treatment target form templates are automatically copied to the new tenant
+2. **Default Configurations**: The new tenant receives configurations for:
+   - Anxiety: GAD-7, WHODAS forms
+   - Depression: PHQ-9, WHODAS forms
+   - PTSD: PCL-5, WHODAS forms
+   - General Mental Health: GAS, SMART Goals, Consent Form, Attendance forms
+3. **Immediate Availability**: Forms are immediately available for use with treatment target-based sessions
+4. **Consistency**: All tenants receive the same baseline form configurations
+5. **Customization**: Tenants can later modify or add to these configurations as needed
+
+### Manual Treatment Target Configuration
+
+For existing tenants or custom configurations:
 
 1. **Create Configuration**: Use the treatment target feedback config API to create configurations
 2. **Define Session Patterns**: Specify which sessions should trigger specific forms

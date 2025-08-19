@@ -722,6 +722,43 @@ export default class Common {
         console.warn(`Warning: Could not create default fee split management for tenant ${tenantRecord.tenant_id}:`, feeSplitError.message);
       }
 
+      // Copy treatment target form templates to new tenant
+      try {
+        // Get all template configurations
+        const templateConfigs = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('treatment_target_session_forms_template')
+          .where('is_active', 1)
+          .select('*');
+
+        if (templateConfigs.length > 0) {
+          // Prepare configurations for the new tenant
+          const tenantConfigs = templateConfigs.map(config => ({
+            treatment_target: config.treatment_target,
+            form_name: config.form_name,
+            service_name: config.service_name,
+            purpose: config.purpose,
+            sessions: JSON.stringify(config.sessions), // Ensure JSON serialization
+            tenant_id: tenantRecord.tenant_id,
+            created_at: new Date(),
+            updated_at: new Date()
+          }));
+
+          // Insert configurations for the new tenant
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('treatment_target_feedback_config')
+            .insert(tenantConfigs);
+
+          console.log(`Treatment target templates copied for tenant ${tenantRecord.tenant_id}: ${tenantConfigs.length} configurations`);
+        } else {
+          console.warn(`Warning: No treatment target templates found to copy for tenant ${tenantRecord.tenant_id}`);
+        }
+      } catch (templateError) {
+        // Log the error but don't fail the tenant creation
+        console.warn(`Warning: Could not copy treatment target templates for tenant ${tenantRecord.tenant_id}:`, templateError.message);
+      }
+
       return tenantRecord.tenant_id;
     } catch (error) {
       console.error(error);
