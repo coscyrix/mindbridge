@@ -297,4 +297,80 @@ export default class ThrpyReqService {
       return { message: 'Error deleting therapy request', error: -1 };
     }
   }
+
+  //////////////////////////////////////////
+
+  async loadSessionFormsWithMode(data) {
+    try {
+      const { req_id, mode, treatment_target, tenant_id } = data;
+
+      // Validate required fields
+      if (!req_id) {
+        return {
+          message: 'Missing required field: req_id',
+          error: -1
+        };
+      }
+
+      // Always use environment variable for form mode (no frontend control needed)
+      const envFormMode = process.env.FORM_MODE || 'auto';
+      const effectiveMode = mode || envFormMode;
+
+      // Validate mode
+      if (!['service', 'treatment_target', 'auto'].includes(effectiveMode)) {
+        return {
+          message: 'Invalid mode specified. Must be "service", "treatment_target", or "auto"',
+          error: -1
+        };
+      }
+
+      // For treatment_target mode, the backend will automatically get the treatment target
+      // No need for frontend to provide it
+
+      // Get tenant ID if not provided
+      if (!tenant_id) {
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        if (Array.isArray(tenantId) && tenantId[0] && tenantId[0].tenant_id) {
+          data.tenant_id = Number(tenantId[0].tenant_id);
+        }
+      }
+
+      const thrpyReq = new ThrpyReq();
+      const result = await thrpyReq.loadSessionFormsWithMode({
+        req_id,
+        mode: effectiveMode,
+        treatment_target,
+        tenant_id: data.tenant_id
+      });
+
+      return result;
+    } catch (error) {
+      console.error(error);
+      return {
+        message: 'Error loading session forms with mode',
+        error: -1
+      };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getThrpyReqByIdWithTreatmentTargetForms(data) {
+    try {
+      const thrpyReq = new ThrpyReq();
+      const result = await thrpyReq.getThrpyReqByIdWithTreatmentTargetForms(data);
+
+      return result;
+    } catch (error) {
+      console.error(error);
+      return {
+        message: 'Error getting therapy request with treatment target forms',
+        error: -1
+      };
+    }
+  }
+
+  //////////////////////////////////////////
 }

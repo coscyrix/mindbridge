@@ -363,4 +363,45 @@ export default class TreatmentTargetFeedbackConfigService {
       };
     }
   }
+
+  //////////////////////////////////////////
+
+  /**
+   * Load session forms based on treatment target for a therapy request
+   * @param {Object} data - Request data
+   * @param {number} data.req_id - Therapy request ID
+   * @param {string} data.treatment_target - Treatment target
+   * @param {number} data.tenant_id - Tenant ID
+   * @returns {Object} Result of form loading operation
+   */
+  async loadSessionFormsByTreatmentTarget(data) {
+    try {
+      const { req_id, treatment_target, tenant_id } = data;
+
+      // Validate required fields
+      if (!req_id || !treatment_target) {
+        return {
+          message: 'Missing required fields: req_id, treatment_target',
+          error: -1
+        };
+      }
+
+      // Load session forms based on treatment target
+      const result = await this.treatmentTargetFeedbackConfig.loadSessionFormsByTreatmentTarget({
+        req_id,
+        treatment_target,
+        tenant_id
+      });
+
+      return result;
+    } catch (error) {
+      logger.error(error);
+      return {
+        message: 'Error loading session forms by treatment target',
+        error: -1
+      };
+    }
+  }
+
+  //////////////////////////////////////////
 } 

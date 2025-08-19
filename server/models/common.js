@@ -482,25 +482,98 @@ export default class Common {
         };
       }
 
-      const getAllSessionUserForm = await this.userForm.getUserFormById({
-        session_id: data.session_id,
-      });
+      // Check forms based on environment variable
+      const formMode = process.env.FORM_MODE || 'auto';
+      
+      if (formMode === 'auto') {
+        // Auto mode: check treatment target forms first, then service forms
+        const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+        const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+        
+        const getTreatmentTargetSessionForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
+          session_id: data.session_id,
+        });
 
-      if (getAllSessionUserForm.error) {
-        logger.error('Error getting user form');
-        return { message: 'Error getting user form', error: -1 };
-      }
+        // If treatment target forms exist, check their sent status
+        if (!getTreatmentTargetSessionForms.error && getTreatmentTargetSessionForms.rec && getTreatmentTargetSessionForms.rec.length > 0) {
+          const checkTreatmentTargetFormsSentStatus = getTreatmentTargetSessionForms.rec.filter(
+            (item) => item.is_sent == 1,
+          );
 
-      const checkTreatmentToolsSentStatus = getAllSessionUserForm.filter(
-        (item) => item.is_sent == 1,
-      );
+          if (checkTreatmentTargetFormsSentStatus.length > 0) {
+            logger.warn('The treatment target forms have already been sent');
+            return {
+              message: 'The treatment target forms have already been sent',
+              error: -1,
+            };
+          }
+        } else {
+          // If no treatment target forms, check regular user forms
+          const getAllSessionUserForm = await this.userForm.getUserFormById({
+            session_id: data.session_id,
+          });
 
-      if (checkTreatmentToolsSentStatus.length > 0) {
-        logger.warn('The treatment tools have already been sent');
-        return {
-          message: 'The treatment tools have already been sent',
-          error: -1,
-        };
+          if (getAllSessionUserForm.error) {
+            logger.error('Error getting user form');
+            return { message: 'Error getting user form', error: -1 };
+          }
+
+          const checkTreatmentToolsSentStatus = getAllSessionUserForm.filter(
+            (item) => item.is_sent == 1,
+          );
+
+          if (checkTreatmentToolsSentStatus.length > 0) {
+            logger.warn('The treatment tools have already been sent');
+            return {
+              message: 'The treatment tools have already been sent',
+              error: -1,
+            };
+          }
+        }
+      } else if (formMode === 'treatment_target') {
+        // Treatment target mode: only check treatment target forms
+        const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+        const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+        
+        const getTreatmentTargetSessionForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
+          session_id: data.session_id,
+        });
+
+        if (!getTreatmentTargetSessionForms.error && getTreatmentTargetSessionForms.rec && getTreatmentTargetSessionForms.rec.length > 0) {
+          const checkTreatmentTargetFormsSentStatus = getTreatmentTargetSessionForms.rec.filter(
+            (item) => item.is_sent == 1,
+          );
+
+          if (checkTreatmentTargetFormsSentStatus.length > 0) {
+            logger.warn('The treatment target forms have already been sent');
+            return {
+              message: 'The treatment target forms have already been sent',
+              error: -1,
+            };
+          }
+        }
+      } else if (formMode === 'service') {
+        // Service mode: only check service-based forms
+        const getAllSessionUserForm = await this.userForm.getUserFormById({
+          session_id: data.session_id,
+        });
+
+        if (getAllSessionUserForm.error) {
+          logger.error('Error getting user form');
+          return { message: 'Error getting user form', error: -1 };
+        }
+
+        const checkTreatmentToolsSentStatus = getAllSessionUserForm.filter(
+          (item) => item.is_sent == 1,
+        );
+
+        if (checkTreatmentToolsSentStatus.length > 0) {
+          logger.warn('The treatment tools have already been sent');
+          return {
+            message: 'The treatment tools have already been sent',
+            error: -1,
+          };
+        }
       }
 
       return {
@@ -515,6 +588,8 @@ export default class Common {
       };
     }
   }
+
+
 
   ///////////////////////////////////////////
 

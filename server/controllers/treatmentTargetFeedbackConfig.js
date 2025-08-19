@@ -390,4 +390,39 @@ export default class TreatmentTargetFeedbackConfigController {
   }
 
   //////////////////////////////////////////
+
+  /**
+   * Load session forms based on treatment target
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async loadSessionFormsByTreatmentTarget(req, res) {
+    try {
+      const data = req.body;
+      
+      // Get tenant ID from user context
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id || req.user?.user_profile_id,
+      });
+      data.tenant_id = Number(tenantId[0]?.tenant_id);
+
+      const treatmentTargetFeedbackConfigService = new TreatmentTargetFeedbackConfigService();
+      const result = await treatmentTargetFeedbackConfigService.loadSessionFormsByTreatmentTarget(data);
+
+      if (result.error) {
+        res.status(400).json(result);
+        return;
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: 'Internal server error',
+        error: -1
+      });
+    }
+  }
+
+  //////////////////////////////////////////
 } 

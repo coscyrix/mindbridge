@@ -27,6 +27,7 @@ import {
   tenantConfigurationRouter,
   feeSplitManagementRouter,
   treatmentTargetFeedbackConfigRouter,
+  treatmentTargetSessionFormsRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -62,6 +63,7 @@ async function main() {
         tenantConfigurationRouter,
         feeSplitManagementRouter,
         treatmentTargetFeedbackConfigRouter,
+        treatmentTargetSessionFormsRouter,
       ],
     });
 

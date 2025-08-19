@@ -37,17 +37,55 @@ export default class Feedback {
         return { message: 'Error creating feedback', error: -1 };
       }
 
-      const updateUserForm =
-        await this.userForm.putUserFormBySessionIdAndFormID({
-          client_id: data.client_id,
+      // Update form submission status based on environment variable
+      const formMode = process.env.FORM_MODE || 'auto';
+      
+      if (formMode === 'treatment_target') {
+        // Treatment target mode: update treatment target session forms
+        const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+        const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+        
+        const updateTreatmentTargetForm = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormBySessionIdAndFormId({
           session_id: data.session_id,
           form_id: data.form_id,
           form_submit: true,
         });
 
-      if (updateUserForm?.error) {
-        logger.error('Error updating user form');
-        return { message: 'Error updating user form', error: -1 };
+        if (updateTreatmentTargetForm?.error) {
+          logger.error('Error updating treatment target session form');
+          return { message: 'Error updating treatment target session form', error: -1 };
+        }
+      } else {
+        // Service mode or auto mode: update user forms (service-based forms)
+        const updateUserForm =
+          await this.userForm.putUserFormBySessionIdAndFormID({
+            client_id: data.client_id,
+            session_id: data.session_id,
+            form_id: data.form_id,
+            form_submit: true,
+          });
+
+        if (updateUserForm?.error) {
+          logger.error('Error updating user form');
+          return { message: 'Error updating user form', error: -1 };
+        }
+        
+        // In auto mode, also try to update treatment target forms if they exist
+        if (formMode === 'auto') {
+          const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+          const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+          
+          const updateTreatmentTargetForm = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormBySessionIdAndFormId({
+            session_id: data.session_id,
+            form_id: data.form_id,
+            form_submit: true,
+          });
+
+          // Don't return error for treatment target forms in auto mode, just log it
+          if (updateTreatmentTargetForm?.error) {
+            logger.error('Error updating treatment target session form');
+          }
+        }
       }
 
       return { message: 'Feedback created successfully', rec: postFeedback };

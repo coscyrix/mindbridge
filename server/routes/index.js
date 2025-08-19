@@ -22,3 +22,4 @@ export { consentDescriptionRouter } from './consentDescription.js';
 export { tenantConfigurationRouter } from './tenantConfiguration.js';
 export { feeSplitManagementRouter } from './feeSplitManagement.js';
 export { treatmentTargetFeedbackConfigRouter } from './treatmentTargetFeedbackConfig.js';
+export { treatmentTargetSessionFormsRouter } from './treatmentTargetSessionForms.js';

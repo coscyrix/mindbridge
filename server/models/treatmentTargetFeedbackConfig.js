@@ -399,4 +399,195 @@ export default class TreatmentTargetFeedbackConfig {
       return { message: 'Error retrieving service names', error: -1 };
     }
   }
+
+  //////////////////////////////////////////
+
+  /**
+   * Load session forms based on treatment target for a therapy request
+   * @param {Object} data - Request data
+   * @param {number} data.req_id - Therapy request ID
+   * @param {string} data.treatment_target - Treatment target
+   * @param {number} data.tenant_id - Tenant ID
+   */
+  async loadSessionFormsByTreatmentTarget(data) {
+    try {
+      // Get therapy request details
+      const query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_thrpy_req')
+        .where('req_id', data.req_id);
+
+      const [rec] = await query;
+
+      if (!rec) {
+        logger.error('Error getting therapy request for treatment target form loading');
+        return { message: 'Error getting therapy request', error: -1 };
+      }
+
+      // Get treatment target feedback configurations
+      const configQuery = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('treatment_target_feedback_config')
+        .where('treatment_target', data.treatment_target);
+
+      if (data.tenant_id !== undefined) {
+        configQuery.where('tenant_id', data.tenant_id);
+      }
+
+      const configs = await configQuery;
+
+      if (!configs || configs.length === 0) {
+        logger.error('No treatment target feedback configurations found');
+        return { message: 'No treatment target feedback configurations found', error: -1 };
+      }
+
+      const tmpSession = [];
+      const tmpForm = [];
+
+      // Remove sessions where is_report = 1 in session_obj
+      rec.session_obj = rec.session_obj.filter((session) => {
+        return session.is_report !== 1;
+      });
+
+      // Sort session_obj by session_id
+      rec.session_obj = rec.session_obj.sort(
+        (a, b) => a.session_id - b.session_id,
+      );
+
+      // Process each configuration
+      for (const config of configs) {
+        const sessions = config.sessions;
+        
+        // Get form ID from form name
+        const form = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('forms')
+          .where('form_cde', config.form_name)
+          .first();
+
+        if (!form) {
+          logger.warn(`Form not found for form_name: ${config.form_name}`);
+          continue;
+        }
+        
+        // Process each session number in the configuration
+        for (let sessionNumber = 1; sessionNumber <= rec.session_obj.length; sessionNumber++) {
+          if (sessions.includes(sessionNumber)) {
+            const sessionIndex = sessionNumber - 1;
+            if (rec.session_obj[sessionIndex]) {
+              const tmpFormSession = {
+                session_id: rec.session_obj[sessionIndex].session_id,
+                form_array: [config.form_name], // Use form_name instead of form_id
+              };
+
+              const tmpTreatmentTargetForm = {
+                req_id: rec.req_id,
+                session_id: rec.session_obj[sessionIndex].session_id,
+                client_id: rec.client_id,
+                counselor_id: rec.counselor_id,
+                treatment_target: data.treatment_target,
+                form_name: config.form_name,
+                form_id: form.form_id,
+                config_id: config.id,
+                purpose: config.purpose,
+                session_number: sessionNumber,
+                tenant_id: data.tenant_id || null,
+              };
+
+              tmpSession.push(tmpFormSession);
+              tmpForm.push(tmpTreatmentTargetForm);
+            }
+          }
+        }
+      }
+
+      // Update session forms
+      const updateResult = await this.updateSessionForms(tmpSession);
+      if (updateResult.error) {
+        return updateResult;
+      }
+
+      // Create treatment target session forms
+      const treatmentTargetFormResult = await this.createTreatmentTargetSessionForms(tmpForm);
+      if (treatmentTargetFormResult.error) {
+        return treatmentTargetFormResult;
+      }
+
+      return { message: 'Treatment target session forms loaded successfully' };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error loading treatment target session forms', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Update session forms with treatment target forms
+   * @param {Array} data - Array of session form data
+   */
+  async updateSessionForms(data) {
+    try {
+      for (const post of data) {
+        // Get current session
+        const [getSession] = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('session')
+          .where('session_id', Number(post.session_id));
+
+        if (!getSession) {
+          logger.error('Error getting session');
+          return { message: 'Error getting session', error: -1 };
+        }
+
+        // Parse existing forms_array
+        const currentForms = Array.isArray(getSession.forms_array)
+          ? getSession.forms_array
+          : JSON.parse(getSession.forms_array || '[]');
+
+        // Add new forms and remove duplicates
+        const updatedForms = Array.from(
+          new Set([...currentForms, ...post.form_array]),
+        );
+
+        const tmpSession = {
+          forms_array: JSON.stringify(updatedForms),
+        };
+
+        await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('session')
+          .update(tmpSession)
+          .where('session_id', Number(post.session_id));
+      }
+
+      return { message: 'Sessions updated successfully' };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error updating session forms', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Create treatment target session forms
+   * @param {Array} data - Array of session form data
+   */
+  async createTreatmentTargetSessionForms(data) {
+    try {
+      const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+      const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+      
+      return await treatmentTargetSessionForms.createTreatmentTargetSessionForms(data);
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error creating treatment target session forms', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
 } 
