@@ -310,4 +310,38 @@ export default class TreatmentTargetSessionForms {
   }
 
   //////////////////////////////////////////
+
+  /**
+   * Update treatment target session form by session ID and form ID
+   * @param {Object} data - Update data
+   * @param {number} data.session_id - Session ID
+   * @param {number} data.form_id - Form ID
+   * @param {boolean} data.form_submit - Form submission status
+   */
+  async updateTreatmentTargetSessionFormBySessionIdAndFormId(data) {
+    try {
+      const updateData = {
+        form_submit: data.form_submit ? 1 : 0,
+      };
+
+      const result = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('treatment_target_session_forms')
+        .where('session_id', data.session_id)
+        .andWhere('form_id', data.form_id)
+        .update(updateData);
+
+      if (!result) {
+        logger.error('Error updating treatment target session form');
+        return { message: 'Error updating treatment target session form', error: -1 };
+      }
+
+      return { message: 'Treatment target session form updated successfully' };
+    } catch (error) {
+      logger.error(error);
+      return { message: 'Error updating treatment target session form', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
 }

@@ -459,7 +459,7 @@ export default class TreatmentTargetFeedbackConfig {
         const sessions = config.sessions;
         
         // Get form ID from form name
-        const [form] = await db
+        const form = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('forms')
           .where('form_cde', config.form_name)

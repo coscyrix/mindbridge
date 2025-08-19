@@ -18,6 +18,7 @@ import {
   dischargeEmail,
 } from '../utils/emailTmplt.js';
 import SendEmail from '../middlewares/sendEmail.js';
+import UserTargetOutcome from './userTargetOutcome.js';
 
 dotenv.config();
 const db = knex(DBconn.dbConn.development);
@@ -33,6 +34,7 @@ export default class ThrpyReq {
     this.sendEmail = new SendEmail();
     this.emailTmplt = new EmailTmplt();
     this.common = new Common();
+    this.userTargetOutcome = new UserTargetOutcome();
   }
 
   // Helper function to calculate session amounts
@@ -91,8 +93,6 @@ export default class ThrpyReq {
         user_profile_id: data.client_id,
       });
 
-
-
       console.log('recClient--------->', tenantId[0].tenant_id);
 
       if (!recClient || !recClient.rec || !recClient.rec[0]) {
@@ -106,6 +106,28 @@ export default class ThrpyReq {
           message: 'The specified client does not have the client role',
           error: -1,
         };
+      }
+
+      // Get client's target outcome to determine treatment target
+      let treatmentTarget = null;
+      try {
+        const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
+          user_profile_id: data.client_id,
+        });
+
+        if (clientTargetOutcome && clientTargetOutcome.length > 0) {
+          const targetOutcomeId = clientTargetOutcome[0].target_outcome_id;
+          
+          // Get the treatment target name from ref_target_outcomes
+          const targetOutcome = await this.common.getTargetOutcomeById(targetOutcomeId);
+          if (targetOutcome && targetOutcome.length > 0) {
+            treatmentTarget = targetOutcome[0].target_name;
+            logger.info(`Mapped client target outcome ${targetOutcomeId} to treatment target: ${treatmentTarget}`);
+          }
+        }
+      } catch (error) {
+        logger.warn('Could not determine treatment target from client target outcome:', error);
+        // Continue without treatment target - will use service-based forms
       }
 
       // Retrieve the service details from the database
@@ -204,6 +226,7 @@ export default class ThrpyReq {
         req_time: req_time,
         session_desc: svc.service_code,
         tenant_id: data.tenant_id,
+        treatment_target: treatmentTarget, // Add treatment target to therapy request
       };
 
       // Insert the therapy request into the database
@@ -509,11 +532,17 @@ export default class ThrpyReq {
         };
       }
 
-      const loadForms = this.loadSessionForms(postThrpyReq[0]);
+      // Load forms using the new mode-based system
+      const loadForms = await this.loadSessionFormsWithMode({
+        req_id: postThrpyReq[0],
+        tenant_id: data.tenant_id
+      });
 
-      if (!loadForms) {
-        logger.error('Error loading session forms');
-        return { message: 'Error loading session forms', error: -1 };
+      if (loadForms.error) {
+        logger.error('Error loading session forms:', loadForms.message);
+        // Don't return error - continue without forms
+      } else {
+        logger.info('Session forms loaded successfully:', loadForms.message);
       }
 
       const ThrpyReq = await this.getThrpyReqById({
@@ -1555,13 +1584,14 @@ export default class ThrpyReq {
         // Get therapy request to find the treatment target
         const query = db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
-          .from('v_thrpy_req')
+          .from('thrpy_req')
           .where('req_id', req_id);
 
         const [rec] = await query;
         
         if (rec && rec.treatment_target) {
           effectiveTreatmentTarget = rec.treatment_target;
+          logger.info(`Found treatment target: ${effectiveTreatmentTarget} for req_id: ${req_id}`);
         } else {
           logger.error('Treatment target not found for therapy request');
           return { message: 'Treatment target not found for therapy request', error: -1 };
@@ -1589,7 +1619,7 @@ export default class ThrpyReq {
         // Get therapy request to check sessions
         const query = db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
-          .from('v_thrpy_req')
+          .from('thrpy_req')
           .where('req_id', req_id);
 
         const [rec] = await query;

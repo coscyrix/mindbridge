@@ -392,23 +392,11 @@ export default class Session {
                   );
                 }
 
-                // Update user forms (for service-based forms)
-                const uptUserForm = await this.userForm.putUserFormBySessionId({
-                  session_id: data.session_id,
-                  is_sent: 1,
-                });
-
-                if (uptUserForm.error) {
-                  console.log('error updating user form', uptUserForm.error);
-                  logger.error('Error updating user form');
-                  return { message: 'Error updating user form', error: -1 };
-                }
-
                 // Update forms based on environment variable
                 const formMode = process.env.FORM_MODE || 'auto';
                 
-                if (formMode === 'auto' || formMode === 'treatment_target') {
-                  // Update treatment target session forms if they exist
+                if (formMode === 'treatment_target') {
+                  // Treatment target mode: only update treatment target session forms
                   const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
                   const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
                   
@@ -417,15 +405,41 @@ export default class Session {
                     is_sent: true,
                   });
 
-                  // Don't return error for treatment target forms, just log it
                   if (updateTreatmentTargetForms.error) {
                     console.log('error updating treatment target session forms', updateTreatmentTargetForms.error);
                     logger.error('Error updating treatment target session forms');
+                    return { message: 'Error updating treatment target session forms', error: -1 };
+                  }
+                } else {
+                  // Service mode or auto mode: update user forms (service-based forms)
+                  const uptUserForm = await this.userForm.putUserFormBySessionId({
+                    session_id: data.session_id,
+                    is_sent: 1,
+                  });
+
+                  if (uptUserForm.error) {
+                    console.log('error updating user form', uptUserForm.error);
+                    logger.error('Error updating user form');
+                    return { message: 'Error updating user form', error: -1 };
+                  }
+                  
+                  // In auto mode, also try to update treatment target forms if they exist
+                  if (formMode === 'auto') {
+                    const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+                    const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+                    
+                    const updateTreatmentTargetForms = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormsBySessionId({
+                      session_id: data.session_id,
+                      is_sent: true,
+                    });
+
+                    // Don't return error for treatment target forms in auto mode, just log it
+                    if (updateTreatmentTargetForms.error) {
+                      console.log('error updating treatment target session forms', updateTreatmentTargetForms.error);
+                      logger.error('Error updating treatment target session forms');
+                    }
                   }
                 }
-                
-                // Note: Service-based forms are always updated regardless of mode
-                // as they are the fallback and always available
               }
             }
           }

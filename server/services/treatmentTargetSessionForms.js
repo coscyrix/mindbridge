@@ -232,4 +232,34 @@ export default class TreatmentTargetSessionFormsService {
   }
 
   //////////////////////////////////////////
+
+  /**
+   * Update treatment target session form by session ID and form ID
+   * @param {Object} data - Update data
+   * @param {number} data.session_id - Session ID
+   * @param {number} data.form_id - Form ID
+   * @param {boolean} data.form_submit - Form submission status
+   */
+  async updateTreatmentTargetSessionFormBySessionIdAndFormId(data) {
+    try {
+      const schema = joi.object({
+        session_id: joi.number().required(),
+        form_id: joi.number().required(),
+        form_submit: joi.boolean().required(),
+      });
+
+      const { error } = schema.validate(data);
+      if (error) {
+        return { message: error.details[0].message, error: -1 };
+      }
+
+      const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+      return await treatmentTargetSessionForms.updateTreatmentTargetSessionFormBySessionIdAndFormId(data);
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error updating treatment target session form', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
 }
