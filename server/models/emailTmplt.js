@@ -96,269 +96,260 @@ export default class EmailTmplt {
         // Get form mode from environment variable
         const formMode = process.env.FORM_MODE || 'auto';
         
-        if (
-          session.forms_array &&
-          Array.isArray(session.forms_array) &&
-          session.forms_array.length > 0
-        ) {
-          // Determine which forms to send based on form mode
-          let formsToSend = [];
+        // Handle forms based on form mode
+        if (formMode === 'treatment_target') {
+          // Treatment target mode: only send treatment target forms
+          const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+          const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
           
-          if (formMode === 'auto') {
-            // Auto mode: use the forms_array as determined by the system
-            formsToSend = session.forms_array;
-          } else if (formMode === 'service') {
-            // Service mode: only send service-based forms
-            // Get original service-based forms for this session
-            const originalServiceForms = await this.getOriginalServiceForms(session.session_id, recThrpy[0].service_id);
-            formsToSend = originalServiceForms;
-          } else if (formMode === 'treatment_target') {
-            // Treatment target mode: only send treatment target forms
-            const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
-            const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
-            
-            const treatmentTargetForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
-              session_id: session.session_id,
-              tenant_id: tenantId?.[0]?.tenant_id
-            });
-            
-            if (!treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0) {
-              formsToSend = treatmentTargetForms.rec.map(form => form.form_id);
-            }
-          }
-          
-          // Send forms based on the determined form type
-          for (const formId of formsToSend) {
-            const [form] = await this.form.getFormByFormId({
-              form_id: formId,
-            });
-            const form_name = form.form_cde;
-            const form_id = form.form_id;
-            const client_full_name =
-              recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
-            const client_id = recUser[0].user_profile_id;
-            
-            // Get client's target outcome ID
-            let clientTargetOutcomeId = null;
-            try {
-              const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
-                user_profile_id: client_id,
-              });
+          const treatmentTargetForms = await treatmentTargetSessionForms.getFormsToSendForSession({
+            session_id: session.session_id,
+            tenant_id: tenantId?.[0]?.tenant_id
+          });
+
+          if (!treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0) {
+            for (const treatmentForm of treatmentTargetForms.rec) {
+              const form_name = treatmentForm.form_name;
+              const form_id = treatmentForm.form_id;
+              const client_full_name =
+                recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
+              const client_id = recUser[0].user_profile_id;
               
-              if (clientTargetOutcome && clientTargetOutcome.length > 0) {
-                clientTargetOutcomeId = clientTargetOutcome[0].target_outcome_id;
+              // Get client's target outcome ID
+              let clientTargetOutcomeId = null;
+              try {
+                const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
+                  user_profile_id: client_id,
+                });
+                
+                if (clientTargetOutcome && clientTargetOutcome.length > 0) {
+                  clientTargetOutcomeId = clientTargetOutcome[0].target_outcome_id;
+                }
+              } catch (error) {
+                logger.error('Error retrieving client target outcome:', error);
+                // Continue without target outcome ID if there's an error
               }
-            } catch (error) {
-              logger.error('Error retrieving client target outcome:', error);
-              // Continue without target outcome ID if there's an error
-            }
-            
-            const toolsEmail = treatmentToolsEmail(
-              recUser[0].email,
-              client_full_name,
-              form_name.toUpperCase(),
-              form_id,
-              client_id,
-              data.session_id,
-              clientTargetOutcomeId, // Add target outcome ID parameter
-            );
-
-            let attendanceEmail;
-            let isAttendanceForm = false;
-            
-            if (formId === 24 && form_name === 'ATTENDANCE') {
-              // 24 is the form_id for attendance
-              isAttendanceForm = true;
-              const sessions = recThrpy[0].session_obj;
-              const sortedSessions = sessions.sort(
-                (a, b) => a.session_id - b.session_id,
-              );
-
-              // Remove reports sessions
-              const removeReportsSessions = sortedSessions.filter(
-                (session) => session.is_report !== 1,
-              );
-
-              // Filter sessions up to the current session
-              const filteredSessions = removeReportsSessions.filter(
-                (session) => session.session_id <= data.session_id,
-              );
-
-              // Count attended and cancelled sessions
-              const attendedSessions = filteredSessions.filter(
-                (session) => session.session_status === 'SHOW',
-              ).length;
-              const cancelledSessions = filteredSessions.filter(
-                (session) => session.session_status === 'NO-SHOW',
-              ).length;
-
-              const attendancePDFTemplt = AttendancePDF(
-                `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
-                client_full_name,
-                recUser[0].clam_num,
-                removeReportsSessions.length,
-                attendedSessions,
-                cancelledSessions,
-              );
-
-              const attendancePDF = await PDFGenerator(attendancePDFTemplt);
-
-              attendanceEmail = attendanceSummaryEmail(
+              
+              const toolsEmail = treatmentToolsEmail(
                 recUser[0].email,
                 client_full_name,
-                attendancePDF,
+                form_name.toUpperCase(),
+                form_id,
+                client_id,
+                data.session_id,
+                clientTargetOutcomeId, // Add target outcome ID parameter
               );
 
-              const postATTENDANCEFeedback =
-                await this.feedback.postATTENDANCEFeedback({
-                  client_id: recUser[0].user_profile_id,
-                  session_id: data.session_id,
-                  total_sessions: removeReportsSessions.length,
-                  total_attended_sessions: attendedSessions,
-                  total_cancelled_sessions: cancelledSessions,
-                  tenant_id: tenantId,
-                });
+              let attendanceEmail;
+              let isAttendanceForm = false;
+              
+              if (form_id === 24 && form_name === 'ATTENDANCE') {
+                // 24 is the form_id for attendance
+                isAttendanceForm = true;
+                const sessions = recThrpy[0].session_obj;
+                const sortedSessions = sessions.sort(
+                  (a, b) => a.session_id - b.session_id,
+                );
 
-              if (postATTENDANCEFeedback.error) {
-                logger.error(postATTENDANCEFeedback.message);
+                // Remove reports sessions
+                const removeReportsSessions = sortedSessions.filter(
+                  (session) => session.is_report !== 1,
+                );
+
+                // Filter sessions up to the current session
+                const filteredSessions = removeReportsSessions.filter(
+                  (session) => session.session_id <= data.session_id,
+                );
+
+                // Count attended and cancelled sessions
+                const attendedSessions = filteredSessions.filter(
+                  (session) => session.session_status === 'SHOW',
+                ).length;
+                const cancelledSessions = filteredSessions.filter(
+                  (session) => session.session_status === 'NO-SHOW',
+                ).length;
+
+                const attendancePDFTemplt = AttendancePDF(
+                  `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
+                  client_full_name,
+                  recUser[0].clam_num,
+                  removeReportsSessions.length,
+                  attendedSessions,
+                  cancelledSessions,
+                );
+
+                const attendancePDF = await PDFGenerator(attendancePDFTemplt);
+
+                attendanceEmail = attendanceSummaryEmail(
+                  recUser[0].email,
+                  client_full_name,
+                  attendancePDF,
+                );
+
+                const postATTENDANCEFeedback =
+                  await this.feedback.postATTENDANCEFeedback({
+                    client_id: recUser[0].user_profile_id,
+                    session_id: data.session_id,
+                    total_sessions: removeReportsSessions.length,
+                    total_attended_sessions: attendedSessions,
+                    total_cancelled_sessions: cancelledSessions,
+                    tenant_id: tenantId,
+                  });
+
+                if (postATTENDANCEFeedback.error) {
+                  logger.error(postATTENDANCEFeedback.message);
+                  return {
+                    message: postATTENDANCEFeedback.message,
+                    error: -1,
+                  };
+                }
+              }
+
+              const email = await this.sendEmail.sendMail(
+                isAttendanceForm ? attendanceEmail : toolsEmail,
+              );
+
+              if (email.error) {
+                logger.error('Error sending email');
                 return {
-                  message: postATTENDANCEFeedback.message,
+                  message: 'Error sending email',
                   error: -1,
                 };
               }
             }
-
-            const email = await this.sendEmail.sendMail(
-              isAttendanceForm ? attendanceEmail : toolsEmail,
-            );
-
-            if (email.error) {
-              logger.error('Error sending email');
-              return {
-                message: 'Error sending email',
-                error: -1,
-              };
-            }
           }
-        }
-
-        // Handle treatment target-based forms (new functionality)
-        const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
-        const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
-        
-        const treatmentTargetForms = await treatmentTargetSessionForms.getFormsToSendForSession({
-          session_id: session.session_id,
-          tenant_id: tenantId?.[0]?.tenant_id
-        });
-
-        if (!treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0) {
-          for (const treatmentForm of treatmentTargetForms.rec) {
-            const form_name = treatmentForm.form_name;
-            const form_id = treatmentForm.form_id;
-            const client_full_name =
-              recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
-            const client_id = recUser[0].user_profile_id;
+        } else {
+          // Service mode or auto mode: handle service-based forms
+          if (
+            session.forms_array &&
+            Array.isArray(session.forms_array) &&
+            session.forms_array.length > 0
+          ) {
+            // Determine which forms to send based on form mode
+            let formsToSend = [];
             
-            // Get client's target outcome ID
-            let clientTargetOutcomeId = null;
-            try {
-              const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
-                user_profile_id: client_id,
-              });
-              
-              if (clientTargetOutcome && clientTargetOutcome.length > 0) {
-                clientTargetOutcomeId = clientTargetOutcome[0].target_outcome_id;
-              }
-            } catch (error) {
-              logger.error('Error retrieving client target outcome:', error);
-              // Continue without target outcome ID if there's an error
+            if (formMode === 'auto') {
+              // Auto mode: use the forms_array as determined by the system
+              formsToSend = session.forms_array;
+            } else if (formMode === 'service') {
+              // Service mode: only send service-based forms
+              // Get original service-based forms for this session
+              const originalServiceForms = await this.getOriginalServiceForms(session.session_id, recThrpy[0].service_id);
+              formsToSend = originalServiceForms;
             }
             
-            const toolsEmail = treatmentToolsEmail(
-              recUser[0].email,
-              client_full_name,
-              form_name.toUpperCase(),
-              form_id,
-              client_id,
-              data.session_id,
-              clientTargetOutcomeId, // Add target outcome ID parameter
-            );
-
-            let attendanceEmail;
-            let isAttendanceForm = false;
-            
-            if (form_id === 24 && form_name === 'ATTENDANCE') {
-              // 24 is the form_id for attendance
-              isAttendanceForm = true;
-              const sessions = recThrpy[0].session_obj;
-              const sortedSessions = sessions.sort(
-                (a, b) => a.session_id - b.session_id,
-              );
-
-              // Remove reports sessions
-              const removeReportsSessions = sortedSessions.filter(
-                (session) => session.is_report !== 1,
-              );
-
-              // Filter sessions up to the current session
-              const filteredSessions = removeReportsSessions.filter(
-                (session) => session.session_id <= data.session_id,
-              );
-
-              // Count attended and cancelled sessions
-              const attendedSessions = filteredSessions.filter(
-                (session) => session.session_status === 'SHOW',
-              ).length;
-              const cancelledSessions = filteredSessions.filter(
-                (session) => session.session_status === 'NO-SHOW',
-              ).length;
-
-              const attendancePDFTemplt = AttendancePDF(
-                `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
-                client_full_name,
-                recUser[0].clam_num,
-                removeReportsSessions.length,
-                attendedSessions,
-                cancelledSessions,
-              );
-
-              const attendancePDF = await PDFGenerator(attendancePDFTemplt);
-
-              attendanceEmail = attendanceSummaryEmail(
+            // Send forms based on the determined form type
+            for (const formId of formsToSend) {
+              const [form] = await this.form.getFormByFormId({
+                form_id: formId,
+              });
+              const form_name = form.form_cde;
+              const form_id = form.form_id;
+              const client_full_name =
+                recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
+              const client_id = recUser[0].user_profile_id;
+              
+              // Get client's target outcome ID
+              let clientTargetOutcomeId = null;
+              try {
+                const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
+                  user_profile_id: client_id,
+                });
+                
+                if (clientTargetOutcome && clientTargetOutcome.length > 0) {
+                  clientTargetOutcomeId = clientTargetOutcome[0].target_outcome_id;
+                }
+              } catch (error) {
+                logger.error('Error retrieving client target outcome:', error);
+                // Continue without target outcome ID if there's an error
+              }
+              
+              const toolsEmail = treatmentToolsEmail(
                 recUser[0].email,
                 client_full_name,
-                attendancePDF,
+                form_name.toUpperCase(),
+                form_id,
+                client_id,
+                data.session_id,
+                clientTargetOutcomeId, // Add target outcome ID parameter
               );
 
-              const postATTENDANCEFeedback =
-                await this.feedback.postATTENDANCEFeedback({
-                  client_id: recUser[0].user_profile_id,
-                  session_id: data.session_id,
-                  total_sessions: removeReportsSessions.length,
-                  total_attended_sessions: attendedSessions,
-                  total_cancelled_sessions: cancelledSessions,
-                  tenant_id: tenantId,
-                });
+              let attendanceEmail;
+              let isAttendanceForm = false;
+              
+              if (formId === 24 && form_name === 'ATTENDANCE') {
+                // 24 is the form_id for attendance
+                isAttendanceForm = true;
+                const sessions = recThrpy[0].session_obj;
+                const sortedSessions = sessions.sort(
+                  (a, b) => a.session_id - b.session_id,
+                );
 
-              if (postATTENDANCEFeedback.error) {
-                logger.error(postATTENDANCEFeedback.message);
+                // Remove reports sessions
+                const removeReportsSessions = sortedSessions.filter(
+                  (session) => session.is_report !== 1,
+                );
+
+                // Filter sessions up to the current session
+                const filteredSessions = removeReportsSessions.filter(
+                  (session) => session.session_id <= data.session_id,
+                );
+
+                // Count attended and cancelled sessions
+                const attendedSessions = filteredSessions.filter(
+                  (session) => session.session_status === 'SHOW',
+                ).length;
+                const cancelledSessions = filteredSessions.filter(
+                  (session) => session.session_status === 'NO-SHOW',
+                ).length;
+
+                const attendancePDFTemplt = AttendancePDF(
+                  `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
+                  client_full_name,
+                  recUser[0].clam_num,
+                  removeReportsSessions.length,
+                  attendedSessions,
+                  cancelledSessions,
+                );
+
+                const attendancePDF = await PDFGenerator(attendancePDFTemplt);
+
+                attendanceEmail = attendanceSummaryEmail(
+                  recUser[0].email,
+                  client_full_name,
+                  attendancePDF,
+                );
+
+                const postATTENDANCEFeedback =
+                  await this.feedback.postATTENDANCEFeedback({
+                    client_id: recUser[0].user_profile_id,
+                    session_id: data.session_id,
+                    total_sessions: removeReportsSessions.length,
+                    total_attended_sessions: attendedSessions,
+                    total_cancelled_sessions: cancelledSessions,
+                    tenant_id: tenantId,
+                  });
+
+                if (postATTENDANCEFeedback.error) {
+                  logger.error(postATTENDANCEFeedback.message);
+                  return {
+                    message: postATTENDANCEFeedback.message,
+                    error: -1,
+                  };
+                }
+              }
+
+              const email = await this.sendEmail.sendMail(
+                isAttendanceForm ? attendanceEmail : toolsEmail,
+              );
+
+              if (email.error) {
+                logger.error('Error sending email');
                 return {
-                  message: postATTENDANCEFeedback.message,
+                  message: 'Error sending email',
                   error: -1,
                 };
               }
-            }
-
-            const email = await this.sendEmail.sendMail(
-              isAttendanceForm ? attendanceEmail : toolsEmail,
-            );
-
-            if (email.error) {
-              logger.error('Error sending email');
-              return {
-                message: 'Error sending email',
-                error: -1,
-              };
             }
           }
         }
