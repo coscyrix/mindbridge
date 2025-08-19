@@ -35,47 +35,57 @@ export default class HomeworkController {
       return;
     }
 
-    // Send email with the file attachment if email is provided
-    if (data.email) {
+    // Send email to client when homework is successfully uploaded
+    if (data.session_id) {
       try {
-        // Get client name if session_id is provided
+        const common = new Common();
+        let clientEmail = null;
         let clientName = null;
-        if (data.session_id) {
-          try {
-            const common = new Common();
-            const sessionInfo = await common.getSessionById(data.session_id);
-            if (sessionInfo && sessionInfo.length > 0) {
-              const therapyRequest = await common.getThrpyReqById(sessionInfo[0].thrpy_req_id);
-              if (therapyRequest && therapyRequest.length > 0) {
-                const clientInfo = await common.getUserProfileByUserProfileId(therapyRequest[0].client_id);
-                if (clientInfo && clientInfo.length > 0) {
-                  clientName = `${clientInfo[0].user_first_name} ${clientInfo[0].user_last_name}`;
-                }
+
+        // Get session information
+        const sessionInfo = await common.getSessionById(data.session_id);
+        if (sessionInfo && sessionInfo.length > 0) {
+          // Get therapy request to find client_id
+          const therapyRequest = await common.getThrpyReqById(sessionInfo[0].thrpy_req_id);
+          if (therapyRequest && therapyRequest.length > 0) {
+            // Get client profile information
+            const clientInfo = await common.getUserProfileByUserProfileId(therapyRequest[0].client_id);
+            if (clientInfo && clientInfo.length > 0) {
+              clientName = `${clientInfo[0].user_first_name} ${clientInfo[0].user_last_name}`;
+              
+              // Get client email from users table using user_id
+              const userInfo = await common.getUserById(clientInfo[0].user_id);
+              if (userInfo && userInfo.length > 0) {
+                clientEmail = userInfo[0].email;
               }
             }
-          } catch (error) {
-            console.error('Error getting client name:', error);
-            // Continue without client name if there's an error
           }
         }
 
-        // Read the file from disk for email attachment
-        const fileBuffer = fs.readFileSync(req.file.path);
-        const emailTempl = homeworkEmailAttachment(
-          data.email,
-          data.homework_title,
-          fileBuffer,
-          req.file.originalname,
-          clientName
-        );
-        const sendEmail = new SendEmail();
-        const homeworkEmail = await sendEmail.sendMail(emailTempl);
-        
-        console.log('Homework email sent successfully to:', data.email);
+        // Send email if client email is found
+        if (clientEmail) {
+          // Read the file from disk for email attachment
+          const fileBuffer = fs.readFileSync(req.file.path);
+          const emailTempl = homeworkEmailAttachment(
+            clientEmail,
+            data.homework_title,
+            fileBuffer,
+            req.file.originalname,
+            clientName
+          );
+          const sendEmail = new SendEmail();
+          const homeworkEmail = await sendEmail.sendMail(emailTempl);
+          
+          console.log('Homework email sent successfully to client:', clientEmail);
+        } else {
+          console.log('Client email not found for session_id:', data.session_id);
+        }
       } catch (error) {
-        console.error('Error sending email with attachment:', error);
+        console.error('Error sending email to client:', error);
         // Don't fail the request if email fails, but log the error
       }
+    } else {
+      console.log('No session_id provided, skipping email notification');
     }
 
     res.status(200).json(rec);
