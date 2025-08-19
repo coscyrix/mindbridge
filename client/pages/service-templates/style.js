@@ -1,13 +1,7 @@
 import styled from "styled-components";
 const ServiceManagementWrapper = styled.div`
-  max-width: 800px;
   margin: 40px auto;
   padding: 40px;
-  background-color: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box;
-
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -15,7 +9,6 @@ const ServiceManagementWrapper = styled.div`
   @media (max-width: 768px) {
     padding: 24px;
     margin: 20px;
-    border-radius: 16px;
     gap: 24px;
   }
 
@@ -25,6 +18,9 @@ const ServiceManagementWrapper = styled.div`
     color: #222;
     text-align: center;
     margin: 0;
+  }
+  h4 {
+    text-align: center;
   }
 
   form {

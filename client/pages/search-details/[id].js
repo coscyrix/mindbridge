@@ -75,7 +75,7 @@ const SearchDetails = () => {
   useEffect(() => {
     if (selectedDate) {
       methods.reset({
-        ...methods.getValues(), 
+        ...methods.getValues(),
         appointment_date: selectedDate,
       });
     }
@@ -97,6 +97,7 @@ const SearchDetails = () => {
       if (id) {
         const response = await CommonServices.getCounselorProfile(id);
         if (response.status === 200 && response.data && response.data.rec) {
+          console.log(response);
           setCounselorDetails(response.data.rec);
           setRelatedCounselors(response.data.related_counselors);
         } else {
@@ -260,7 +261,10 @@ const SearchDetails = () => {
       }
     } catch (error) {
       console.error("Form submission error:", error);
-      toast.error(error.response?.data?.message || "An error occurred while sending the appointment request");
+      toast.error(
+        error.response?.data?.message ||
+          "An error occurred while sending the appointment request"
+      );
     } finally {
       setIsSendingAppointment(false);
     }
@@ -340,7 +344,8 @@ const SearchDetails = () => {
                 <DetailItem>
                   <span className="icon">
                     <img src="/assets/icons/fontisto_person.svg" />
-                  </span>s
+                  </span>
+                  s
                   <div>
                     <h3>Service Modalities</h3>
                     <p>{(counselor.service_modalities || []).join(", ")}</p>

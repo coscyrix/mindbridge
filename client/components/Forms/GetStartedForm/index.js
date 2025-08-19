@@ -14,6 +14,8 @@ import { toast } from "react-toastify";
 import GetStartedFormTemplateWrapper from "./style";
 import { useRouter } from "next/router";
 import { GoArrowLeft } from "react-icons/go";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 export const featureOptions = [
   { value: "Session Scheduling", label: "Session Scheduling" },
   { value: "Billing & Invoicing", label: "Billing & Invoicing" },
@@ -203,21 +205,39 @@ const GetStartedFormTemplate = ({ onClose, open }) => {
                   type="email"
                 />
                 <div className="country-phoneno">
-                  <select name="countrycode" className="countryOption">
-                    {countryOptions.map((country, index) => (
-                      <option key={index} value={country?.value}>
-                        {country?.label}
-                      </option>
-                    ))}
-                  </select>
-                  <CustomInputField
-                    customClass={`phone-number-input`}
-                    //${
-                    //   errors?.[name] ? "error-input" : ""
-                    // }`}
-                    label="Phone Number"
+                  <Controller
                     name="phone"
-                    type="tel"
+                    control={control}
+                    rules={{ required: "Phone number is required" }}
+                    render={({ field, fieldState }) => (
+                      <div className="phone-input-wrapper">
+                        <label className="phone-label">Phone Number</label>
+                        <PhoneInput
+                          country={"us"}
+                          enableSearch={true}
+                          value={field.value || ""}
+                          onChange={(value, country) => {
+                            field.onChange("+" + value);
+                          }}
+                          inputClass={
+                            fieldState.error
+                              ? "phone-input error"
+                              : "phone-input"
+                          }
+                          buttonClass="phone-dropdown"
+                          dropdownClass="phone-dropdown-menu"
+                          inputProps={{
+                            name: "phone",
+                            required: true,
+                          }}
+                        />
+                        {fieldState.error && (
+                          <p className="phone-error">
+                            {fieldState.error.message}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   />
                 </div>
 

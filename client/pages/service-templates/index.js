@@ -39,6 +39,7 @@ const ServiceManagement = () => {
         service.service_price ?? service.total_invoice ?? service.price ?? 0
       ),
       name: service.name ?? service.service_name ?? "",
+      tax: Number(service?.gst ?? service?.tax ?? 0),
     };
   };
   const router = useRouter();
@@ -48,6 +49,7 @@ const ServiceManagement = () => {
       const res = await api.get("/service-templates");
       if (res.status === 200 && res.data.rec) {
         const sanitizedData = res.data.rec.map(sanitizeService);
+        console.log(sanitizedData, ":::::");
         setServiceTemplates(sanitizedData);
         reset({ services: sanitizedData });
       }
@@ -69,11 +71,11 @@ const ServiceManagement = () => {
 
   const handlesubmitServices = async (data) => {
     try {
-        setLoading(true);
+      setLoading(true);
       const userData = Cookies.get("user");
       const user = userData ? JSON.parse(userData) : null;
       const tenant_id = user?.tenant_id;
-      console.log(user)
+      console.log(user);
       const processed_service_template = Array.isArray(data.services)
         ? data.services.map((item) => ({
             template_service_id: item.service_id,
@@ -90,17 +92,15 @@ const ServiceManagement = () => {
         payload
       );
       console.log(response);
-      if(response?.status === 200){
-      
+      if (response?.status === 200) {
         toast.success(response?.data?.message);
         router.push("/dashboard");
       }
     } catch (error) {
       toast.error(error?.response?.data?.message);
       console.log(error);
-    }
-    finally{
-        setLoading(false)
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,7 +109,11 @@ const ServiceManagement = () => {
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(handlesubmitServices)}>
           <h2>Tenant Manager Onboarding</h2>
-          {loading && serviceTemplates.length===0 ? (
+          <h4>
+            Specify the service fee structure that will be applied to this
+            tenant.
+          </h4>
+          {loading && serviceTemplates.length === 0 ? (
             <Spinner />
           ) : (
             <CustomEditableInputModal
@@ -120,7 +124,8 @@ const ServiceManagement = () => {
           )}
 
           <button type="submit">
-            {loading ? <Spinner></Spinner> :"Submit"}</button>
+            {loading ? <Spinner></Spinner> : "Submit"}
+          </button>
         </form>
       </FormProvider>
     </ServiceManagementWrapper>

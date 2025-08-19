@@ -165,9 +165,9 @@ const SearchListing = () => {
             `${imageBaseUrl}${counselor.profile_picture_url}`,
             {
               responseType: "blob",
-              headers: {
-                "ngrok-skip-browser-warning": "true",
-              },
+              // headers: {
+              //   "ngrok-skip-browser-warning": "true",
+              // },
             }
           );
 

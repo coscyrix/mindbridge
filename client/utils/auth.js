@@ -7,7 +7,7 @@ export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "https://mindbridge-backend.kmz6b6.easypanel.host/api",
   headers: {
     "Content-Type": "application/json",
-    "ngrok-skip-browser-warning": "true",
+    // "ngrok-skip-browser-warning": "true",
   },
 });
 
@@ -22,6 +22,8 @@ export const login = async (credentials) => {
       loginToken = token;
       Cookies.set("user", JSON.stringify(usr));
       Cookies.set("email", credentials.email);
+       Cookies.set("accountVerified", true);
+       Cookies.set("token", loginToken);
       return response.data;
     } else {
       throw new Error("Login failed");

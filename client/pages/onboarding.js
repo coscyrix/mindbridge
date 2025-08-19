@@ -26,6 +26,7 @@ import WeeklyAvailability from "../components/WeeklyAvailability";
 import LocationSearch from "../components/LocationSearch";
 import axios from "axios";
 import { TREATMENT_TARGET } from "../utils/constants";
+import Spinner from "../components/common/Spinner";
 
 const StepIndicator = styled.div`
   display: flex;
@@ -683,9 +684,9 @@ const SignUp = () => {
               `${imageBaseUrl}${onBoardingDetails.profile_picture_url}`,
               {
                 responseType: "blob", // Important: get raw binary data
-                headers: {
-                  "ngrok-skip-browser-warning": "true",
-                },
+                // headers: {
+                //   "ngrok-skip-browser-warning": "true",
+                // },
               }
             );
 
@@ -715,9 +716,9 @@ const SignUp = () => {
               `${imageBaseUrl}${onBoardingDetails.license_file_url}`,
               {
                 responseType: "blob",
-                headers: {
-                  "ngrok-skip-browser-warning": "true",
-                },
+                // headers: {
+                //   "ngrok-skip-browser-warning": "true",
+                // },
               }
             );
 
@@ -1303,6 +1304,8 @@ const SignUp = () => {
                       customClass="primary-button"
                       onboardingStep={true}
                     />
+                  ) : loading ? (
+                    <Spinner color="#628acdff" position="end" />
                   ) : (
                     <CustomButton
                       title="Submit"

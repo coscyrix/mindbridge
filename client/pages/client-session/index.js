@@ -125,7 +125,12 @@ function ClientSession() {
     setSelectTenantId(tenant_id);
     setSelectCounselor(counselorId);
     setSelectCounselorEmail(data.email);
-    fetchSessions(counselorId);
+    if (data?.value === "allCounselor") {
+      fetchSessions();
+    } else {
+      fetchSessions(counselorId);
+    }
+
     getInvoice(counselorId);
   };
 
@@ -364,6 +369,36 @@ function ClientSession() {
               value={
                 summaryLoading ? (
                   <Skeleton width={120} height={40} />
+                ) : userObj?.role_id === 2 ? (
+                  (() => {
+                    const match = counselorConfiguration?.find(
+                      (item) =>
+                        item?.counselor_info?.email?.toLowerCase() ===
+                        userObj?.counselor_profile?.email?.toLowerCase()
+                    );
+                    const total = summaryData
+                      ? Number(summaryData?.sum_session_counselor_amt) +
+                          Number(summaryData?.sum_session_system_amt) || 0
+                      : 0;
+
+                    const adminFeePercent =
+                      userObj?.role_id === 2
+                        ? Number(userObj?.tenant?.admin_fee) || 0
+                        : Number(summaryData?.system_pcnt) || 0;
+                    const adminFeeAmount = (total * adminFeePercent) / 100;
+                    const netAfterAdmin = total - adminFeeAmount;
+
+                    if (match?.counselor_share_percentage) {
+                      const percentageAmount =
+                        (netAfterAdmin * match.counselor_share_percentage) /
+                        100;
+                      return `Total ${total.toFixed(2)} x ${
+                        match?.counselor_share_percentage
+                      }% =  ${percentageAmount.toFixed(2)}$`;
+                    }
+
+                    return "$0.00";
+                  })()
                 ) : (
                   `$${
                     summaryData
@@ -483,6 +518,7 @@ function ClientSession() {
                     userObj?.role_id === 2
                       ? Number(userObj?.tenant?.admin_fee) || 0
                       : Number(summaryData?.system_pcnt) || 0;
+                  const admin_share = (total * adminFeePercent) / 100;
                   const adminFeeAmount = (total * adminFeePercent) / 100;
                   const netAfterAdmin = total - adminFeeAmount;
 
@@ -503,9 +539,12 @@ function ClientSession() {
                   return (
                     <>
                       Total: ${total.toFixed(2)} <br />
-                      Admin Fee: {adminFeePercent}% = $
-                      {adminFeeAmount.toFixed(2)} <br />
-                      Net After Admin Fee: ${netAfterAdmin.toFixed(2)} <br />
+                      Admin Fee: Total {total.toFixed(2)} - Admin Fee{" "}
+                      {admin_share.toFixed(2)} <br />
+                      New total admin fee: {(total - admin_share).toFixed(
+                        2
+                      )}
+                      <br />
                       Counselor Share: {counselorShare} <br />
                       Manager Share: {managerShare}
                     </>
@@ -548,8 +587,8 @@ function ClientSession() {
                   return (
                     <>
                       Total ${total.toFixed(2)} <br />
-                      Admin Fee: Total {total} - Admin Fee {admin_share}% <br />
-                      New total admin fee: {total - admin_share} <br />
+                      {/* Admin Fee: Total {total} - Admin Fee {admin_share}% <br /> */}
+                      {/* New total admin fee: {total - admin_share} <br /> */}
                       Counselor Share: {counselorShare} <br />
                       Manager Share: {managerShare}
                     </>

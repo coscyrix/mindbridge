@@ -1,6 +1,11 @@
 import React from "react";
 
-function Spinner({ color = "#fff", width = "28px", height = "28px" }) {
+function Spinner({
+  color = "#fff",
+  width = "28px",
+  height = "28px",
+  position = "center",
+}) {
   const spinnerStyle = {
     width: width,
     height: height,
@@ -17,7 +22,7 @@ function Spinner({ color = "#fff", width = "28px", height = "28px" }) {
     height: "100%",
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: position,
   };
 
   const keyframesStyle = `

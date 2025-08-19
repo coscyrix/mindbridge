@@ -1151,7 +1151,8 @@ function CreateSessionForm({
                 )}
               {/* Create Session Schedule ->  Generate Seesion Schedule button  */}
               {![3, 4].includes(userObj?.role_id) &&
-                allSessionsStatusScheduled && (
+                allSessionsStatusScheduled &&
+                !showGeneratedSession && (
                   <button
                     type="button"
                     onClick={handleGenerateSchedule}

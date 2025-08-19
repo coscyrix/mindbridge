@@ -111,7 +111,10 @@ function CustomClientDetails({
       }
     });
     const counselorOptions = Array.from(uniqueCounselorsMap.values());
-    setCounselors([...counselors, ...counselorOptions]);
+    setCounselors([
+      { label: "All Counselor", value: "allCounselor", tenant_id: 0 },
+      ...counselorOptions,
+    ]);
   };
   useEffect(() => {
     fetchManagers();

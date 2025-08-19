@@ -14,15 +14,15 @@ import SignatureField from "../../../SignatureCanvas";
 import ApiConfig from "../../../../config/apiConfig";
 import FormHeader from "../../../FormsHeader";
 
-const ConsentForm = ({ tenant_ID = "", initialData, loader }) => {
+const ConsentForm = ({ tenant_ID = "", initialData, loader, client_name }) => {
   const signaturePadRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [consentBody, setConsentBody] = useState(null);
   const methods = useForm({
     defaultValues: {
-      client_name: "",
+      client_name: client_name || "",
       date: moment().format("DD/MM/YYYY"),
-      signature: null,
+      imgBase64: null,
       acknowledged: false,
     },
   });
@@ -60,6 +60,8 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader }) => {
         client_id: client_id,
         imgBase64,
         tenant_id,
+        date: date,
+        submittedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
       };
       if (!client_id || !form_id || !tenant_id) {
         toast.error("Required parameters are missing from the route.");
@@ -74,7 +76,10 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader }) => {
       }
     } catch (error) {
       console.error("Error while submitting the consent form: ", error);
-      toast.error(error?.message || "Error while submitting the consent form");
+      toast.error(
+        error?.response?.data?.message ||
+          "Error while submitting the consent form"
+      );
     } finally {
       setLoading(false);
     }
@@ -83,12 +88,18 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader }) => {
   useEffect(() => {
     if (initialData) {
       reset({
-        client_name: initialData?.clientName || "",
+        client_name: client_name || "e",
         date: moment().format("DD/MM/YYYY"),
-        signature: initialData?.imgBase64 || null,
+        imgBase64: initialData?.imgBase64 || null,
+        acknowledged: false,
       });
     }
-  }, [initialData, reset]);
+  }, [initialData, reset, client_name]);
+  useEffect(() => {
+    reset({
+      client_name: client_name,
+    });
+  }, [reset, client_name]);
 
   const getConsentBody = async () => {
     try {
@@ -96,7 +107,7 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader }) => {
       if (router.pathname === "/dashboard") {
         tenant_id = tenant_ID;
       } else {
-        tenant_id=router.query.tenant_id;
+        tenant_id = router.query.tenant_id;
       }
       const result = await api.get(
         `${ApiConfig.consentFormSubmittion.consentForm}?tenant_id=${tenant_id}`
@@ -244,11 +255,17 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader }) => {
                 <div className="signature-container">
                   <div className="client-details-field">
                     <label>Client Print Name :</label>
-                    <CustomInputField
+                    <Controller
                       name="client_name"
-                      customClass="name-input"
-                      placeholder="Full Name"
-                      disabled={initialData}
+                      control={control}
+                      render={({ field }) => (
+                        <CustomInputField
+                          {...field}
+                          customClass="name-input"
+                          placeholder="Full Name"
+                          disabled={!!initialData}
+                        />
+                      )}
                     />
                   </div>
                   <div>
@@ -303,19 +320,33 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader }) => {
                     </div>
                   )}
                 />
+                {initialData?.submittedAt && (
+                  <p>
+                    <strong>Submitted On:</strong>{" "}
+                    {moment(initialData.submittedAt).format(
+                      "MMM DD, YYYY [at] hh:mm A"
+                    )}
+                  </p>
+                )}
               </div>
 
-              {!initialData && (
-                <CustomButton
-                  title="Submit"
-                  style={{
-                    marginLeft: "auto",
-                    marginTop: "20px",
-                    minWidth: "100px",
-                  }}
-                  type="submit"
-                  customClass="primary"
-                />
+              {loading ? (
+                <div style={{ marginTop: "20px", textAlign: "center" }}>
+                  <Spinner color="#525252" />
+                </div>
+              ) : (
+                !initialData && (
+                  <CustomButton
+                    title="Submit"
+                    style={{
+                      marginLeft: "auto",
+                      marginTop: "20px",
+                      minWidth: "100px",
+                    }}
+                    type="submit"
+                    customClass="primary"
+                  />
+                )
               )}
             </form>
           </FormProvider>

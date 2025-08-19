@@ -16,6 +16,7 @@ const sanitizeService = (service) => {
       service.service_price ?? service.total_invoice ?? service.price ?? 0
     ),
     name: service.name ?? service.service_name ?? "",
+    tax: Number(service?.gst ?? service?.tax ?? 0),
   };
 };
 
@@ -28,6 +29,7 @@ const CustomEditableInputModal = ({
   const [activeServices, setActiveServices] = useState(() =>
     initialTemplates.map(sanitizeService)
   );
+  console.log(initialTemplates);
 
   const [deletedServices, setDeletedServices] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
@@ -180,7 +182,7 @@ const CustomEditableInputModal = ({
               />
             </div>
             <div className="field-group">
-              <label>Service Price</label>
+              <label>Service Price before tax</label>
               <input
                 type="number"
                 className="input"
@@ -189,6 +191,18 @@ const CustomEditableInputModal = ({
                   handleChange(index, "service_price", e.target.value)
                 }
                 placeholder="Service Price"
+              />
+            </div>
+            <div className="field-group">
+              <label>Tax</label>
+              <input className="input" disabled value={service?.tax} />
+            </div>
+            <div className="field-group">
+              <label>Service Price after tax</label>
+              <input
+                className="input"
+                disabled
+                value={service?.tax + service.service_price}
               />
             </div>
             <div className="delete-btn-container">

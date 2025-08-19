@@ -102,7 +102,7 @@ const HomeworkModal = ({ isOpen, id, onClose, session_id }) => {
                     render={({ field }) => (
                       <input
                         type="file"
-                        accept=".pdf"
+                        // accept=".pdf"
                         onChange={(e) => {
                           field.onChange(e.target.files[0]);
                           handleSelectFile(e);
