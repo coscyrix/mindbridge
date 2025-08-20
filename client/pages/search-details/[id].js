@@ -301,7 +301,16 @@ const SearchDetails = () => {
                     {counselor.is_verified && <VerifiedBadge type="verified" />}
                   </Badges> */}
                 </NameBadges>
-                <Address>{counselor.location}</Address>
+                <Address>
+                  {(() => {
+                    const parts = counselor.location
+                      ?.split(",")
+                      .map((p) => p.trim());
+                    return parts?.length >= 2
+                      ? `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`
+                      : counselor.location;
+                  })()}
+                </Address>
               </div>
               {/* <Rating>
                 {"★".repeat(Math.floor(counselor.average_rating))}
@@ -335,9 +344,14 @@ const SearchDetails = () => {
                   </span>
                   <div>
                     <h3>Specialties</h3>
-                    {TREATMENT_TARGET.map((specialties, index) => (
-                      <p key={specialties.label}> {specialties.label}</p>
+
+                    {counselor?.target_outcomes?.map((item, index) => (
+                      <p key={index}>
+                        {item.target_name}
+                        {index < counselor.target_outcomes.length - 1 && ", "}
+                      </p>
                     ))}
+
                     {/* <p>{specialties.join(", ")}</p> */}
                   </div>
                 </DetailItem>

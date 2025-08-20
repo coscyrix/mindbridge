@@ -2,7 +2,7 @@ import React from "react";
 import { useRouter } from "next/router";
 import { CardWrapper } from "./style";
 import { StarIcon } from "../../../public/assets/icons";
-import { TREATMENT_TARGET } from "../../../utils/constants";
+// import { TREATMENT_TARGET } from "../../../utils/constants";
 const CounselorCard = ({
   name,
   speciality,
@@ -16,9 +16,9 @@ const CounselorCard = ({
   services,
   available,
   counselorId,
+  TREATMENT_TARGET = [],
 }) => {
   const router = useRouter();
-
   const handleBookAppointment = () => {
     router.push(`/search-details/${counselorId}`);
   };
@@ -138,9 +138,16 @@ const CounselorCard = ({
               </div> */}
               <div className="servicesDetails" style={{ marginTop: "20px" }}>
                 <h6>Treatment target</h6>
-                {TREATMENT_TARGET.map((specialties, index) => (
-                  <span key={specialties.value || index}>{specialties.label}, </span>
-                ))}
+                {TREATMENT_TARGET.length > 0 ? (
+                  TREATMENT_TARGET.map((specialty, index) => (
+                    <span key={index}>
+                      {specialty}
+                      {index < TREATMENT_TARGET.length - 1 && ", "}
+                    </span>
+                  ))
+                ) : (
+                  <span>No targets</span>
+                )}
               </div>
               <div
                 className="availabilityWrapper"

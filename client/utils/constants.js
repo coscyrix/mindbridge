@@ -56,8 +56,8 @@ const ActionMenu = ({ row, handleEdit, handleDelete }) => {
         open={open}
         anchorEl={anchorEl}
         onClose={handleClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        transformOrigin={{ vertical: "top", horizontal: "center" }}
+        anchorOrigin={{ vertical: "top", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
       >
         <List dense style={{ flexDirection: "column" }}>
           <ListItem

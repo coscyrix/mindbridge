@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import CounselorCard from "../../components/SearchListingComponents/CounselorCard";
-import { SearchListingWrapper, SearchWrapper } from "../../components/SearchListingComponents/style";
+import {
+  SearchListingWrapper,
+  SearchWrapper,
+} from "../../components/SearchListingComponents/style";
 import CommonServices from "../../services/CommonServices";
 import { useForm } from "react-hook-form";
 import axios from "axios";
@@ -138,8 +141,7 @@ const SearchListing = () => {
         delete payload.specialties;
 
       // Final filter to remove any empty keys
-      
-      
+
       payload = filterPayload(payload);
 
       const response = await CommonServices.getSearchedCounselors(payload);
@@ -155,12 +157,11 @@ const SearchListing = () => {
 
   const fetchAllProfilePictures = async () => {
     const pictureMap = {};
-    console.log()
 
     await Promise.all(
       counselorsData?.map(async (counselor) => {
         try {
-          console.log(counselor.profile_picture_url)
+          console.log(counselor.profile_picture_url);
           const response = await axios.get(
             `${imageBaseUrl}${counselor.profile_picture_url}`,
             {
@@ -449,7 +450,7 @@ const SearchListing = () => {
           </div>
         </div>
         {/* {console.log(counselorsData)} */}
-        
+
         <div className="wrapperCardShow">
           {counselorsData?.length !== 0 ? (
             counselorsData.map((counselor) => (
@@ -461,7 +462,14 @@ const SearchListing = () => {
                 }
                 name={`${counselor.user_first_name} ${counselor.user_last_name}`}
                 // speciality={TREATMENT_TARGET}
-                location={counselor.location}
+                location={(() => {
+                  const parts = counselor.location
+                    ?.split(",")
+                    .map((p) => p.trim());
+                  return parts?.length >= 2
+                    ? `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`
+                    : counselor.location;
+                })()}
                 rating={counselor.average_rating}
                 reviews={counselor.review_count}
                 availability={counselor?.availability}
@@ -470,6 +478,10 @@ const SearchListing = () => {
                 services={counselor.services_offered?.join(", ")}
                 available={counselor.service_modalities}
                 counselorId={counselor.counselor_profile_id}
+                TREATMENT_TARGET={
+                  counselor?.target_outcomes?.map((item) => item.target_name) ||
+                  []
+                }
               />
             ))
           ) : (
