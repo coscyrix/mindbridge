@@ -40,6 +40,258 @@ export default class ServiceTemplateService {
     return [];
   }
 
+  // Helper function to map report service IDs for tenant
+  async mapReportServiceIdsForTenant(tenant_generated_id, originalReportFormula) {
+    console.log(`🔧 Mapping report service IDs for tenant ${tenant_generated_id}`);
+    console.log(`Original report formula:`, originalReportFormula);
+    
+    if (!originalReportFormula || !originalReportFormula.service_id || !Array.isArray(originalReportFormula.service_id)) {
+      console.log('No report service IDs to map');
+      return originalReportFormula;
+    }
+
+    const mappedServiceIds = [];
+    const originalServiceIds = originalReportFormula.service_id;
+
+    // Get the first three services created for this tenant (assuming they are report services)
+    const tenantServices = await db
+      .withSchema(`${process.env.MYSQL_DATABASE}`)
+      .from('service')
+      .where('tenant_id', tenant_generated_id)
+      .where('is_report', 1)
+      .orderBy('created_at', 'asc')
+      .limit(3);
+
+    console.log(`Found ${tenantServices.length} report services for tenant ${tenant_generated_id}:`, tenantServices.map(s => ({ id: s.service_id, name: s.service_name, code: s.service_code })));
+
+    // Map each original service ID to the corresponding tenant report service
+    for (let i = 0; i < originalServiceIds.length; i++) {
+      const originalServiceId = originalServiceIds[i];
+      
+      // If we have a corresponding tenant report service, use it
+      if (tenantServices[i]) {
+        mappedServiceIds.push(tenantServices[i].service_id);
+        console.log(`Mapped original service ID ${originalServiceId} to tenant service ID ${tenantServices[i].service_id} (${tenantServices[i].service_name})`);
+      } else {
+        // Fallback to original service ID if tenant doesn't have enough report services
+        console.log(`No tenant report service found for position ${i}, keeping original service ID ${originalServiceId}`);
+        mappedServiceIds.push(originalServiceId);
+      }
+    }
+
+    const mappedFormula = {
+      position: originalReportFormula.position || [],
+      service_id: mappedServiceIds
+    };
+
+    console.log(`Mapped report formula:`, mappedFormula);
+    return mappedFormula;
+  }
+
+  // Helper function to get default report service templates
+  async getDefaultReportTemplates() {
+    return [
+      {
+        name: 'Intake Report',
+        service_code: 'IR',
+        is_report: 1,
+        is_additional: 0,
+        total_invoice: 0,
+        nbr_of_sessions: 1,
+        svc_formula_typ: 's',
+        svc_formula: '[0]',
+        gst: 0
+      },
+      {
+        name: 'Progress Report',
+        service_code: 'PR',
+        is_report: 1,
+        is_additional: 0,
+        total_invoice: 0,
+        nbr_of_sessions: 1,
+        svc_formula_typ: 's',
+        svc_formula: '[0]',
+        gst: 0
+      },
+      {
+        name: 'Discharge Report',
+        service_code: 'DR',
+        is_report: 1,
+        is_additional: 0,
+        total_invoice: 0,
+        nbr_of_sessions: 1,
+        svc_formula_typ: 's',
+        svc_formula: '[0]',
+        gst: 0
+      }
+    ];
+  }
+
+  // Helper function to create default report service for tenant
+  async createDefaultReportService(tenant_generated_id, template) {
+    try {
+      const serviceData = {
+        service_name: template.name,
+        service_code: template.service_code,
+        is_report: template.is_report,
+        is_additional: template.is_additional,
+        total_invoice: template.total_invoice,
+        nbr_of_sessions: template.nbr_of_sessions,
+        svc_formula_typ: template.svc_formula_typ,
+        svc_formula: template.svc_formula,
+        gst: template.gst,
+        tenant_id: tenant_generated_id
+      };
+
+      const result = await this.service.postService(serviceData);
+      return result;
+    } catch (error) {
+      console.error('Error creating default report service:', error);
+      return null;
+    }
+  }
+
+  // Helper function to update svc_report_formula for all non-report services
+  async updateReportFormulasForTenant(tenant_generated_id, createdServices) {
+    console.log(`🔧 Updating report formulas for tenant ${tenant_generated_id}`);
+    
+    // Get all report services for this tenant
+    const reportServices = await db
+      .withSchema(`${process.env.MYSQL_DATABASE}`)
+      .from('service')
+      .where('tenant_id', tenant_generated_id)
+      .where('is_report', 1)
+      .orderBy('created_at', 'asc');
+
+    console.log(`Found ${reportServices.length} report services:`, reportServices.map(s => ({ id: s.service_id, name: s.service_name, code: s.service_code })));
+
+    if (reportServices.length === 0) {
+      console.log('No report services found, skipping formula updates');
+      return;
+    }
+
+    // Get all non-report services that have svc_report_formula
+    const nonReportServices = await db
+      .withSchema(`${process.env.MYSQL_DATABASE}`)
+      .from('service')
+      .where('tenant_id', tenant_generated_id)
+      .where('is_report', 0)
+      .whereRaw('svc_report_formula != ?', ['{"position": [], "service_id": []}'])
+      .whereRaw('svc_report_formula != ?', ['{"position":[],"service_id":[]}']);
+
+    console.log(`Found ${nonReportServices.length} non-report services with report formulas`);
+
+    for (const service of nonReportServices) {
+      try {
+        // Parse the current svc_report_formula
+        let currentFormula;
+        try {
+          currentFormula = typeof service.svc_report_formula === 'string' 
+            ? JSON.parse(service.svc_report_formula) 
+            : service.svc_report_formula;
+        } catch (error) {
+          console.error(`Error parsing svc_report_formula for service ${service.service_id}:`, error);
+          continue;
+        }
+
+        if (!currentFormula || !currentFormula.service_id || !Array.isArray(currentFormula.service_id)) {
+          console.log(`Service ${service.service_id} has no valid report formula, skipping`);
+          continue;
+        }
+
+        // Map the original service IDs to tenant report service IDs
+        const mappedServiceIds = [];
+        for (let i = 0; i < currentFormula.service_id.length; i++) {
+          const originalServiceId = currentFormula.service_id[i];
+          
+          // Use the corresponding tenant report service
+          if (reportServices[i]) {
+            mappedServiceIds.push(reportServices[i].service_id);
+            console.log(`Mapping service ${service.service_id}: original ID ${originalServiceId} -> tenant ID ${reportServices[i].service_id} (${reportServices[i].service_name})`);
+          } else {
+            // Fallback to original ID if no corresponding report service
+            mappedServiceIds.push(originalServiceId);
+            console.log(`No tenant report service for position ${i}, keeping original ID ${originalServiceId}`);
+          }
+        }
+
+        // Update the service with the mapped formula
+        const updatedFormula = {
+          position: currentFormula.position || [],
+          service_id: mappedServiceIds
+        };
+
+        const updateResult = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('service')
+          .where('service_id', service.service_id)
+          .update({
+            svc_report_formula: JSON.stringify(updatedFormula),
+            updated_at: new Date()
+          });
+
+        if (updateResult > 0) {
+          console.log(`✅ Updated svc_report_formula for service ${service.service_id} (${service.service_name}):`, updatedFormula);
+        } else {
+          console.error(`❌ Failed to update svc_report_formula for service ${service.service_id}`);
+        }
+
+      } catch (error) {
+        console.error(`Error updating svc_report_formula for service ${service.service_id}:`, error);
+      }
+    }
+  }
+
+  // Helper function to ensure tenant has basic report services
+  async ensureTenantHasReportServices(tenant_generated_id) {
+    console.log(`🔧 Ensuring tenant ${tenant_generated_id} has basic report services`);
+    
+    // Check if tenant already has report services
+    const existingReportServices = await db
+      .withSchema(`${process.env.MYSQL_DATABASE}`)
+      .from('service')
+      .where('tenant_id', tenant_generated_id)
+      .where('is_report', 1)
+      .orderBy('created_at', 'asc');
+
+    console.log(`Tenant ${tenant_generated_id} has ${existingReportServices.length} existing report services`);
+
+    // Get default templates to check what we need
+    const defaultTemplates = await this.getDefaultReportTemplates();
+    
+    // Check which report services are missing
+    const missingServices = [];
+    for (const template of defaultTemplates) {
+      const existingService = existingReportServices.find(s => s.service_code === template.service_code);
+      if (!existingService) {
+        missingServices.push(template);
+        console.log(`Missing report service: ${template.name} (${template.service_code})`);
+      } else {
+        console.log(`Report service ${template.name} (${template.service_code}) already exists for tenant ${tenant_generated_id}`);
+      }
+    }
+
+    // Create only the missing report services
+    if (missingServices.length > 0) {
+      console.log(`Creating ${missingServices.length} missing report services for tenant ${tenant_generated_id}`);
+      
+      for (const template of missingServices) {
+        try {
+          const result = await this.createDefaultReportService(tenant_generated_id, template);
+          if (result && !result.error) {
+            console.log(`Created report service: ${template.name} (ID: ${result.service_id})`);
+          } else {
+            console.error(`Failed to create report service: ${template.name}`, result);
+          }
+        } catch (error) {
+          console.error(`Error creating report service ${template.name}:`, error);
+        }
+      }
+    } else {
+      console.log(`All required report services already exist for tenant ${tenant_generated_id}`);
+    }
+  }
+
   // Helper function to parse svc_report_formula safely
   parseSvcReportFormula(data) {
     console.log(`🔧 Parsing svc_report_formula: ${JSON.stringify(data)} (type: ${typeof data})`);
@@ -314,6 +566,13 @@ export default class ServiceTemplateService {
       tenant_id: tenant.tenant_generated_id,
     };
     
+    console.log('🔍 Template data:', {
+      is_report: template.is_report,
+      service_name: template.name || template.service_name,
+      service_code: template.service_code
+    });
+    console.log('🔍 Service data is_report before override:', serviceData.is_report);
+    
     // Remove/override fields that should not be copied or are not relevant for the service table
     delete serviceData.template_service_id; // avoid conflict if present
     delete serviceData.id; // generic id field if present
@@ -340,6 +599,7 @@ export default class ServiceTemplateService {
     }
     
     // Handle svc_report_formula properly - store as object directly
+    // For now, keep the original formula and we'll update it after all services are created
     serviceData.svc_report_formula = this.parseSvcReportFormula(template.svc_report_formula);
     
     // Handle position and service_id fields if they exist in template
@@ -355,8 +615,30 @@ export default class ServiceTemplateService {
     if (!serviceData.svc_formula_typ) serviceData.svc_formula_typ = 's';
     if (!serviceData.svc_formula) serviceData.svc_formula = [7];
     if (!serviceData.svc_report_formula) serviceData.svc_report_formula = { position: [], service_id: [] };
-    if (serviceData.is_report === undefined) serviceData.is_report = 0;
+    
+    // Force is_report = 1 for specific report service codes
+    const serviceCode = (serviceData.service_code || '').toUpperCase();
+    if (serviceCode === 'IR' || serviceCode === 'DR' || serviceCode === 'PR') {
+      serviceData.is_report = 1;
+      console.log(`🔍 Forced is_report = 1 for report service: ${serviceData.service_name} (${serviceData.service_code})`);
+    } else if (serviceData.is_report === undefined || serviceData.is_report === null) {
+      // For other services, detect by name if is_report is not set
+      const serviceName = (serviceData.service_name || '').toLowerCase();
+      
+      // Check if this is a report service by name
+      const isReportByName = serviceName.includes('report') || serviceName.includes('intake') || serviceName.includes('progress') || serviceName.includes('discharge');
+      
+      if (isReportByName) {
+        serviceData.is_report = 1;
+        console.log(`🔍 Detected report service by name: ${serviceData.service_name} (${serviceData.service_code})`);
+      } else {
+        serviceData.is_report = 0;
+      }
+    }
+    
     if (serviceData.is_additional === undefined) serviceData.is_additional = 0;
+    
+    console.log('🔍 Service data is_report after override:', serviceData.is_report);
     
     console.log('Service data to be created:', serviceData);
 
@@ -394,8 +676,17 @@ export default class ServiceTemplateService {
     const errors = [];
     const formsUpdateResults = [];
 
+    // Get tenant details to get tenant_generated_id
+    const tenantRes = await this.common.getTenantByTenantId(tenant_id);
+    if (tenantRes.error) {
+      return { message: 'Error fetching tenant details', error: -1, details: tenantRes };
+    }
+    const tenant = tenantRes[0];
+    const tenant_generated_id = tenant.tenant_generated_id;
+
+    // First, get template details to identify report services
+    const templateDetails = [];
     for (const svc of service_templates) {
-      // Validate each service template
       if (!svc.template_service_id || typeof svc.price !== 'number') {
         errors.push({ 
           template_service_id: svc.template_service_id, 
@@ -404,6 +695,54 @@ export default class ServiceTemplateService {
         continue;
       }
 
+      try {
+        const templateRes = await this.serviceTemplate.getTemplateById(svc.template_service_id);
+        if (templateRes.error) {
+          errors.push({ 
+            template_service_id: svc.template_service_id, 
+            message: templateRes.message,
+            details: templateRes 
+          });
+          continue;
+        }
+        
+        templateDetails.push({
+          ...svc,
+          template: templateRes.rec,
+          isReportService: templateRes.rec.is_report === 1
+        });
+      } catch (error) {
+        errors.push({ 
+          template_service_id: svc.template_service_id, 
+          message: 'Error fetching template details',
+          details: error.message 
+        });
+      }
+    }
+
+    // Check if user is already copying report service templates
+    const hasReportServiceTemplates = templateDetails.some(t => t.isReportService);
+    console.log(`User is copying ${templateDetails.filter(t => t.isReportService).length} report service templates`);
+
+    // Only create default report services if user is not already copying report service templates
+    if (!hasReportServiceTemplates) {
+      console.log('No report service templates found in user selection, ensuring default report services exist');
+      await this.ensureTenantHasReportServices(tenant_generated_id);
+    } else {
+      console.log('User is copying report service templates, skipping default report service creation');
+    }
+
+    // Sort templates: report services first, then others
+    const sortedTemplates = templateDetails.sort((a, b) => {
+      if (a.isReportService && !b.isReportService) return -1;
+      if (!a.isReportService && b.isReportService) return 1;
+      return 0;
+    });
+
+    console.log(`📋 Processing ${sortedTemplates.length} templates (${sortedTemplates.filter(t => t.isReportService).length} report services first)`);
+
+    // Process templates in order (report services first)
+    for (const svc of sortedTemplates) {
       try {
         const result = await this.copyTemplateToTenantService(svc.template_service_id, tenant_id, svc.price);
         if (result.error) {
@@ -417,7 +756,8 @@ export default class ServiceTemplateService {
             template_service_id: svc.template_service_id, 
             success: true,
             service_id: result.service_id,
-            forms_update: result.forms_update
+            forms_update: result.forms_update,
+            isReportService: svc.isReportService
           });
           
           // Collect forms update results
@@ -437,6 +777,10 @@ export default class ServiceTemplateService {
         });
       }
     }
+
+    // After all services are created, update svc_report_formula for non-report services
+    console.log('🔧 Updating svc_report_formula for non-report services...');
+    await this.updateReportFormulasForTenant(tenant_generated_id, results);
 
     const response = {
       message: 'Service templates copy operation completed',

@@ -463,6 +463,10 @@ export default class ThrpyReq {
               is_report: 1,
             });
 
+            console.log('reportName', reportName);
+            console.log('reportServiceId', reportServiceId);
+            console.log('reportName.rec', reportName.rec);
+
             if (reportName && reportName.rec && reportName.rec[0]) {
               tmpSession.session_code = `${svc.service_code}_${reportName.rec[0].service_code}`;
               tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;

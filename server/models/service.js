@@ -131,7 +131,7 @@ export default class Service {
       const tmpSvc = {
         service_name: capitalizeFirstLetter(data.service_name),
         service_code: data.service_code.toUpperCase(),
-        is_report: isReportValid ? 1 : 0,
+        is_report: data.is_report !== undefined ? data.is_report : (isReportValid ? 1 : 0),
         is_additional: data.is_additional || 0,
         total_invoice: data.total_invoice || 0,
         nbr_of_sessions: data.nbr_of_sessions || 0,
@@ -143,6 +143,9 @@ export default class Service {
       };
       
       console.log('🔍 DEBUG: Service creation data:');
+      console.log('  - data.is_report:', data.is_report);
+      console.log('  - data.service_code:', data.service_code);
+      console.log('  - tmpSvc.is_report:', tmpSvc.is_report);
       console.log('  - data.svc_report_formula:', data.svc_report_formula);
       console.log('  - data.svc_report_formula type:', typeof data.svc_report_formula);
       console.log('  - tmpSvc.svc_report_formula:', tmpSvc.svc_report_formula);
