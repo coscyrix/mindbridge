@@ -979,6 +979,7 @@ const SignUp = () => {
                   render={({ field, fieldState: { error } }) => (
                     <CustomMultiSelect
                       {...field}
+                      className="min-multi"
                       label="Treatment Target"
                       placeholder="Select Treatment Target"
                       isMulti={true}

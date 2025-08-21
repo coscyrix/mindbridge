@@ -319,7 +319,7 @@ function CreateSessionForm({
           <div style={{ cursor: "pointer" }}>
             {![3, 4].includes(userObj?.role_id) &&
               showNoShowButtonDisplay &&
-              isWithin24Hours(row.intake_date, row.scheduled_time) && (
+              (
                 <div
                   className="action-buttons-container"
                   style={{ display: "flex" }}

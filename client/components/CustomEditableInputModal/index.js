@@ -3,6 +3,8 @@ import { CustomEditableInputModalWrapper } from "./style";
 import { MdDelete } from "react-icons/md";
 import Spinner from "../common/Spinner";
 import { DeleteIcon } from "../../public/assets/icons";
+import { useReferenceContext } from "../../context/ReferenceContext";
+
 const sanitizeService = (service) => {
   const id =
     service.service_id ??
@@ -26,6 +28,8 @@ const CustomEditableInputModal = ({
   onChange,
   loading = false,
 }) => {
+  const { userObj } = useReferenceContext();
+  console.log(userObj);
   const [activeServices, setActiveServices] = useState(() =>
     initialTemplates.map(sanitizeService)
   );
@@ -194,15 +198,22 @@ const CustomEditableInputModal = ({
               />
             </div>
             <div className="field-group">
-              <label>Tax</label>
-              <input className="input" disabled value={service?.tax} />
+              <label>Tax %</label>
+              <input
+                className="input"
+                disabled
+                value={`${userObj?.tenant?.tax_percent}%`}
+              />
             </div>
             <div className="field-group">
               <label>Service Price after tax</label>
               <input
                 className="input"
                 disabled
-                value={service?.tax + service.service_price}
+                value={
+                  service.service_price +
+                  (service.service_price * userObj?.tenant?.tax_percent) / 100
+                }
               />
             </div>
             <div className="delete-btn-container">

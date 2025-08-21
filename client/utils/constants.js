@@ -2005,10 +2005,10 @@ export const service_templates = [
 ];
 
 export const gasQuestionBank = {
-  Improving_Emotional_Regulation_in_Therapy: [
+  Anxiety_Management: [
     {
       question:
-        "How often do you use emotional regulation techniques (e.g., breathing exercises, cognitive reframing ,mindfulness)?",
+        "How often do you use anxiety management techniques (eg deep breathing grounding exercises progressive muscle relaxation)",
       name: "q1",
       options: [
         { label: "Never (0 times per week)", value: -2 },
@@ -2019,8 +2019,7 @@ export const gasQuestionBank = {
       ],
     },
     {
-      question:
-        "How effective are these techniques in reducing your emotional distress?",
+      question: "How effective are these techniques in reducing your anxiety??",
       name: "q2",
       options: [
         {
@@ -2049,8 +2048,7 @@ export const gasQuestionBank = {
       ],
     },
     {
-      question:
-        "Do you apply emotional regulation techniques outside of therapy sessions?",
+      question: " How well do you manage anxious thoughts without avoidance?",
       name: "q3",
       options: [
         {
@@ -2077,7 +2075,7 @@ export const gasQuestionBank = {
     },
     {
       question:
-        "How confident do you feel in managing emotional distress on your own?",
+        "How confident are you in handling anxiety-provoking situations?",
       name: "q4",
       options: [
         {
@@ -2105,8 +2103,7 @@ export const gasQuestionBank = {
       ],
     },
     {
-      question:
-        "Have you noticed a change in your emotional well-being since starting therapy?",
+      question: "How much has your overall anxiety decreased over time?",
       name: "q5",
       options: [
         {
@@ -2296,6 +2293,301 @@ export const gasQuestionBank = {
           label: "Major change, I feel confident and resilient",
           value: 2,
         },
+      ],
+    },
+  ],
+  Relationship_Issues: [
+    {
+      question: "How often do you engage in open and healthy communication?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once or twice a week)", value: -1 },
+        { label: "Sometimes (a few times a week)", value: 0 },
+        { label: "Often (most days)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question: "How effectively do you handle conflict without escalation?",
+      name: "q2",
+      options: [
+        { label: "Not at all effectively", value: -2 },
+        { label: "Slightly effectively", value: -1 },
+        { label: "Somewhat effectively", value: 0 },
+        { label: "Effectively", value: 1 },
+        { label: "Very effectively", value: 2 },
+      ],
+    },
+    {
+      question: "How much trust do you feel in your relationships?",
+      name: "q3",
+      options: [
+        { label: "No trust at all", value: -2 },
+        { label: "Low trust", value: -1 },
+        { label: "Moderate trust", value: 0 },
+        { label: "High trust", value: 1 },
+        { label: "Complete trust", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in setting and maintaining boundaries?",
+      name: "q4",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Moderately confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question: "How much have your relationships improved over time?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
+  Grief_and_Loss: [
+    {
+      question:
+        "How often do you allow yourself to acknowledge and process grief?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once or twice a week)", value: -1 },
+        { label: "Sometimes (a few times a week)", value: 0 },
+        { label: "Often (most days)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question: "How well can you manage emotions related to the loss?",
+      name: "q2",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Poorly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How frequently do you engage in meaningful activities that honor your loved one?",
+      name: "q3",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once or twice a week)", value: -1 },
+        { label: "Sometimes (a few times a week)", value: 0 },
+        { label: "Often (most days)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How confident are you in navigating life changes after the loss?",
+      name: "q4",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Moderately confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question: "How much has your ability to cope with grief improved?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
+  Trauma_and_PTSD: [
+    {
+      question:
+        "How effectively can you identify and challenge trauma-related thoughts?",
+      name: "q1",
+      options: [
+        { label: "Not at all effectively", value: -2 },
+        { label: "Slightly effectively", value: -1 },
+        { label: "Somewhat effectively", value: 0 },
+        { label: "Effectively", value: 1 },
+        { label: "Very effectively", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How often do you use grounding techniques to manage trauma responses?",
+      name: "q2",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once or twice a week)", value: -1 },
+        { label: "Sometimes (a few times a week)", value: 0 },
+        { label: "Often (most days)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question: "How frequently do you feel safe and in control in daily life?",
+      name: "q3",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Always", value: 2 },
+      ],
+    },
+    {
+      question: "How well can you regulate emotional triggers?",
+      name: "q4",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Poorly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How much have your trauma symptoms decreased over time?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
+  Identity_and_Self_Exploration: [
+    {
+      question:
+        "How often do you reflect on and embrace your personal values and beliefs?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once or twice a week)", value: -1 },
+        { label: "Sometimes (a few times a week)", value: 0 },
+        { label: "Often (most days)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in expressing your authentic self?",
+      name: "q2",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Moderately confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How frequently do you make choices aligned with your identity?",
+      name: "q3",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Always", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How well do you navigate identity-related challenges (e.g., cultural, gender, personal growth)?",
+      name: "q4",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Poorly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How much has your self-awareness and acceptance improved?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
+  Family_and_Parenting_Issues: [
+    {
+      question:
+        "How often do you use effective communication techniques with family members?",
+      name: "q1",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How well do you set and enforce healthy boundaries within your family?",
+      name: "q2",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in handling parenting challenges?",
+      name: "q3",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+    {
+      question: "How frequently do you engage in positive family interactions?",
+      name: "q4",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+    {
+      question: "How much have family dynamics improved?",
+      name: "q5",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
       ],
     },
   ],
@@ -2774,31 +3066,207 @@ export const gasQuestionBank = {
       ],
     },
   ],
+  Coping_With_Disability: [
+    {
+      question: "How often do you engage in adaptive coping strategies?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once in a while)", value: -1 },
+        { label: "Sometimes (a few times a month)", value: 0 },
+        { label: "Often (weekly)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question: "How well do you advocate for accessibility and support?",
+      name: "q2",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Poorly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in managing daily activities?",
+      name: "q3",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Moderately confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How frequently do you engage in self-care and emotional regulation?",
+      name: "q4",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Very often", value: 2 },
+      ],
+    },
+    {
+      question: "How much has your overall well-being improved?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
+  Chronic_Illness_and_Health_Related_Concerns: [
+    {
+      question:
+        "How often do you engage in self-care and health management activities?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once in a while)", value: -1 },
+        { label: "Sometimes (a few times a month)", value: 0 },
+        { label: "Often (weekly)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How well do you cope emotionally with health-related challenges?",
+      name: "q2",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Poorly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in advocating for your health needs?",
+      name: "q3",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Moderately confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How frequently do you engage in supportive social interactions?",
+      name: "q4",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Very often", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How much has your ability to manage your health condition improved?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
 };
 
 export const treatment_goals = [
   {
-    label: "Improving Emotional Regulation in Therapy",
-    value: "Improving_Emotional_Regulation_in_Therapy",
+    label: "Coping With Disability",
+    value: "Coping_With_Disability",
+    goal: "Improve emotional adjustment and daily functioning with a disability",
   },
-  { label: "Depression", value: "Depression" },
-  { label: "Stress Management", value: "Stress_Management" },
+  {
+    label: "Chronic Illness and Health Related Concerns",
+    value: "Chronic_Illness_and_Health_Related_Concerns",
+    goal: "Improve emotional coping with chronic illness and maintain well-being.",
+  },
+  {
+    label: "Relationship Issues",
+    value: "Relationship_Issues",
+    goal: "Improve communication, trust, and emotional connection in relationships.",
+  },
+  {
+    label: "Grief and Loss",
+    value: "Grief_and_Loss",
+    goal: "Develop coping strategies to process grief and integrate loss into daily life.",
+  },
+  {
+    label: "Trauma and PTSD",
+    value: "Trauma_and_PTSD",
+    goal: "Reduce trauma-related symptoms and increase emotional regulation.",
+  },
+  {
+    label: "Identity and Self Exploration",
+    value: "Identity_and_Self_Exploration",
+    goal: "Develop a strong sense of self and personal identity.",
+  },
+  {
+    label: "Family and Parenting Issues",
+    value: "Family_and_Parenting_Issues",
+    goal: "Strengthen family relationships and develop effective parenting strategies.",
+  },
+
+  {
+    label: "Anxiety Management",
+    value: "Anxiety_Management",
+    goal: "Reduce anxiety symptoms and increase the ability to handle stressful situations.",
+  },
+  {
+    label: "Depression",
+    value: "Depression",
+    goal: "Improve mood, motivation, and ability to engage in daily activities.",
+  },
+  {
+    label: "Stress Management",
+    value: "Stress_Management",
+    goal: "Develop healthier coping mechanisms to handle stress effectively.",
+  },
   {
     label: "Self-Esteem and Self-Confidence Issues",
     value: "Self_Esteem_and_Self_Confidence_Issues",
+    goal: "Build a more positive self-image and increase self-worth.",
   },
   {
     label: "Addiction and Substance Abuse",
     value: "Addiction_and_Substance_Abuse",
+    goal: "Reduce substance use and develop healthier coping mechanisms.",
   },
   {
     label: "Work and Career-Related Issues",
     value: "Work_and_Career_Related_Issues",
+    goal: "Increase job satisfaction, career confidence, and work-life balance.",
   },
-  { label: "Anger Management", value: "Anger_Management" },
+  {
+    label: "Anger Management",
+    value: "Anger_Management",
+    goal: "Develop healthier ways to express and regulate anger.",
+  },
   {
     label: "Eating Disorders and Body Image Issues",
     value: "Eating_Disorders_and_Body_Image_Issues",
+    goal: "Develop a healthier relationship with food and body image.",
   },
-  { label: "Life Transitions", value: "Life_Transitions" },
+  {
+    label: "Life Transitions",
+    value: "Life_Transitions",
+    goal: "Adjust to major life changes with resilience and stability.",
+  },
 ];

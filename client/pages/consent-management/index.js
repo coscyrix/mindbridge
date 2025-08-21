@@ -13,18 +13,19 @@ import { useReferenceContext } from "../../context/ReferenceContext";
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 import "react-quill/dist/quill.snow.css";
 import { toast } from "react-toastify";
+import Spinner from "../../components/common/Spinner";
 
 const ConsentManagement = () => {
   const [isEnabled, setIsEnabled] = useState(false);
   const [userData, setUserData] = useState(null);
   const [counselors, setCounselors] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const { userObj, allCounselors } = useReferenceContext();
   const [consentBody, setConsentBody] = useState(null);
   const methods = useForm({
     resolver: zodResolver(getConsentManagementSchema(userData)),
     defaultValues: {
-      agreeTerms: false,
       consent_Editor_Values: "",
       counselorSelect: null,
     },
@@ -83,16 +84,16 @@ const ConsentManagement = () => {
   };
 
   const onSubmit = async (data) => {
-    console.log(data);
-    const isAdmin = userData?.role_id === 4;
-    const payload = {
-      description: data.consent_Editor_Values,
-      tenant_id: isAdmin
-        ? data?.counselorSelect?.tenant_id
-        : userData?.tenant?.tenant_generated_id || "",
-      ...(!isAdmin && { counselor_id: userData?.counselor_profile_id }),
-    };
     try {
+      setLoading(true);
+      const isAdmin = userData?.role_id === 4;
+      const payload = {
+        description: data.consent_Editor_Values,
+        tenant_id: isAdmin
+          ? data?.counselorSelect?.tenant_id
+          : userData?.tenant?.tenant_generated_id || "",
+        ...(!isAdmin && { counselor_id: userData?.counselor_profile_id }),
+      };
       const response = await api.post(
         ApiConfig.consentFormSubmittion.consentForm,
         payload
@@ -100,7 +101,7 @@ const ConsentManagement = () => {
       if (response.status === 201) {
         toast.success(response?.data?.message);
       }
-      console.log("Consent submitted:", response);
+      setLoading(false);
     } catch (error) {
       toast.error(error?.response?.data?.message);
       console.error("Submission failed:", error);
@@ -182,22 +183,26 @@ const ConsentManagement = () => {
                   />
                 </div>
 
-                <label className="disclaimer">
+                {/* <label className="disclaimer">
                   <input type="checkbox" {...methods.register("agreeTerms")} />{" "}
                   I agree to the terms and conditions and consent to receive
                   services through Mindbridge.
                   {errors.agreeTerms && (
                     <p className="error-text">{errors.agreeTerms.message}</p>
                   )}
-                </label>
+                </label> */}
 
                 <div className="form-row">
-                  <CustomButton
-                    className="button-blue"
-                    title="Submit"
-                    type="button"
-                    onClick={handleSubmit(onSubmit)}
-                  />
+                  {loading ? (
+                    <Spinner color="blue" />
+                  ) : (
+                    <CustomButton
+                      className="button-blue"
+                      title="Submit"
+                      type="button"
+                      onClick={handleSubmit(onSubmit)}
+                    />
+                  )}
                 </div>
               </form>
             </FormProvider>

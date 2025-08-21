@@ -62,6 +62,9 @@ export const RightPanel = styled.div`
 
 export const FormContainer = styled.div`
   padding: 2rem;
+  .min-multi {
+    max-width: 200px;
+  }
 
   h2 {
     text-align: center;
@@ -201,10 +204,10 @@ export const FormContainer = styled.div`
     }
   }
 
-  .primary-button{
+  .primary-button {
     margin-left: auto;
     background-color: var(--primary-button-color);
-    color:#fff;
+    color: #fff;
   }
 
   @media (max-width: 768px) {

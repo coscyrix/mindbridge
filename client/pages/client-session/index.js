@@ -392,9 +392,7 @@ function ClientSession() {
                       const percentageAmount =
                         (netAfterAdmin * match.counselor_share_percentage) /
                         100;
-                      return `Total ${total.toFixed(2)} x ${
-                        match?.counselor_share_percentage
-                      }% =  ${percentageAmount.toFixed(2)}$`;
+                      return `Total ${total.toFixed(2)}`
                     }
 
                     return "$0.00";
@@ -607,6 +605,7 @@ function ClientSession() {
                 }`}
               />
             ) : (
+              userObj?.role_id !==2 && (
               <CustomTab
                 heading={"Admin Fee:"}
                 value={
@@ -633,22 +632,10 @@ function ClientSession() {
                         2
                       )} * ${percentage} = ${fee}`;
                     })()
-                  ) : (
-                    (() => {
-                      const baseAmount =
-                        Number(summaryData?.sum_session_system_amt) +
-                        Number(summaryData?.sum_session_counselor_amt);
-
-                      const percentage = Number(userObj?.tenant?.admin_fee);
-                      const fee = ((baseAmount * percentage) / 100).toFixed(2);
-
-                      return `Admin Fee: ${baseAmount.toFixed(
-                        2
-                      )} * ${percentage} = ${fee}`;
-                    })()
-                  )
+                  ):""
                 }
               />
+              )
             )}
             {/* <CustomTab
               heading={"Total Amount to Vapendama for a Month:"}

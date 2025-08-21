@@ -247,10 +247,7 @@ const Invoice = () => {
     },
     {
       name: "Total Amount",
-      selector: (row) =>
-        `$${(
-          Number(row.session_counselor_amt) + Number(row.session_system_amt)
-        ).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_price).toFixed(2)}`,
       selectorId: "session_price",
     },
     {
@@ -552,6 +549,7 @@ const Invoice = () => {
           counselorId: "allCounselors",
           startDate,
           endDate,
+          ...(userObj?.role_id === 3 && { tenant_id: userObj?.tenant_id }),
         });
       } else {
         getInvoice();

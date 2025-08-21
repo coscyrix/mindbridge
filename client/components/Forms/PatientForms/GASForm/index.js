@@ -1,9 +1,4 @@
-import {
-  useForm,
-  Controller,
-  useWatch,
-  FormProvider,
-} from "react-hook-form";
+import { useForm, Controller, useWatch, FormProvider } from "react-hook-form";
 import CustomMultiSelect from "../../../CustomMultiSelect";
 import { GasFormWrapper } from "./style";
 import { gasQuestionBank, treatment_goals } from "../../../../utils/constants";
@@ -39,7 +34,6 @@ const GasForm = ({
     },
     mode: "onSubmit",
   });
-
   const {
     control,
     handleSubmit,
@@ -74,7 +68,6 @@ const GasForm = ({
     const val = answers?.[q.name];
     return sum + (val ? Number(val) : 0);
   }, 0);
-
   const onSubmit = async (data) => {
     try {
       setIsSubmitting(true);
@@ -124,6 +117,9 @@ const GasForm = ({
 
           {questions.length > 0 && (
             <div className="score-box">
+              <p>
+                {treatment_goals.find((g) => g.value === selectedGoal)?.goal}
+              </p>
               <div className="score-content">
                 <div className="score-circle">
                   <CircularProgressbar
@@ -182,14 +178,14 @@ const GasForm = ({
                 ))}
               </div>
 
-              {submitError && (
+              {/* {submitError && (
                 <div
                   className="error-message"
                   style={{ color: "red", marginBottom: "10px" }}
                 >
                   {submitError}
                 </div>
-              )}
+              )} */}
               <div className="button-group">
                 {/* <CustomButton title="Cancel" type="button" /> */}
                 <CustomButton
