@@ -40,6 +40,76 @@ export default class ServiceTemplateService {
     return [];
   }
 
+  // Helper function to parse svc_report_formula safely
+  parseSvcReportFormula(data) {
+    console.log(`🔧 Parsing svc_report_formula: ${JSON.stringify(data)} (type: ${typeof data})`);
+    
+    // If data is null or undefined, return default
+    if (data === null || data === undefined) {
+      console.log('  → Data is null/undefined, returning default');
+      return { position: [], service_id: [] };
+    }
+    
+    // If data is already a proper object with position and service_id arrays
+    if (typeof data === 'object' && !Array.isArray(data)) {
+      console.log('  → Data is already an object');
+      
+      // Validate and ensure proper structure
+      const result = {
+        position: Array.isArray(data.position) ? data.position : [],
+        service_id: Array.isArray(data.service_id) ? data.service_id : []
+      };
+      
+      // Validate array contents are numbers
+      result.position = result.position.filter(item => typeof item === 'number' && !isNaN(item));
+      result.service_id = result.service_id.filter(item => typeof item === 'number' && !isNaN(item));
+      
+      console.log(`  → Parsed object: ${JSON.stringify(result)}`);
+      return result;
+    }
+    
+    // If data is a string, try to parse as JSON
+    if (typeof data === 'string') {
+      console.log('  → Data is a string, attempting JSON parse');
+      
+      // Handle empty string
+      if (data.trim() === '') {
+        console.log('  → Empty string, returning default');
+        return { position: [], service_id: [] };
+      }
+      
+      try {
+        const parsed = JSON.parse(data);
+        console.log(`  → JSON parsed successfully: ${JSON.stringify(parsed)}`);
+        
+        // Validate the parsed result
+        if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const result = {
+            position: Array.isArray(parsed.position) ? parsed.position : [],
+            service_id: Array.isArray(parsed.service_id) ? parsed.service_id : []
+          };
+          
+          // Validate array contents are numbers
+          result.position = result.position.filter(item => typeof item === 'number' && !isNaN(item));
+          result.service_id = result.service_id.filter(item => typeof item === 'number' && !isNaN(item));
+          
+          console.log(`  → Validated parsed object: ${JSON.stringify(result)}`);
+          return result;
+        } else {
+          console.log('  → Parsed JSON is not a valid object, returning default');
+          return { position: [], service_id: [] };
+        }
+      } catch (error) {
+        console.log(`  → JSON parse error: ${error.message}, returning default`);
+        return { position: [], service_id: [] };
+      }
+    }
+    
+    // If data is an array or any other type, return default
+    console.log(`  → Data is ${typeof data} (not object or string), returning default`);
+    return { position: [], service_id: [] };
+  }
+
   async createTemplate(data) {
     return this.serviceTemplate.createTemplate(data);
   }
@@ -270,26 +340,7 @@ export default class ServiceTemplateService {
     }
     
     // Handle svc_report_formula properly - store as object directly
-    if (template.svc_report_formula) {
-      // If it's already an object, use it directly
-      if (typeof template.svc_report_formula === 'object' && !Array.isArray(template.svc_report_formula)) {
-        serviceData.svc_report_formula = template.svc_report_formula;
-      } else if (typeof template.svc_report_formula === 'string') {
-        // If it's a JSON string, parse it to object
-        try {
-          serviceData.svc_report_formula = JSON.parse(template.svc_report_formula);
-        } catch (error) {
-          console.log('Error parsing svc_report_formula string:', error);
-          serviceData.svc_report_formula = { position: [], service_id: [] };
-        }
-      } else {
-        // If it's something else, default to empty object
-        serviceData.svc_report_formula = { position: [], service_id: [] };
-      }
-    } else {
-      // Default empty object if not provided
-      serviceData.svc_report_formula = { position: [], service_id: [] };
-    }
+    serviceData.svc_report_formula = this.parseSvcReportFormula(template.svc_report_formula);
     
     // Handle position and service_id fields if they exist in template
     if (template.position) {

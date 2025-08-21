@@ -137,13 +137,17 @@ export default class Service {
         nbr_of_sessions: data.nbr_of_sessions || 0,
         svc_formula_typ: data.svc_formula_typ || 's',
         svc_formula: JSON.stringify(data.svc_formula || [7]),
-        svc_report_formula: JSON.stringify({
-          position: data.position,
-          service_id: data.service_id,
-        }),
+        svc_report_formula: JSON.stringify(data.svc_report_formula || { position: [], service_id: [] }),
         gst: data.gst || 0,
         tenant_id: data.tenant_id,
       };
+      
+      console.log('🔍 DEBUG: Service creation data:');
+      console.log('  - data.svc_report_formula:', data.svc_report_formula);
+      console.log('  - data.svc_report_formula type:', typeof data.svc_report_formula);
+      console.log('  - tmpSvc.svc_report_formula:', tmpSvc.svc_report_formula);
+      console.log('  - tmpSvc.svc_report_formula type:', typeof tmpSvc.svc_report_formula);
+      
       const postSvc = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('service')
