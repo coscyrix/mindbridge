@@ -119,7 +119,7 @@ export default class Session {
 
       const session_price = total_invoice;
       const session_taxes = total_invoice * (tax_pcnt / 100);
-      const session_system_amt = (total_invoice + session_taxes) * system_pcnt;
+      const session_system_amt = (total_invoice + session_taxes) * (system_pcnt / 100);
       const session_counselor_amt = total_invoice - session_taxes - session_system_amt;
 
       tmpSession = {
