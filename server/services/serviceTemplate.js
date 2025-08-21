@@ -556,13 +556,19 @@ export default class ServiceTemplateService {
     const taxPercent = Number(tenant.tax_percent) || 0;
     const finalPrice = basePrice + adminFee + (basePrice * taxPercent / 100);
 
+    console.log('💰 Price calculation:', {
+      basePrice,
+      adminFee,
+      taxPercent: `${taxPercent}%`,
+      finalPrice
+    });
+
     // Copy all fields from template, override only necessary ones
     const serviceData = {
       ...template,
       service_name: template.name || template.service_name,
       service_code: template.service_code || (template.name || template.service_name || 'SERVICE').replace(/\s+/g, '_').toUpperCase(),
       total_invoice: finalPrice,
-      gst: taxPercent,
       tenant_id: tenant.tenant_generated_id,
     };
     
@@ -578,6 +584,10 @@ export default class ServiceTemplateService {
     delete serviceData.id; // generic id field if present
     delete serviceData.created_at;
     delete serviceData.updated_at;
+    delete serviceData.gst; // Remove template's gst, we'll use tenant's tax_percent instead
+    
+    // Add tenant's tax_percent as gst
+    serviceData.gst = taxPercent;
     
     // Handle svc_formula properly - store as array directly (like svc_ids)
     if (template.svc_formula) {
