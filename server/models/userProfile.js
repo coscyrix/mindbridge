@@ -426,8 +426,9 @@ export default class UserProfile {
     try {
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .from('v_user_profile');
+        .select('v_user_profile.*', 't.tenant_generated_id')
+        .from('v_user_profile')
+        .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id');
 
       if (!(data.role_id === 4) || !data.role_id) {
         if (data.user_profile_id) {

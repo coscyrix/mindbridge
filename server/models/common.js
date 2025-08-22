@@ -89,9 +89,10 @@ export default class Common {
     try {
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .where('user_id', id)
-        .from('v_user_profile');
+        .select('v_user_profile.*', 't.tenant_generated_id')
+        .from('v_user_profile')
+        .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id')
+        .where('user_id', id);
 
       return rec;
     } catch (error) {
@@ -105,9 +106,10 @@ export default class Common {
     try {
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .where('user_profile_id', id)
-        .from('v_user_profile');
+        .select('v_user_profile.*', 't.tenant_generated_id')
+        .from('v_user_profile')
+        .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id')
+        .where('user_profile_id', id);
 
       return rec;
     } catch (error) {
@@ -400,9 +402,10 @@ export default class Common {
     try {
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .where('user_profile_id', data.user_profile_id)
-        .from('v_user_profile');
+        .select('v_user_profile.*', 't.tenant_generated_id')
+        .from('v_user_profile')
+        .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id')
+        .where('user_profile_id', data.user_profile_id);
 
       if (!rec) {
         return { message: 'User not found', error: -1 };
@@ -599,8 +602,9 @@ export default class Common {
       
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .from('v_user_profile');
+        .select('v_user_profile.*', 't.tenant_generated_id')
+        .from('v_user_profile')
+        .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id');
 
       if (data.user_profile_id) {
         query.where('user_profile_id', data.user_profile_id);
