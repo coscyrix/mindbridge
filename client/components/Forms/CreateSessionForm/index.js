@@ -317,69 +317,67 @@ function CreateSessionForm({
           sessionStatus != "discharged";
         return (
           <div style={{ cursor: "pointer" }}>
-            {![3, 4].includes(userObj?.role_id) &&
-              showNoShowButtonDisplay &&
-              (
-                <div
-                  className="action-buttons-container"
-                  style={{ display: "flex" }}
-                >
-                  <CustomButton
-                    type="button"
-                    title="Show"
-                    customClass="show-button"
-                    onClick={() => {
+            {![3, 4].includes(userObj?.role_id) && showNoShowButtonDisplay && (
+              <div
+                className="action-buttons-container"
+                style={{ display: "flex" }}
+              >
+                <CustomButton
+                  type="button"
+                  title="Show"
+                  customClass="show-button"
+                  onClick={() => {
+                    setActiveRow(row);
+                    setShowStatusConfirmationModal(true);
+                  }}
+                />
+                <CustomButton
+                  type="button"
+                  title="No Show"
+                  customClass="no-show-button"
+                  onClick={() => handleNoShowStatus(row)}
+                />
+                <CustomButton
+                  type="button"
+                  title="Edit"
+                  customClass="edit-button"
+                  onClick={() => {
+                    if (row?.is_additional === 1) {
+                      setShowAdditionalService(true);
                       setActiveRow(row);
-                      setShowStatusConfirmationModal(true);
-                    }}
-                  />
-                  <CustomButton
-                    type="button"
-                    title="No Show"
-                    customClass="no-show-button"
-                    onClick={() => handleNoShowStatus(row)}
-                  />
-                  <CustomButton
-                    type="button"
-                    title="Edit"
-                    customClass="edit-button"
-                    onClick={() => {
-                      if (row?.is_additional === 1) {
-                        setShowAdditionalService(true);
-                        setActiveRow(row);
-                      } else {
-                        setEditSessionModal(true);
-                        setActiveRow({ ...row, rowIndex });
-                      }
-                      const tempData = initialData
-                        ? scheduledSession
-                        : sessionTableData
-                        ? sessionTableData?.filter((data) => {
-                            return data?.is_additional === 0;
-                          })
-                        : [];
+                    } else {
+                      setEditSessionModal(true);
+                      setActiveRow({ ...row, rowIndex });
+                    }
+                    const tempData = initialData
+                      ? scheduledSession
+                      : sessionTableData
+                      ? sessionTableData?.filter((data) => {
+                          return data?.is_additional === 0;
+                        })
+                      : [];
 
-                      if (rowIndex < tempData.length - 1) {
-                        let minDate = new Date(row.intake_date);
-                        let maxDate = new Date(
-                          tempData[rowIndex + 1].intake_date
-                        );
-                        setSessionRange((prev) => ({
-                          ...prev,
-                          min: formatDate(minDate),
-                          max: formatDate(maxDate),
-                        }));
-                      } else {
-                        setSessionRange((prev) => ({
-                          ...prev,
-                          min: false,
-                          max: false,
-                        }));
-                      }
-                    }}
-                  />
-                </div>
-              )}
+                    if (rowIndex < tempData.length - 1) {
+                      let minDate = new Date(row.intake_date);
+                      let maxDate = new Date(
+                        tempData[rowIndex + 1].intake_date
+                      );
+                      setSessionRange((prev) => ({
+                        ...prev,
+                        min: formatDate(minDate),
+                        max: formatDate(maxDate),
+                      }));
+                    } else {
+                      setSessionRange((prev) => ({
+                        ...prev,
+                        min: false,
+                        max: false,
+                      }));
+                    }
+                  }}
+                />
+              </div>
+            )}
             {initialData &&
               [3, 4].includes(userObj?.role_id) &&
               isWithin24Hours(row.intake_date, row.scheduled_time) && (
@@ -1376,8 +1374,10 @@ function CreateSessionForm({
           setShowVerification={setShowVerification}
         />
       )}
+      {console.log(initialData)}
       {isWorkModalOpen && (
         <HomeworkModal
+          email={initialData?.email}
           session_id={session?.session_obj[0]?.session_id}
           id={initialData}
           isOpen={isWorkModalOpen}

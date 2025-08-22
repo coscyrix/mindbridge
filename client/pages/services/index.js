@@ -12,6 +12,7 @@ import { toast } from "react-toastify";
 import CommonServices from "../../services/CommonServices";
 import { useReferenceContext } from "../../context/ReferenceContext";
 import Cookies from "js-cookie";
+import ApiConfig from "../../config/apiConfig";
 function Services() {
   const [showCreateFlyout, setShowCreateFlyout] = useState(false);
   const [activeData, setActiveData] = useState();
@@ -71,7 +72,9 @@ function Services() {
   };
   const fetchManager = async () => {
     try {
-      const response = await CommonServices.getClients();
+      const response = await api.get(
+         `${ApiConfig.clients.getClients}`
+      );
       if (response.status === 200) {
         const { data } = response;
         const filteredManagers = data?.rec?.filter(
@@ -88,14 +91,14 @@ function Services() {
     }
   };
   const combineManagersWithServices = (services, managers) => {
-    const serviceTenantIds = new Set(services.map((s) => s.tenant_id));
 
-    const mergedOptions = managers
-      ?.filter((m) => m?.user_first_name && serviceTenantIds.has(m.tenant_id))
-      .map((m) => ({
-        label: `${m.user_first_name} ${m.user_last_name}`,
-        value: m.tenant_id,
-      }));
+    const mergedOptions =
+      managers
+        ?.filter((m) => m?.user_first_name)
+        .map((m) => ({
+          label: `${m.user_first_name} ${m.user_last_name}`,
+          value: m.tenant_generated_id,
+        })) || [];
     mergedOptions.push({
       label: "All Manager",
       value: "allManager",
@@ -136,7 +139,7 @@ function Services() {
     ) {
       combineManagersWithServices(servicesData, allManagers);
     }
-  }, [allManagers]);
+  }, [allManagers, servicesData]);
   useEffect(() => {
     fetchManager();
     fetchServices();

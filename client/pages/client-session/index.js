@@ -392,7 +392,7 @@ function ClientSession() {
                       const percentageAmount =
                         (netAfterAdmin * match.counselor_share_percentage) /
                         100;
-                      return `Total ${total.toFixed(2)}`
+                      return `Total ${total.toFixed(2)}`;
                     }
 
                     return "$0.00";
@@ -445,7 +445,9 @@ function ClientSession() {
                       const percentageAmount =
                         (netAfterAdmin * match.counselor_share_percentage) /
                         100;
-                      return `$${percentageAmount.toFixed(2)}`;
+                      return `$${percentageAmount.toFixed(
+                        2
+                      )} For Counselor Only`;
                     }
 
                     return "$0.00";
@@ -481,7 +483,7 @@ function ClientSession() {
                     if (match?.tenant_share_percentage) {
                       const percentageAmount =
                         (netAfterAdmin * match.tenant_share_percentage) / 100;
-                      return `$${percentageAmount.toFixed(2)}`;
+                      return `$${percentageAmount.toFixed(2)} For Tenant manager only`;
                     }
 
                     return "$0.00";
@@ -539,9 +541,7 @@ function ClientSession() {
                       Total: ${total.toFixed(2)} <br />
                       Admin Fee: Total {total.toFixed(2)} - Admin Fee{" "}
                       {admin_share.toFixed(2)} <br />
-                      New total admin fee: {(total - admin_share).toFixed(
-                        2
-                      )}
+                      New total admin fee: {(total - admin_share).toFixed(2)}
                       <br />
                       Counselor Share: {counselorShare} <br />
                       Manager Share: {managerShare}
@@ -605,36 +605,40 @@ function ClientSession() {
                 }`}
               />
             ) : (
-              userObj?.role_id !==2 && (
-              <CustomTab
-                heading={"Admin Fee:"}
-                value={
-                  summaryLoading ? (
-                    <Skeleton width={120} height={40} />
-                  ) : userObj?.role_id === 4 ? (
-                    `$${
-                      summaryData
-                        ? Number(summaryData?.sum_session_system_amt).toFixed(
-                            2
-                          ) || 0
-                        : 0
-                    }`
-                  ) : userObj?.role_id == 3 ? (
-                    (() => {
-                      const baseAmount =
-                        Number(summaryData?.sum_session_system_amt) +
-                        Number(summaryData?.sum_session_counselor_amt);
+              userObj?.role_id !== 2 && (
+                <CustomTab
+                  heading={"Admin Fee:"}
+                  value={
+                    summaryLoading ? (
+                      <Skeleton width={120} height={40} />
+                    ) : userObj?.role_id === 4 ? (
+                      `$${
+                        summaryData
+                          ? Number(summaryData?.sum_session_system_amt).toFixed(
+                              2
+                            ) || 0
+                          : 0
+                      }`
+                    ) : userObj?.role_id == 3 ? (
+                      (() => {
+                        const baseAmount =
+                          Number(summaryData?.sum_session_system_amt) +
+                          Number(summaryData?.sum_session_counselor_amt);
 
-                      const percentage = Number(summaryData?.system_pcnt);
-                      const fee = ((baseAmount * percentage) / 100).toFixed(2);
+                        const percentage = Number(summaryData?.system_pcnt);
+                        const fee = ((baseAmount * percentage) / 100).toFixed(
+                          2
+                        );
 
-                      return `Admin Fee: ${baseAmount.toFixed(
-                        2
-                      )} * ${percentage} = ${fee}`;
-                    })()
-                  ):""
-                }
-              />
+                        return `Admin Fee: ${baseAmount.toFixed(
+                          2
+                        )} * ${percentage} = ${fee}`;
+                      })()
+                    ) : (
+                      ""
+                    )
+                  }
+                />
               )
             )}
             {/* <CustomTab

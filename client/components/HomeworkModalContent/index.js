@@ -24,7 +24,7 @@ const HomeworkModal = ({ isOpen, id, onClose, session_id }) => {
   const fetchHomeworkDetails = async () => {
     try {
       const response = await api.get(
-        `${ApiConfig.homeworkUpload.gethomeworkdetail}/662`
+        `${ApiConfig.homeworkUpload.gethomeworkdetail}/${session_id}`
       );
       if (response.status == 200) {
         console.log(response);
@@ -82,7 +82,6 @@ const HomeworkModal = ({ isOpen, id, onClose, session_id }) => {
       isOpen={isOpen}
       onRequestClose={onClose}
     >
-
       <FormProvider {...methods}>
         {console.log(methods.getValues("homework"))}
         <form onSubmit={methods.handleSubmit(handleUploadHomeWork)}>

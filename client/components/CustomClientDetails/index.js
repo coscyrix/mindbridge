@@ -320,6 +320,8 @@ function CustomClientDetails({
     }
   };
   const router = useRouter();
+  const shouldHideButton =
+    userObj?.role_id === 4 && router.pathname.includes("/services");
   return (
     <>
       <ClientDetailsContainer icon={<SearchIcon />}>
@@ -443,7 +445,7 @@ function CustomClientDetails({
                     dropdownOptions={columnOptions}
                     renderFooter={renderFooter}
                   />
-                  {primaryButton && (
+                  {!shouldHideButton && primaryButton && (
                     <CustomButton
                       icon={<AddIcon />}
                       title={primaryButton}
