@@ -161,8 +161,10 @@ export default class ThrpyReq {
 
       const svc = servc.rec[0];
 
+      // Get tenant-specific discharge service
       const drService = await this.service.getServiceById({
         service_code: process.env.DISCHARGE_SERVICE_CODE || 'DR',
+        tenant_id: data.tenant_id,
       });
 
       console.log('drService', drService);
@@ -325,23 +327,46 @@ export default class ThrpyReq {
             svc.svc_report_formula.position.includes(i + 1)
           ) {
             const reportIndex = svc.svc_report_formula.position.indexOf(i + 1);
-            const reportServiceId =
-              svc.svc_report_formula.service_id[reportIndex];
-            const reportName = await this.service.getServiceById({
-              service_id: reportServiceId,
+            const templateReportServiceId = svc.svc_report_formula.service_id[reportIndex];
+            
+            // Get the template report service to find its service_code
+            const templateReportService = await this.service.getServiceById({
+              service_id: templateReportServiceId,
               is_report: 1,
             });
 
-            if (reportName && reportName.rec && reportName.rec[0]) {
-              tmpSession.session_code = `${svc.service_code}_${reportName.rec[0].service_code}`;
-              tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
-              tmpSession.service_id = reportServiceId;
-              tmpSession.is_report = reportName.rec[0].is_report === 1 ? 1 : 0;
-              tmpSession.is_additional =
-                reportName.rec[0].is_additional &&
-                reportName.rec[0].is_additional[0] === 1
-                  ? 1
-                  : 0;
+            if (templateReportService && templateReportService.rec && templateReportService.rec[0]) {
+              const templateReportCode = templateReportService.rec[0].service_code;
+              
+              // Find the tenant-specific report service with the same code
+              const tenantReportService = await this.service.getServiceById({
+                service_code: templateReportCode,
+                tenant_id: data.tenant_id,
+                is_report: 1,
+              });
+
+              if (tenantReportService && tenantReportService.rec && tenantReportService.rec[0]) {
+                tmpSession.session_code = `${svc.service_code}_${tenantReportService.rec[0].service_code}`;
+                tmpSession.session_description = `${svc.service_code} ${tenantReportService.rec[0].service_name}`;
+                tmpSession.service_id = tenantReportService.rec[0].service_id;
+                tmpSession.is_report = tenantReportService.rec[0].is_report === 1 ? 1 : 0;
+                tmpSession.is_additional =
+                  tenantReportService.rec[0].is_additional &&
+                  tenantReportService.rec[0].is_additional[0] === 1
+                    ? 1
+                    : 0;
+              } else {
+                // Fallback to template service if tenant-specific service not found
+                tmpSession.session_code = `${svc.service_code}_${templateReportService.rec[0].service_code}`;
+                tmpSession.session_description = `${svc.service_code} ${templateReportService.rec[0].service_name}`;
+                tmpSession.service_id = templateReportServiceId;
+                tmpSession.is_report = templateReportService.rec[0].is_report === 1 ? 1 : 0;
+                tmpSession.is_additional =
+                  templateReportService.rec[0].is_additional &&
+                  templateReportService.rec[0].is_additional[0] === 1
+                    ? 1
+                    : 0;
+              }
             }
           }
 
@@ -475,24 +500,44 @@ export default class ThrpyReq {
             svc.svc_report_formula.position.includes(i + 1)
           ) {
             const reportIndex = svc.svc_report_formula.position.indexOf(i + 1);
-            const reportServiceId =
-              svc.svc_report_formula.service_id[reportIndex];
-            const reportName = await this.service.getServiceById({
-              service_id: reportServiceId,
+            const templateReportServiceId = svc.svc_report_formula.service_id[reportIndex];
+            
+            // Get the template report service to find its service_code
+            const templateReportService = await this.service.getServiceById({
+              service_id: templateReportServiceId,
               is_report: 1,
             });
 
-            console.log('reportName', reportName);
-            console.log('reportServiceId', reportServiceId);
-            console.log('reportName.rec', reportName.rec);
+            console.log('templateReportService', templateReportService);
+            console.log('templateReportServiceId', templateReportServiceId);
+            console.log('templateReportService.rec', templateReportService.rec);
 
-            if (reportName && reportName.rec && reportName.rec[0]) {
-              tmpSession.session_code = `${svc.service_code}_${reportName.rec[0].service_code}`;
-              tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
-              tmpSession.service_id = reportServiceId;
-              tmpSession.is_report = reportName.rec[0].is_report === 1 ? 1 : 0;
-              tmpSession.is_additional =
-                reportName.rec[0].is_additional[0] === 1 ? 1 : 0;
+            if (templateReportService && templateReportService.rec && templateReportService.rec[0]) {
+              const templateReportCode = templateReportService.rec[0].service_code;
+              
+              // Find the tenant-specific report service with the same code
+              const tenantReportService = await this.service.getServiceById({
+                service_code: templateReportCode,
+                tenant_id: data.tenant_id,
+                is_report: 1,
+              });
+
+              if (tenantReportService && tenantReportService.rec && tenantReportService.rec[0]) {
+                tmpSession.session_code = `${svc.service_code}_${tenantReportService.rec[0].service_code}`;
+                tmpSession.session_description = `${svc.service_code} ${tenantReportService.rec[0].service_name}`;
+                tmpSession.service_id = tenantReportService.rec[0].service_id;
+                tmpSession.is_report = tenantReportService.rec[0].is_report === 1 ? 1 : 0;
+                tmpSession.is_additional =
+                  tenantReportService.rec[0].is_additional[0] === 1 ? 1 : 0;
+              } else {
+                // Fallback to template service if tenant-specific service not found
+                tmpSession.session_code = `${svc.service_code}_${templateReportService.rec[0].service_code}`;
+                tmpSession.session_description = `${svc.service_code} ${templateReportService.rec[0].service_name}`;
+                tmpSession.service_id = templateReportServiceId;
+                tmpSession.is_report = templateReportService.rec[0].is_report === 1 ? 1 : 0;
+                tmpSession.is_additional =
+                  templateReportService.rec[0].is_additional[0] === 1 ? 1 : 0;
+              }
             }
           }
 
