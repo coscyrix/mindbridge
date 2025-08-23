@@ -113,14 +113,32 @@ export default class Session {
 
       // Calculate session amounts
       const total_invoice = Number(svc.total_invoice);
+      const service_gst = Number(svc.gst) || 0;
       const tax_pcnt = Number(ref_fees[0].tax_pcnt);
       const counselor_pcnt = Number(ref_fees[0].counselor_pcnt);
       const system_pcnt = Number(ref_fees[0].system_pcnt);
 
-      const session_price = total_invoice;
-      const session_taxes = total_invoice * (tax_pcnt / 100);
-      const session_system_amt = (total_invoice + session_taxes) * (system_pcnt / 100);
-      const session_counselor_amt = total_invoice - session_taxes - session_system_amt;
+      // total_invoice already includes tax, so we need to extract the base price
+      let basePrice = total_invoice;
+      let session_taxes = 0;
+      
+      if (service_gst && service_gst > 0) {
+        // Calculate base price by removing the tax that's already included
+        // total_invoice = basePrice + (basePrice * service_gst / 100)
+        // total_invoice = basePrice * (1 + service_gst / 100)
+        // basePrice = total_invoice / (1 + service_gst / 100)
+        basePrice = total_invoice / (1 + service_gst / 100);
+        session_taxes = total_invoice - basePrice;
+      } else {
+        // Fallback: use ref_fees tax percentage if service GST is not available
+        session_taxes = total_invoice * (tax_pcnt / 100);
+        basePrice = total_invoice - session_taxes;
+      }
+
+      const session_price = total_invoice; // Keep the original total_invoice as session_price
+      const session_system_amt = basePrice * (system_pcnt / 100);
+      // Counselor gets the remaining amount after system fees
+      const session_counselor_amt = basePrice - session_system_amt;
 
       tmpSession = {
         thrpy_req_id: data.thrpy_req_id,

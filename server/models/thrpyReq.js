@@ -38,13 +38,32 @@ export default class ThrpyReq {
   }
 
   // Helper function to calculate session amounts
-  calculateSessionAmounts(totalInvoice, refFees) {
-    const taxAmount = totalInvoice * (refFees.tax_pcnt / 100);
-    const systemAmount = (totalInvoice + taxAmount) * (refFees.system_pcnt / 100);
-    const counselorAmount = totalInvoice - taxAmount - systemAmount;
+  calculateSessionAmounts(totalInvoice, refFees, serviceGst) {
+    // totalInvoice already includes tax, so we need to extract the base price
+    // If service has GST stored, use it to calculate base price
+    let basePrice = totalInvoice;
+    let taxAmount = 0;
+    
+    if (serviceGst && serviceGst > 0) {
+      // Calculate base price by removing the tax that's already included
+      // totalInvoice = basePrice + (basePrice * serviceGst / 100)
+      // totalInvoice = basePrice * (1 + serviceGst / 100)
+      // basePrice = totalInvoice / (1 + serviceGst / 100)
+      basePrice = totalInvoice / (1 + serviceGst / 100);
+      taxAmount = totalInvoice - basePrice;
+    } else {
+      // Fallback: use ref_fees tax percentage if service GST is not available
+      taxAmount = totalInvoice * (refFees.tax_pcnt / 100);
+      basePrice = totalInvoice - taxAmount;
+    }
+    
+    // Calculate system amount based on base price
+    const systemAmount = basePrice * (refFees.system_pcnt / 100);
+    // Counselor gets the remaining amount after taxes and system fees
+    const counselorAmount = basePrice - systemAmount;
     
     return {
-      session_price: totalInvoice,
+      session_price: totalInvoice, // Keep the original total_invoice as session_price
       session_taxes: taxAmount,
       session_system_amt: systemAmount,
       session_counselor_amt: counselorAmount
@@ -279,7 +298,7 @@ export default class ThrpyReq {
           const intakeDate = currentDate.toISOString().split('T')[0];
 
           // Prepare the session object
-          const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0]);
+          const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
           const tmpSession = {
             thrpy_req_id: postThrpyReq[0],
             service_id: data.service_id,
@@ -344,7 +363,7 @@ export default class ThrpyReq {
         const dischargeDate = currentDate.toISOString().split('T')[0];
 
         // Prepare the discharge session object
-        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0]);
+        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
         const dischargeSession = {
           thrpy_req_id: postThrpyReq[0],
           service_id: drSvc.service_id,
@@ -429,7 +448,7 @@ export default class ThrpyReq {
           const intakeDate = currentDate.toISOString().split('T')[0];
 
           // Prepare the session object
-          const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0]);
+          const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
           const tmpSession = {
             thrpy_req_id: postThrpyReq[0],
             service_id: data.service_id,
@@ -495,7 +514,7 @@ export default class ThrpyReq {
         const dischargeDate = currentDate.toISOString().split('T')[0];
 
         // Prepare the discharge session object
-        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0]);
+        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
         const dischargeSession = {
           thrpy_req_id: postThrpyReq[0],
           service_id: drSvc.service_id,

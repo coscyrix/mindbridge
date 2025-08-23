@@ -435,7 +435,7 @@ function CreateSessionForm({
     {
       name: "Total Amt.",
       selector: (row) =>
-        `$${Number(row.session_price + row.session_taxes).toFixed(2)}`,
+        `$${Number(row.session_price).toFixed(2)}`,
       selectorId: "session_price",
       maxWidth: "100px",
     },
