@@ -53,29 +53,52 @@ export default class ServiceTemplateService {
     const mappedServiceIds = [];
     const originalServiceIds = originalReportFormula.service_id;
 
-    // Get the first three services created for this tenant (assuming they are report services)
+    // Get all report services for this tenant
     const tenantServices = await db
       .withSchema(`${process.env.MYSQL_DATABASE}`)
       .from('service')
       .where('tenant_id', tenant_generated_id)
       .where('is_report', 1)
-      .orderBy('created_at', 'asc')
-      .limit(3);
+      .orderBy('created_at', 'asc');
 
     console.log(`Found ${tenantServices.length} report services for tenant ${tenant_generated_id}:`, tenantServices.map(s => ({ id: s.service_id, name: s.service_name, code: s.service_code })));
 
-    // Map each original service ID to the corresponding tenant report service
+    // Map each original service ID to the corresponding tenant report service based on service codes
     for (let i = 0; i < originalServiceIds.length; i++) {
       const originalServiceId = originalServiceIds[i];
       
-      // If we have a corresponding tenant report service, use it
-      if (tenantServices[i]) {
-        mappedServiceIds.push(tenantServices[i].service_id);
-        console.log(`Mapped original service ID ${originalServiceId} to tenant service ID ${tenantServices[i].service_id} (${tenantServices[i].service_name})`);
+      // First, try to find the original template service to get its service_code
+      const originalTemplateService = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('service_template')
+        .where('template_service_id', originalServiceId)
+        .first();
+      
+      if (originalTemplateService) {
+        // Find the corresponding tenant report service by service_code
+        const matchingTenantService = tenantServices.find(ts => ts.service_code === originalTemplateService.service_code);
+        if (matchingTenantService) {
+          mappedServiceIds.push(matchingTenantService.service_id);
+          console.log(`Mapped original service ID ${originalServiceId} (${originalTemplateService.service_code}) to tenant service ID ${matchingTenantService.service_id} (${matchingTenantService.service_name})`);
+        } else {
+          // Fallback to position-based mapping if no matching service code found
+          if (tenantServices[i]) {
+            mappedServiceIds.push(tenantServices[i].service_id);
+            console.log(`No matching service code found, using position-based mapping: original ID ${originalServiceId} -> tenant ID ${tenantServices[i].service_id} (${tenantServices[i].service_name})`);
+          } else {
+            console.log(`No tenant report service found for position ${i}, keeping original service ID ${originalServiceId}`);
+            mappedServiceIds.push(originalServiceId);
+          }
+        }
       } else {
-        // Fallback to original service ID if tenant doesn't have enough report services
-        console.log(`No tenant report service found for position ${i}, keeping original service ID ${originalServiceId}`);
-        mappedServiceIds.push(originalServiceId);
+        // Fallback to position-based mapping if original template service not found
+        if (tenantServices[i]) {
+          mappedServiceIds.push(tenantServices[i].service_id);
+          console.log(`Original template service not found, using position-based mapping: original ID ${originalServiceId} -> tenant ID ${tenantServices[i].service_id} (${tenantServices[i].service_name})`);
+        } else {
+          console.log(`No tenant report service found for position ${i}, keeping original service ID ${originalServiceId}`);
+          mappedServiceIds.push(originalServiceId);
+        }
       }
     }
 
@@ -199,19 +222,43 @@ export default class ServiceTemplateService {
           continue;
         }
 
-        // Map the original service IDs to tenant report service IDs
+        // Map the original service IDs to tenant report service IDs based on service codes
         const mappedServiceIds = [];
         for (let i = 0; i < currentFormula.service_id.length; i++) {
           const originalServiceId = currentFormula.service_id[i];
           
-          // Use the corresponding tenant report service
-          if (reportServices[i]) {
-            mappedServiceIds.push(reportServices[i].service_id);
-            console.log(`Mapping service ${service.service_id}: original ID ${originalServiceId} -> tenant ID ${reportServices[i].service_id} (${reportServices[i].service_name})`);
+          // First, try to find the original template service to get its service_code
+          const originalTemplateService = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('service_template')
+            .where('template_service_id', originalServiceId)
+            .first();
+          
+          if (originalTemplateService) {
+            // Find the corresponding tenant report service by service_code
+            const matchingTenantService = reportServices.find(rs => rs.service_code === originalTemplateService.service_code);
+            if (matchingTenantService) {
+              mappedServiceIds.push(matchingTenantService.service_id);
+              console.log(`Mapping service ${service.service_id}: original ID ${originalServiceId} (${originalTemplateService.service_code}) -> tenant ID ${matchingTenantService.service_id} (${matchingTenantService.service_name})`);
+            } else {
+              // Fallback to position-based mapping if no matching service code found
+              if (reportServices[i]) {
+                mappedServiceIds.push(reportServices[i].service_id);
+                console.log(`No matching service code found, using position-based mapping: original ID ${originalServiceId} -> tenant ID ${reportServices[i].service_id} (${reportServices[i].service_name})`);
+              } else {
+                mappedServiceIds.push(originalServiceId);
+                console.log(`No tenant report service found for position ${i}, keeping original ID ${originalServiceId}`);
+              }
+            }
           } else {
-            // Fallback to original ID if no corresponding report service
-            mappedServiceIds.push(originalServiceId);
-            console.log(`No tenant report service for position ${i}, keeping original ID ${originalServiceId}`);
+            // Fallback to position-based mapping if original template service not found
+            if (reportServices[i]) {
+              mappedServiceIds.push(reportServices[i].service_id);
+              console.log(`Original template service not found, using position-based mapping: original ID ${originalServiceId} -> tenant ID ${reportServices[i].service_id} (${reportServices[i].service_name})`);
+            } else {
+              mappedServiceIds.push(originalServiceId);
+              console.log(`No tenant report service for position ${i}, keeping original ID ${originalServiceId}`);
+            }
           }
         }
 
