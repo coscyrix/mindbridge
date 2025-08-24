@@ -807,7 +807,7 @@ export const SERVICES_TABLE_COLUMNS = (
   {
     name: "Total Invoice + Tax",
     selector: (row) =>
-      `$${(Number(row.total_invoice)).toFixed(2)}`,
+      `$${(Number(row.total_invoice) + Number(row.gst)).toFixed(2)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
