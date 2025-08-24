@@ -440,7 +440,7 @@ export default class UserProfile {
         }
 
         if (data.tenant_id) {
-          query.where('tenant_id', data.tenant_id);
+          query.where('v_user_profile.tenant_id', data.tenant_id);
         }
 
         if (Object.keys(data).length === 1 && data.hasOwnProperty('role_id')) {
@@ -492,7 +492,7 @@ export default class UserProfile {
 
       return { message: 'User profile found', rec };
     } catch (error) {
-      logger.error(error);
+      console.log('error', error);
       return { message: 'Error getting user profile', error: -1, rec: [] };
     }
   }

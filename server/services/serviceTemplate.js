@@ -553,7 +553,7 @@ export default class ServiceTemplateService {
     // Use provided price as basePrice
     const basePrice = Number(price) || 0;
     const taxPercent = Number(tenant.tax_percent) || 0;
-    const finalPrice = basePrice + (basePrice * taxPercent / 100);
+    const finalPrice = basePrice;
 
     console.log('💰 Price calculation:', {
       basePrice,
@@ -585,7 +585,7 @@ export default class ServiceTemplateService {
     delete serviceData.gst; // Remove template's gst, we'll use tenant's tax_percent instead
     
     // Add tenant's tax_percent as gst
-    serviceData.gst = taxPercent;
+    serviceData.gst = basePrice * taxPercent / 100;
     
     // Handle svc_formula properly - store as array directly (like svc_ids)
     if (template.svc_formula) {
