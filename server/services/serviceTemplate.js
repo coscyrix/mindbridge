@@ -553,7 +553,7 @@ export default class ServiceTemplateService {
     // Use provided price as basePrice
     const basePrice = Number(price) || 0;
     const taxPercent = Number(tenant.tax_percent) || 0;
-    const finalPrice = basePrice;
+    const finalPrice = basePrice + (basePrice * taxPercent / 100);
 
     console.log('💰 Price calculation:', {
       basePrice,

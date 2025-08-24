@@ -160,11 +160,12 @@ export default class ThrpyReq {
       }
 
       const svc = servc.rec[0];
+      
 
       // Get tenant-specific discharge service
       const drService = await this.service.getServiceById({
         service_code: process.env.DISCHARGE_SERVICE_CODE || 'DR',
-        tenant_id: data.tenant_id,
+        tenant_id: tenantId[0].tenant_generated_id,
       });
 
       console.log('drService', drService);
