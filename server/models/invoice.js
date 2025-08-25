@@ -211,11 +211,15 @@ export default class Invoice {
       let totalSystem = 0;
       let totalTenant = 0;
 
-      // Check if we need to calculate tenant_amount (role_id=2 or role_id=3 and tenant_id present)
-      const shouldCalculateTenantAmount = (data.role_id === 2 || data.role_id === 3) && data.tenant_id;
+      // Check if we need to calculate tenant_amount 
+      // For role_id=2,3: when tenant_id is present
+      // For role_id=4: always calculate (either for specific counselor or all counselors)
+      const shouldCalculateTenantAmount = (data.role_id === 2 || data.role_id === 3) && data.tenant_id || data.role_id === 4;
       
-      // Check if we need to include system_pcnt for role_id=2, role_id=3 or role_id=4 with tenant selection
-      const shouldIncludeSystemPcnt = (data.role_id === 2 || data.role_id === 3 || data.role_id === 4) && data.tenant_id;
+      // Check if we need to include system_pcnt 
+      // For role_id=2,3: when tenant_id is present
+      // For role_id=4: always include (will be calculated per counselor if needed)
+      const shouldIncludeSystemPcnt = (data.role_id === 2 || data.role_id === 3) && data.tenant_id || data.role_id === 4;
 
 
 
@@ -246,12 +250,33 @@ export default class Invoice {
             continue;
           }
 
+          // For role_id=4, get tenant_id for each counselor if not already provided
+          let counselorTenantId = data.tenant_id;
+          if (data.role_id === 4 && !counselorTenantId) {
+            const counselorTenant = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('user_profile')
+              .where('user_profile_id', counselorId)
+              .select('tenant_id')
+              .first();
+            counselorTenantId = counselorTenant?.tenant_id;
+          }
+
+          if (!counselorTenantId) {
+            console.log(`No tenant_id found for counselor_id ${counselorId}`);
+            continue;
+          }
+
           // Get fee split configuration for this counselor using user_id
-          const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(data.tenant_id, userMapping.user_id);
+          const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(counselorTenantId, userMapping.user_id);
           
           let counselorTotalAmount = 0;
           sessions.forEach((session) => {
-            counselorTotalAmount += parseFloat(session.session_price) || 0;
+            // Use pre-tax amount for fee split calculations
+            const sessionPrice = parseFloat(session.session_price) || 0;
+            const sessionTaxes = parseFloat(session.session_taxes) || 0;
+            const preTaxAmount = sessionPrice - sessionTaxes;
+            counselorTotalAmount += preTaxAmount;
           });
 
           // Calculate tenant_amount based on fee split percentage
@@ -259,14 +284,23 @@ export default class Invoice {
           if (feeSplitConfig.is_fee_split_enabled && feeSplitConfig.tenant_share_percentage > 0) {
             const tenantAmount = (counselorTotalAmount * feeSplitConfig.tenant_share_percentage) / 100;
             totalTenant += tenantAmount;
+            console.log(`Counselor ${counselorId} (tenant ${counselorTenantId}): total=${counselorTotalAmount}, tenant_share=${feeSplitConfig.tenant_share_percentage}%, tenant_amount=${tenantAmount}`);
+          } else {
+            console.log(`Counselor ${counselorId} (tenant ${counselorTenantId}): fee split disabled or tenant_share=0, fee_split_enabled=${feeSplitConfig.is_fee_split_enabled}, tenant_share_percentage=${feeSplitConfig.tenant_share_percentage}`);
           }
         }
       }
 
+      let totalPreTaxAmount = 0;
       rec.forEach((item) => {
         totalPrice += parseFloat(item.session_price) || 0;
         totalCounselor += parseFloat(item.session_counselor_amt) || 0;
         totalSystem += parseFloat(item.session_system_amt) || 0;
+        
+        // Calculate pre-tax amount for tenant calculations
+        const sessionPrice = parseFloat(item.session_price) || 0;
+        const sessionTaxes = parseFloat(item.session_taxes) || 0;
+        totalPreTaxAmount += (sessionPrice - sessionTaxes);
       });
 
       const summary = {
@@ -274,6 +308,7 @@ export default class Invoice {
         sum_session_counselor_amt: totalCounselor.toFixed(4),
         sum_session_system_amt: totalSystem.toFixed(4),
         sum_session_system_units: rec.length,
+        sum_session_pre_tax_amount: totalPreTaxAmount.toFixed(4),
       };
 
       // Add tenant_amount to summary if calculated
@@ -281,25 +316,49 @@ export default class Invoice {
         summary.sum_session_tenant_amt = totalTenant.toFixed(4);
         
         // Also add individual counselor and tenant amounts for clarity
-        if (data.counselor_id) {
-          // Calculate counselor amount (total - tenant amount)
-          const counselorAmount = totalPrice - totalTenant;
-          summary.sum_session_counselor_tenant_amt = counselorAmount.toFixed(4);
-        }
+        const counselorAmount = totalPreTaxAmount - totalTenant;
+        summary.sum_session_counselor_tenant_amt = counselorAmount.toFixed(4);
+        
+        console.log(`Summary calculation: total=${totalPrice}, tenant_amount=${totalTenant}, counselor_amount=${counselorAmount}`);
       }
 
-      // Add system_pcnt to summary if role_id=4 and tenant is selected
+      // Add system_pcnt to summary
       if (shouldIncludeSystemPcnt) {
         try {
-          const refFees = await db
-            .withSchema(`${process.env.MYSQL_DATABASE}`)
-            .from('ref_fees')
-            .where('tenant_id', data.tenant_id)
-            .select('system_pcnt')
-            .first();
+          if (data.role_id === 4 && !data.tenant_id) {
+            // For role_id=4 without specific tenant, get system_pcnt for all tenants in the result
+            const tenantIds = [...new Set(rec.map(item => item.tenant_id))];
+            const systemPcnts = [];
+            
+            for (const tenantId of tenantIds) {
+              const refFees = await db
+                .withSchema(`${process.env.MYSQL_DATABASE}`)
+                .from('ref_fees')
+                .where('tenant_id', tenantId)
+                .select('system_pcnt')
+                .first();
+              
+              if (refFees && refFees.system_pcnt !== null && refFees.system_pcnt !== undefined) {
+                systemPcnts.push(parseFloat(refFees.system_pcnt));
+              }
+            }
+            
+            // Use average system_pcnt if multiple tenants
+            if (systemPcnts.length > 0) {
+              summary.system_pcnt = systemPcnts.reduce((a, b) => a + b, 0) / systemPcnts.length;
+            }
+          } else {
+            // For specific tenant_id
+            const refFees = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('ref_fees')
+              .where('tenant_id', data.tenant_id)
+              .select('system_pcnt')
+              .first();
 
-          if (refFees && refFees.system_pcnt !== null && refFees.system_pcnt !== undefined) {
-            summary.system_pcnt = parseFloat(refFees.system_pcnt);
+            if (refFees && refFees.system_pcnt !== null && refFees.system_pcnt !== undefined) {
+              summary.system_pcnt = parseFloat(refFees.system_pcnt);
+            }
           }
         } catch (error) {
           console.error('Error fetching system_pcnt from ref_fees:', error);

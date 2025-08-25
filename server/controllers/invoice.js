@@ -82,16 +82,10 @@ export default class InvoiceController {
       // So we don't filter by specific counselor_id
     }
 
-    if (data.role_id === 4 && !data.counselor_id) {
-      return res
-        .status(400)
-        .send({ message: 'Counselor ID is required for that specific role' });
-    }
-
-    // Handle role_id=4 with tenant selection
-    if (data.role_id === 4 && data.tenant_id) {
-      // If tenant is selected for role_id=4, we'll include system_pcnt in the response
-      // The model will handle fetching system_pcnt from ref_fees table
+    // For role_id=4, counselor_id is optional - they can see all data or filter by counselor
+    if (data.role_id === 4 && data.counselor_id) {
+      // If counselor_id is provided for role_id=4, we'll calculate tenant amount for that counselor
+      // The service will handle getting tenant_id from the counselor
     }
 
 

@@ -79,9 +79,12 @@ export default class InvoiceService {
   async getInvoiceByMulti(data) {
     data.role_id = Number(data.role_id);
 
-    if (data.role_id === 4) {
-      // For role_id=4, if tenant_id is provided, we'll include system_pcnt in response
-      // If no tenant_id is provided, no additional processing is needed
+    if (data.role_id === 4 && data.counselor_id) {
+      // For role_id=4, if counselor_id is provided, get their tenant_id to calculate tenant amount
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+      data.tenant_id = Number(tenantId[0].tenant_id);
     }
 
     if (data.role_id === 2 && data.counselor_id) {
