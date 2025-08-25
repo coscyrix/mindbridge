@@ -373,10 +373,9 @@ export const createGasSchema = (goalKey) => {
     goal: z
       .object({
         label: z.string(),
-        value: z.string(),
+        value: z.number(),
       })
-      .nullable()
-      .refine((val) => !!val?.value, {
+      .refine(val => typeof val?.value === "number", {
         message: "Treatment goal is required",
       }),
     ...dynamicQuestionSchema,

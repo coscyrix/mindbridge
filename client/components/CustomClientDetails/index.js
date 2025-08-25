@@ -44,6 +44,8 @@ function CustomClientDetails({
   setHomeWorkUpload,
   session,
   counselor,
+  setSelectedTenantId,
+  getInvoice,
   ...props
 }) {
   const [currentPage, setCurrentPage] = useState(0);
@@ -90,13 +92,14 @@ function CustomClientDetails({
         setAllManagers(filteredManagers);
       }
     } catch (error) {
-      console.log("Error fetching clients", error);
+      console.error("Error fetching clients", error);
     } finally {
       // setClientsLoading(false);
     }
   };
   const handleSelectManager = (selected) => {
     setSelectedManager(selected);
+    setSelectedTenantId(selected);
     const matchingCounselors = allCounselors?.filter(
       (c) => c.tenant_id === selected.tenant_id
     );
@@ -115,6 +118,8 @@ function CustomClientDetails({
       { label: "All Counselor", value: "allCounselor", tenant_id: 0 },
       ...counselorOptions,
     ]);
+
+    getInvoice("", selected?.tenant_id);
   };
   useEffect(() => {
     fetchManagers();
@@ -295,7 +300,9 @@ function CustomClientDetails({
 
   useEffect(() => {
     const userData = Cookies.get("user");
-    setUser(JSON.parse(userData));
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
   }, []);
 
   const manager = userObj?.role_id == 3;

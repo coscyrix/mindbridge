@@ -11,7 +11,7 @@ import GasForm from "../../components/Forms/PatientForms/GASForm";
 
 const AnxietyDisorderFormPage = () => {
   const router = useRouter();
-  const { form_id, session_id, client_id, goal } = router.query;
+  const { form_id, session_id, client_id, target_outcome_id } = router.query;
   const [formAlreadySubmitted, setFormAlreadySubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +52,11 @@ const AnxietyDisorderFormPage = () => {
   return formAlreadySubmitted ? (
     <FormSubmission alreadySubmitted />
   ) : (
-    <GasForm client_id={client_id} session_id={session_id} goal={goal} />
+    <GasForm
+      client_id={client_id}
+      session_id={session_id}
+      target_outcome_id={target_outcome_id}
+    />
   );
 };
 

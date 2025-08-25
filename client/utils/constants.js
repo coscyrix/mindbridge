@@ -794,7 +794,7 @@ export const SERVICES_TABLE_COLUMNS = (
   },
   {
     name: "Total Invoice",
-    selector: (row) => `$${Number(row.total_invoice).toFixed(2)}`,
+    selector: (row) => `$${Number(row.total_invoice) - Number(row?.gst)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
@@ -807,7 +807,7 @@ export const SERVICES_TABLE_COLUMNS = (
   {
     name: "Total Invoice + Tax",
     selector: (row) =>
-      `$${(Number(row.total_invoice) + Number(row.gst)).toFixed(2)}`,
+      `$${(Number(row.total_invoice)).toFixed(2)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
@@ -2005,7 +2005,7 @@ export const service_templates = [
 ];
 
 export const gasQuestionBank = {
-  Anxiety_Management: [
+  1: [
     {
       question:
         "How often do you use anxiety management techniques (eg deep breathing grounding exercises progressive muscle relaxation)",
@@ -2130,7 +2130,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Depression: [
+  2: [
     {
       question: "How often do you engage in activities that improve your mood?",
       name: "q1",
@@ -2209,7 +2209,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Stress_Management: [
+  3: [
     {
       question:
         "How often do you use stress management techniques (e.g., relaxation exercises, time management, self-care)?",
@@ -2296,7 +2296,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Relationship_Issues: [
+  4: [
     {
       question: "How often do you engage in open and healthy communication?",
       name: "q1",
@@ -2353,7 +2353,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Grief_and_Loss: [
+  5: [
     {
       question:
         "How often do you allow yourself to acknowledge and process grief?",
@@ -2413,7 +2413,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Trauma_and_PTSD: [
+  6: [
     {
       question:
         "How effectively can you identify and challenge trauma-related thoughts?",
@@ -2472,7 +2472,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Identity_and_Self_Exploration: [
+  7: [
     {
       question:
         "How often do you reflect on and embrace your personal values and beliefs?",
@@ -2532,7 +2532,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Family_and_Parenting_Issues: [
+  8: [
     {
       question:
         "How often do you use effective communication techniques with family members?",
@@ -2591,7 +2591,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Self_Esteem_and_Self_Confidence_Issues: [
+  9: [
     {
       question: "How often do you engage in positive self-talk?",
       name: "q1",
@@ -2681,7 +2681,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Addiction_and_Substance_Abuse: [
+  10: [
     {
       question:
         "How often do you use alternative coping strategies instead of substances?",
@@ -2746,7 +2746,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Work_and_Career_Related_Issues: [
+  11: [
     {
       question: "How often do you feel motivated and engaged in your work?",
       name: "q1",
@@ -2811,7 +2811,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Anger_Management: [
+  12: [
     {
       question:
         "How often do you use anger management techniques (e.g., deep breathing, cognitive reframing)?",
@@ -2901,7 +2901,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Eating_Disorders_and_Body_Image_Issues: [
+  13: [
     {
       question: "How often do you engage in mindful eating habits?",
       name: "q1",
@@ -2985,7 +2985,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Life_Transitions: [
+  14: [
     {
       question: "How often do you engage in self-care during life transitions?",
       name: "q1",
@@ -3066,7 +3066,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Coping_With_Disability: [
+  15: [
     {
       question: "How often do you engage in adaptive coping strategies?",
       name: "q1",
@@ -3124,7 +3124,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Chronic_Illness_and_Health_Related_Concerns: [
+  16: [
     {
       question:
         "How often do you engage in self-care and health management activities?",

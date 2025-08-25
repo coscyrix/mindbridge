@@ -31,6 +31,7 @@ function ClientSession() {
   const [activeTab, setActiveTab] = useState(0);
   const { userObj } = useReferenceContext();
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState("");
 
   const tabLabels = [
     { id: 0, label: "Current Session", value: "currentSession" },
@@ -118,6 +119,7 @@ function ClientSession() {
   };
   const [selectTenantId, setSelectTenantId] = useState(null);
   const [userId, setUserId] = useState(null);
+
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
     const tenant_id = data?.tenant_id;
@@ -133,6 +135,7 @@ function ClientSession() {
 
     getInvoice(counselorId);
   };
+
 
   const handleClickOutside = (e) => {
     if (
@@ -212,7 +215,7 @@ function ClientSession() {
     setShowFlyout(true);
   };
 
-  const getInvoice = async (counselorIdParam) => {
+  const getInvoice = async (counselorIdParam, tenantId) => {
     setSummaryLoading(true);
     try {
       let response;
@@ -222,6 +225,9 @@ function ClientSession() {
         );
       } else if (userObj.role_id === 4) {
         let url = `/invoice/multi?role_id=${userObj?.role_id}`;
+        if (tenantId) {
+          url += `&tenant_id=${tenantId}`;
+        }
         if (counselorIdParam && counselorIdParam !== "allCounselors") {
           url += `&counselor_id=${counselorIdParam}`;
         }
@@ -241,7 +247,7 @@ function ClientSession() {
         setSummaryData(response?.data?.rec?.summary);
       }
     } catch (error) {
-      console.log(":: Invoice.getInvoice()", error);
+      console.error(":: Invoice.getInvoice()", error);
     } finally {
       setSummaryLoading(false);
     }
@@ -260,7 +266,7 @@ function ClientSession() {
       fetchCounsellor();
     }
     fetchSessions(selectCounselor);
-    getInvoice();
+    getInvoice(selectCounselor , selectedTenantId?.tenant_id);
   }, [userObj]);
 
   const [isHomeworkUpload, setHomeWorkUpload] = useState(false);
@@ -274,9 +280,7 @@ function ClientSession() {
       const response = await api.get(
         `${ApiConfig.homeworkUpload.fetchHomeworkUploadStatus}?tenant_id=${userObj?.tenant?.tenant_id}&feature_name=homework_upload_enabled`
       );
-      console.log(response);
       if (response?.status == 200) {
-        // console.log(response?.data[0]?.feature_value);
         setHomeWorkUpload(response?.data[0]?.feature_value);
         toast.success(response.data?.message);
       }
@@ -293,15 +297,12 @@ function ClientSession() {
     }
 
     try {
-      console.log(selectCounselor);
       const tenant_id =
         userObj?.role_id === 2 ? userObj?.tenant_id : selectTenantId;
-      console.log(tenant_id);
       const response = await api.get(
         `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}` // this is to be changed using 1 for dummy data
       );
       if (response.status == 200) {
-        console.log(response);
         setCounselorConfiguration(
           response?.data?.data?.counselor_specific_configurations
         );
@@ -353,6 +354,7 @@ function ClientSession() {
           session={activeData}
           fetchSessions={fetchSessions}
           fetchCounselorClient={fetchSessions}
+          counselorConfiguration={counselorConfiguration}
         />
       </CreateSessionLayout>
       <CustomClientDetails
@@ -365,244 +367,128 @@ function ClientSession() {
               value={moment().format("dddd, D MMMM YYYY")}
             /> */}
             <CustomTab
-              heading={"Total Amount For A Month"}
+              heading="Total Amount For A Month"
               value={
                 summaryLoading ? (
                   <Skeleton width={120} height={40} />
                 ) : userObj?.role_id === 2 ? (
-                  (() => {
-                    const match = counselorConfiguration?.find(
-                      (item) =>
-                        item?.counselor_info?.email?.toLowerCase() ===
-                        userObj?.counselor_profile?.email?.toLowerCase()
-                    );
-                    const total = summaryData
-                      ? Number(summaryData?.sum_session_counselor_amt) +
-                          Number(summaryData?.sum_session_system_amt) || 0
-                      : 0;
-
-                    const adminFeePercent =
-                      userObj?.role_id === 2
-                        ? Number(userObj?.tenant?.admin_fee) || 0
-                        : Number(summaryData?.system_pcnt) || 0;
-                    const adminFeeAmount = (total * adminFeePercent) / 100;
-                    const netAfterAdmin = total - adminFeeAmount;
-
-                    if (match?.counselor_share_percentage) {
-                      const percentageAmount =
-                        (netAfterAdmin * match.counselor_share_percentage) /
-                        100;
-                      return `Total ${total.toFixed(2)}`;
-                    }
-
-                    return "$0.00";
-                  })()
-                ) : (
-                  `$${
-                    summaryData
-                      ? (
-                          Number(summaryData?.sum_session_system_amt) +
-                          Number(summaryData?.sum_session_counselor_amt)
-                        ).toFixed(2) || 0
-                      : 0
-                  }`
-                )
-              }
-            />
-            <CustomTab
-              heading={"Total Amount to Associate for a Month: "}
-              value={
-                summaryLoading ? (
-                  <Skeleton width={120} height={40} />
+                  Number(summaryData?.sum_session_counselor_amt).toFixed(2)
+                ) : userObj?.role_id === 3 ? (
+                  Number(summaryData?.sum_session_price).toFixed(2)
                 ) : userObj?.role_id === 4 ? (
-                  `$${
-                    summaryData
-                      ? Number(summaryData?.sum_session_counselor_amt).toFixed(
-                          2
-                        ) || 0
-                      : 0
-                  }`
-                ) : userObj?.role_id === 2 ? (
-                  (() => {
-                    const match = counselorConfiguration?.find(
-                      (item) =>
-                        item?.counselor_info?.email?.toLowerCase() ===
-                        userObj?.counselor_profile?.email?.toLowerCase()
-                    );
-                    const total = summaryData
-                      ? Number(summaryData?.sum_session_counselor_amt) +
-                          Number(summaryData?.sum_session_system_amt) || 0
-                      : 0;
-
-                    const adminFeePercent =
-                      userObj?.role_id === 2
-                        ? Number(userObj?.tenant?.admin_fee) || 0
-                        : Number(summaryData?.system_pcnt) || 0;
-                    const adminFeeAmount = (total * adminFeePercent) / 100;
-                    const netAfterAdmin = total - adminFeeAmount;
-
-                    if (match?.counselor_share_percentage) {
-                      const percentageAmount =
-                        (netAfterAdmin * match.counselor_share_percentage) /
-                        100;
-                      return `$${percentageAmount.toFixed(
-                        2
-                      )} For Counselor Only`;
-                    }
-
-                    return "$0.00";
-                  })()
-                ) : selectCounselor === "allCounselors" ? (
-                  `$${
-                    summaryData
-                      ? Number(summaryData?.sum_session_tenant_amt).toFixed(
-                          2
-                        ) || 0
-                      : 0
-                  }`
+                  Number(summaryData?.sum_session_pre_tax_amount).toFixed(2)
                 ) : (
-                  (() => {
-                    const match = counselorConfiguration?.find(
-                      (item) =>
-                        item?.counselor_info?.email?.toLowerCase() ===
-                        selectCounselorEmail?.toLowerCase()
-                    );
-
-                    const total = summaryData
-                      ? Number(summaryData?.sum_session_counselor_amt) +
-                          Number(summaryData?.sum_session_system_amt) || 0
-                      : 0;
-
-                    const adminFeePercent =
-                      userObj?.role_id === 2
-                        ? Number(userObj?.tenant?.admin_fee) || 0
-                        : Number(summaryData?.system_pcnt) || 0;
-                    const adminFeeAmount = (total * adminFeePercent) / 100;
-                    const netAfterAdmin = total - adminFeeAmount;
-
-                    if (match?.tenant_share_percentage) {
-                      const percentageAmount =
-                        (netAfterAdmin * match.tenant_share_percentage) / 100;
-                      return `$${percentageAmount.toFixed(2)} For Tenant manager only`;
-                    }
-
-                    return "$0.00";
-                  })()
+                  ""
                 )
-                // (
-                //   `$${
-                //     summaryData
-                //       ? Number(summaryData?.sum_session_tenant_amt).toFixed(
-                //           2
-                //         ) || 0
-                //       : 0
-                //   }`
-                // )
               }
             />
-            {userObj?.role_id === 3 && selectCounselor != "allCounselors" && (
+
+            {userObj?.role_id !== 4 && (
               <CustomTab
-                heading={"Detail breakdown"}
-                value={(() => {
-                  const match = counselorConfiguration?.find(
-                    (item) =>
-                      item?.counselor_info?.email?.toLowerCase() ===
-                      selectCounselorEmail?.toLowerCase()
-                  );
-
-                  const total = summaryData
-                    ? Number(summaryData?.sum_session_counselor_amt) +
-                        Number(summaryData?.sum_session_system_amt) || 0
-                    : 0;
-                  const adminFeePercent =
-                    userObj?.role_id === 2
-                      ? Number(userObj?.tenant?.admin_fee) || 0
-                      : Number(summaryData?.system_pcnt) || 0;
-                  const admin_share = (total * adminFeePercent) / 100;
-                  const adminFeeAmount = (total * adminFeePercent) / 100;
-                  const netAfterAdmin = total - adminFeeAmount;
-
-                  const counselorShare = match?.counselor_share_percentage
-                    ? `$${(
-                        (netAfterAdmin * match.counselor_share_percentage) /
-                        100
-                      ).toFixed(2)} (${match.counselor_share_percentage}%)`
-                    : "$0.00";
-
-                  const managerShare = match?.tenant_share_percentage
-                    ? `$${(
-                        (netAfterAdmin * match.tenant_share_percentage) /
-                        100
-                      ).toFixed(2)} (${match.tenant_share_percentage}%)`
-                    : "$0.00";
-
-                  return (
-                    <>
-                      Total: ${total.toFixed(2)} <br />
-                      Admin Fee: Total {total.toFixed(2)} - Admin Fee{" "}
-                      {admin_share.toFixed(2)} <br />
-                      New total admin fee: {(total - admin_share).toFixed(2)}
-                      <br />
-                      Counselor Share: {counselorShare} <br />
-                      Manager Share: {managerShare}
-                    </>
-                  );
-                })()}
+                heading="Total Amount to Associate for a Month:"
+                value={
+                  summaryLoading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : userObj?.role_id === 2 ? (
+                    Number(
+                      summaryData?.sum_session_counselor_amt -
+                        summaryData?.sum_session_tenant_amt
+                    ).toFixed(2)
+                  ) : userObj?.role_id === 3 ? (
+                    Number(summaryData?.sum_session_tenant_amt).toFixed(2)
+                  ) : (
+                    ""
+                  )
+                }
               />
             )}
-            {userObj?.role_id === 2 && (
-              <CustomTab
-                heading={"Detail breakdown"}
-                value={(() => {
-                  const match = counselorConfiguration?.find(
-                    (item) =>
-                      item?.counselor_info?.email?.toLowerCase() ===
-                      userObj?.counselor_profile?.email?.toLowerCase()
-                  );
-                  const adminFeePercent =
-                    userObj?.role_id === 2
-                      ? Number(userObj?.tenant?.admin_fee) || 0
-                      : Number(summaryData?.system_pcnt) || 0;
-                  const total = summaryData
-                    ? Number(summaryData?.sum_session_counselor_amt) +
-                        Number(summaryData?.sum_session_system_amt) || 0
-                    : 0;
-                  const admin_share = (total * adminFeePercent) / 100;
-                  const netAfterAdmin = total - admin_share;
-                  const counselorShare = match?.counselor_share_percentage
-                    ? `$${(
-                        (netAfterAdmin * match.counselor_share_percentage) /
-                        100
-                      ).toFixed(2)} (${match.counselor_share_percentage}%)`
-                    : "$0.00";
-                  const managerShare = match?.tenant_share_percentage
-                    ? `$${(
-                        (netAfterAdmin * match.tenant_share_percentage) /
-                        100
-                      ).toFixed(2)} (${match.tenant_share_percentage}%)`
-                    : "$0.00";
 
-                  return (
-                    <>
-                      Total ${total.toFixed(2)} <br />
-                      {/* Admin Fee: Total {total} - Admin Fee {admin_share}% <br /> */}
-                      {/* New total admin fee: {total - admin_share} <br /> */}
-                      Counselor Share: {counselorShare} <br />
-                      Manager Share: {managerShare}
-                    </>
-                  );
-                })()}
-              />
-            )}
+            <CustomTab
+              heading="Detail breakdown"
+              value={
+                summaryLoading ? (
+                  <Skeleton width={200} height={40} />
+                ) : userObj?.role_id === 2 ? (
+                  <>
+                    <p>
+                      Counsellor Share:{" "}
+                      {Number(
+                        summaryData?.sum_session_counselor_amt -
+                          summaryData?.sum_session_tenant_amt
+                      ).toFixed(2)}{" "}
+                      (
+                      {
+                        summaryData?.fee_split_management
+                          ?.counselor_share_percentage
+                      }
+                      %)
+                    </p>
+                    Tenant Share:{" "}
+                    {Number(summaryData?.sum_session_tenant_amt).toFixed(2)} (
+                    {summaryData?.fee_split_management?.tenant_share_percentage}
+                    %)
+                  </>
+                ) : userObj?.role_id === 3 ? (
+                  <>
+                    Counsellor Share:{" "}
+                    {Number(
+                      summaryData?.sum_session_counselor_amt -
+                        summaryData?.sum_session_tenant_amt
+                    ).toFixed(2)}
+                    <br />
+                    Tenant Share:{" "}
+                    {Number(summaryData?.sum_session_tenant_amt).toFixed(2)}
+                  </>
+                ) : userObj?.role_id === 4 ? (
+                  <>
+                    <p>
+                      All Practice Amount:{" "}
+                      {Number(
+                        summaryData?.sum_session_pre_tax_amount -
+                          summaryData?.sum_session_system_amt
+                      ).toFixed(2)}
+                    </p>
+                    
+                      <>
+                        Counsellor Amount:{" "}
+                        {Number(
+                          summaryData?.sum_session_counselor_tenant_amt
+                        ).toFixed(2)}{" "}
+                        (
+                        {
+                          summaryData?.fee_split_management
+                            ?.counselor_share_percentage
+                        }
+                        %)
+                        <br />
+                        Tenant Amount:{" "}
+                        {Number(summaryData?.sum_session_tenant_amt).toFixed(
+                          2
+                        )}{" "}
+                        (
+                        {
+                          summaryData?.fee_split_management
+                            ?.tenant_share_percentage
+                        }
+                        %)
+                      </>
+                  </>
+                ) : (
+                  ""
+                )
+              }
+            />
+
             {userObj?.role_id == 4 ? (
               <CustomTab
                 heading={"Total Amount to Vapendama for a Month:"}
-                value={`$${
-                  summaryData
-                    ? Number(summaryData?.sum_session_system_amt).toFixed(2) ||
-                      0
-                    : 0
-                }`}
+                value={
+                  summaryLoading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : (
+                    Number(summaryData?.sum_session_system_amt)?.toFixed(2)
+                  )
+                }
               />
             ) : (
               userObj?.role_id !== 2 && (
@@ -611,78 +497,14 @@ function ClientSession() {
                   value={
                     summaryLoading ? (
                       <Skeleton width={120} height={40} />
-                    ) : userObj?.role_id === 4 ? (
-                      `$${
-                        summaryData
-                          ? Number(summaryData?.sum_session_system_amt).toFixed(
-                              2
-                            ) || 0
-                          : 0
-                      }`
-                    ) : userObj?.role_id == 3 ? (
-                      (() => {
-                        const baseAmount =
-                          Number(summaryData?.sum_session_system_amt) +
-                          Number(summaryData?.sum_session_counselor_amt);
-
-                        const percentage = Number(summaryData?.system_pcnt);
-                        const fee = ((baseAmount * percentage) / 100).toFixed(
-                          2
-                        );
-
-                        return `Admin Fee: ${baseAmount.toFixed(
-                          2
-                        )} * ${percentage} = ${fee}`;
-                      })()
                     ) : (
-                      ""
+                      Number(summaryData?.sum_session_system_amt)?.toFixed(2)
                     )
                   }
                 />
               )
             )}
-            {/* <CustomTab
-              heading={"Total Amount to Vapendama for a Month:"}
-              value={
-                summaryLoading ? (
-                  <Skeleton width={120} height={40} />
-                ) : userObj?.role_id === 4 ? (
-                  `$${
-                    summaryData
-                      ? Number(summaryData?.sum_session_system_amt).toFixed(
-                          2
-                        ) || 0
-                      : 0
-                  }`
-                ) : userObj?.role_id == 3 ? (
-                  (() => {
-                    const baseAmount =
-                      Number(summaryData?.sum_session_system_amt) +
-                      Number(summaryData?.sum_session_counselor_amt);
 
-                    const percentage = Number(summaryData?.system_pcnt);
-                    const fee = (baseAmount * percentage).toFixed(2);
-
-                    return `Admin Fee: ${baseAmount.toFixed(
-                      2
-                    )} * ${percentage} = ${fee}`;
-                  })()
-                ) : (
-                  (() => {
-                    const baseAmount =
-                      Number(summaryData?.sum_session_system_amt) +
-                      Number(summaryData?.sum_session_counselor_amt);
-
-                    const percentage = Number(userObj?.tenant?.admin_fee);
-                    const fee = (baseAmount * percentage).toFixed(2);
-
-                    return `Admin Fee: ${baseAmount.toFixed(
-                      2
-                    )} * ${percentage} = ${fee}`;
-                  })()
-                )
-              }
-            /> */}
             <CustomTab
               heading={"Total Amount of Units:"}
               value={
@@ -707,6 +529,8 @@ function ClientSession() {
         }
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
+        setSelectedTenantId={setSelectedTenantId}
+        getInvoice={getInvoice}
         counselor={counselors}
         handleCreate={handleShowAddClientSession}
         onRowClicked={handleEdit}

@@ -48,6 +48,7 @@ function CreateSessionForm({
   session,
   isHomeworkUpload,
   setHomeWorkUpload,
+  counselorConfiguration,
 }) {
   const methods = useForm();
   const { userObj } = useReferenceContext();
@@ -74,6 +75,11 @@ function CreateSessionForm({
   const [countNotes, setCountNotes] = useState([]);
   const [additionalSessions, setAddittionalSessions] = useState([]);
   // to show verification on Notes Page
+  const match = counselorConfiguration?.find(
+    (item) =>
+      item?.counselor_info?.email?.toLowerCase() ===
+      userObj?.counselor_profile?.email?.toLowerCase()
+  );
   const [showVerification, setShowVerification] = useState(true);
   const [user, setUser] = useState(null);
   const [sessionRange, setSessionRange] = useState({
@@ -434,8 +440,7 @@ function CreateSessionForm({
     },
     {
       name: "Total Amt.",
-      selector: (row) =>
-        `$${Number(row.session_price).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_price).toFixed(2)}`,
       selectorId: "session_price",
       maxWidth: "100px",
     },
@@ -452,8 +457,11 @@ function CreateSessionForm({
       maxWidth: "130px",
     },
     {
-      name: "Amt. to Admin",
-      selector: (row) => `$${Number(row.session_system_amt).toFixed(2)}`,
+      name: userObj?.role_id === 3 ? "Amt. to Admin" : "Amount to Practice",
+      selector: (row) =>
+        userObj?.role_id === 3
+          ? `$${Number(row.session_system_amt).toFixed(2)}`
+          : `${match?.tenant_share_percentage}%`,
       selectorId: "session_system_amt",
       maxWidth: "120px",
     },

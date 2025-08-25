@@ -1,5 +1,4 @@
 import { useForm, Controller, useWatch, FormProvider } from "react-hook-form";
-import CustomMultiSelect from "../../../CustomMultiSelect";
 import { GasFormWrapper } from "./style";
 import { gasQuestionBank, treatment_goals } from "../../../../utils/constants";
 import CustomButton from "../../../CustomButton";
@@ -11,57 +10,44 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import CommonServices from "../../../../services/CommonServices";
 import { toast } from "react-toastify";
 import FormHeader from "../../../FormsHeader";
-const GasForm = ({
-  client_id,
-  session_id,
-  goal = "Improving_Emotional_Regulation_in_Therapy",
-}) => {
-  const [goalValue, setGoalValue] = useState(null);
+import { useReferenceContext } from "../../../../context/ReferenceContext";
+
+const GasForm = ({ client_id, session_id, target_outcome_id = 3 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+
+  const { targetOutcomes } = useReferenceContext();
+  const selectedOutcome = treatment_goals.find(
+    (g) => g.id === Number(target_outcome_id)
+  );
+
+  const questions = gasQuestionBank[target_outcome_id] || [];
   const schema = useMemo(() => {
-    if (!goalValue) return null;
-    return createGasSchema(goalValue);
-  }, [goalValue]);
+    if (!target_outcome_id) return null;
+    return createGasSchema(target_outcome_id);
+  }, [target_outcome_id]);
 
   const methods = useForm({
     resolver: schema ? zodResolver(schema) : undefined,
     defaultValues: {
       goal: {
-        label: treatment_goals.find((g) => g.value === goal)?.label,
-        value: goal,
+        label: selectedOutcome?.label || "",
+        value: Number(selectedOutcome?.id) || 0,
       },
+      ...questions.reduce((acc, q) => {
+        acc[q.name] = undefined;
+        return acc;
+      }, {}),
     },
     mode: "onSubmit",
   });
   const {
     control,
     handleSubmit,
-    watch,
     reset,
-    setValue,
     formState: { errors },
   } = methods;
 
-  const selectedGoal = goalValue || goal;
-  useEffect(() => {
-    if (goal && goal !== goalValue) {
-      const newQuestions = gasQuestionBank[goal] || [];
-      const newDefaults = {
-        goal: {
-          label: treatment_goals.find((g) => g.value === goal)?.label,
-          value: goal,
-        },
-      };
-      newQuestions.forEach((q) => {
-        newDefaults[q.name] = undefined;
-      });
-      reset(newDefaults);
-      setGoalValue(goal);
-    }
-  }, [goal]);
-
-  const questions = gasQuestionBank[selectedGoal] || [];
   const answers = useWatch({ control });
 
   const totalScore = questions.reduce((sum, q) => {
@@ -74,7 +60,8 @@ const GasForm = ({
       setSubmitError(null);
 
       const payload = {
-        goal: data.goal?.value,
+        goal:data.goal.label,
+        target_outcome_id: Number(target_outcome_id),
         responses: questions.map((q) => {
           const numericValue = data[q.name];
           const selectedOption = q.options.find(
@@ -86,40 +73,51 @@ const GasForm = ({
             score: numericValue,
           };
         }),
-        session_id: Number(session_id), // This should be passed as a prop or from context
-        client_id: Number(client_id), // This should be passed as a prop or from context
+        session_id: Number(session_id),
+        client_id: Number(client_id),
       };
 
       const response = await CommonServices.submitGASForm(payload);
-      console.log("Form submitted successfully", response);
       toast.success(response?.data?.message);
       reset();
-      setGoalValue(null);
     } catch (error) {
       console.error("Error submitting form:", error);
-      toast.error(error?.response?.data?.message);
+      toast.error(error?.response?.data?.message || "Failed to submit form");
       setSubmitError(error.message || "Failed to submit form");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  useEffect(() => {
+    if (!selectedOutcome) return;
+
+    const newDefaults = {
+      goal: {
+        label: selectedOutcome.label,
+        value: Number(selectedOutcome.id),
+      },
+    };
+
+    questions.forEach((q) => {
+      newDefaults[q.name] = undefined;
+    });
+
+    reset(newDefaults);
+  }, [selectedOutcome, questions, reset]);
+
   return (
     <FormProvider {...methods}>
-      <GasFormWrapper key={goalValue || "initial"}>
+      <GasFormWrapper>
         <div className="main-bg">
           <FormHeader
-            tittle={"Gas Form Tracker Questionnaire"}
-            description={
-              " Structured -2 to +2 scale questionnaire to monitor client progresssupport therapy adjustments and visualize weekly mental health changes"
-            }
+            tittle="Gas Form Tracker Questionnaire"
+            description="Structured -2 to +2 scale questionnaire to monitor client progress, support therapy adjustments and visualize weekly mental health changes"
           />
 
           {questions.length > 0 && (
             <div className="score-box">
-              <p>
-                {treatment_goals.find((g) => g.value === selectedGoal)?.goal}
-              </p>
+              <p>{selectedOutcome?.label}</p>
               <div className="score-content">
                 <div className="score-circle">
                   <CircularProgressbar
@@ -178,16 +176,7 @@ const GasForm = ({
                 ))}
               </div>
 
-              {/* {submitError && (
-                <div
-                  className="error-message"
-                  style={{ color: "red", marginBottom: "10px" }}
-                >
-                  {submitError}
-                </div>
-              )} */}
               <div className="button-group">
-                {/* <CustomButton title="Cancel" type="button" /> */}
                 <CustomButton
                   customClass="blue"
                   type="submit"

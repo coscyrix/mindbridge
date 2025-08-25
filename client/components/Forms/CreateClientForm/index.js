@@ -44,15 +44,13 @@ function CreateClientForm({
       if (initialData) return true;
       if (Counselor) return roledetail?.role_id === 1;
       if (admin) return roledetail?.role_id === 3;
-      if (manager) return roledetail?.role_id ===2;
+      if (manager) return roledetail?.role_id === 2;
       return true;
     })
     .map((roledetail) => ({
       label: roledetail?.role_cde,
       value: roledetail?.role_id,
     }));
-
-
 
   const Services = servicesData?.map((service) => ({
     label: service?.service_name,
@@ -142,7 +140,7 @@ function CreateClientForm({
         user_phone_nbr: data?.user_phone_nbr,
         tenant_name: data?.tenant_name,
       };
-    } else if(role ===2){
+    } else if (role === 2) {
       processedData = {
         user_profile_id: user?.user_profile_id,
         user_first_name: data?.user_first_name,
@@ -153,10 +151,7 @@ function CreateClientForm({
         tenant_name: data?.tenant_name,
         // description: data.description,
       };
-    }
-    else if(role === 3){
-      
-    
+    } else if (role === 3) {
       processedData = {
         user_profile_id: user?.user_profile_id,
         user_first_name: data?.user_first_name,
@@ -167,9 +162,8 @@ function CreateClientForm({
         tenant_name: data?.tenant_name,
         admin_fee: data.admin_fee,
         tax_percent: data.tax,
-        
       };
-    }else{
+    } else {
       processedData = {
         user_profile_id: user?.user_profile_id,
         user_first_name: data?.user_first_name,
@@ -197,7 +191,7 @@ function CreateClientForm({
             position: "top-right",
           });
         }
-      
+
         // setTableData((prev) => [processedData, ...prev]);
         fetchClients();
         methods.reset(defaultValues);
@@ -223,8 +217,9 @@ function CreateClientForm({
       description,
       tax,
       admin_fee,
+      clam_num,
     } = data;
-   
+    console.log(clam_num);
     const processedData = {
       user_first_name,
       user_last_name,
@@ -238,13 +233,14 @@ function CreateClientForm({
         tenant_name: tenant_name || "",
         admin_fee,
         tax,
-       
+
         tenant_name,
       }),
       ...(role_id === 2 &&
         {
           // description: description,
         }),
+      ...(role_id === 1 && { clam_num: clam_num }),
     };
 
     try {
@@ -272,7 +268,7 @@ function CreateClientForm({
             position: "top-right",
           });
         }
-      
+
         fetchClients();
         setIsOpen(false);
         methods.reset(defaultValues);
@@ -302,7 +298,6 @@ function CreateClientForm({
       setFormButton("Create");
       methods.reset(defaultValues);
     }
-
   }, [isOpen]);
 
   const handleDiscard = (e) => {
@@ -345,7 +340,6 @@ function CreateClientForm({
   // }, [isOpen, role, serviceTemplates, initialData]);
 
   return (
-
     <CreateClientWrapper>
       <FormProvider {...methods}>
         <form
@@ -371,7 +365,7 @@ function CreateClientForm({
                   <CustomSelect
                     {...field}
                     options={RoleIds}
-                    disable={Counselor || manager ||admin|| initialData}
+                    disable={Counselor || manager || admin || initialData}
                     dropdownIcon={
                       <ArrowIcon style={{ transform: "rotate(90deg)" }} />
                     }
