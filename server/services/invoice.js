@@ -84,6 +84,14 @@ export default class InvoiceService {
       // If no tenant_id is provided, no additional processing is needed
     }
 
+    if (data.role_id === 2 && data.counselor_id) {
+      // For role_id=2 (counselor), get their tenant_id to calculate tenant amount
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+      data.tenant_id = Number(tenantId[0].tenant_id);
+    }
+
     if (data.role_id === 3) {
       if (data.counselor_id && data.counselor_id !== 'allCounselors') {
         // If specific counselor is provided, get their tenant_id

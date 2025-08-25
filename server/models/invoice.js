@@ -211,11 +211,11 @@ export default class Invoice {
       let totalSystem = 0;
       let totalTenant = 0;
 
-      // Check if we need to calculate tenant_amount (role_id=3 and tenant_id present)
-      const shouldCalculateTenantAmount = data.role_id === 3 && data.tenant_id;
+      // Check if we need to calculate tenant_amount (role_id=2 or role_id=3 and tenant_id present)
+      const shouldCalculateTenantAmount = (data.role_id === 2 || data.role_id === 3) && data.tenant_id;
       
-      // Check if we need to include system_pcnt for role_id=3 or role_id=4 with tenant selection
-      const shouldIncludeSystemPcnt = (data.role_id === 3 || data.role_id === 4) && data.tenant_id;
+      // Check if we need to include system_pcnt for role_id=2, role_id=3 or role_id=4 with tenant selection
+      const shouldIncludeSystemPcnt = (data.role_id === 2 || data.role_id === 3 || data.role_id === 4) && data.tenant_id;
 
 
 
@@ -299,8 +299,8 @@ export default class Invoice {
         }
       }
 
-      // Add fee_split_management keys if role_id=4 and counselor_id is selected
-      if (data.role_id === 4 && data.counselor_id && data.tenant_id) {
+      // Add fee_split_management keys if role_id=2, role_id=4 and counselor_id is selected
+      if ((data.role_id === 2 || data.role_id === 4) && data.counselor_id && data.tenant_id) {
         try {
           // Get the user_id from user_profile table using counselor_id
           const userMapping = await db
