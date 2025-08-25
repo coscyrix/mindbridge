@@ -299,8 +299,8 @@ export default class Invoice {
         }
       }
 
-      // Add fee_split_management keys if role_id=2, role_id=4 and counselor_id is selected
-      if ((data.role_id === 2 || data.role_id === 4) && data.counselor_id && data.tenant_id) {
+      // Add fee_split_management keys if role_id=2, role_id=3, role_id=4 and counselor_id is selected
+      if ((data.role_id === 2 || data.role_id === 3 || data.role_id === 4) && data.counselor_id && data.tenant_id) {
         try {
           // Get the user_id from user_profile table using counselor_id
           const userMapping = await db
