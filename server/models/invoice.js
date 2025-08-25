@@ -272,11 +272,8 @@ export default class Invoice {
           
           let counselorTotalAmount = 0;
           sessions.forEach((session) => {
-            // Use pre-tax amount for fee split calculations
-            const sessionPrice = parseFloat(session.session_price) || 0;
-            const sessionTaxes = parseFloat(session.session_taxes) || 0;
-            const preTaxAmount = sessionPrice - sessionTaxes;
-            counselorTotalAmount += preTaxAmount;
+            // Use counselor amount (which already excludes system amount) for fee split calculations
+            counselorTotalAmount += parseFloat(session.session_counselor_amt) || 0;
           });
 
           // Calculate tenant_amount based on fee split percentage
@@ -316,7 +313,7 @@ export default class Invoice {
         summary.sum_session_tenant_amt = totalTenant.toFixed(4);
         
         // Also add individual counselor and tenant amounts for clarity
-        const counselorAmount = totalPreTaxAmount - totalTenant;
+        const counselorAmount = totalCounselor - totalTenant;
         summary.sum_session_counselor_tenant_amt = counselorAmount.toFixed(4);
         
         console.log(`Summary calculation: total=${totalPrice}, tenant_amount=${totalTenant}, counselor_amount=${counselorAmount}`);
