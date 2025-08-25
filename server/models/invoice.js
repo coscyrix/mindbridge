@@ -279,6 +279,13 @@ export default class Invoice {
       // Add tenant_amount to summary if calculated
       if (shouldCalculateTenantAmount) {
         summary.sum_session_tenant_amt = totalTenant.toFixed(4);
+        
+        // Also add individual counselor and tenant amounts for clarity
+        if (data.counselor_id) {
+          // Calculate counselor amount (total - tenant amount)
+          const counselorAmount = totalPrice - totalTenant;
+          summary.sum_session_counselor_tenant_amt = counselorAmount.toFixed(4);
+        }
       }
 
       // Add system_pcnt to summary if role_id=4 and tenant is selected
