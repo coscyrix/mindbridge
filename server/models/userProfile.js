@@ -380,6 +380,20 @@ export default class UserProfile {
       }
 
       if (data.email || data.role_id) {
+        // If email is being updated, check if it already exists for a different user
+        if (data.email) {
+          const checkEmail = await this.common.getUserByEmail(data.email);
+          const getUsr = await this.getUserProfileById({
+            user_profile_id: user_profile_id,
+          });
+          
+          // Check if email exists for a different user
+          if (checkEmail.length > 0 && checkEmail[0].user_id !== getUsr.rec[0].user_id) {
+            logger.error('Email already exists for another user');
+            return { message: 'Email already exists', error: -1 };
+          }
+        }
+
         const tmpUsr = {
           ...(data.email && { email: data.email.toLowerCase() }),
           ...(data.role_id && { role_id: data.role_id }),
