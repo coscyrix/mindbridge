@@ -88,6 +88,38 @@ export default class UserProfileController {
 
     if (!user_profile_id) {
       res.status(400).json({ message: 'Mandatory fields are missing' });
+      return;
+    }
+
+    // Role-based validation at controller level
+    if (data.role_id === 1) {
+      if (!data.target_outcome_id) {
+        res.status(400).json({
+          message: 'target_outcome_id is required for client updates',
+          error: -1,
+        });
+        return;
+      }
+    }
+
+    if (data.role_id === 2) {
+      if (data.target_outcome_id) {
+        res.status(400).json({
+          message: 'target_outcome_id is not required for counselor updates',
+          error: -1,
+        });
+        return;
+      }
+    }
+
+    if (data.role_id === 3) {
+      if (data.target_outcome_id) {
+        res.status(400).json({
+          message: 'target_outcome_id is not required for tenant updates',
+          error: -1,
+        });
+        return;
+      }
     }
 
     const userProfile = new UserProfileService();

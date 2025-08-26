@@ -270,21 +270,62 @@ export default class Invoice {
           // Get fee split configuration for this counselor using user_id
           const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(counselorTenantId, userMapping.user_id);
           
-          let counselorTotalAmount = 0;
+          // Get system percentage for this tenant
+          const refFees = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('ref_fees')
+            .where('tenant_id', counselorTenantId)
+            .select('system_pcnt')
+            .first();
+          
+          const systemPercentage = refFees?.system_pcnt || 0;
+          
+          let counselorTotalPreTaxAmount = 0;
           sessions.forEach((session) => {
-            // Use counselor amount (which already excludes system amount) for fee split calculations
-            counselorTotalAmount += parseFloat(session.session_counselor_amt) || 0;
+            // Use pre-tax amount for calculations
+            const sessionPrice = parseFloat(session.session_price) || 0;
+            const sessionTaxes = parseFloat(session.session_taxes) || 0;
+            const preTaxAmount = sessionPrice - sessionTaxes;
+            counselorTotalPreTaxAmount += preTaxAmount;
           });
 
-          // Calculate tenant_amount based on fee split percentage
-          // Only calculate if fee split is enabled and tenant share percentage > 0
-          if (feeSplitConfig.is_fee_split_enabled && feeSplitConfig.tenant_share_percentage > 0) {
-            const tenantAmount = (counselorTotalAmount * feeSplitConfig.tenant_share_percentage) / 100;
-            totalTenant += tenantAmount;
-            console.log(`Counselor ${counselorId} (tenant ${counselorTenantId}): total=${counselorTotalAmount}, tenant_share=${feeSplitConfig.tenant_share_percentage}%, tenant_amount=${tenantAmount}`);
+          // Calculate fee split based on the correct model:
+          // 1. Counselor gets their percentage first
+          // 2. System gets their percentage
+          // 3. Tenant gets the remaining amount
+          
+          // Calculate counselor amount first
+          const counselorAmount = (counselorTotalPreTaxAmount * feeSplitConfig.counselor_share_percentage) / 100;
+          
+          // Calculate system amount
+          const systemAmount = (counselorTotalPreTaxAmount * systemPercentage) / 100;
+          
+          // Calculate remaining amount after counselor and system cuts
+          const remainingAfterCounselorAndSystem = counselorTotalPreTaxAmount - counselorAmount - systemAmount;
+          
+          let tenantAmount = 0;
+          
+          if (feeSplitConfig.is_fee_split_enabled) {
+            // Tenant gets the remaining amount after counselor and system cuts
+            tenantAmount = remainingAfterCounselorAndSystem;
+            
+            // If counselor gets 100%, tenant gets 0 (only system amount is deducted)
+            if (feeSplitConfig.counselor_share_percentage === 100) {
+              tenantAmount = 0;
+              console.log(`Counselor gets 100%, tenant gets 0`);
+            }
+            
+            console.log(`Fee split config: enabled=${feeSplitConfig.is_fee_split_enabled}, counselor_share=${feeSplitConfig.counselor_share_percentage}%, tenant_share=${feeSplitConfig.tenant_share_percentage}%`);
+            console.log(`Counselor ${counselorId} (tenant ${counselorTenantId}): pre_tax=${counselorTotalPreTaxAmount}, counselor=${feeSplitConfig.counselor_share_percentage}%, system=${systemPercentage}%, counselor_amt=${counselorAmount}, system_amt=${systemAmount}, tenant_amt=${tenantAmount}`);
           } else {
-            console.log(`Counselor ${counselorId} (tenant ${counselorTenantId}): fee split disabled or tenant_share=0, fee_split_enabled=${feeSplitConfig.is_fee_split_enabled}, tenant_share_percentage=${feeSplitConfig.tenant_share_percentage}`);
+            // If fee split is disabled, counselor gets everything after system cut
+            const counselorAmount = remainingAfterSystem;
+            tenantAmount = 0;
+            
+            console.log(`Counselor ${counselorId} (tenant ${counselorTenantId}): fee split disabled, counselor gets all remaining after system cut`);
           }
+          
+          totalTenant += tenantAmount;
         }
       }
 
@@ -313,10 +354,11 @@ export default class Invoice {
         summary.sum_session_tenant_amt = totalTenant.toFixed(4);
         
         // Also add individual counselor and tenant amounts for clarity
-        const counselorAmount = totalCounselor - totalTenant;
-        summary.sum_session_counselor_tenant_amt = counselorAmount.toFixed(4);
+        // Calculate the new counselor amount based on the new fee split model
+        const newCounselorAmount = totalPreTaxAmount - totalTenant - totalSystem;
+        summary.sum_session_counselor_tenant_amt = newCounselorAmount.toFixed(4);
         
-        console.log(`Summary calculation: total=${totalPrice}, tenant_amount=${totalTenant}, counselor_amount=${counselorAmount}`);
+        console.log(`Summary calculation: total=${totalPrice}, tenant_amount=${totalTenant}`);
       }
 
       // Add system_pcnt to summary
@@ -377,11 +419,23 @@ export default class Invoice {
             // Get fee split configuration for this counselor
             const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(data.tenant_id, userMapping.user_id);
             
+            // Get system percentage for this tenant
+            const refFees = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('ref_fees')
+              .where('tenant_id', data.tenant_id)
+              .select('system_pcnt')
+              .first();
+            
+            const systemPercentage = refFees?.system_pcnt || 0;
+            
             // Add fee split management keys to summary
             summary.fee_split_management = {
               is_fee_split_enabled: feeSplitConfig.is_fee_split_enabled,
               tenant_share_percentage: feeSplitConfig.tenant_share_percentage,
-              counselor_share_percentage: feeSplitConfig.counselor_share_percentage
+              counselor_share_percentage: feeSplitConfig.counselor_share_percentage,
+              system_percentage: systemPercentage,
+              calculation_method: "counselor_first_then_system_then_tenant_remaining"
             };
           } else {
             // If no user mapping found, return default configuration

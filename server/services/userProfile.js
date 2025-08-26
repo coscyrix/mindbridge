@@ -130,6 +130,42 @@ export default class UserProfileService {
       delete data.tenant_name;
     }
 
+    // Role-based validation
+    if (data.role_id === 1) {
+      // For clients (role_id = 1), require target_outcome_id
+      if (!data.target_outcome_id) {
+        return { message: 'target_outcome_id is required for client updates', error: -1 };
+      }
+    }
+
+    if (data.role_id === 2) {
+      // For counselors (role_id = 2), target_outcome_id should not be provided
+      if (data.target_outcome_id) {
+        return { message: 'target_outcome_id is not required for counselor updates', error: -1 };
+      }
+      
+      // For counselors, require basic profile fields
+      if (!data.user_first_name || !data.user_last_name || !data.email) {
+        return { message: 'user_first_name, user_last_name, and email are required for counselor updates', error: -1 };
+      }
+    }
+
+    if (data.role_id === 3) {
+      // For tenants/managers (role_id = 3), target_outcome_id should not be provided
+      if (data.target_outcome_id) {
+        return { message: 'target_outcome_id is not required for tenant updates', error: -1 };
+      }
+      
+      // For tenants, require admin_fee and tax_percent
+      if (data.admin_fee !== undefined && (!data.admin_fee || data.admin_fee <= 0)) {
+        return { message: 'admin_fee is required and must be greater than 0 for tenant updates', error: -1 };
+      }
+      
+      if (data.tax_percent !== undefined && (data.tax_percent < 0)) {
+        return { message: 'tax_percent must be 0 or greater for tenant updates', error: -1 };
+      }
+    }
+
     const userProfileSchema = joi.object({
       user_first_name: joi.string().min(2).optional(),
       user_last_name: joi.string().min(2).optional(),
@@ -142,6 +178,8 @@ export default class UserProfileService {
       //fields below are for target outcome
       target_outcome_id: joi.number().optional(),
       counselor_id: joi.number().optional(),
+      admin_fee: joi.number().precision(2).optional(),
+      tax_percent: joi.number().precision(2).optional(),
     });
 
     // Validate the entire data object against the schema
