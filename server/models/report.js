@@ -17,6 +17,9 @@ export default class Report {
       const formMode = process.env.FORM_MODE || 'auto';
       
       let query;
+
+      console.log('formMode', formMode);
+      
       
       if (formMode === 'treatment_target') {
         // Treatment target mode: query treatment target session forms
@@ -138,13 +141,25 @@ export default class Report {
 
       if (data.role_id === 3) {
         // If the user is a manager, filter by tenant_id
-        const tenantId = await this.common.getUserTenantId({
-          user_profile_id: data.counselor_id,
-        });
-        if (formMode === 'treatment_target') {
-          query.where('tt.tenant_id', Number(tenantId[0].tenant_id));
-        } else {
-          query.where('tenant_id', Number(tenantId[0].tenant_id));
+        if (data.tenant_id) {
+          // Use the provided tenant_id directly
+          if (formMode === 'treatment_target') {
+            query.where('tt.tenant_id', Number(data.tenant_id));
+          } else {
+            query.where('tenant_id', Number(data.tenant_id));
+          }
+        } else if (data.counselor_id) {
+          // If no tenant_id provided but counselor_id is, get tenant_id from counselor
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            if (formMode === 'treatment_target') {
+              query.where('tt.tenant_id', Number(tenantId[0].tenant_id));
+            } else {
+              query.where('tenant_id', Number(tenantId[0].tenant_id));
+            }
+          }
         }
         
         // If counselor_id is provided, also filter by specific counselor
@@ -249,10 +264,18 @@ export default class Report {
 
       if (data.role_id === 3) {
         // If the user is a manager, filter by tenant_id
-        const tenantId = await this.common.getUserTenantId({
-          user_profile_id: data.counselor_id,
-        });
-        query.where('tenant_id', Number(tenantId[0].tenant_id));
+        if (data.tenant_id) {
+          // Use the provided tenant_id directly
+          query.where('tenant_id', Number(data.tenant_id));
+        } else if (data.counselor_id) {
+          // If no tenant_id provided but counselor_id is, get tenant_id from counselor
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            query.where('tenant_id', Number(tenantId[0].tenant_id));
+          }
+        }
         
         // If counselor_id is provided, also filter by specific counselor
         if (data.counselor_id) {
@@ -397,10 +420,18 @@ export default class Report {
 
       if (data.role_id == 3) {
         // If the user is a manager, filter by tenant_id
-        const tenantId = await this.common.getUserTenantId({
-          user_profile_id: data.counselor_id,
-        });
-        query.where('tenant_id', Number(tenantId[0].tenant_id));
+        if (data.tenant_id) {
+          // Use the provided tenant_id directly
+          query.where('tenant_id', Number(data.tenant_id));
+        } else if (data.counselor_id) {
+          // If no tenant_id provided but counselor_id is, get tenant_id from counselor
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            query.where('tenant_id', Number(tenantId[0].tenant_id));
+          }
+        }
         
         // If counselor_id is provided, also filter by specific counselor
         if (data.counselor_id) {
