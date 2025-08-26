@@ -319,7 +319,7 @@ export default class Invoice {
             console.log(`Counselor ${counselorId} (tenant ${counselorTenantId}): pre_tax=${counselorTotalPreTaxAmount}, counselor=${feeSplitConfig.counselor_share_percentage}%, system=${systemPercentage}%, counselor_amt=${counselorAmount}, system_amt=${systemAmount}, tenant_amt=${tenantAmount}`);
           } else {
             // If fee split is disabled, counselor gets everything after system cut
-            const counselorAmount = remainingAfterSystem;
+            const counselorAmount = remainingAfterCounselorAndSystem;
             tenantAmount = 0;
             
             console.log(`Counselor ${counselorId} (tenant ${counselorTenantId}): fee split disabled, counselor gets all remaining after system cut`);
