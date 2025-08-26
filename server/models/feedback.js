@@ -40,20 +40,38 @@ export default class Feedback {
       // Update form submission status based on environment variable
       const formMode = process.env.FORM_MODE || 'auto';
       
-      if (formMode === 'treatment_target') {
+      // Only update treatment target session forms if session_id is provided
+      if (data.session_id && formMode === 'treatment_target') {
         // Treatment target mode: update treatment target session forms
+        console.log('Treatment target mode - importing TreatmentTargetSessionForms');
         const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+        console.log('TreatmentTargetSessionForms imported:', typeof TreatmentTargetSessionForms);
         const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+        console.log('treatmentTargetSessionForms instance created:', typeof treatmentTargetSessionForms);
         
-        const updateTreatmentTargetForm = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormBySessionIdAndFormId({
-          session_id: data.session_id,
-          form_id: data.form_id,
-          form_submit: true,
-        });
+        try {
+          console.log('Calling updateTreatmentTargetSessionFormBySessionIdAndFormId with data:', {
+            session_id: data.session_id,
+            form_id: data.form_id,
+            form_submit: true,
+          });
+          
+          const updateTreatmentTargetForm = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormBySessionIdAndFormId({
+            session_id: data.session_id,
+            form_id: data.form_id,
+            form_submit: true,
+          });
 
-        if (updateTreatmentTargetForm?.error) {
-          logger.error('Error updating treatment target session form');
-          return { message: 'Error updating treatment target session form', error: -1 };
+          console.log('updateTreatmentTargetForm result:', updateTreatmentTargetForm);
+
+          if (updateTreatmentTargetForm?.error) {
+            logger.error('Error updating treatment target session form:', updateTreatmentTargetForm.message);
+            return { message: 'Error updating treatment target session forms', error: -1 };
+          }
+        } catch (updateError) {
+          console.log('Exception in updateTreatmentTargetSessionFormBySessionIdAndFormId:', updateError);
+          logger.error('Exception updating treatment target session form:', updateError);
+          return { message: 'Error updating treatment target session forms', error: -1 };
         }
       } else {
         // Service mode or auto mode: update user forms (service-based forms)
@@ -71,19 +89,26 @@ export default class Feedback {
         }
         
         // In auto mode, also try to update treatment target forms if they exist
-        if (formMode === 'auto') {
-          const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
-          const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
-          
-          const updateTreatmentTargetForm = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormBySessionIdAndFormId({
-            session_id: data.session_id,
-            form_id: data.form_id,
-            form_submit: true,
-          });
+        if (data.session_id && formMode === 'auto') {
+          try {
+            const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+            const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+            
+            const updateTreatmentTargetForm = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormBySessionIdAndFormId({
+              session_id: data.session_id,
+              form_id: data.form_id,
+              form_submit: true,
+            });
 
-          // Don't return error for treatment target forms in auto mode, just log it
-          if (updateTreatmentTargetForm?.error) {
-            logger.error('Error updating treatment target session form');
+            console.log('Auto mode updateTreatmentTargetForm result:', updateTreatmentTargetForm);
+
+            // Don't return error for treatment target forms in auto mode, just log it
+            if (updateTreatmentTargetForm?.error) {
+              logger.error('Error updating treatment target session form in auto mode:', updateTreatmentTargetForm.message);
+            }
+          } catch (updateError) {
+            console.log('Exception in auto mode updateTreatmentTargetSessionFormBySessionIdAndFormId:', updateError);
+            logger.error('Exception updating treatment target session form in auto mode:', updateError);
           }
         }
       }
@@ -1060,9 +1085,9 @@ export default class Feedback {
 
       return { message: 'Feedback created successfully' };
     } catch (error) {
-      console.log(error);
-      logger.error(error);
-      return { message: 'Error creating feedback', error: -1 };
+      console.log('error', error);
+      
+      return { message: 'Error creating feedbacks', error: -1 };
     }
   }
 

@@ -433,6 +433,7 @@ export default class FeedbackService {
       client_id: joi.number().required(),
       imgBase64: joi.string().required(),
       tenant_id: joi.number().required(),
+      form_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

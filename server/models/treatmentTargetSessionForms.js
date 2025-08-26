@@ -38,7 +38,8 @@ export default class TreatmentTargetSessionForms {
           .from('treatment_target_session_forms')
           .insert(tmpSessionForm);
 
-        if (!result) {
+        // Check if result is undefined or null (indicating an error)
+        if (result === undefined || result === null) {
           logger.error('Error creating treatment target session form');
           return { message: 'Error creating treatment target session form', error: -1 };
         }
@@ -166,7 +167,8 @@ export default class TreatmentTargetSessionForms {
         .where('id', data.id)
         .update(updateData);
 
-      if (!result) {
+      // Check if result is undefined or null (indicating an error)
+      if (result === undefined || result === null) {
         logger.error('Error updating treatment target session form sent status');
         return { message: 'Error updating treatment target session form sent status', error: -1 };
       }
@@ -320,9 +322,13 @@ export default class TreatmentTargetSessionForms {
    */
   async updateTreatmentTargetSessionFormBySessionIdAndFormId(data) {
     try {
+      console.log('updateTreatmentTargetSessionFormBySessionIdAndFormId called with:', data);
+      
       const updateData = {
         form_submit: data.form_submit ? 1 : 0,
       };
+      
+      console.log('updateData:', updateData);
 
       const result = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -331,10 +337,17 @@ export default class TreatmentTargetSessionForms {
         .andWhere('form_id', data.form_id)
         .update(updateData);
 
-      if (!result) {
+      console.log('Database update result:', result);
+
+      // Check if result is undefined or null (indicating an error)
+      if (result === undefined || result === null) {
         logger.error('Error updating treatment target session form');
         return { message: 'Error updating treatment target session form', error: -1 };
       }
+
+      // Log the number of rows affected for debugging
+      logger.info(`Updated ${result} treatment target session form records`);
+      console.log(`Updated ${result} treatment target session form records`);
 
       return { message: 'Treatment target session form updated successfully' };
     } catch (error) {
