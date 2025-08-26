@@ -14,8 +14,12 @@ import { AddIcon } from "../../public/assets/icons";
 import { useReferenceContext } from "../../context/ReferenceContext";
 import Skeleton from "@mui/material/Skeleton";
 import ApiConfig from "../../config/apiConfig";
+import { useRouter } from "next/router";
 
 function ClientSession() {
+  const router = useRouter();
+  const [counselorId, setCounselorId] = useState(null);
+  const { open } = router.query;
   const [showFlyout, setShowFlyout] = useState(false);
   const [activeData, setActiveData] = useState();
   const [confirmationModal, setConfirmationModal] = useState(false);
@@ -136,7 +140,6 @@ function ClientSession() {
     getInvoice(counselorId);
   };
 
-
   const handleClickOutside = (e) => {
     if (
       actionDropdownRef.current &&
@@ -174,6 +177,11 @@ function ClientSession() {
   const handleEdit = (row) => {
     setShowFlyout(true);
     setActiveData(row);
+    console.log(row);
+    if (row?.tenant_id) {
+      setSelectTenantId(row.tenant_id);
+    }
+    setCounselorId(row?.counselor_id);
   };
 
   const handleDelete = async (row) => {
@@ -211,7 +219,8 @@ function ClientSession() {
     actionDropdownRef
   );
 
-  const handleShowAddClientSession = () => {
+  const handleShowAddClientSession = (row) => {
+    console.log(row);
     setShowFlyout(true);
   };
 
@@ -266,7 +275,7 @@ function ClientSession() {
       fetchCounsellor();
     }
     fetchSessions(selectCounselor);
-    getInvoice(selectCounselor , selectedTenantId?.tenant_id);
+    getInvoice(selectCounselor, selectedTenantId?.tenant_id);
   }, [userObj]);
 
   const [isHomeworkUpload, setHomeWorkUpload] = useState(false);
@@ -300,7 +309,7 @@ function ClientSession() {
       const tenant_id =
         userObj?.role_id === 2 ? userObj?.tenant_id : selectTenantId;
       const response = await api.get(
-        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}` // this is to be changed using 1 for dummy data
+        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}`
       );
       if (response.status == 200) {
         setCounselorConfiguration(
@@ -313,10 +322,15 @@ function ClientSession() {
     }
   };
   useEffect(() => {
-    if (userObj.role_id === 2 || userObj.role_id == 3) {
+    if (userObj.role_id === 2 || userObj.role_id == 3 || userObj.role_id == 4) {
       fetchAllSplit();
     }
-  }, [selectCounselor]);
+  }, [selectCounselor, selectTenantId]);
+  useEffect(() => {
+    if (open === "true") {
+      setShowFlyout(true);
+    }
+  }, []);
 
   return (
     <ClientSessionWrapper>
@@ -355,6 +369,7 @@ function ClientSession() {
           fetchSessions={fetchSessions}
           fetchCounselorClient={fetchSessions}
           counselorConfiguration={counselorConfiguration}
+          counselor_id={counselorId}
         />
       </CreateSessionLayout>
       <CustomClientDetails
@@ -372,11 +387,36 @@ function ClientSession() {
                 summaryLoading ? (
                   <Skeleton width={120} height={40} />
                 ) : userObj?.role_id === 2 ? (
-                  Number(summaryData?.sum_session_counselor_amt).toFixed(2)
-                ) : userObj?.role_id === 3 ? (
-                  Number(summaryData?.sum_session_price).toFixed(2)
-                ) : userObj?.role_id === 4 ? (
                   Number(summaryData?.sum_session_pre_tax_amount).toFixed(2)
+                ) : userObj?.role_id === 3 ? (
+                  <>
+                    Total Amount :{" "}
+                    {Number(summaryData?.sum_session_pre_tax_amount).toFixed(2)}
+                    <p>
+                      Total Tax:{" "}
+                      {(
+                        Number(summaryData?.sum_session_price) -
+                        Number(summaryData?.sum_session_pre_tax_amount)
+                      ).toFixed(2)}
+                    </p>
+                    <p>
+                      Amount After Tax :{" "}
+                      {Number(summaryData?.sum_session_price).toFixed(2)}
+                    </p>
+                  </>
+                ) : userObj?.role_id === 4 ? (
+                  <>
+                    Total Amount :{" "}
+                    {Number(summaryData?.sum_session_pre_tax_amount).toFixed(2)}
+                    <p>
+                      Tax Amount :{" "}
+                      {(
+                        Number(summaryData?.sum_session_price) -
+                        Number(summaryData?.sum_session_pre_tax_amount)
+                      ).toFixed(2)}
+                    </p>
+                    <p>Amount After Tax : {summaryData?.sum_session_price} </p>
+                  </>
                 ) : (
                   ""
                 )
@@ -391,8 +431,7 @@ function ClientSession() {
                     <Skeleton width={120} height={40} />
                   ) : userObj?.role_id === 2 ? (
                     Number(
-                      summaryData?.sum_session_counselor_amt -
-                        summaryData?.sum_session_tenant_amt
+                      summaryData?.sum_session_counselor_tenant_amt
                     ).toFixed(2)
                   ) : userObj?.role_id === 3 ? (
                     Number(summaryData?.sum_session_tenant_amt).toFixed(2)
@@ -424,7 +463,11 @@ function ClientSession() {
                       %)
                     </p>
                     Tenant Share:{" "}
-                    {Number(summaryData?.sum_session_tenant_amt).toFixed(2)} (
+                    {(
+                      Number(summaryData?.sum_session_tenant_amt) +
+                      Number(summaryData?.sum_session_system_amt)
+                    ).toFixed(2)}{" "}
+                    (
                     {summaryData?.fee_split_management?.tenant_share_percentage}
                     %)
                   </>
@@ -448,30 +491,16 @@ function ClientSession() {
                           summaryData?.sum_session_system_amt
                       ).toFixed(2)}
                     </p>
-                    
-                      <>
-                        Counsellor Amount:{" "}
-                        {Number(
-                          summaryData?.sum_session_counselor_tenant_amt
-                        ).toFixed(2)}{" "}
-                        (
-                        {
-                          summaryData?.fee_split_management
-                            ?.counselor_share_percentage
-                        }
-                        %)
-                        <br />
-                        Tenant Amount:{" "}
-                        {Number(summaryData?.sum_session_tenant_amt).toFixed(
-                          2
-                        )}{" "}
-                        (
-                        {
-                          summaryData?.fee_split_management
-                            ?.tenant_share_percentage
-                        }
-                        %)
-                      </>
+
+                    <>
+                      Counsellor Amount:{" "}
+                      {Number(
+                        summaryData?.sum_session_counselor_tenant_amt
+                      ).toFixed(2)}{" "}
+                      <br />
+                      Tenant Amount:{" "}
+                      {Number(summaryData?.sum_session_tenant_amt).toFixed(2)}
+                    </>
                   </>
                 ) : (
                   ""

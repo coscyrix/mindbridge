@@ -806,8 +806,7 @@ export const SERVICES_TABLE_COLUMNS = (
   },
   {
     name: "Total Invoice + Tax",
-    selector: (row) =>
-      `$${(Number(row.total_invoice)).toFixed(2)}`,
+    selector: (row) => `$${Number(row.total_invoice).toFixed(2)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
@@ -3192,81 +3191,97 @@ export const treatment_goals = [
     label: "Coping With Disability",
     value: "Coping_With_Disability",
     goal: "Improve emotional adjustment and daily functioning with a disability",
+    id: 1,
   },
   {
     label: "Chronic Illness and Health Related Concerns",
     value: "Chronic_Illness_and_Health_Related_Concerns",
     goal: "Improve emotional coping with chronic illness and maintain well-being.",
+    id: 2,
   },
   {
     label: "Relationship Issues",
     value: "Relationship_Issues",
     goal: "Improve communication, trust, and emotional connection in relationships.",
+    id:3
   },
   {
     label: "Grief and Loss",
     value: "Grief_and_Loss",
     goal: "Develop coping strategies to process grief and integrate loss into daily life.",
+    id:4
   },
   {
     label: "Trauma and PTSD",
     value: "Trauma_and_PTSD",
     goal: "Reduce trauma-related symptoms and increase emotional regulation.",
+    id:5
   },
   {
     label: "Identity and Self Exploration",
     value: "Identity_and_Self_Exploration",
     goal: "Develop a strong sense of self and personal identity.",
+    id:6
   },
   {
     label: "Family and Parenting Issues",
     value: "Family_and_Parenting_Issues",
     goal: "Strengthen family relationships and develop effective parenting strategies.",
+    id:7
   },
 
   {
     label: "Anxiety Management",
     value: "Anxiety_Management",
     goal: "Reduce anxiety symptoms and increase the ability to handle stressful situations.",
+    id:8
   },
   {
     label: "Depression",
     value: "Depression",
     goal: "Improve mood, motivation, and ability to engage in daily activities.",
+    id:9
   },
   {
     label: "Stress Management",
     value: "Stress_Management",
     goal: "Develop healthier coping mechanisms to handle stress effectively.",
+    id:10
   },
   {
     label: "Self-Esteem and Self-Confidence Issues",
     value: "Self_Esteem_and_Self_Confidence_Issues",
     goal: "Build a more positive self-image and increase self-worth.",
+    id:11
   },
   {
     label: "Addiction and Substance Abuse",
     value: "Addiction_and_Substance_Abuse",
     goal: "Reduce substance use and develop healthier coping mechanisms.",
+    id:12
   },
   {
     label: "Work and Career-Related Issues",
     value: "Work_and_Career_Related_Issues",
     goal: "Increase job satisfaction, career confidence, and work-life balance.",
+    id:13
   },
   {
     label: "Anger Management",
     value: "Anger_Management",
     goal: "Develop healthier ways to express and regulate anger.",
+    id:14
   },
   {
     label: "Eating Disorders and Body Image Issues",
     value: "Eating_Disorders_and_Body_Image_Issues",
     goal: "Develop a healthier relationship with food and body image.",
+    id:15
   },
   {
     label: "Life Transitions",
     value: "Life_Transitions",
     goal: "Adjust to major life changes with resilience and stability.",
+    id:16
   },
 ];

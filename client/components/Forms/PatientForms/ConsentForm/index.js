@@ -61,7 +61,7 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader, client_name }) => {
         imgBase64,
         tenant_id,
         //date: date,
-        submittedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+        // submittedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
       };
       if (!client_id || !form_id || !tenant_id) {
         toast.error("Required parameters are missing from the route.");

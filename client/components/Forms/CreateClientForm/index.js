@@ -219,7 +219,6 @@ function CreateClientForm({
       admin_fee,
       clam_num,
     } = data;
-    console.log(clam_num);
     const processedData = {
       user_first_name,
       user_last_name,
@@ -227,12 +226,12 @@ function CreateClientForm({
       role_id,
       user_phone_nbr,
       ...(role_id === 1 && {
-        target_outcome_id: target_outcome_id?.value,
+        target_outcome_id: target_outcome_id,
       }),
       ...(role_id === 3 && {
         tenant_name: tenant_name || "",
         admin_fee,
-        tax,
+        tax_percent:tax,
 
         tenant_name,
       }),

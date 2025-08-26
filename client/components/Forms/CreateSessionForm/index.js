@@ -49,6 +49,8 @@ function CreateSessionForm({
   isHomeworkUpload,
   setHomeWorkUpload,
   counselorConfiguration,
+  managerSplitDetails,
+  counselor_id,
 }) {
   const methods = useForm();
   const { userObj } = useReferenceContext();
@@ -74,12 +76,14 @@ function CreateSessionForm({
   const [loading, setLoading] = useState(false);
   const [countNotes, setCountNotes] = useState([]);
   const [additionalSessions, setAddittionalSessions] = useState([]);
+  const [counselorSplit, setCounselorSplit] = useState(null);
+  const [managerSplit, setManagerSplit] = useState(null);
   // to show verification on Notes Page
-  const match = counselorConfiguration?.find(
-    (item) =>
-      item?.counselor_info?.email?.toLowerCase() ===
-      userObj?.counselor_profile?.email?.toLowerCase()
-  );
+  let match =
+    counselorConfiguration?.find(
+      (item) => item?.counselor_info?.user_id == counselor_id
+    )?.tenant_share_percentage ?? managerSplitDetails?.tenant_share_percentage;
+
   const [showVerification, setShowVerification] = useState(true);
   const [user, setUser] = useState(null);
   const [sessionRange, setSessionRange] = useState({
@@ -107,6 +111,22 @@ function CreateSessionForm({
     has_schedule: client.has_schedule,
     user_target_outcome: client.user_target_outcome,
   }));
+  const fetchAllSplit = async () => {
+    try {
+      // console.log("logging selected", selectTenantId);
+      const response = await api.get(
+        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${userObj?.tenant_id}`
+      );
+      if (response.status == 200) {
+        setCounselorSplit(
+          response?.data?.data?.counselor_specific_configurations
+        );
+        setManagerSplit(response?.data?.data?.default_configuration);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
+  };
   const fetchServices = async () => {
     try {
       let tenant_id = userObj?.tenant?.tenant_generated_id;
@@ -458,10 +478,18 @@ function CreateSessionForm({
     },
     {
       name: userObj?.role_id === 3 ? "Amt. to Admin" : "Amount to Practice",
-      selector: (row) =>
-        userObj?.role_id === 3
+      selector: (row) => {
+        if (!match || match === undefined) {
+          match =
+            counselorSplit?.find(
+              (item) => item?.counselor_info?.email === userObj?.email
+            )?.tenant_share_percentage ?? managerSplit?.tenant_share_percentage;
+        }
+
+        return userObj?.role_id === 3
           ? `$${Number(row.session_system_amt).toFixed(2)}`
-          : `${match?.tenant_share_percentage}%`,
+          : `${match ?? 0}%`;
+      },
       selectorId: "session_system_amt",
       maxWidth: "120px",
     },
@@ -716,6 +744,7 @@ function CreateSessionForm({
   };
 
   const handleGenerateSchedule = async () => {
+    fetchAllSplit();
     const formData = methods.getValues();
     const { client_first_name } = formData;
     const hasOngoingSession =
