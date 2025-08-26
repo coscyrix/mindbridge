@@ -36,6 +36,7 @@ function ClientManagement() {
   const [clientsLoading, setClientsLoading] = useState();
   const [showCreateSessionLayout, setShowCreateSessionLayout] = useState(false);
   const [activeData, setActiveData] = useState();
+  const [clientFormData, setClientFormData] = useState();
   const [clientData, setClientData] = useState([]);
   const [showFlyout, setShowFlyout] = useState(false);
   const [initialDataLoading, setInitialDataLoading] = useState(false);
@@ -198,8 +199,8 @@ function ClientManagement() {
   };
 
   const handleEdit = (row) => {
+    setClientFormData(row);
     setShowCreateSessionLayout(true);
-    setActiveData(row);
   };
   const fetchAllSplit = async (tenant_id) => {
     if (userObj.role_id === 3) {
@@ -298,6 +299,7 @@ function ClientManagement() {
       fetchCounsellor();
     }
   }, [userObj]);
+
   return (
     <ClientManagementContainer role={userObj?.role_id}>
       {[3, 4].includes(userObj?.role_id) && (
@@ -318,8 +320,8 @@ function ClientManagement() {
         <CreateClientForm
           isOpen={showCreateSessionLayout}
           setIsOpen={setShowCreateSessionLayout}
-          initialData={activeData}
-          setInitialData={setActiveData}
+          initialData={clientFormData}
+          setInitialData={setClientFormData}
           tableData={clientData}
           setTableData={setClientData}
           fetchClients={fetchClients}

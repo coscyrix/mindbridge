@@ -93,6 +93,7 @@ function CreateClientForm({
           value: initialData?.user_target_outcome?.at(0)?.target_outcome_id,
         }
       : "",
+
     user_phone_nbr: "",
     admin_fee: "",
     tax: "",
@@ -226,12 +227,12 @@ function CreateClientForm({
       role_id,
       user_phone_nbr,
       ...(role_id === 1 && {
-        target_outcome_id: target_outcome_id,
+        target_outcome_id: target_outcome_id?.value,
       }),
       ...(role_id === 3 && {
         tenant_name: tenant_name || "",
         admin_fee,
-        tax_percent:tax,
+        tax_percent: tax,
 
         tenant_name,
       }),
@@ -241,6 +242,7 @@ function CreateClientForm({
         }),
       ...(role_id === 1 && { clam_num: clam_num }),
     };
+
 
     try {
       setLoading(true);
@@ -297,7 +299,7 @@ function CreateClientForm({
       setFormButton("Create");
       methods.reset(defaultValues);
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   const handleDiscard = (e) => {
     e.preventDefault();

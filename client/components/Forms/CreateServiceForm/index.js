@@ -42,6 +42,13 @@ export default function CreateServiceForm({
     methods.setValue("svc_formula_typ", value);
   };
 
+  const calculateTotalInvoiceTaxes = () => {
+    const totalInvoice = parseFloat(methods.getValues("total_invoice")) || 0;
+    const gst = parseFloat(methods.getValues("gst")) || 0;
+    const total = totalInvoice + gst;
+    methods.setValue("totalInvoiceTaxes", parseFloat(total.toFixed(2)));
+  };
+
   useEffect(() => {
     if (userData) {
       const details = JSON.parse(userData);
@@ -51,13 +58,19 @@ export default function CreateServiceForm({
 
   const handleSaveService = async (data) => {
     const svcFormula = methods.getValues("svc_formula");
-    const svcFormulaArray =
-      svcFormula &&
-      svcFormula
-        ?.split(",")
-        .map((item) => item.trim())
-        .filter((item) => item !== "")
-        ?.map(Number);
+    let svcFormulaArray = [];
+    
+    if (svcFormula) {
+      if (typeof svcFormula === 'string') {
+        svcFormulaArray = svcFormula
+          .split(",")
+          .map((item) => item.trim())
+          .filter((item) => item !== "")
+          .map(Number);
+      } else if (Array.isArray(svcFormula)) {
+        svcFormulaArray = svcFormula;
+      }
+    }
 
     const createPayload = {
       service_name: data.service_name,
@@ -277,6 +290,10 @@ export default function CreateServiceForm({
                   label="Invoice Amount"
                   type="number"
                   step="0.01"
+                  onChange={(e) => {
+                    methods.setValue("total_invoice", e.target.value);
+                    calculateTotalInvoiceTaxes();
+                  }}
                 />
               </div>
               <div className="fields">
@@ -285,6 +302,10 @@ export default function CreateServiceForm({
                   label="Tax (%)"
                   placeholder="Enter GST"
                   type="text"
+                  onChange={(e) => {
+                    methods.setValue("gst", e.target.value);
+                    calculateTotalInvoiceTaxes();
+                  }}
                 />
               </div>
               {formButton === "Update" ? (
