@@ -11,11 +11,12 @@ import CommonServices from "../../../../services/CommonServices";
 import { toast } from "react-toastify";
 import FormHeader from "../../../FormsHeader";
 import { useReferenceContext } from "../../../../context/ReferenceContext";
+import { useRouter } from "next/router";
 
 const GasForm = ({ client_id, session_id, target_outcome_id = 3 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
-
+  const router = useRouter();
   const { targetOutcomes } = useReferenceContext();
   const selectedOutcome = treatment_goals.find(
     (g) => g.id === Number(target_outcome_id)
@@ -60,7 +61,7 @@ const GasForm = ({ client_id, session_id, target_outcome_id = 3 }) => {
       setSubmitError(null);
 
       const payload = {
-        goal:data.goal.label,
+        goal: data.goal.label,
         target_outcome_id: Number(target_outcome_id),
         responses: questions.map((q) => {
           const numericValue = data[q.name];
@@ -78,8 +79,12 @@ const GasForm = ({ client_id, session_id, target_outcome_id = 3 }) => {
       };
 
       const response = await CommonServices.submitGASForm(payload);
-      toast.success(response?.data?.message);
-      reset();
+      if (response.status === 200) {
+        toast.success(response?.data?.message);
+        router.push("/patient-forms/form-submission");
+         reset();
+      }
+     
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error(error?.response?.data?.message || "Failed to submit form");

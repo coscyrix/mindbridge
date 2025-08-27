@@ -387,6 +387,7 @@ function CreateClientForm({
               <div className="fields">
                 <CustomInputField
                   name="clam_num"
+                  disabled={true}
                   label="Serial Number"
                   placeholder="Enter Serial Number"
                   type="number"
@@ -431,6 +432,7 @@ function CreateClientForm({
             <div className="fields">
               <CustomInputField
                 name="email"
+                disabled={true}
                 label="Email*"
                 placeholder="Enter your email"
                 type="email"

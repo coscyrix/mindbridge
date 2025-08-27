@@ -143,8 +143,10 @@ function CreateSessionForm({
       console.log(error?.response?.data?.message);
     }
   };
-  useEffect(() => {
-    fetchServices();
+useEffect(() => {
+    if (userObj.role_id !== 4) {
+      fetchServices();
+    }
   }, []);
   const infoTooltipContent =
     methods?.watch("client_first_name")?.user_target_outcome;
@@ -721,7 +723,7 @@ function CreateSessionForm({
       setLoader("discardChanges");
       if (thrpyReqId) {
         const response = await api.put(
-          `/thrpyReq/?req_id=${thrpyReqId}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
+          `/thrpyReq?req_id=${thrpyReqId}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
           {
             status_yn: "n",
           }

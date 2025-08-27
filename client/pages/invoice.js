@@ -26,6 +26,7 @@ import { DOWNLOAD_OPTIONS, SERVICE_FEE_INFO } from "../utils/constants";
 import moment from "moment";
 import { useReferenceContext } from "../context/ReferenceContext";
 import ApiConfig from "../config/apiConfig";
+import { Skeleton } from "@mui/material";
 
 const Invoice = () => {
   const { userObj } = useReferenceContext();
@@ -578,6 +579,8 @@ const Invoice = () => {
     return null;
   }
 
+  console.log(invoices , "invoices::::")
+
   return (
     <InvoiceContainer>
       <div className="top-section-wrapper">
@@ -590,127 +593,157 @@ const Invoice = () => {
         </p>
 
         <div className="tab-and-search-container">
-          <div className="tab-container">
+          <div className="tab-container" style={{marginTop:"12px"}}>
             <CustomTab
               heading={"Total Amount For A Month"}
-              value={`$${
-                invoices
-                  ? (
-                      Number(invoices?.summary?.sum_session_counselor_amt) +
-                      Number(invoices?.summary?.sum_session_system_amt)
-                    ).toFixed(2) || 0
-                  : 0
-              }`}
-            />
-            <CustomTab
-              heading={"Total Amount to Associate for a Month: "}
               value={
-                userObj?.role_id === 3
-                  ? selectCounselor === "allCounselors"
-                    ? `Admin fees: ${
-                        invoices?.summary?.system_pcnt
-                      }% Total_amount: ${Number(
-                        invoices?.summary?.sum_session_counselor_amt || 0
-                      ).toFixed(2)}`
-                    : (() => {
-                        const match = counselorConfiguration?.find(
-                          (item) =>
-                            item?.counselor_info?.email?.toLowerCase() ===
-                            selectCounselorEmail?.toLowerCase()
-                        );
-                        const total = invoices
-                          ? Number(invoices?.summary?.sum_session_counselor_amt)
-                          : 0;
-                        if (match?.tenant_share_percentage) {
-                          const percentageAmount =
-                            (total * match.tenant_share_percentage) / 100;
-                          return `$${percentageAmount.toFixed(2)}`;
-                        }
-                        return "$0.00";
-                      })()
-                  : selectedManager === null || selectedManager === "allManager"
-                  ? `$${
-                      invoices
-                        ? Number(invoices?.summary?.sum_session_price).toFixed(
-                            2
-                          )
-                        : "0.00"
-                    }`
-                  : `${(() => {
-                      // `Admin fee: ${invoices?.summary?.system_pcnt}%`
-                      const fee =
-                        (Number(invoices?.summary?.sum_session_price) *
-                          Number(invoices?.summary?.system_pcnt)) /
-                        100;
-                      const toreturn =
-                        `Admin fee:${invoices?.summary?.system_pcnt}% ` +
-                        fee.toFixed(2) +
-                        "$";
-                      return isNaN(fee)
-                        ? Number(
-                            invoices?.summary?.sum_session_counselor_amt || 0
-                          ).toFixed(2)
-                        : toreturn;
-                    })()}`
+                loading ? (
+                  <Skeleton width={120} height={40} />
+                ) : userObj?.role_id === 2 ? (
+                  Number(invoices?.summary?.sum_session_total_amount).toFixed(4)
+                ) : userObj?.role_id === 3 ? (
+                  <>
+                    Total Amount :{" "}
+                    {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
+                  
+                  </>
+                ) : userObj?.role_id === 4 ? (
+                  <>
+                    Total Amount :{" "}
+                    {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
+                  
+                  </>
+                ) : (
+                  ""
+                )
               }
             />
-            {userObj?.role_id === 3 && selectCounselor != "allCounselors" && (
+            {userObj?.role_id !== 4 && (
               <CustomTab
-                heading={"Detail breakdown"}
-                value={(() => {
-                  const match = counselorConfiguration?.find(
-                    (item) =>
-                      item?.counselor_info?.email?.toLowerCase() ===
-                      selectCounselorEmail?.toLowerCase()
-                  );
-
-                  const total = invoices
-                    ? Number(invoices?.summary?.sum_session_counselor_amt) || 0
-                    : 0;
-
-                  const counselorShare = match?.counselor_share_percentage
-                    ? `$${(
-                        (total * match.counselor_share_percentage) /
-                        100
-                      ).toFixed(2)} (${match.counselor_share_percentage}%)`
-                    : "$0.00";
-
-                  const managerShare = match?.tenant_share_percentage
-                    ? `$${(
-                        (total * match.tenant_share_percentage) /
-                        100
-                      ).toFixed(2)} (${match.tenant_share_percentage}%)`
-                    : "$0.00";
-
-                  return (
-                    <>
-                      Total ${total.toFixed(2)} <br />
-                      Counselor Share: {counselorShare} <br />
-                      Manager Share: {managerShare}
-                    </>
-                  );
-                })()}
+                heading="Total Amount to Associate for a Month:"
+                value={
+                  loading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : userObj?.role_id === 2 ? (
+                    Number(
+                      invoices?.summary?.sum_session_counselor_tenant_amt
+                    ).toFixed(4)
+                  ) : userObj?.role_id === 3 ? (
+                    Number(invoices?.summary?.sum_session_tenant_amt).toFixed(4)
+                  ) : (
+                    ""
+                  )
+                }
               />
             )}
             <CustomTab
-              heading={"Total Amount to Vapendama for a Month:"}
-              value={`$${
-                invoices
-                  ? Number(invoices?.summary?.sum_session_system_amt).toFixed(2)
-                  : 0
-              }`}
+              heading="Detail breakdown"
+              value={
+                loading ? (
+                  <Skeleton width={200} height={40} />
+                ) : userObj?.role_id === 2 ? (
+                  <>
+                    <p>
+                      Counsellor Share:{" "}
+                      {Number(invoices?.summary?.sum_session_counselor_amt).toFixed(
+                        4
+                      )}{" "}
+                      (
+                      {
+                        invoices?.summary?.fee_split_management
+                          ?.counselor_share_percentage
+                      }
+                      %)
+                    </p>
+                    Tenant Share:{" "}
+                    {(
+                      Number(invoices?.summary?.sum_session_tenant_amt) +
+                      Number(invoices?.summary?.sum_session_system_amt)
+                    ).toFixed(4)}{" "}
+                    (
+                    {invoices?.summary?.fee_split_management?.tenant_share_percentage}
+                    %)
+                  </>
+                ) : userObj?.role_id === 3 ? (
+                  <>
+                    Counsellor Share:{" "}
+                    {Number(invoices?.summary?.sum_session_counselor_amt).toFixed(4)}
+                    <br />
+                    Tenant Share:{" "}
+                    {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(4)}
+                  </>
+                ) : userObj?.role_id === 4 ? (
+                  <>
+                    <p>
+                      All Practice Amount:{" "}
+                      {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
+                    </p>
+
+                    <>
+                      Counsellor Amount:{" "}
+                      {Number(
+                        invoices?.summary?.sum_session_counselor_tenant_amt
+                      ).toFixed(4)}{" "}
+                      <br />
+                      Tenant Amount:{" "}
+                      {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(4)}
+                    </>
+                  </>
+                ) : (
+                  ""
+                )
+              }
             />
+
+            {(userObj?.role_id == 3 || userObj?.role_id == 4) && (
+              <CustomTab
+                heading={"Tax (GST) "}
+                value={
+                  loading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : (
+                    Number(invoices?.summary?.sum_session_taxes)?.toFixed(4)
+                  )
+                }
+              />
+            )}
+
+            {userObj?.role_id == 4 ? (
+              <CustomTab
+                heading={"Total Amount to Vapendama for a Month:"}
+                value={
+                  loading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : (
+                    Number(invoices?.summary?.sum_session_system_amt)?.toFixed(4)
+                  )
+                }
+              />
+            ) : (
+              userObj?.role_id !== 2 && (
+                <CustomTab
+                  heading={"Admin Fee:"}
+                  value={
+                    loading ? (
+                      <Skeleton width={120} height={40} />
+                    ) : (
+                      Number(invoices?.summary?.sum_session_system_amt)?.toFixed(4)
+                    )
+                  }
+                />
+              )
+            )}
             <CustomTab
               heading={"Total Amount of Units:"}
-              value={invoices?.summary?.sum_session_system_units || 0}
+              value={
+                loading ? (
+                  <Skeleton width={120} height={40} />
+                ) : (
+                  invoices?.summary?.sum_session_system_units || 0
+                )
+              }
             />
-            {/* {roleId === 3 && selectCounselor != "allCounselors" && <CustomTab heading="Service Fees" value={
-
-             } />} */}
-
-            {/* {roleId != 4 && (
-              <CustomTab heading="Service Fees" lines={SERVICE_FEE_INFO} />
-            )} */}
+            
           </div>
           <div className="search-container">
             <div className="search-and-select">

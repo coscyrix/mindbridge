@@ -267,6 +267,7 @@ const SignUp = () => {
   const userObj = userData && JSON.parse(userData);
   const methods = useForm({
     mode: "onTouched",
+    shouldUnregister: false,
     defaultValues: {
       location: "",
       public_phone: "",
@@ -281,6 +282,9 @@ const SignUp = () => {
       license_file_url: "",
       license_provider: "",
       availability: {},
+      documentFiles: [],
+      documentNames: [],
+      documentExpiryDates: [],
     },
   });
   const [loading, setLoading] = useState(false);
@@ -577,18 +581,21 @@ const SignUp = () => {
     const newFiles = [...documentFiles];
     newFiles[index] = file;
     setDocumentFiles(newFiles);
+     methods.setValue("documentFiles", newFiles); 
   };
 
   const handleDocumentNameChange = (index, name) => {
     const newNames = [...documentNames];
     newNames[index] = name;
     setDocumentNames(newNames);
+    methods.setValue(`documentNames.${index}`, name);
   };
 
   const handleDocumentExpiryChange = (index, date) => {
     const newDates = [...documentExpiryDates];
     newDates[index] = date;
     setDocumentExpiryDates(newDates);
+    methods.setValue(`documentExpiryDates.${index}`, date);
   };
 
   const uploadAllDocuments = async (counselorProfileId) => {
