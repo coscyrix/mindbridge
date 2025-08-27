@@ -130,6 +130,7 @@ export default class ThrpyReqService {
       status_yn: joi.string().valid('y', 'n').optional(),
       thrpy_status: joi.string().valid('ONGOING', 'DISCHARGED').optional(),
       role_id: joi.number().optional(),
+      tenant_id: joi.number().optional(),
       session_obj: joi
         .array()
         .items(
@@ -156,7 +157,7 @@ export default class ThrpyReqService {
           }),
         )
         .optional(),
-    });
+    }).unknown(true); // Allow additional fields
 
     const { error } = schema.validate(data);
 
