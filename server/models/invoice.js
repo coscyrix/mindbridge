@@ -280,13 +280,11 @@ export default class Invoice {
           
           const systemPercentage = refFees?.system_pcnt || 0;
           
-          let counselorTotalPreTaxAmount = 0;
+          let counselorTotalAmount = 0;
           sessions.forEach((session) => {
-            // Use pre-tax amount for calculations
+            // Use full session price (including tax) for calculations
             const sessionPrice = parseFloat(session.session_price) || 0;
-            const sessionTaxes = parseFloat(session.session_taxes) || 0;
-            const preTaxAmount = sessionPrice - sessionTaxes;
-            counselorTotalPreTaxAmount += preTaxAmount;
+            counselorTotalAmount += sessionPrice;
           });
 
           // Calculate fee split based on the correct model:
@@ -295,13 +293,13 @@ export default class Invoice {
           // 3. Tenant gets the remaining amount
           
           // Calculate counselor amount first
-          const counselorAmount = (counselorTotalPreTaxAmount * feeSplitConfig.counselor_share_percentage) / 100;
+          const counselorAmount = (counselorTotalAmount * feeSplitConfig.counselor_share_percentage) / 100;
           
           // Calculate system amount
-          const systemAmount = (counselorTotalPreTaxAmount * systemPercentage) / 100;
+          const systemAmount = (counselorTotalAmount * systemPercentage) / 100;
           
           // Calculate remaining amount after counselor and system cuts
-          const remainingAfterCounselorAndSystem = counselorTotalPreTaxAmount - counselorAmount - systemAmount;
+          const remainingAfterCounselorAndSystem = counselorTotalAmount - counselorAmount - systemAmount;
           
           let tenantAmount = 0;
           
@@ -316,7 +314,7 @@ export default class Invoice {
             }
             
             console.log(`Fee split config: enabled=${feeSplitConfig.is_fee_split_enabled}, counselor_share=${feeSplitConfig.counselor_share_percentage}%, tenant_share=${feeSplitConfig.tenant_share_percentage}%`);
-            console.log(`Counselor ${counselorId} (tenant ${counselorTenantId}): pre_tax=${counselorTotalPreTaxAmount}, counselor=${feeSplitConfig.counselor_share_percentage}%, system=${systemPercentage}%, counselor_amt=${counselorAmount}, system_amt=${systemAmount}, tenant_amt=${tenantAmount}`);
+            console.log(`Counselor ${counselorId} (tenant ${counselorTenantId}): total_amount=${counselorTotalAmount}, counselor=${feeSplitConfig.counselor_share_percentage}%, system=${systemPercentage}%, counselor_amt=${counselorAmount}, system_amt=${systemAmount}, tenant_amt=${tenantAmount}`);
           } else {
             // If fee split is disabled, counselor gets everything after system cut
             const counselorAmount = remainingAfterCounselorAndSystem;
@@ -329,36 +327,122 @@ export default class Invoice {
         }
       }
 
+      let totalAmount = 0;
+      let totalTaxes = 0;
       let totalPreTaxAmount = 0;
+      let totalSystemFromRecords = 0; // Keep original system amount from records for reference
+      
       rec.forEach((item) => {
         totalPrice += parseFloat(item.session_price) || 0;
         totalCounselor += parseFloat(item.session_counselor_amt) || 0;
-        totalSystem += parseFloat(item.session_system_amt) || 0;
+        totalSystemFromRecords += parseFloat(item.session_system_amt) || 0;
         
-        // Calculate pre-tax amount for tenant calculations
+        // Calculate tax and pre-tax amounts
         const sessionPrice = parseFloat(item.session_price) || 0;
         const sessionTaxes = parseFloat(item.session_taxes) || 0;
-        totalPreTaxAmount += (sessionPrice - sessionTaxes);
+        const preTaxAmount = sessionPrice - sessionTaxes;
+        
+        totalAmount += sessionPrice;
+        totalTaxes += sessionTaxes;
+        totalPreTaxAmount += preTaxAmount;
       });
 
+      // Calculate average tax percentage
+      const avgTaxPercentage = totalPreTaxAmount > 0 ? ((totalTaxes / totalPreTaxAmount) * 100) : 0;
+      
+      // Calculate correct amounts with perfect precision
+      let correctSystemAmount = totalSystemFromRecords; // Default to original amount
+      let correctCounselorAmount = totalCounselor; // Default to original amount
+      
+      // If we have role_id=2,3,4 with counselor_id and tenant_id, calculate amounts correctly
+      if ((data.role_id === 2 || data.role_id === 3 || data.role_id === 4) && data.counselor_id && data.tenant_id) {
+        try {
+          // Get the user_id from user_profile table using counselor_id
+          const userMapping = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('user_profile')
+            .where('user_profile_id', data.counselor_id)
+            .select('user_id')
+            .first();
+
+          if (userMapping) {
+            // Get fee split configuration for this counselor
+            const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(data.tenant_id, userMapping.user_id);
+            
+            // Get system percentage for this tenant
+            const refFees = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('ref_fees')
+              .where('tenant_id', data.tenant_id)
+              .select('system_pcnt')
+              .first();
+            
+            const systemPercentage = refFees?.system_pcnt || 0;
+            
+            // Calculate amounts with perfect precision to avoid rounding errors
+            // 1. Calculate counselor amount first (rounded to 4 decimal places)
+            correctCounselorAmount = Math.round((totalAmount * feeSplitConfig.counselor_share_percentage) / 100 * 10000) / 10000;
+            
+            // 2. Calculate system amount (rounded to 4 decimal places)
+            correctSystemAmount = Math.round((totalAmount * systemPercentage) / 100 * 10000) / 10000;
+            
+            // 3. Calculate tenant amount as remainder to ensure perfect total
+            const correctTenantAmount = Math.round((totalAmount - correctCounselorAmount - correctSystemAmount) * 10000) / 10000;
+            
+            // 4. Verify the total adds up exactly
+            const calculatedTotal = correctCounselorAmount + correctSystemAmount + correctTenantAmount;
+            if (Math.abs(calculatedTotal - totalAmount) > 0.0001) {
+              console.warn(`Rounding difference detected: calculated=${calculatedTotal}, actual=${totalAmount}, diff=${calculatedTotal - totalAmount}`);
+              // Adjust the largest amount to make up the difference
+              const difference = totalAmount - calculatedTotal;
+              if (Math.abs(difference) > 0.0001) {
+                correctTenantAmount += difference;
+              }
+            }
+            
+            console.log(`Perfect precision calculation: total=${totalAmount}, counselor=${correctCounselorAmount}, system=${correctSystemAmount}, tenant=${correctTenantAmount}, sum=${correctCounselorAmount + correctSystemAmount + correctTenantAmount}`);
+          }
+        } catch (error) {
+          console.error('Error calculating amounts with perfect precision:', error);
+          // Keep original amounts on error
+          correctSystemAmount = totalSystemFromRecords;
+          correctCounselorAmount = totalCounselor;
+        }
+      }
+      
       const summary = {
         sum_session_price: totalPrice.toFixed(4),
-        sum_session_counselor_amt: totalCounselor.toFixed(4),
-        sum_session_system_amt: totalSystem.toFixed(4),
+        sum_session_counselor_amt: correctCounselorAmount.toFixed(4),
+        sum_session_system_amt: correctSystemAmount.toFixed(4),
         sum_session_system_units: rec.length,
+        sum_session_total_amount: totalAmount.toFixed(4),
+        sum_session_taxes: totalTaxes.toFixed(4),
         sum_session_pre_tax_amount: totalPreTaxAmount.toFixed(4),
+        sum_session_tax_percentage: avgTaxPercentage.toFixed(2),
       };
 
       // Add tenant_amount to summary if calculated
       if (shouldCalculateTenantAmount) {
-        summary.sum_session_tenant_amt = totalTenant.toFixed(4);
+        // Calculate tenant amount with perfect precision
+        let correctTenantAmount = totalTenant; // Default to original amount
         
-        // Also add individual counselor and tenant amounts for clarity
-        // Calculate the new counselor amount based on the new fee split model
-        const newCounselorAmount = totalPreTaxAmount - totalTenant - totalSystem;
-        summary.sum_session_counselor_tenant_amt = newCounselorAmount.toFixed(4);
+        if ((data.role_id === 2 || data.role_id === 3 || data.role_id === 4) && data.counselor_id && data.tenant_id) {
+          // Use the tenant amount calculated in the perfect precision section above
+          correctTenantAmount = Math.round((totalAmount - correctCounselorAmount - correctSystemAmount) * 10000) / 10000;
+        }
         
-        console.log(`Summary calculation: total=${totalPrice}, tenant_amount=${totalTenant}`);
+        summary.sum_session_tenant_amt = correctTenantAmount.toFixed(4);
+        summary.sum_session_counselor_tenant_amt = correctCounselorAmount.toFixed(4);
+        
+        // Verify perfect precision
+        const calculatedTotal = correctCounselorAmount + correctSystemAmount + correctTenantAmount;
+        const difference = Math.abs(calculatedTotal - totalAmount);
+        
+        if (difference > 0.0001) {
+          console.warn(`Final precision check failed: calculated=${calculatedTotal}, actual=${totalAmount}, diff=${difference}`);
+        } else {
+          console.log(`Perfect precision achieved: total=${totalAmount}, counselor=${correctCounselorAmount}, system=${correctSystemAmount}, tenant=${correctTenantAmount}, sum=${calculatedTotal}`);
+        }
       }
 
       // Add system_pcnt to summary
@@ -435,7 +519,14 @@ export default class Invoice {
               tenant_share_percentage: feeSplitConfig.tenant_share_percentage,
               counselor_share_percentage: feeSplitConfig.counselor_share_percentage,
               system_percentage: systemPercentage,
-              calculation_method: "counselor_first_then_system_then_tenant_remaining"
+              calculation_method: "counselor_first_then_system_then_tenant_remaining_tax_inclusive",
+                              tax_information: {
+                  total_tax_amount: totalTaxes.toFixed(4),
+                  total_pre_tax_amount: totalPreTaxAmount.toFixed(4),
+                  average_tax_percentage: avgTaxPercentage.toFixed(2),
+                  calculation_base: "tax_inclusive",
+                  note: "Tax rates may vary by tenant. Individual session records contain tenant-specific tax amounts. System and counselor amounts are calculated from total amount (tax-inclusive)."
+                }
             };
           } else {
             // If no user mapping found, return default configuration
