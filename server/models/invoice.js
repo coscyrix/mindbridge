@@ -331,10 +331,11 @@ export default class Invoice {
       let totalTaxes = 0;
       let totalPreTaxAmount = 0;
       let totalSystemFromRecords = 0; // Keep original system amount from records for reference
+      let totalCounselorFromRecords = 0; // Keep original counselor amount from records for reference
       
       rec.forEach((item) => {
         totalPrice += parseFloat(item.session_price) || 0;
-        totalCounselor += parseFloat(item.session_counselor_amt) || 0;
+        totalCounselorFromRecords += parseFloat(item.session_counselor_amt) || 0;
         totalSystemFromRecords += parseFloat(item.session_system_amt) || 0;
         
         // Calculate tax and pre-tax amounts
@@ -352,12 +353,12 @@ export default class Invoice {
       
       // Calculate correct amounts with perfect precision
       let correctSystemAmount = totalSystemFromRecords; // Default to original amount
-      let correctCounselorAmount = totalCounselor; // Default to original amount
+      let correctCounselorAmount = totalCounselorFromRecords; // Default to original amount
       
-      // If we have role_id=2,3,4 with counselor_id and tenant_id, calculate amounts correctly
-      if ((data.role_id === 2 || data.role_id === 3 || data.role_id === 4) && data.counselor_id && data.tenant_id) {
-        try {
-          // Get the user_id from user_profile table using counselor_id
+      try {
+        // Handle different role scenarios
+        if (data.role_id === 2 && data.counselor_id && data.tenant_id) {
+          // Role 2: Specific counselor with tenant
           const userMapping = await db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
             .from('user_profile')
@@ -366,10 +367,7 @@ export default class Invoice {
             .first();
 
           if (userMapping) {
-            // Get fee split configuration for this counselor
             const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(data.tenant_id, userMapping.user_id);
-            
-            // Get system percentage for this tenant
             const refFees = await db
               .withSchema(`${process.env.MYSQL_DATABASE}`)
               .from('ref_fees')
@@ -379,35 +377,69 @@ export default class Invoice {
             
             const systemPercentage = refFees?.system_pcnt || 0;
             
-            // Calculate amounts with perfect precision to avoid rounding errors
-            // 1. Calculate counselor amount first (rounded to 4 decimal places)
             correctCounselorAmount = Math.round((totalAmount * feeSplitConfig.counselor_share_percentage) / 100 * 10000) / 10000;
-            
-            // 2. Calculate system amount (rounded to 4 decimal places)
             correctSystemAmount = Math.round((totalAmount * systemPercentage) / 100 * 10000) / 10000;
-            
-            // 3. Calculate tenant amount as remainder to ensure perfect total
-            const correctTenantAmount = Math.round((totalAmount - correctCounselorAmount - correctSystemAmount) * 10000) / 10000;
-            
-            // 4. Verify the total adds up exactly
-            const calculatedTotal = correctCounselorAmount + correctSystemAmount + correctTenantAmount;
-            if (Math.abs(calculatedTotal - totalAmount) > 0.0001) {
-              console.warn(`Rounding difference detected: calculated=${calculatedTotal}, actual=${totalAmount}, diff=${calculatedTotal - totalAmount}`);
-              // Adjust the largest amount to make up the difference
-              const difference = totalAmount - calculatedTotal;
-              if (Math.abs(difference) > 0.0001) {
-                correctTenantAmount += difference;
-              }
-            }
-            
-            console.log(`Perfect precision calculation: total=${totalAmount}, counselor=${correctCounselorAmount}, system=${correctSystemAmount}, tenant=${correctTenantAmount}, sum=${correctCounselorAmount + correctSystemAmount + correctTenantAmount}`);
           }
-        } catch (error) {
-          console.error('Error calculating amounts with perfect precision:', error);
-          // Keep original amounts on error
-          correctSystemAmount = totalSystemFromRecords;
-          correctCounselorAmount = totalCounselor;
+        } else if (data.role_id === 3 && data.tenant_id) {
+          // Role 3: Tenant manager - use first counselor's fee split as reference
+          const counselorIds = [...new Set(rec.map(item => item.counselor_id))];
+          
+          if (counselorIds.length > 0) {
+            const firstCounselorId = counselorIds[0];
+            
+            const userMapping = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('user_profile')
+              .where('user_profile_id', firstCounselorId)
+              .select('user_id')
+              .first();
+            
+            if (userMapping) {
+              const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(data.tenant_id, userMapping.user_id);
+              const refFees = await db
+                .withSchema(`${process.env.MYSQL_DATABASE}`)
+                .from('ref_fees')
+                .where('tenant_id', data.tenant_id)
+                .select('system_pcnt')
+                .first();
+              
+              const systemPercentage = refFees?.system_pcnt || 0;
+              
+              correctCounselorAmount = Math.round((totalAmount * feeSplitConfig.counselor_share_percentage) / 100 * 10000) / 10000;
+              correctSystemAmount = Math.round((totalAmount * systemPercentage) / 100 * 10000) / 10000;
+              
+              console.log(`Role 3 calculation: total=${totalAmount}, counselor=${correctCounselorAmount}, system=${correctSystemAmount}, using counselor_id=${firstCounselorId}`);
+            }
+          }
+        } else if (data.role_id === 4 && data.counselor_id && data.tenant_id) {
+          // Role 4: System admin with specific counselor and tenant
+          const userMapping = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('user_profile')
+            .where('user_profile_id', data.counselor_id)
+            .select('user_id')
+            .first();
+
+          if (userMapping) {
+            const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(data.tenant_id, userMapping.user_id);
+            const refFees = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('ref_fees')
+              .where('tenant_id', data.tenant_id)
+              .select('system_pcnt')
+              .first();
+            
+            const systemPercentage = refFees?.system_pcnt || 0;
+            
+            correctCounselorAmount = Math.round((totalAmount * feeSplitConfig.counselor_share_percentage) / 100 * 10000) / 10000;
+            correctSystemAmount = Math.round((totalAmount * systemPercentage) / 100 * 10000) / 10000;
+          }
         }
+      } catch (error) {
+        console.error('Error calculating amounts with perfect precision:', error);
+        // Keep original amounts on error
+        correctSystemAmount = totalSystemFromRecords;
+        correctCounselorAmount = totalCounselorFromRecords;
       }
       
       const summary = {
