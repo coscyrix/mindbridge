@@ -434,6 +434,139 @@ export default class Invoice {
             correctCounselorAmount = Math.round((totalAmount * feeSplitConfig.counselor_share_percentage) / 100 * 10000) / 10000;
             correctSystemAmount = Math.round((totalAmount * systemPercentage) / 100 * 10000) / 10000;
           }
+        } else if (data.role_id === 4 && data.tenant_id && !data.counselor_id) {
+          // Role 4: System admin with specific tenant but no counselor - calculate based on fee splits for all counselors in that tenant
+          console.log('Role 4: Calculating amounts based on fee splits for all counselors in tenant_id=' + data.tenant_id);
+          
+          // Group sessions by counselor_id within the specific tenant
+          const sessionGroups = {};
+          rec.forEach(session => {
+            if (session.tenant_id == data.tenant_id) {
+              const counselorId = session.counselor_id;
+              if (!sessionGroups[counselorId]) {
+                sessionGroups[counselorId] = {
+                  counselor_id: counselorId,
+                  sessions: [],
+                  totalAmount: 0
+                };
+              }
+              sessionGroups[counselorId].sessions.push(session);
+              sessionGroups[counselorId].totalAmount += parseFloat(session.session_price) || 0;
+            }
+          });
+          
+          let calculatedCounselorAmount = 0;
+          let calculatedSystemAmount = 0;
+          
+          // Calculate amounts for each counselor in the tenant
+          for (const [counselorId, group] of Object.entries(sessionGroups)) {
+            try {
+              const userMapping = await db
+                .withSchema(`${process.env.MYSQL_DATABASE}`)
+                .from('user_profile')
+                .where('user_profile_id', group.counselor_id)
+                .select('user_id')
+                .first();
+              
+              if (userMapping) {
+                const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(data.tenant_id, userMapping.user_id);
+                const refFees = await db
+                  .withSchema(`${process.env.MYSQL_DATABASE}`)
+                  .from('ref_fees')
+                  .where('tenant_id', data.tenant_id)
+                  .select('system_pcnt')
+                  .first();
+                
+                const systemPercentage = refFees?.system_pcnt || 0;
+                
+                const groupCounselorAmount = Math.round((group.totalAmount * feeSplitConfig.counselor_share_percentage) / 100 * 10000) / 10000;
+                const groupSystemAmount = Math.round((group.totalAmount * systemPercentage) / 100 * 10000) / 10000;
+                
+                calculatedCounselorAmount += groupCounselorAmount;
+                calculatedSystemAmount += groupSystemAmount;
+                
+                console.log(`Tenant ${data.tenant_id}, Counselor ${counselorId}: total=${group.totalAmount}, counselor=${groupCounselorAmount}, system=${groupSystemAmount}, counselor_share=${feeSplitConfig.counselor_share_percentage}%, system_share=${systemPercentage}%`);
+              }
+            } catch (error) {
+              console.error(`Error calculating for counselor ${counselorId} in tenant ${data.tenant_id}:`, error);
+              // Use original amounts for this group on error
+              const groupOriginalCounselor = group.sessions.reduce((sum, session) => sum + (parseFloat(session.session_counselor_amt) || 0), 0);
+              const groupOriginalSystem = group.sessions.reduce((sum, session) => sum + (parseFloat(session.session_system_amt) || 0), 0);
+              calculatedCounselorAmount += groupOriginalCounselor;
+              calculatedSystemAmount += groupOriginalSystem;
+            }
+          }
+          
+          correctCounselorAmount = Math.round(calculatedCounselorAmount * 10000) / 10000;
+          correctSystemAmount = Math.round(calculatedSystemAmount * 10000) / 10000;
+          
+          console.log(`Role 4 with tenant_id=${data.tenant_id} final calculation: total=${totalAmount}, counselor=${correctCounselorAmount}, system=${correctSystemAmount}`);
+        } else if (data.role_id === 4 && !data.counselor_id && !data.tenant_id) {
+          // Role 4: System admin viewing all data - calculate based on fee splits for each tenant/counselor
+          console.log('Role 4: Calculating amounts based on fee splits for all tenants/counselors');
+          
+          // Group sessions by tenant_id and counselor_id to calculate amounts correctly
+          const sessionGroups = {};
+          rec.forEach(session => {
+            const key = `${session.tenant_id}_${session.counselor_id}`;
+            if (!sessionGroups[key]) {
+              sessionGroups[key] = {
+                tenant_id: session.tenant_id,
+                counselor_id: session.counselor_id,
+                sessions: [],
+                totalAmount: 0
+              };
+            }
+            sessionGroups[key].sessions.push(session);
+            sessionGroups[key].totalAmount += parseFloat(session.session_price) || 0;
+          });
+          
+          let calculatedCounselorAmount = 0;
+          let calculatedSystemAmount = 0;
+          
+          // Calculate amounts for each tenant/counselor group
+          for (const [key, group] of Object.entries(sessionGroups)) {
+            try {
+              const userMapping = await db
+                .withSchema(`${process.env.MYSQL_DATABASE}`)
+                .from('user_profile')
+                .where('user_profile_id', group.counselor_id)
+                .select('user_id')
+                .first();
+              
+              if (userMapping) {
+                const feeSplitConfig = await this.feeSplitManagement.getFeeSplitPercentages(group.tenant_id, userMapping.user_id);
+                const refFees = await db
+                  .withSchema(`${process.env.MYSQL_DATABASE}`)
+                  .from('ref_fees')
+                  .where('tenant_id', group.tenant_id)
+                  .select('system_pcnt')
+                  .first();
+                
+                const systemPercentage = refFees?.system_pcnt || 0;
+                
+                const groupCounselorAmount = Math.round((group.totalAmount * feeSplitConfig.counselor_share_percentage) / 100 * 10000) / 10000;
+                const groupSystemAmount = Math.round((group.totalAmount * systemPercentage) / 100 * 10000) / 10000;
+                
+                calculatedCounselorAmount += groupCounselorAmount;
+                calculatedSystemAmount += groupSystemAmount;
+                
+                console.log(`Group ${key}: total=${group.totalAmount}, counselor=${groupCounselorAmount}, system=${groupSystemAmount}, counselor_share=${feeSplitConfig.counselor_share_percentage}%, system_share=${systemPercentage}%`);
+              }
+            } catch (error) {
+              console.error(`Error calculating for group ${key}:`, error);
+              // Use original amounts for this group on error
+              const groupOriginalCounselor = group.sessions.reduce((sum, session) => sum + (parseFloat(session.session_counselor_amt) || 0), 0);
+              const groupOriginalSystem = group.sessions.reduce((sum, session) => sum + (parseFloat(session.session_system_amt) || 0), 0);
+              calculatedCounselorAmount += groupOriginalCounselor;
+              calculatedSystemAmount += groupOriginalSystem;
+            }
+          }
+          
+          correctCounselorAmount = Math.round(calculatedCounselorAmount * 10000) / 10000;
+          correctSystemAmount = Math.round(calculatedSystemAmount * 10000) / 10000;
+          
+          console.log(`Role 4 final calculation: total=${totalAmount}, counselor=${correctCounselorAmount}, system=${correctSystemAmount}`);
         }
       } catch (error) {
         console.error('Error calculating amounts with perfect precision:', error);
@@ -460,6 +593,12 @@ export default class Invoice {
         
         if ((data.role_id === 2 || data.role_id === 3 || data.role_id === 4) && data.counselor_id && data.tenant_id) {
           // Use the tenant amount calculated in the perfect precision section above
+          correctTenantAmount = Math.round((totalAmount - correctCounselorAmount - correctSystemAmount) * 10000) / 10000;
+        } else if (data.role_id === 4 && data.tenant_id && !data.counselor_id) {
+          // For role_id=4 with specific tenant but no counselor, calculate tenant amount as remainder
+          correctTenantAmount = Math.round((totalAmount - correctCounselorAmount - correctSystemAmount) * 10000) / 10000;
+        } else if (data.role_id === 4 && !data.counselor_id && !data.tenant_id) {
+          // For role_id=4 viewing all data, calculate tenant amount as remainder
           correctTenantAmount = Math.round((totalAmount - correctCounselorAmount - correctSystemAmount) * 10000) / 10000;
         }
         
