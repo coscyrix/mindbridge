@@ -215,10 +215,14 @@ export default class ThrpyReqService {
   async getThrpyReqById(data) {
     console.log('/////////////////////////////////////////');
     data.role_id = Number(data.role_id);
+    
+    // Handle role_id=4 (system admin)
     if (data.role_id === 4) {
       delete data.counselor_id;
       delete data.user_profile_id;
     }
+    
+    // Handle role_id=3 (tenant manager)
     if (data.role_id === 3) {
       if (data.counselor_id) {
         const tenantId = await this.common.getUserTenantId({
@@ -227,6 +231,16 @@ export default class ThrpyReqService {
         data.tenant_id = Number(tenantId[0].tenant_id);
       } else {
         data.tenant_id = Number(data.tenant_id);
+      }
+    }
+    
+    // Handle role_id=2 (counselor) - derive tenant_id from counselor_id if not provided
+    if (data.role_id === 2 && data.user_profile_id && !data.tenant_id) {
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.user_profile_id,
+      });
+      if (tenantId && tenantId.length > 0) {
+        data.tenant_id = Number(tenantId[0].tenant_id);
       }
     }
 
@@ -239,7 +253,7 @@ export default class ThrpyReqService {
       thrpy_status: joi.string().optional(),
       tenant_id: joi.number().optional(),
       role_id: joi.number().optional(),
-    });
+    }).unknown(true); // Allow additional fields that might be sent
 
     const { error } = schema.validate(data);
 
