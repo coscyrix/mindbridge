@@ -131,10 +131,22 @@ export default class CounselorProfileService {
     // Fetch documents if profile exists and has an ID
     let documents = [];
     if (profile.rec && profile.rec.length > 0) {
-      const counselor_profile_id = profile.rec[0].counselor_profile_id;
-      const docsResult = await this.counselorDocumentsService.getDocuments(counselor_profile_id);
-      if (!docsResult.error) {
-        documents = docsResult.rec || [];
+      // If specific counselor_profile_id is requested, fetch documents for that profile
+      if (filters.counselor_profile_id) {
+        const docsResult = await this.counselorDocumentsService.getDocuments(filters.counselor_profile_id);
+        if (!docsResult.error) {
+          documents = docsResult.rec || [];
+        }
+      } else {
+        // If no specific profile requested, fetch documents for all profiles
+        const allDocuments = [];
+        for (const profileItem of profile.rec) {
+          const docsResult = await this.counselorDocumentsService.getDocuments(profileItem.counselor_profile_id);
+          if (!docsResult.error && docsResult.rec) {
+            allDocuments.push(...docsResult.rec);
+          }
+        }
+        documents = allDocuments;
       }
     }
     return { ...profile, documents };

@@ -62,7 +62,8 @@ export default class CounselorProfileController {
         return res.status(200).json({
           message: profile.message || 'Counselor profile retrieved successfully',
           rec: [profile.rec[0]],
-          related_counselors: profile.related_counselors || []
+          related_counselors: profile.related_counselors || [],
+          documents: profile.documents || []
         });
       }
 
