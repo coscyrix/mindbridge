@@ -267,26 +267,34 @@ export const SearchListingWrapper = styled.div`
           background: #e0e0e0;
           border-radius: 2px;
           margin: 20px 0;
+        }
 
-          input[type="range"] {
-            position: absolute;
-            width: 100%;
-            height: 4px;
-            background: none;
-            pointer-events: none;
-            -webkit-appearance: none;
+        .price-slider input[type="range"] {
+          position: absolute;
+          width: 100%;
+          // height: 4px;
+          background: none;
+          pointer-events: none;
+          -webkit-appearance: none;
+        }
 
-            &::-webkit-slider-thumb {
-              -webkit-appearance: none;
-              width: 16px;
-              height: 16px;
-              border-radius: 50%;
-              background: #3973b7;
-              cursor: pointer;
-              pointer-events: auto;
-              margin-top: -6px;
-            }
-          }
+        .price-slider input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #3973b7;
+          cursor: pointer;
+          pointer-events: auto;
+          margin-top: -6px;
+        }
+
+        .price-slider .range-highlight {
+          position: absolute;
+          height: 4px;
+          background: #3973b7; /* blue part */
+          border-radius: 2px;
+          top: 0;
         }
       }
 

@@ -12,6 +12,7 @@ const ROUTES = {
     "/search-listing",
     "/search-details/[id]",
     "/get-started-form",
+    "/*",
   ],
   AUTH_PAGES: ["/login", "/reset-password"],
   ONBOARDING: "/onboarding",
@@ -43,14 +44,14 @@ function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const { pathname } = router;
   const { type } = router.query;
-
+  const is404Page = pathname === "/404";
   const isLandingPageRoute = ROUTES.LANDING_PAGES.includes(pathname);
   const isAuthPage = ROUTES.AUTH_PAGES.includes(pathname);
   const isOnboardingPage = pathname === ROUTES.ONBOARDING;
   const isServiceTemplatesPage = pathname === ROUTES.SERVICE_TEMPLATES;
   const isPatientFormsPage = pathname.startsWith("/patient-forms");
 
-  const shouldUseDefaultLayout = isAuthPage || isPatientFormsPage;
+  const shouldUseDefaultLayout = isAuthPage || isPatientFormsPage || is404Page;
 
   return (
     <>

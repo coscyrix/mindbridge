@@ -27,6 +27,7 @@ import LocationSearch from "../components/LocationSearch";
 import axios from "axios";
 import { TREATMENT_TARGET } from "../utils/constants";
 import Spinner from "../components/common/Spinner";
+import ApiConfig from "../config/apiConfig";
 
 const StepIndicator = styled.div`
   display: flex;
@@ -457,31 +458,30 @@ const SignUp = () => {
         if (documentFiles.length > 0) {
           const documentUploadPromises = documentFiles.map(
             async (file, index) => {
-              if (file) {
-                try {
-                  const formData = new FormData();
-                  formData.append("document", file);
-                  formData.append("counselor_profile_id", idToUpdate);
-                  formData.append("document_type", "other");
-                  formData.append("document_name", documentNames[index]);
-                  formData.append("expiry_date", documentExpiryDates[index]);
-
-                  await CommonServices.uploadOnboardingDocuments(formData);
+              try {
+                if (!(file instanceof File)) {
                   return true;
-                } catch (error) {
-                  console.error(
-                    `Error uploading document ${index + 1}:`,
-                    error
-                  );
-                  return false;
                 }
+
+                const formData = new FormData();
+                formData.append("counselor_profile_id", idToUpdate);
+                formData.append("document_type", "other");
+                formData.append("document_name", documentNames[index]);
+                formData.append("expiry_date", documentExpiryDates[index]);
+                formData.append("document", file);
+
+                await CommonServices.uploadOnboardingDocuments(formData);
+                return true;
+              } catch (error) {
+                console.error(`Error uploading document ${index + 1}:`, error);
+                return false;
               }
-              return true;
             }
           );
 
           const documentResults = await Promise.all(documentUploadPromises);
-          documentsSuccess = documentResults.every((result) => result);
+          const documentsSuccess = documentResults.every((result) => result);
+
           if (!documentsSuccess) {
             toast.warning("Some documents failed to upload");
           }
@@ -581,7 +581,7 @@ const SignUp = () => {
     const newFiles = [...documentFiles];
     newFiles[index] = file;
     setDocumentFiles(newFiles);
-     methods.setValue("documentFiles", newFiles); 
+    methods.setValue("documentFiles", newFiles);
   };
 
   const handleDocumentNameChange = (index, name) => {
@@ -596,6 +596,42 @@ const SignUp = () => {
     newDates[index] = date;
     setDocumentExpiryDates(newDates);
     methods.setValue(`documentExpiryDates.${index}`, date);
+  };
+  const handleDeleteDocument = async (index) => {
+    try {
+      const document_id = documentFiles[index]?.id;
+      console.log(document_id);
+      if (document_id) {
+        const response = await api.delete(
+          `${ApiConfig.onboarding.uploadDocuments}/${document_id}`
+        );
+        if (response.status === 200) {
+          toast.success(response?.data?.message);
+          const newFiles = [...documentFiles];
+          const newNames = [...documentNames];
+          const newDates = [...documentExpiryDates];
+          newFiles.splice(index, 1);
+          newNames.splice(index, 1);
+          newDates.splice(index, 1);
+          setDocumentFiles(newFiles);
+          setDocumentNames(newNames);
+          setDocumentExpiryDates(newDates);
+          // fetchDocuments();
+        }
+      } else {
+        const newFiles = [...documentFiles];
+        const newNames = [...documentNames];
+        const newDates = [...documentExpiryDates];
+        newFiles.splice(index, 1);
+        newNames.splice(index, 1);
+        newDates.splice(index, 1);
+        setDocumentFiles(newFiles);
+        setDocumentNames(newNames);
+        setDocumentExpiryDates(newDates);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
   };
 
   const uploadAllDocuments = async (counselorProfileId) => {
@@ -620,6 +656,53 @@ const SignUp = () => {
 
     const results = await Promise.all(uploadPromises);
     return results.every((result) => result);
+  };
+  const fetchDocuments = async () => {
+    try {
+      if (!onBoardingDetails?.documents?.length) return;
+
+      const results = await Promise.allSettled(
+        onBoardingDetails.documents.map(async (doc) => {
+          const response = await axios.get(
+            `${imageBaseUrl}${doc.document_url}`,
+            {
+              responseType: "blob",
+            }
+          );
+          const blob = response.data;
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              resolve({
+                base64: reader.result,
+                name: doc.document_name,
+                expiry: doc.expiry_date,
+                type: doc.document_type,
+                id: doc.document_id,
+              });
+            };
+            reader.readAsDataURL(blob);
+          });
+        })
+      );
+      const successfulFiles = results
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => r.value);
+      setDocumentFiles(successfulFiles);
+      setDocumentNames(successfulFiles.map((f) => f.name));
+      setDocumentExpiryDates(successfulFiles.map((f) => f.expiry));
+      methods.setValue(
+        "documentNames",
+        successfulFiles.map((f) => f.name)
+      );
+      methods.setValue(
+        "documentExpiryDates",
+        successfulFiles.map((f) => f.expiry)
+      );
+      console.log("Prefilled docs:", successfulFiles);
+    } catch (err) {
+      console.error("Error fetching documents:", err);
+    }
   };
 
   useEffect(() => {
@@ -746,6 +829,12 @@ const SignUp = () => {
 
       if (onBoardingDetails.license_file_url) {
         fetchLicenseImage();
+      }
+      if (
+        onBoardingDetails.documents &&
+        onBoardingDetails.documents.length > 0
+      ) {
+        fetchDocuments();
       }
     }
   }, [onBoardingDetails]);
@@ -1067,6 +1156,9 @@ const SignUp = () => {
                             rules={{ required: "Document name is required" }}
                             render={({ field, fieldState: { error } }) => (
                               <CustomInputField
+                                disabled={
+                                  documentFiles[index]?.id ? true : false // for now disabling this in if client need to update or edit enable both felids
+                                }
                                 {...field}
                                 label="Document Name"
                                 required
@@ -1087,6 +1179,7 @@ const SignUp = () => {
                           <Controller
                             name={`documentExpiryDates.${index}`}
                             control={methods.control}
+                            disabled={documentFiles[index]?.id ? true : false}
                             rules={{
                               required: "Document expiry date is required",
                             }}
@@ -1096,7 +1189,7 @@ const SignUp = () => {
                                 label="Expiry Date"
                                 required
                                 customClass="document-expiry-input"
-                                placeholder="Enter expiry date"
+                                placeholder="DD-MM-YYYY"
                                 error={error?.message}
                                 onChange={(e) =>
                                   handleDocumentExpiryChange(
@@ -1114,17 +1207,7 @@ const SignUp = () => {
                       <CustomButton
                         title="Delete"
                         type="button"
-                        onClick={() => {
-                          const newFiles = [...documentFiles];
-                          const newNames = [...documentNames];
-                          const newDates = [...documentExpiryDates];
-                          newFiles.splice(index, 1);
-                          newNames.splice(index, 1);
-                          newDates.splice(index, 1);
-                          setDocumentFiles(newFiles);
-                          setDocumentNames(newNames);
-                          setDocumentExpiryDates(newDates);
-                        }}
+                        onClick={() => handleDeleteDocument(index)}
                         className="secondary-button"
                       />
                     </div>
@@ -1135,11 +1218,7 @@ const SignUp = () => {
                 <CustomButton
                   title="Add More Documents"
                   type="button"
-                  onClick={() => {
-                    setDocumentFiles((prev) => [...prev, null]);
-                    setDocumentNames((prev) => [...prev, ""]);
-                    setDocumentExpiryDates((prev) => [...prev, ""]);
-                  }}
+                  onClick={handleAddMoreDocument}
                   className="secondary-button"
                 />
               </div>
@@ -1218,7 +1297,12 @@ const SignUp = () => {
     try {
       const { data, status } = await CommonServices.getCounselorProfile(userId);
       if (data && status === 200) {
-        setOnBoardingDetails(data?.rec[0]);
+        const profile = data?.rec?.[0] || {};
+        const documents = data?.documents || [];
+        setOnBoardingDetails({
+          ...profile,
+          documents,
+        });
       }
     } catch (error) {
       console.log("Error while fetching counselor details:", error);

@@ -143,7 +143,9 @@ const SearchListing = () => {
       // Final filter to remove any empty keys
 
       payload = filterPayload(payload);
-
+      if (payload.treatment_target) {
+        payload.treatment_target = JSON.stringify(payload.treatment_target);
+      }
       const response = await CommonServices.getSearchedCounselors(payload);
       if (response.status === 200) {
         setCounselorsData(response.data.rec);
@@ -229,13 +231,19 @@ const SearchListing = () => {
   };
 
   const handlePriceRangeChange = (type, value) => {
-    setSearchParams((prev) => ({
-      ...prev,
-      priceRange: {
-        ...prev.priceRange,
-        [type]: value,
-      },
-    }));
+    value = Number(value);
+    setSearchParams((prev) => {
+      let { min, max } = prev.priceRange;
+      if (type === "min") {
+        min = Math.min(value, max - 1);
+      } else if (type === "max") {
+        max = Math.max(value, min + 1);
+      }
+      return {
+        ...prev,
+        priceRange: { min, max },
+      };
+    });
   };
 
   const handleCategoryChange = (category) => {
@@ -378,10 +386,12 @@ const SearchListing = () => {
                   <span>$</span>
                   <input
                     type="number"
+                    min={0}
+                    max={500}
                     value={searchParams.priceRange.min}
-                    onChange={(e) =>
-                      handlePriceRangeChange("min", e.target.value)
-                    }
+                    onChange={(e) => {
+                      handlePriceRangeChange("min", e.target.value);
+                    }}
                   />
                 </div>
               </div>
@@ -391,16 +401,31 @@ const SearchListing = () => {
                 <div className="price-input">
                   <span>$</span>
                   <input
+                    min={0}
+                    max={500}
                     type="number"
                     value={searchParams.priceRange.max}
-                    onChange={(e) =>
+                    onChange={(e) =>{
+                       if (e.target.value > 500) e.target.value = 500;
+                       if (e.target.value < 0) e.target.value = 0;
                       handlePriceRangeChange("max", e.target.value)
+                    }
                     }
                   />
                 </div>
               </div>
             </div>
             <div className="price-slider">
+              {/* Highlight bar */}
+              <div
+                className="range-highlight"
+                style={{
+                  left: `${(searchParams.priceRange.min / 500) * 100}%`,
+                  right: `${100 - (searchParams.priceRange.max / 500) * 100}%`,
+                }}
+              />
+
+              {/* Sliders */}
               <input
                 type="range"
                 min="1"

@@ -245,6 +245,10 @@ function CustomClientDetails({
     setCurrentPage(selected);
   };
 
+  const handleServiceChange = (selected) => {
+    handleSelectService(selected);
+    setCurrentPage(0);
+  };
   const renderFooter = () => (
     <div
       style={{
@@ -431,7 +435,7 @@ function CustomClientDetails({
                     >
                       <CustomMultiSelect
                         options={serviceOptions}
-                        onChange={handleSelectService}
+                        onChange={handleServiceChange}
                         isMulti={false}
                         placeholder="Select a manager"
                       />
