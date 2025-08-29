@@ -378,12 +378,12 @@ function ClientSession() {
       <div className="client-session-heading">
         <div className="heading-wrapper">
           <h2 className="heading">Client Session Schedule</h2>
-          <CustomButton
+          {/* <CustomButton
             icon={<AddIcon />}
             title="Add Client Session"
             onClick={handleShowAddClientSession}
             customClass="session-create-mobile-button"
-          />
+          /> */}
         </div>
         <p className="sub-heading">
           A detailed table tracking client session schedules, session times, and

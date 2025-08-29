@@ -82,8 +82,6 @@ export const SearchListingWrapper = styled.div`
         align-items: center;
         padding: 18px 60px 13px 70px;
 
-        // flex-wrap: wrap;
-
         .filter-item {
           border: 1px solid #2e2e2e33;
           position: relative;
@@ -93,7 +91,7 @@ export const SearchListingWrapper = styled.div`
           background: white;
           padding: 12px 12px;
           border-radius: 8px;
-          min-width: 180px;
+          // min-width: 180px;
 
           svg,
           img {
@@ -150,11 +148,27 @@ export const SearchListingWrapper = styled.div`
     display: flex;
     gap: 24px;
     background-color: #f8f8f8;
-    padding: 0px 60px;
+    padding: 0px 15px;
+    @media (max-width: 768px) {
+      padding: 10px;
+    }
+
+    .toggle-filters-btn {
+      display: none;
+      background-color: #3973b7;
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
 
     .filters-section {
       width: 25%;
-      min-width: 280px;
+      // min-width: 280px;
       background: white;
       border-radius: 12px;
       padding: 24px;
@@ -257,7 +271,7 @@ export const SearchListingWrapper = styled.div`
 
           .separator {
             color: #666;
-            margin-top:20px;
+            margin-top: 20px;
           }
         }
 
@@ -272,7 +286,6 @@ export const SearchListingWrapper = styled.div`
         .price-slider input[type="range"] {
           position: absolute;
           width: 100%;
-          // height: 4px;
           background: none;
           pointer-events: none;
           -webkit-appearance: none;
@@ -292,7 +305,7 @@ export const SearchListingWrapper = styled.div`
         .price-slider .range-highlight {
           position: absolute;
           height: 4px;
-          background: #3973b7; /* blue part */
+          background: #3973b7;
           border-radius: 2px;
           top: 0;
         }
@@ -359,9 +372,34 @@ export const SearchListingWrapper = styled.div`
     .results-section {
       flex-direction: column;
 
-      .filters-section,
+      .toggle-filters-btn {
+        display: block;
+      }
+
+      .filters-section {
+        display: none;
+        width: 100%;
+        margin-bottom: 16px;
+      }
+
+      .filters-section.active {
+        display: block;
+        animation: slideDown 0.3s ease-out;
+      }
+
       .wrapperCardShow {
         width: 100%;
+      }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
     }
   }
@@ -375,7 +413,7 @@ export const SearchWrapper = styled.div`
   padding: 8px 12px;
   background-color: white;
   width: 100%;
-  max-width: 320px;
+  // max-width: 320px;
   margin-bottom: 24px;
 
   .search-icon {
@@ -385,6 +423,7 @@ export const SearchWrapper = styled.div`
   }
 
   .search-input {
+    width: 10px;
     border: none;
     outline: none;
     flex: 1;
@@ -399,7 +438,7 @@ export const SearchWrapper = styled.div`
   .search-button {
     background: none;
     border: none;
-    color: #3973B7;
+    color: #3973b7;
     font-weight: 600;
     cursor: pointer;
     font-size: 16px;

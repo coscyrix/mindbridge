@@ -106,6 +106,16 @@ export const ClientDetailsContainer = styled.div`
     }
 
     .mobile-button-group{
+    .create-client-button {
+        margin-left: 4px;
+        background: var(--primary-button-color);
+        border-radius: 8px;
+        color: #ffffff;
+
+        &:hover{
+          background:var(--primary-button-hover-color);
+        }
+      }
         display:none;
         width:100%;
         justify-content: space-between;

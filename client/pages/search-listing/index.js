@@ -6,15 +6,14 @@ import {
   SearchWrapper,
 } from "../../components/SearchListingComponents/style";
 import CommonServices from "../../services/CommonServices";
-import { useForm } from "react-hook-form";
 import axios from "axios";
 import CustomLoader from "../../components/Loader/CustomLoader";
-import CustomButton from "../../components/CustomButton";
 import { GoArrowLeft } from "react-icons/go";
 import { TREATMENT_TARGET } from "../../utils/constants";
 import { FiSearch } from "react-icons/fi";
 const SearchListing = () => {
   const [isloading, setIsLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false); // ✅ toggle for mobile filters
   const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
 
   const router = useRouter();
@@ -74,7 +73,6 @@ const SearchListing = () => {
             data.filters.specialties.map((item) => [item.service_name, item])
           ).values()
         );
-
         setSearchFilters({
           ...data.filters,
           specialties: uniqueSpecialties,
@@ -103,14 +101,13 @@ const SearchListing = () => {
               !Array.isArray(value) &&
               Object.keys(value).length === 0)
           ) {
-            // skip
+            //skip
           } else {
             result[key] = value;
           }
         });
         return result;
       };
-
       // Build the payload
       let payload = { ...data };
 
@@ -141,7 +138,6 @@ const SearchListing = () => {
         delete payload.specialties;
 
       // Final filter to remove any empty keys
-
       payload = filterPayload(payload);
       if (payload.treatment_target) {
         payload.treatment_target = JSON.stringify(payload.treatment_target);
@@ -159,31 +155,21 @@ const SearchListing = () => {
 
   const fetchAllProfilePictures = async () => {
     const pictureMap = {};
-
     await Promise.all(
       counselorsData?.map(async (counselor) => {
         try {
-          console.log(counselor.profile_picture_url);
           const response = await axios.get(
             `${imageBaseUrl}${counselor.profile_picture_url}`,
-            {
-              responseType: "blob",
-              // headers: {
-              //   "ngrok-skip-browser-warning": "true",
-              // },
-            }
+            { responseType: "blob" }
           );
-
           const blob = response.data;
           const reader = new FileReader();
-
           // Wrap reader in a Promise to wait until it's done
           const base64 = await new Promise((resolve, reject) => {
             reader.onloadend = () => resolve(reader.result);
             reader.onerror = reject;
             reader.readAsDataURL(blob);
           });
-
           pictureMap[counselor.counselor_profile_id] = base64;
         } catch (error) {
           console.log(
@@ -193,7 +179,6 @@ const SearchListing = () => {
         }
       })
     );
-
     setProfilePictures(pictureMap);
   };
 
@@ -218,18 +203,6 @@ const SearchListing = () => {
     }
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    filterSearchResult(searchParams);
-  };
-
-  const handleInputChange = (field, value) => {
-    setSearchParams((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
   const handlePriceRangeChange = (type, value) => {
     value = Number(value);
     setSearchParams((prev) => {
@@ -239,10 +212,7 @@ const SearchListing = () => {
       } else if (type === "max") {
         max = Math.max(value, min + 1);
       }
-      return {
-        ...prev,
-        priceRange: { min, max },
-      };
+      return { ...prev, priceRange: { min, max } };
     });
   };
 
@@ -251,117 +221,28 @@ const SearchListing = () => {
       const updatedCategories = prev.categories.includes(category)
         ? prev.categories.filter((c) => c !== category)
         : [...prev.categories, category];
-
-      return {
-        ...prev,
-        categories: updatedCategories,
-      };
+      return { ...prev, categories: updatedCategories };
     });
   };
   return (
     <SearchListingWrapper>
       <div className="search-section">
-        {/* <div className="search-container">
-          <div className="search-input-wrapper">
-            <input
-              type="text"
-              placeholder="Search services"
-              value={searchParams.searchServices}
-              onChange={(e) =>
-                handleInputChange("searchServices", e.target.value)
-              }
-            />
-            <button className="search-icon-button">
-              <img src="./assets/icons/searchIcon.svg" />
-            </button>
-          </div>
-
-          <div className="filters-wrapper">
-            <div className="filter-item">
-              <img src="./assets/icons/locationIcon.svg" />
-              <select
-                className="select-input"
-                value={searchParams.location}
-                onChange={(e) => handleInputChange("location", e.target.value)}
-              >
-                <option value="">Select Location</option>
-                {searchFilters?.locations?.map((location) => (
-                  <option key={location} value={location.toLowerCase()}>
-                    {location}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-item">
-              <img src="/assets/icons/raceIcon.svg" alt="Race" />
-              <select
-                className="select-input"
-                value={searchParams.race}
-                onChange={(e) => handleInputChange("race", e.target.value)}
-              >
-                <option value="">Select Race</option>
-                {searchFilters?.race_options?.map((race) => (
-                  <option key={race} value={race.toLowerCase()}>
-                    {race}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-item">
-              <img src="/assets/icons/genderIcon.svg" alt="Gender" />
-              <select
-                className="select-input"
-                value={searchParams.gender}
-                onChange={(e) => handleInputChange("gender", e.target.value)}
-              >
-                <option value="">Select Gender</option>
-                {searchFilters?.gender_options?.map((gender) => (
-                  <option key={gender} value={gender.toLowerCase()}>
-                    {gender}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-item">
-              <img src="./assets/icons/locationIcon.svg" />
-              <select
-                className="select-input"
-                value={searchParams.speciality}
-                onChange={(e) =>
-                  handleInputChange("speciality", e.target.value)
-                }
-              >
-                <option value="">Select Speciality</option>
-                {TREATMENT_TARGET.map((specialty) => (
-                  <option
-                    key={specialty?.service_name}
-                    value={specialty?.label.toLowerCase()}
-                  >
-                    {specialty?.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="searchButtonHeader">
-              <button className="search-button" onClick={handleSearch}>
-                Search
-              </button>
-              <img src="./assets/icons/searchIcon.svg" />
-            </div>
-          </div>
-        </div> */}
-        <GoArrowLeft
-          onClick={() => {
-            router.back();
-          }}
-          size={30}
-        />
+        <GoArrowLeft onClick={() => router.back()} size={30} />
       </div>
+
       <div className="results-section">
-        <div className="filters-section">
+       
+        <button
+          className="toggle-filters-btn"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          {/* <FilterAltOffIcon /> */}
+
+          {showFilters ? "Hide Filters" : "Show Filters"}
+        </button>
+
+       
+        <div className={`filters-section ${showFilters ? "active" : ""}`}>
           <div className="price-range">
             <SearchWrapper>
               <FiSearch className="search-icon" />
@@ -375,8 +256,7 @@ const SearchListing = () => {
             <div className="wrapperRange">
               <h3>Price Range</h3>
               <div className="price-display">
-                $ {searchParams.priceRange.min} - ${" "}
-                {searchParams.priceRange.max}
+                $ {searchParams.priceRange.min} - ${searchParams.priceRange.max}
               </div>
             </div>
             <div className="price-inputs">
@@ -389,9 +269,9 @@ const SearchListing = () => {
                     min={0}
                     max={500}
                     value={searchParams.priceRange.min}
-                    onChange={(e) => {
-                      handlePriceRangeChange("min", e.target.value);
-                    }}
+                    onChange={(e) =>
+                      handlePriceRangeChange("min", e.target.value)
+                    }
                   />
                 </div>
               </div>
@@ -405,18 +285,16 @@ const SearchListing = () => {
                     max={500}
                     type="number"
                     value={searchParams.priceRange.max}
-                    onChange={(e) =>{
-                       if (e.target.value > 500) e.target.value = 500;
-                       if (e.target.value < 0) e.target.value = 0;
-                      handlePriceRangeChange("max", e.target.value)
-                    }
-                    }
+                    onChange={(e) => {
+                      if (e.target.value > 500) e.target.value = 500;
+                      if (e.target.value < 0) e.target.value = 0;
+                      handlePriceRangeChange("max", e.target.value);
+                    }}
                   />
                 </div>
               </div>
             </div>
             <div className="price-slider">
-              {/* Highlight bar */}
               <div
                 className="range-highlight"
                 style={{
@@ -424,8 +302,6 @@ const SearchListing = () => {
                   right: `${100 - (searchParams.priceRange.max / 500) * 100}%`,
                 }}
               />
-
-              {/* Sliders */}
               <input
                 type="range"
                 min="1"
@@ -474,8 +350,8 @@ const SearchListing = () => {
             Submit
           </div>
         </div>
-        {/* {console.log(counselorsData)} */}
 
+      
         <div className="wrapperCardShow">
           {counselorsData?.length !== 0 ? (
             counselorsData.map((counselor) => (
@@ -486,7 +362,6 @@ const SearchListing = () => {
                   "/assets/images/drImage2.png"
                 }
                 name={`${counselor.user_first_name} ${counselor.user_last_name}`}
-                // speciality={TREATMENT_TARGET}
                 location={(() => {
                   const parts = counselor.location
                     ?.split(",")
@@ -514,12 +389,8 @@ const SearchListing = () => {
           )}
         </div>
       </div>
-      {isloading ? (
-        <CustomLoader
-          style={{ top: "30vh", left: "10vw", height: "20vh" }}
-        ></CustomLoader>
-      ) : (
-        <></>
+      {isloading && (
+        <CustomLoader style={{ top: "30vh", left: "10vw", height: "20vh" }} />
       )}
     </SearchListingWrapper>
   );

@@ -386,6 +386,83 @@ function CustomClientDetails({
                         renderFooter={renderFooter}
                       />
                     </div>
+                    {!shouldHideButton && primaryButton && (
+                      <CustomButton
+                        icon={<AddIcon />}
+                        title={primaryButton}
+                        onClick={handleCreate}
+                        customClass="create-client-button"
+                      />
+                    )}
+                  </div>
+                  <div className="function-button">
+                    {[3, 4].includes(user?.role_id) && handleSelectCounselor ? (
+                      <div
+                        key="counselor-select"
+                        className="custom-select-container"
+                      >
+                        <CustomMultiSelect
+                          options={
+                            userObj.role_id === 4 ? counselors : counselor
+                          }
+                          onChange={handleSelectCounselor}
+                          isMulti={false}
+                          placeholder="Select a counselor"
+                        />
+                      </div>
+                    ) : null}
+                    {[4].includes(user?.role_id) &&
+                      router.pathname === "/client-session" && (
+                        <div
+                          key="counselor-select"
+                          className="custom-select-container"
+                        >
+                          <CustomMultiSelect
+                            options={managerOptions}
+                            onChange={handleSelectManager}
+                            isMulti={false}
+                            value={selectedManager}
+                            placeholder="Select a manager"
+                          />
+                        </div>
+                      )}
+                    {router.pathname === "/services" &&
+                    [4].includes(user?.role_id) ? (
+                      <div
+                        key="manager-select"
+                        className="custom-select-container"
+                      >
+                        <CustomMultiSelect
+                          options={serviceOptions}
+                          onChange={handleServiceChange}
+                          isMulti={false}
+                          placeholder="Select a manager"
+                        />
+                      </div>
+                    ) : null}
+                    <CustomButton
+                      icon={<DownloadIcon />}
+                      title="Download"
+                      dropdownOptions={DOWNLOAD_OPTIONS(
+                        tableData?.columns,
+                        tableData?.data,
+                        tableCaption
+                      )}
+                    />
+                    <CustomButton
+                      icon={<SettingsIcon />}
+                      title="Columns"
+                      dropdownOptions={columnOptions}
+                      renderFooter={renderFooter}
+                    />
+                    {!shouldHideButton && primaryButton && (
+                      <CustomButton
+                        icon={<AddIcon />}
+                        title={primaryButton}
+                        onClick={handleCreate}
+                        customClass="create-client-button"
+                      />
+                    )}
                   </div>
                 </div>
               </div>

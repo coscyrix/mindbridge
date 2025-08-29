@@ -359,7 +359,6 @@ const SearchDetails = () => {
                   <span className="icon">
                     <img src="/assets/icons/fontisto_person.svg" />
                   </span>
-                  s
                   <div>
                     <h3>Service Modalities</h3>
                     <p>{(counselor.service_modalities || []).join(", ")}</p>

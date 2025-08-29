@@ -2,7 +2,7 @@ import React from "react";
 import { useRouter } from "next/router";
 import { CardWrapper } from "./style";
 import { StarIcon } from "../../../public/assets/icons";
-// import { TREATMENT_TARGET } from "../../../utils/constants";
+
 const CounselorCard = ({
   name,
   speciality,
@@ -42,7 +42,6 @@ const CounselorCard = ({
       saturday: "Saturday",
       sunday: "Sunday",
     };
-
     // Group days by time string, excluding empty
     const grouped = {};
     daysOrder.forEach((day) => {
@@ -54,7 +53,6 @@ const CounselorCard = ({
     });
 
     const output = [];
-
     for (const [timeKey, days] of Object.entries(grouped)) {
       const ranges = groupConsecutiveDays(days, daysOrder).map((range) => {
         if (range.length === 1) {
@@ -67,11 +65,9 @@ const CounselorCard = ({
       });
       output.push(`${ranges.join(", ")}: ${timeKey}`);
     }
-
     return output.join(" | ");
   }
 
-  // Helper to group consecutive days
   function groupConsecutiveDays(days, orderedDays) {
     const indices = days
       .map((d) => orderedDays.indexOf(d))
@@ -89,7 +85,6 @@ const CounselorCard = ({
         temp = [];
       }
     }
-
     if (temp.length) result.push(temp);
     return result;
   }
@@ -98,94 +93,81 @@ const CounselorCard = ({
 
   return (
     <CardWrapper>
-      <div className="card-header">
-        <img
-          src={image}
-          alt={name}
-          style={{ objectFit: "cover", width: "300px" }}
-        />
-        <div className="counselor-info">
+      <div className="card-left">
+        <img src={image} alt={name} className="counselor-photo" />
+      </div>
+
+      <div className="card-center">
+        <div className="rating-row">
+          <div className="stars">
+            {[...Array(5)].map((_, index) => (
+              <StarIcon
+                key={index}
+                className={index < Math.floor(rating) ? "filled" : ""}
+              />
+            ))}
+          </div>
           <span className="reviews">{reviews} Reviews</span>
-          <div className="rating-container">
-            <div className="stars">
-              {[...Array(5)].map((_, index) => (
-                <StarIcon
-                  key={index}
-                  className={index < Math.floor(rating) ? "filled" : ""}
-                />
-              ))}
-            </div>
-          </div>
-          <h3 className="counselor-name">{name}</h3>
-          <div className="info-row">
-            <img src="/assets/icons/locationIcon.svg" />
-            <prompt className="value">{location}</prompt>
-          </div>
-          <div className="info-row">
-            <img src="/assets/icons/callIcon.svg" />
-            <p className="value">{contact}</p>
-          </div>
-          <div className="info-row">
-            <img src="/assets/icons/mailIcon.svg" />
-            <p className="value">{email}</p>
-          </div>
+        </div>
+        <h3 className="counselor-name">{name}</h3>
+        <p className="counselor-speciality">{speciality}</p>
 
-          <div className="card-body">
-            <div className="services-list">
-              {/* <div className="servicesDetails">
-                <h6>Types of Services</h6>
-                <p>{services}</p>
-              </div> */}
-              <div className="servicesDetails" style={{ marginTop: "20px" }}>
-                <h6>Treatment target</h6>
-                {TREATMENT_TARGET.length > 0 ? (
-                  TREATMENT_TARGET.map((specialty, index) => (
-                    <span key={index}>
-                      {specialty}
-                      {index < TREATMENT_TARGET.length - 1 && ", "}
-                    </span>
-                  ))
-                ) : (
-                  <span>No targets</span>
-                )}
-              </div>
-              <div
-                className="availabilityWrapper"
-                style={{ marginTop: "20px" }}
-              >
-                <h6>Available</h6>
-                <div>
-                  {Array.isArray(available) ? (
-                    available.map((mode, index) => (
-                      <span key={index}>{mode}</span>
-                    ))
-                  ) : (
-                    <p>{available}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="info-row">
+          <img src="/assets/icons/locationIcon.svg" />
+          <span className="value">{location}</span>
+        </div>
+        <div className="info-row">
+          <img src="/assets/icons/callIcon.svg" />
+          <span className="value">{contact}</span>
+        </div>
+        <div className="info-row">
+          <img src="/assets/icons/mailIcon.svg" />
+          <span className="value">{email}</span>
         </div>
 
-        <div className="card-footer">
-          <img
-            src="/assets/images/verified-user.svg"
-            className="cardImageFooter"
-            alt="Verified"
-          />
-          <div className="availability">
-            <h6 className="label">Availability:</h6>
-            <div className="time">
-              {normalisedAvailability.split("|").map((line, index) => (
-                <p key={index}>{line.trim()}</p>
-              ))}
-            </div>
-          </div>
-          <button className="book-button" onClick={handleBookAppointment}>
-            View More Details
-          </button>
+        <div className="servicesDetails">
+          <h6>Treatment target</h6>
+          {TREATMENT_TARGET.length > 0 ? (
+            TREATMENT_TARGET.map((specialty, index) => (
+              <span key={index}>
+                {specialty}
+                {index < TREATMENT_TARGET.length - 1 && ", "}
+              </span>
+            ))
+          ) : (
+            <span>No targets</span>
+          )}
         </div>
+
+        <div className="availabilityWrapper">
+          <h6>Available</h6>
+          <div>
+            {Array.isArray(available) ? (
+              available.map((mode, index) => <span key={index}>{mode}</span>)
+            ) : (
+              <span>{available}</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="card-right">
+        <img
+          src="/assets/images/verified-user.svg"
+          className="cardImageFooter"
+          alt="Verified"
+        />
+        <div className="availability">
+          <h6 className="label">Availability:</h6>
+          <div className="time">
+            {normalisedAvailability.split("|").map((line, index) => (
+              <p key={index}>{line.trim()}</p>
+            ))}
+          </div>
+        </div>
+        <button className="book-button" onClick={handleBookAppointment}>
+          View More Details
+        </button>
       </div>
     </CardWrapper>
   );
