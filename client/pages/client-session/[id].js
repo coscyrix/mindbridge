@@ -307,13 +307,14 @@ function ClientDetails() {
                     title="Upload and Send Homework"
                   />
                 )} */}
-                {!admin && (
+                {/* {!admin && (
                   <CustomButton
                     onClick={handleOpenConfirmationModal}
                     icon={<SettingsIcon />}
                     title="Send Consent Form"
+                    
                   />
-                )}
+                )} */}
               </div>
             </div>
           </div>
@@ -355,13 +356,13 @@ function ClientDetails() {
                 title="Upload and Send Homework"
               />
             )}
-            {!admin && (
+            {/* {!admin && (
               <CustomButton
                 onClick={handleOpenConfirmationModal}
                 icon={<SettingsIcon />}
                 title="Send Consent Form"
               />
-            )}
+            )} */}
           </div>
         </div>
         <CustomTable
@@ -372,7 +373,14 @@ function ClientDetails() {
           fixedHeaderScrollHeight="650px"
         />
       </div>
-      {/* <HomeworkModal isOpen={isWorkModalOpen} onClose={handleCloseWorkModal} /> */}
+      {activeData && (
+        <HomeworkModal
+          isOpen={isWorkModalOpen}
+          onClose={handleCloseWorkModal}
+          session_id={activeData ? activeData[0]?.session_id : null}
+        />
+      )}
+
       <ConfirmationModal
         isOpen={showConfirmationModal}
         onClose={handleCloseConfirmationModal}
