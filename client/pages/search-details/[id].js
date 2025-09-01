@@ -498,7 +498,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="customer_name"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Customer Name
               </label>
@@ -531,7 +531,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="customer_email"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Customer Email
               </label>
@@ -564,7 +564,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="contact_number"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Customer Contact No.
               </label>
@@ -597,7 +597,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="service"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Select Service
               </label>
@@ -635,7 +635,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="appointment_date"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Appointment Date
               </label>
@@ -667,7 +667,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="description"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Description
               </label>
@@ -700,7 +700,11 @@ const SearchDetails = () => {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                marginTop: 24,
+                padding: "16px 20px",
+                borderTop: "1px solid #eee",
+                background: "#fff",
+                position: "sticky",
+                bottom: 0,
               }}
             >
               <button

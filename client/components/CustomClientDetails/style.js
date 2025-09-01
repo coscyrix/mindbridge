@@ -7,7 +7,7 @@ export const ClientDetailsContainer = styled.div`
     }
   .content{
     .tab-and-heading-container{
-      position:sticky;
+      // position:sticky;
       top:60px;
       padding:20px 0px;
     z-index: 5;
@@ -21,7 +21,7 @@ export const ClientDetailsContainer = styled.div`
 
     .heading-container {
     display: flex;
-    gap:10px
+    gap:10px;
     justify-content: space-evenly;
     align-items: start;
     gap:20px;

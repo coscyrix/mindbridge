@@ -10,6 +10,7 @@ import ApiConfig from "../../../config/apiConfig";
 import { useReferenceContext } from "../../../context/ReferenceContext";
 import { toast } from "react-toastify";
 import { api } from "../../../utils/auth";
+import Spinner from "../../common/Spinner";
 
 const FeeSplitForm = ({
   share_percentage,
@@ -19,6 +20,7 @@ const FeeSplitForm = ({
   setOpen,
 }) => {
   const { userObj } = useReferenceContext();
+  const [loading, setLoading] = useState(false);
   const methods = useForm({
     resolver: zodResolver(splitFeeManagementSchema),
     defaultValues: {
@@ -36,10 +38,11 @@ const FeeSplitForm = ({
   const onSubmit = async (data) => {
     console.log(data);
     try {
+      setLoading(true);
       let payload = {
         tenant_share_percentage: data?.tenant_share,
         counselor_share_percentage: data?.counselor_share,
-        tenant_id:  userObj?.tenant?.tenant_id,
+        tenant_id: userObj?.tenant?.tenant_id,
         is_fee_split_enabled: true,
         ...(is_counselor_update && {
           counselor_user_id: share_percentage?.counselor_info?.user_id,
@@ -53,12 +56,13 @@ const FeeSplitForm = ({
       if (response?.status == 200) {
         toast.success(response?.data?.message);
         fetchAllSplit();
-        if(open){
-            setOpen(false);
+        if (open) {
+          setOpen(false);
         }
-        
       }
+      setLoading(false);
     } catch (error) {
+      setLoading(false);
       console.error(error);
       toast.error(error?.response?.data?.message);
     }
@@ -105,13 +109,17 @@ const FeeSplitForm = ({
             <span className="note">
               Note: The sum of both input must be equal to 100
             </span>
-            <div className="form-row">
-              <CustomButton
-                className="button-blue"
-                title="Submit"
-                type="submit"
-              />
-            </div>
+            {loading ? (
+              <Spinner color="blue" />
+            ) : (
+              <div className="form-row">
+                <CustomButton
+                  className="button-blue"
+                  title="Submit"
+                  type="submit"
+                />
+              </div>
+            )}
           </form>
         </FormProvider>
       </div>

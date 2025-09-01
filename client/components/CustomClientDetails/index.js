@@ -368,7 +368,7 @@ function CustomClientDetails({
                     />
                   </div>
                   <div className="dropdowns-container">
-                    <div className="action-button-wrapper">
+                    {/* <div className="action-button-wrapper">
                       <CustomButton
                         icon={<MenuIcon />}
                         title="More Option"
@@ -378,22 +378,22 @@ function CustomClientDetails({
                           tableCaption
                         )}
                       />
-                    </div>
-                    <div className="action-button-wrapper">
+                    </div> */}
+                    {/* <div className="action-button-wrapper">
                       <CustomButton
                         icon={<SettingsIcon />}
                         dropdownOptions={columnOptions}
                         renderFooter={renderFooter}
                       />
-                    </div>
-                    {!shouldHideButton && primaryButton && (
+                    </div> */}
+                    {/* {!shouldHideButton && primaryButton && (
                       <CustomButton
                         icon={<AddIcon />}
                         title={primaryButton}
                         onClick={handleCreate}
                         customClass="create-client-button"
                       />
-                    )}
+                    )} */}
                   </div>
                   <div className="function-button">
                     {[3, 4].includes(user?.role_id) && handleSelectCounselor ? (

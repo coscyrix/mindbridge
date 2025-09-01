@@ -143,7 +143,7 @@ function CreateSessionForm({
       console.log(error?.response?.data?.message);
     }
   };
-useEffect(() => {
+  useEffect(() => {
     if (userObj.role_id !== 4) {
       fetchServices();
     }
@@ -474,7 +474,18 @@ useEffect(() => {
     },
     {
       name: "Amt. to Counselor",
-      selector: (row) => `$${Number(row.session_counselor_amt).toFixed(2)}`,
+      selector: (row) => {
+        if (!match || match === undefined) {
+          match =
+            counselorSplit?.find(
+              (item) => item?.counselor_info?.email === userObj?.email
+            )?.tenant_share_percentage ?? managerSplit?.tenant_share_percentage;
+        }
+
+        return userObj?.role_id === 3
+          ? `$${Number(row.session_system_amt).toFixed(2)}`
+          : `${Number((row.session_price * match) / 100).toFixed(2) ?? 0}%`;
+      },
       selectorId: "session_counselor_amt",
       maxWidth: "130px",
     },
@@ -718,7 +729,7 @@ useEffect(() => {
     }
   };
 
-  const handleAffirmativeAction = async () => {
+  const handleAffirmativeAction = async (isClose = true) => {
     try {
       setLoader("discardChanges");
       if (thrpyReqId) {
@@ -732,7 +743,9 @@ useEffect(() => {
           toast.success("Therapy request discarded!");
         }
       }
-      setIsOpen(false);
+      if (isClose) {
+        setIsOpen(false);
+      }
     } catch (error) {
       console.log("Error while discarding therapy request :", error);
       toast.error("Error while discarding therapy request.");
@@ -1082,6 +1095,14 @@ useEffect(() => {
                       render={({ field }) => (
                         <CustomMultiSelect
                           {...field}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            // setSessionTableData([]);
+                            if (sessionTableData.length > 0) {
+                              setConfirmationModal(true);
+                            }
+                            setShowGeneratedSession(false);
+                          }}
                           options={clientsDropdown}
                           placeholder="Select a client"
                           isMulti={false}
@@ -1125,8 +1146,12 @@ useEffect(() => {
                           isMulti={false}
                           isDisabled={initialData}
                           onChange={(selectedOption) => {
-                            setSessionTableData([]);
+                            // setSessionTableData([]);
                             field.onChange(selectedOption);
+                            setShowGeneratedSession(false);
+                            if (sessionTableData.length > 0) {
+                              setConfirmationModal(true);
+                            }
                           }}
                         />
                       )}
@@ -1149,6 +1174,14 @@ useEffect(() => {
                       render={({ field }) => (
                         <CustomMultiSelect
                           {...field}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            setShowGeneratedSession(false);
+                            // setSessionTableData([]);
+                            if (sessionTableData.length > 0) {
+                              setConfirmationModal(true);
+                            }
+                          }}
                           options={sessionFormatDropdown}
                           placeholder="Select a format"
                           isMulti={false}

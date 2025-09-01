@@ -600,16 +600,16 @@ const Invoice = () => {
                 loading ? (
                   <Skeleton width={120} height={40} />
                 ) : userObj?.role_id === 2 ? (
-                  Number(invoices?.summary?.sum_session_total_amount).toFixed(4)
+                 `$${Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}`
                 ) : userObj?.role_id === 3 ? (
                   <>
-                    Total Amount :{" "}
+                    Total Amount :{" $"}
                     {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
                   
                   </>
                 ) : userObj?.role_id === 4 ? (
                   <>
-                    Total Amount :{" "}
+                    Total Amount :{" $"}
                     {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
                   
                   </>
@@ -625,11 +625,11 @@ const Invoice = () => {
                   loading ? (
                     <Skeleton width={120} height={40} />
                   ) : userObj?.role_id === 2 ? (
-                    Number(
+                    `$${Number(
                       invoices?.summary?.sum_session_counselor_tenant_amt
-                    ).toFixed(4)
+                    ).toFixed(4)}`
                   ) : userObj?.role_id === 3 ? (
-                    Number(invoices?.summary?.sum_session_tenant_amt).toFixed(4)
+                    `$${Number(invoices?.summary?.sum_session_counselor_amt).toFixed(4)}`
                   ) : (
                     ""
                   )
@@ -644,7 +644,7 @@ const Invoice = () => {
                 ) : userObj?.role_id === 2 ? (
                   <>
                     <p>
-                      Counsellor Share:{" "}
+                      Counsellor Share:{" $"}
                       {Number(invoices?.summary?.sum_session_counselor_amt).toFixed(
                         4
                       )}{" "}
@@ -655,7 +655,7 @@ const Invoice = () => {
                       }
                       %)
                     </p>
-                    Tenant Share:{" "}
+                    Tenant Share:{" $"}
                     {(
                       Number(invoices?.summary?.sum_session_tenant_amt) +
                       Number(invoices?.summary?.sum_session_system_amt)
@@ -666,26 +666,26 @@ const Invoice = () => {
                   </>
                 ) : userObj?.role_id === 3 ? (
                   <>
-                    Counsellor Share:{" "}
+                    {/* Counsellor Share:{" "}
                     {Number(invoices?.summary?.sum_session_counselor_amt).toFixed(4)}
-                    <br />
-                    Tenant Share:{" "}
+                    <br /> */}
+                    Your Share:{" $"}
                     {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(4)}
                   </>
                 ) : userObj?.role_id === 4 ? (
                   <>
                     <p>
-                      All Practice Amount:{" "}
+                      All Practice Amount:{" $"}
                       {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
                     </p>
 
                     <>
-                      Counsellor Amount:{" "}
+                      Counsellor Amount:{" $"}
                       {Number(
                         invoices?.summary?.sum_session_counselor_tenant_amt
                       ).toFixed(4)}{" "}
                       <br />
-                      Tenant Amount:{" "}
+                      Tenant Amount:{" $"}
                       {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(4)}
                     </>
                   </>
@@ -702,7 +702,7 @@ const Invoice = () => {
                   loading ? (
                     <Skeleton width={120} height={40} />
                   ) : (
-                    Number(invoices?.summary?.sum_session_taxes)?.toFixed(4)
+                    `$${Number(invoices?.summary?.sum_session_taxes)?.toFixed(4)}`
                   )
                 }
               />
@@ -715,7 +715,7 @@ const Invoice = () => {
                   loading ? (
                     <Skeleton width={120} height={40} />
                   ) : (
-                    Number(invoices?.summary?.sum_session_system_amt)?.toFixed(4)
+                    `$${Number(invoices?.summary?.sum_session_system_amt)?.toFixed(4)}`
                   )
                 }
               />
@@ -727,7 +727,7 @@ const Invoice = () => {
                     loading ? (
                       <Skeleton width={120} height={40} />
                     ) : (
-                      Number(invoices?.summary?.sum_session_system_amt)?.toFixed(4)
+                      `$${Number(invoices?.summary?.sum_session_system_amt)?.toFixed(4)}`
                     )
                   }
                 />

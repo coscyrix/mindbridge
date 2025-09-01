@@ -5,6 +5,7 @@ import ButtonRow from "../CustomButton/CustomButtonRow";
 import ApiConfig from "../../config/apiConfig";
 import { GoArrowRight } from "react-icons/go";
 import GetStartedForm from "../GetStartedForm";
+import { useRouter } from "next/router";
 const Footer = () => {
   const termsDocUrl = process.env.NEXT_PUBLIC_TERMS_AND_CONDITION;
   const userGuide = process.env.NEXT_PUBLIC_MINDBRIDGE_USER_GUIDE;
@@ -13,7 +14,7 @@ const Footer = () => {
   const learnMore = process.env.NEXT_PUBLIC_LEARN_MORE_VEDIO_LINK;
   const [isOpen, setIsOpen] = useState(false);
   const sidebarRef = useRef(null);
-
+  const router = useRouter();
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
@@ -25,7 +26,13 @@ const Footer = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   const [showModal, setShowModal] = useState(false);
-
+  const handleClick = () => {
+    if (window.innerWidth <= 768) {
+      router.push("/get-started-form");
+    } else {
+      handleGetStarted();
+    }
+  };
   const handleGetStarted = () => {
     setShowModal(true);
   };
@@ -56,10 +63,10 @@ const Footer = () => {
             Support Starts Here
           </h2>
           <div className="cta-buttons">
-            <button onClick={handleGetStarted} className="get-started">
+            <button onClick={handleClick} className="get-started">
               Get Started <p>Pay only when you earn</p>
             </button>
-            <button onClick={handleGetStarted} className="demo-request">
+            <button onClick={handleClick} className="demo-request">
               Request Free Demo
             </button>
           </div>

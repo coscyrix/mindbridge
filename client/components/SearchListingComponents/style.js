@@ -5,7 +5,7 @@ export const SearchListingWrapper = styled.div`
   /* background-color: #f8f9fa; */
 
   @media (max-width: 768px) {
-    padding: 20px 16px;
+    // padding: 20px 16px;
   }
   .select-input {
     border: none;

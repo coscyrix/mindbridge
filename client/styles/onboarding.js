@@ -218,7 +218,7 @@ export const StepContent = styled.div`
   // width: 100vw;
   // max-width: 1000px;
   margin: 0 auto;
-  padding: 0px 24px;
+  // padding: 0px 24px;
 
   h2 {
     font-size: clamp(20px, 5vw, 26px);

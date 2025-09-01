@@ -28,6 +28,8 @@ import axios from "axios";
 import { TREATMENT_TARGET } from "../utils/constants";
 import Spinner from "../components/common/Spinner";
 import ApiConfig from "../config/apiConfig";
+import { FaRegFilePdf } from "react-icons/fa";
+import { CiCircleRemove } from "react-icons/ci";
 
 const StepIndicator = styled.div`
   display: flex;
@@ -99,7 +101,7 @@ const StepIndicator = styled.div`
 const ButtonContainer = styled.div`
   display: flex;
   justify-content: space-evenly;
-  margin: 0px 64px;
+  // margin: 0px 64px;
   gap: 20px;
   button {
     min-width: 120px;
@@ -152,48 +154,115 @@ const ProfilePictureUpload = styled.div`
 `;
 
 const DocumentUpload = styled.div`
-  margin-top: 24px;
-
-  .document-list {
-    margin-top: 16px;
+  .document-slot {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border: 1px solid #e0e0e0;
+    padding: 1rem;
+    border-radius: 12px;
+    background: #fafafa;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
   }
 
-  .document-item {
+  .document-slot:hover {
+    border-color: #007bff;
+    background: #f5f9ff;
+  }
+
+  .upload-dropzone {
+    border: 2px dashed #bbb;
+    padding: 2rem;
+    text-align: center;
+    border-radius: 12px;
+    background: #fdfdfd;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .upload-dropzone:hover {
+    border-color: #007bff;
+    background: #eef6ff;
+  }
+  .add-more-documents {
+    margin-top: 1rem;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .upload-label {
+    color: blue;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .upload-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .file-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    margin-bottom: 8px;
+    gap: 1rem;
+  }
 
-    .document-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+  .file-preview {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f0f0f0;
+    flex-shrink: 0;
+  }
 
-      .document-icon {
-        font-size: 24px;
-        color: #666;
-      }
+  .preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 
-      .document-details {
-        .document-name {
-          font-weight: 500;
-          margin-bottom: 4px;
-        }
+  .pdf-preview {
+    font-size: 2rem;
+    color: #d9534f;
+  }
 
-        .document-type {
-          font-size: 14px;
-          color: #666;
-        }
-      }
-    }
+  .file-meta {
+    display: flex;
+    flex-direction: column;
+  }
 
-    .document-actions {
-      display: flex;
-      gap: 8px;
-    }
+  .file-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+
+  .file-size {
+    font-size: 0.8rem;
+    color: #888;
+  }
+
+  .document-details {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .document-details .document-name,
+  .document-details .document-expiry {
+    flex: 1;
+  }
+
+  .document-actions {
+    margin-top: 0.5rem;
+    text-align: right;
   }
 `;
 
@@ -473,6 +542,7 @@ const SignUp = () => {
                 await CommonServices.uploadOnboardingDocuments(formData);
                 return true;
               } catch (error) {
+                toast.error(error?.message);
                 console.error(`Error uploading document ${index + 1}:`, error);
                 return false;
               }
@@ -1120,101 +1190,144 @@ const SignUp = () => {
                 Upload any additional certifications, insurance documents, or
                 other relevant files.
               </p>
-              <div className="document-list">
-                {documentFiles.map((file, index) => (
-                  <div key={index} className="document-item">
-                    <div className="document-info">
+              {documentFiles.map((file, index) => (
+                <div key={index} className="document-slot">
+                  {!file && (
+                    <div
+                      className="upload-dropzone"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (e.dataTransfer.files.length > 0) {
+                          handleDocumentFileChange(
+                            index,
+                            e.dataTransfer.files[0]
+                          );
+                        }
+                      }}
+                    >
+                      <input
+                        accept="image/*,.pdf"
+                        id={`document-upload-${index}`}
+                        type="file"
+                        style={{ display: "none" }}
+                        onChange={(e) =>
+                          e.target.files?.[0] &&
+                          handleDocumentFileChange(index, e.target.files[0])
+                        }
+                      />
                       <label
-                        htmlFor={`document-file-${index}`}
-                        className="document-upload-label"
-                        style={{ cursor: "pointer" }}
+                        htmlFor={`document-upload-${index}`}
+                        className="upload-label"
                       >
-                        {file ? (
-                          <span style={{ fontSize: 14, color: "#2196F3" }}>
-                            {file.name}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: 24, color: "#666" }}>
-                            📎
-                          </span>
-                        )}
-                        <input
-                          id={`document-file-${index}`}
-                          type="file"
-                          accept="image/*,application/pdf"
-                          style={{ display: "none" }}
-                          onChange={(e) =>
-                            handleDocumentFileChange(index, e.target.files[0])
-                          }
-                        />
+                        <span className="upload-icon">⬆️</span>
+                        <p>
+                          Drag and Drop here
+                          <br />
+                          or <span className="browse-link">Browse files</span>
+                        </p>
                       </label>
-                      <div className="document-details">
-                        <div className="document-name">
-                          <Controller
-                            name={`documentNames.${index}`}
-                            control={methods.control}
-                            rules={{ required: "Document name is required" }}
-                            render={({ field, fieldState: { error } }) => (
-                              <CustomInputField
-                                disabled={
-                                  documentFiles[index]?.id ? true : false // for now disabling this in if client need to update or edit enable both felids
-                                }
-                                {...field}
-                                label="Document Name"
-                                required
-                                customClass="document-name-input"
-                                placeholder="Enter document name"
-                                error={error?.message}
-                                onChange={(e) =>
-                                  handleDocumentNameChange(
-                                    index,
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            )}
-                          />
-                        </div>
-                        <div className="document-type">
-                          <Controller
-                            name={`documentExpiryDates.${index}`}
-                            control={methods.control}
-                            disabled={documentFiles[index]?.id ? true : false}
-                            rules={{
-                              required: "Document expiry date is required",
-                            }}
-                            render={({ field, fieldState: { error } }) => (
-                              <CustomInputField
-                                {...field}
-                                label="Expiry Date"
-                                required
-                                customClass="document-expiry-input"
-                                placeholder="DD-MM-YYYY"
-                                error={error?.message}
-                                onChange={(e) =>
-                                  handleDocumentExpiryChange(
-                                    index,
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            )}
-                          />
-                        </div>
-                      </div>
                     </div>
-                    <div className="document-actions">
-                      <CustomButton
-                        title="Delete"
-                        type="button"
-                        onClick={() => handleDeleteDocument(index)}
-                        className="secondary-button"
+                  )}
+                  {file && (
+                    <div className="file-item">
+                      <div className="file-preview">
+                        {file?.type?.startsWith("image/") ||
+                        file?.base64?.startsWith("data:image") ? (
+                          <img
+                            src={
+                              file.base64
+                                ? file.base64
+                                : URL.createObjectURL(file)
+                            }
+                            alt={file.name || "document"}
+                            className="preview-image"
+                            onLoad={(e) => {
+                              if (file instanceof File) {
+                                URL.revokeObjectURL(e.currentTarget.src);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <FaRegFilePdf color="red" />
+                        )}
+                      </div>
+
+                      <div className="file-meta">
+                        <p className="file-name">{file.name}</p>
+                      </div>
+                      {file instanceof File && (
+                        <CiCircleRemove
+                        size={30}
+                          color="red"
+                          onClick={() => {
+                            const updatedFiles = [...documentFiles];
+                            updatedFiles[index] = null;
+                            setDocumentFiles(updatedFiles);
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  <div className="document-details">
+                    <div className="document-name">
+                      <Controller
+                        name={`documentNames.${index}`}
+                        control={methods.control}
+                        rules={{ required: "Document name is required" }}
+                        render={({ field, fieldState: { error } }) => (
+                          <CustomInputField
+                            disabled={documentFiles[index]?.id ? true : false}
+                            {...field}
+                            label="Document Name"
+                            required
+                            customClass="document-name-input"
+                            placeholder="Enter document name"
+                            error={error?.message}
+                            onChange={(e) =>
+                              handleDocumentNameChange(index, e.target.value)
+                            }
+                          />
+                        )}
+                      />
+                    </div>
+
+                    <div className="document-expiry">
+                      <Controller
+                        disabled={documentFiles[index]?.id ? true : false}
+                        name={`documentExpiryDates.${index}`}
+                        control={methods.control}
+                        rules={{ required: "Document expiry date is required" }}
+                        render={({ field, fieldState: { error } }) => (
+                          <CustomInputField
+                            {...field}
+                            label="Expiry Date"
+                            required
+                            customClass="document-expiry-input"
+                            placeholder="DD-MM-YYYY"
+                            error={error?.message}
+                            onChange={(e) =>
+                              handleDocumentExpiryChange(index, e.target.value)
+                            }
+                          />
+                        )}
                       />
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="add-more-documents skip-add-more-documents">
+
+                  <div className="document-actions">
+                    <CustomButton
+                      title="Delete"
+                      type="button"
+                      onClick={() => handleDeleteDocument(index)}
+                      className="secondary-button"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              <div className="add-more-documents">
                 <CustomButton
                   title="Add More Documents"
                   type="button"
@@ -1468,6 +1581,7 @@ const SignUp = () => {
 
         .add-more-documents {
           margin-top: 1rem;
+          margin-bottom: 10px;
           text-align: center;
         }
 
