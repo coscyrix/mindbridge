@@ -108,6 +108,21 @@ export default class InvoiceService {
       // The model will handle filtering by tenant_id only
     }
 
+    // Set current month start and end dates if not provided
+    if (!data.start_dte && !data.end_dte) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      
+      // First day of current month
+      data.start_dte = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
+      
+      // Last day of current month
+      data.end_dte = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+      
+      console.log('Auto-setting dates - start_dte:', data.start_dte, 'end_dte:', data.end_dte);
+    }
+
     console.log(
       '////////////////////////////////////////////////////////////////////////////////',
     );
