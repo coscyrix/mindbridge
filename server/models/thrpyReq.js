@@ -1187,6 +1187,46 @@ export default class ThrpyReq {
         }
       }
 
+      // Add fee split management data to each therapy request
+      if (rec && Array.isArray(rec)) {
+        for (const thrpyReq of rec) {
+          try {
+            // Import and instantiate FeeSplitManagement model
+            const FeeSplitManagement = (await import('./feeSplitManagement.js')).default;
+            const feeSplitManagement = new FeeSplitManagement();
+            
+            // Get fee split configuration for this tenant and specific counselor only
+            const feeSplitConfig = await feeSplitManagement.getFeeSplitConfigurationForCounselor(
+              thrpyReq.tenant_id, 
+              thrpyReq.counselor_id
+            );
+            
+            if (!feeSplitConfig.error) {
+              thrpyReq.fee_split_management = feeSplitConfig;
+            } else {
+              // If there's an error, provide default fee split configuration
+              thrpyReq.fee_split_management = {
+                is_fee_split_enabled: false,
+                tenant_share_percentage: 0,
+                counselor_share_percentage: 100,
+                counselor_user_id: thrpyReq.counselor_id,
+                counselor_info: null
+              };
+            }
+          } catch (feeSplitError) {
+            console.error('Error fetching fee split management:', feeSplitError);
+            // Provide default fee split configuration on error
+            thrpyReq.fee_split_management = {
+              is_fee_split_enabled: false,
+              tenant_share_percentage: 0,
+              counselor_share_percentage: 100,
+              counselor_user_id: thrpyReq.counselor_id,
+              counselor_info: null
+            };
+          }
+        }
+      }
+
       if (!rec) {
         logger.error('Error getting therapy request');
         return { message: 'Error getting therapy request', error: -1 };

@@ -34,6 +34,7 @@ function ClientDetails() {
   const [activeData, setActiveData] = useState(null);
   const [note, setNote] = useState("");
   const [filterText, setFilterText] = useState("");
+  const [columns, setColumns] = useState([]);
   const router = useRouter();
   const { id } = router.query;
   const actionDropdownRef = useRef(null);
@@ -60,15 +61,33 @@ function ClientDetails() {
     );
   };
 
-  const columns = CLIENT_SESSION_LIST_DATA_BY_ID(
-    handleCellClick,
-    handleEdit,
-    handleDelete,
-    actionDropdownRef
-  );
-  const [visibleColumns, setVisibleColumns] = useState(
-    columns?.map((col) => ({ ...col, omit: false }))
-  );
+  console.log(clientDetails?.fee_split_management,"clientDetails?.fee_split_management22");
+
+  // Update columns when clientDetails changes
+  useEffect(() => {
+    if (clientDetails) {
+      console.log("clientDetails updated:", clientDetails);
+      console.log("fee_split_management:", clientDetails?.fee_split_management);
+      
+      const updatedColumns = CLIENT_SESSION_LIST_DATA_BY_ID(
+        handleCellClick,
+        handleEdit,
+        handleDelete,
+        actionDropdownRef,
+        clientDetails?.fee_split_management
+      );
+      setColumns(updatedColumns);
+    }
+  }, [clientDetails]);
+
+  // Update visibleColumns when columns change
+  useEffect(() => {
+    if (columns.length > 0) {
+      setVisibleColumns(columns.map((col) => ({ ...col, omit: false })));
+    }
+  }, [columns]);
+
+  const [visibleColumns, setVisibleColumns] = useState([]);
 
   const filteredItems = activeData?.filter((item) => {
     return item.serviceDesc

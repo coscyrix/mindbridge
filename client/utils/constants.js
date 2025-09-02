@@ -800,13 +800,13 @@ export const SERVICES_TABLE_COLUMNS = (
   },
   {
     name: "Tax",
-    selector: (row) => `$${Number(row.gst).toFixed(2)}`,
+    selector: (row) => `$${Number(row.gst).toFixed(4)}`,
     sortable: true,
     selectorId: "gst",
   },
   {
     name: "Total Invoice + Tax",
-    selector: (row) => `$${Number(row.total_invoice).toFixed(2)}`,
+    selector: (row) => `$${Number(row.total_invoice).toFixed(4)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
@@ -1074,7 +1074,8 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
   handleCellClick,
   handleEdit,
   handleDelete,
-  dropdownRef
+  dropdownRef,
+  feeSplitData = null
 ) => [
   {
     name: "ID",
@@ -1096,19 +1097,32 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
   {
     name: "Total Amount",
     selector: (row) =>
-      `$${Number(row.session_price + row.session_taxes).toFixed(2)}`,
+      `$${Number(row.session_price).toFixed(4)}`,
   },
   {
     name: "Tax",
-    selector: (row) => `$${Number(row.session_taxes).toFixed(2)}`,
+    selector: (row) => `$${Number(row.session_taxes).toFixed(4)}`,
   },
   {
     name: "Amt. to Counselor",
-    selector: (row) => `$${Number(row.session_counselor_amt).toFixed(2)}`,
+    selector: (row) => {
+      console.log("feeSplitData",feeSplitData);
+      if (feeSplitData && feeSplitData.is_fee_split_enabled) {
+        const counselorAmount = (Number(row.session_price || 0) * feeSplitData.counselor_share_percentage) / 100;
+        return `$${counselorAmount.toFixed(4)}`;
+      } else {
+        // Default: full amount to counselor
+        return `$${Number(row.session_price || 0).toFixed(4)}`;
+      }
+    },
   },
   {
     name: "Amt. to Admin",
-    selector: (row) => `$${Number(row.session_system_amt).toFixed(2)}`,
+    selector: (row) => {      
+        // Default: system amount
+        return `$${Number(row.session_system_amt || 0).toFixed(4)}`;
+      
+    },
   },
   {
     name: "",
@@ -1469,7 +1483,7 @@ export const IPF_FORM_QUESTIONS = {
     },
     {
       id: "item4",
-      text: "I showed interest in my spouse or partner’s activities.",
+      text: "I showed interest in my spouse or partner's activities.",
     },
     {
       id: "item5",
@@ -1636,7 +1650,7 @@ export const IPF_FORM_QUESTIONS = {
     },
     {
       id: "item49",
-      text: "I was interested in my children’s activities.",
+      text: "I was interested in my children's activities.",
     },
     {
       id: "item50",
@@ -1674,7 +1688,7 @@ export const IPF_FORM_QUESTIONS = {
     { id: "item60", text: "I arrived on time for my classes." },
     {
       id: "item61",
-      text: "I had trouble being supportive of my classmates’ achievements.",
+      text: "I had trouble being supportive of my classmates' achievements.",
     },
     { id: "item62", text: "I turned in assignments late." },
     {
@@ -1723,7 +1737,7 @@ export const IPF_FORM_QUESTIONS = {
     },
     {
       id: "item75",
-      text: "I had trouble managing my medical care (for example, medications, doctors’ appointments, physical therapy, etc).",
+      text: "I had trouble managing my medical care (for example, medications, doctors' appointments, physical therapy, etc).",
     },
     { id: "item76", text: "I ate healthy and nutritious meals." },
     {

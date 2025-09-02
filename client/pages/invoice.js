@@ -248,24 +248,24 @@ const Invoice = () => {
     },
     {
       name: "Total Amount",
-      selector: (row) => `$${Number(row.session_price).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_price).toFixed(4)}`,
       selectorId: "session_price",
     },
     {
       name: "Tax",
       selector: (row) =>
-        row.session_taxes ? `$${Number(row.session_taxes).toFixed(2)}` : "NA",
+        row.session_taxes ? `$${Number(row.session_taxes).toFixed(4)}` : "NA",
       selectorId: "session_taxes",
     },
     {
       name: "Amt. to Counselor",
-      selector: (row) => `$${Number(row.session_counselor_amt).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_price * (row.fee_split_management.counselor_share_percentage / 100)).toFixed(4)}`,
       selectorId: "session_counselor_amt",
       minWidth: "150px",
     },
     {
       name: "Amt. to Admin",
-      selector: (row) => `$${Number(row.session_system_amt).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_system_amt).toFixed(4)}`,
       selectorId: "session_system_amt",
     },
   ];

@@ -17,9 +17,9 @@ export default class Report {
       const formMode = process.env.FORM_MODE || 'auto';
       
       let query;
+      let consentFormsQuery;
 
       console.log('formMode', formMode);
-      
       
       if (formMode === 'treatment_target') {
         // Treatment target mode: query treatment target session forms
@@ -60,6 +60,44 @@ export default class Report {
             'tt.counselor_id',
             'tt.req_id',
             'tt.tenant_id',
+          ])
+          .orderBy('date_sent', 'desc');
+
+        // Also get consent forms from v_user_form view for treatment target mode
+        consentFormsQuery = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('v_user_form')
+          .select(
+            'client_first_name',
+            'client_last_name',
+            'client_clam_num',
+            'client_id',
+            'counselor_id',
+            'form_id',
+            'form_cde',
+            'thrpy_req_id',
+            'tenant_id',
+            db.raw('MAX(updated_at) as date_sent'),
+            db.raw(`
+                COALESCE(
+                  MAX(due_date), 
+                  DATE_ADD(MAX(updated_at), INTERVAL 7 DAY)
+                ) as due_date
+              `),
+          )
+          .where('is_sent', 1)
+          .andWhere('client_status_yn', 'y')
+          .andWhere('form_cde', 'CONSENT') // Only get consent forms
+          .groupBy([
+            'client_first_name',
+            'client_last_name',
+            'client_clam_num',
+            'form_id',
+            'form_cde',
+            'client_id',
+            'counselor_id',
+            'thrpy_req_id',
+            'tenant_id',
           ])
           .orderBy('date_sent', 'desc');
       } else {
@@ -170,6 +208,22 @@ export default class Report {
             query.where('counselor_id', data.counselor_id);
           }
         }
+        
+        if (data.start_date) {
+          if (formMode === 'treatment_target') {
+            query.andWhere('tt.intake_date', '>=', data.start_date);
+          } else {
+            query.andWhere('intake_date', '>=', data.start_date);
+          }
+        }
+
+        if (data.end_date) {
+          if (formMode === 'treatment_target') {
+            query.andWhere('tt.intake_date', '<=', data.end_date);
+          } else {
+            query.andWhere('intake_date', '<=', data.end_date);
+          }
+        }
       }
 
       // Handle other role_ids (like role_id === 4) - always include tenant_id when counselor_id is provided
@@ -183,10 +237,8 @@ export default class Report {
           } else {
             query.where('tenant_id', Number(tenantId[0].tenant_id));
           }
-        } else {
-          // If we can't get tenant_id for the counselor, return an error
-          return { message: 'Invalid counselor_id or counselor not found', error: -1 };
         }
+        
         if (formMode === 'treatment_target') {
           query.where('tt.counselor_id', data.counselor_id);
         } else {
@@ -194,9 +246,31 @@ export default class Report {
         }
       }
 
-      const rec = await query;
+      // Apply tenant filtering to consent forms query if role_id is 3 and tenant_id is provided
+      if (data.role_id == 3 && data.tenant_id && consentFormsQuery) {
+        consentFormsQuery.where('tenant_id', Number(data.tenant_id));
+      }
 
-      return rec;
+      // Execute queries
+      const [rec, consentForms] = await Promise.all([
+        query,
+        consentFormsQuery ? consentFormsQuery : Promise.resolve([])
+      ]);
+
+      // Combine results if we have both treatment target forms and consent forms
+      let combinedResults = [...rec];
+      if (consentForms && consentForms.length > 0) {
+        combinedResults = [...combinedResults, ...consentForms];
+      }
+
+      // Sort combined results by date_sent
+      combinedResults.sort((a, b) => new Date(b.date_sent) - new Date(a.date_sent));
+
+      if (!combinedResults || combinedResults.length === 0) {
+        return { message: 'No forms found', error: -1 };
+      }
+
+      return combinedResults;
     } catch (error) {
       console.error(error);
       logger.error(error);
@@ -324,7 +398,6 @@ export default class Report {
       query.orderBy('intake_date');
 
       const rec = await query;
-
       return rec;
     } catch (error) {
       console.error(error);

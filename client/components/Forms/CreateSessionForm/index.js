@@ -80,6 +80,7 @@ function CreateSessionForm({
   const [managerSplit, setManagerSplit] = useState(null);
   const [isDiscard, setIsDiscard] = useState(false);
   const [isValueChanged, setIsValueChanged] = useState(false);
+  const [feeSplitDetails, setFeeSplitDetails] = useState(null);
   // to show verification on Notes Page
   let match =
     counselorConfiguration?.find(
@@ -205,6 +206,7 @@ function CreateSessionForm({
       );
       if (response?.status === 200) {
         const scheduledSession = response?.data[0]?.session_obj;
+        setFeeSplitDetails(response?.data[0]?.fee_split_management);
         const result =
           scheduledSession &&
           scheduledSession?.some(
@@ -467,13 +469,13 @@ function CreateSessionForm({
     },
     {
       name: "Total Amt.",
-      selector: (row) => `$${Number(row.session_price).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_price).toFixed(4)}`,
       selectorId: "session_price",
       maxWidth: "100px",
     },
     {
       name: "Tax",
-      selector: (row) => `$${Number(row.session_taxes).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_taxes).toFixed(4)}`,
       selectorId: "session_gst",
       maxWidth: "70px",
     },
@@ -487,11 +489,12 @@ function CreateSessionForm({
             )?.tenant_share_percentage ?? managerSplit?.tenant_share_percentage;
         }
         if (userObj?.role_id === 3) {
-          return `$${Number(row.session_system_amt || 0).toFixed(2)}`;
+          
+          return `$${Number(row.session_price * (feeSplitDetails.counselor_share_percentage / 100) || 0).toFixed(4)}`;
         } else {
           const shareAmount =
             (Number(row.session_price || 0) * Number(match || 0)) / 100;
-          return `$${shareAmount.toFixed(2)}`;
+          return `$${shareAmount.toFixed(4)}`;
         }
       },
       selectorId: "session_counselor_amt",
@@ -508,7 +511,7 @@ function CreateSessionForm({
         }
 
         return userObj?.role_id === 3
-          ? `$${Number(row.session_system_amt).toFixed(2)}`
+          ? `$${Number(row.session_system_amt).toFixed(4)}`
           : `${match ?? 0}%`;
       },
       selectorId: "session_system_amt",

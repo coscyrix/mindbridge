@@ -691,13 +691,13 @@ export default class Invoice {
               counselor_share_percentage: feeSplitConfig.counselor_share_percentage,
               system_percentage: systemPercentage,
               calculation_method: "counselor_first_then_system_then_tenant_remaining_tax_inclusive",
-                              tax_information: {
-                  total_tax_amount: totalTaxes.toFixed(4),
-                  total_pre_tax_amount: totalPreTaxAmount.toFixed(4),
-                  average_tax_percentage: avgTaxPercentage.toFixed(2),
-                  calculation_base: "tax_inclusive",
-                  note: "Tax rates may vary by tenant. Individual session records contain tenant-specific tax amounts. System and counselor amounts are calculated from total amount (tax-inclusive)."
-                }
+              tax_information: {
+                total_tax_amount: totalTaxes.toFixed(4),
+                total_pre_tax_amount: totalPreTaxAmount.toFixed(4),
+                average_tax_percentage: avgTaxPercentage.toFixed(2),
+                calculation_base: "tax_inclusive",
+                note: "Tax rates may vary by tenant. Individual session records contain tenant-specific tax amounts. System and counselor amounts are calculated from total amount (tax-inclusive)."
+              }
             };
           } else {
             // If no user mapping found, return default configuration
@@ -715,6 +715,42 @@ export default class Invoice {
             tenant_share_percentage: 0,
             counselor_share_percentage: 100
           };
+        }
+      }
+
+      // Add fee split management data to each individual record in rec_list
+      if (rec && Array.isArray(rec)) {
+        for (const session of rec) {
+          try {
+            // Get fee split configuration for this specific session's counselor
+            const feeSplitConfig = await this.feeSplitManagement.getFeeSplitConfigurationForCounselor(
+              session.tenant_id, 
+              session.counselor_id
+            );
+            
+            if (!feeSplitConfig.error) {
+              session.fee_split_management = feeSplitConfig;
+            } else {
+              // If there's an error, provide default fee split configuration
+              session.fee_split_management = {
+                is_fee_split_enabled: false,
+                tenant_share_percentage: 0,
+                counselor_share_percentage: 100,
+                counselor_user_id: session.counselor_id,
+                counselor_info: null
+              };
+            }
+          } catch (feeSplitError) {
+            console.error('Error fetching fee split management for session:', feeSplitError);
+            // Provide default fee split configuration on error
+            session.fee_split_management = {
+              is_fee_split_enabled: false,
+              tenant_share_percentage: 0,
+              counselor_share_percentage: 100,
+              counselor_user_id: session.counselor_id,
+              counselor_info: null
+            };
+          }
         }
       }
 
