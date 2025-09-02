@@ -78,6 +78,8 @@ function CreateSessionForm({
   const [additionalSessions, setAddittionalSessions] = useState([]);
   const [counselorSplit, setCounselorSplit] = useState(null);
   const [managerSplit, setManagerSplit] = useState(null);
+  const [isDiscard, setIsDiscard] = useState(false);
+  const [isValueChanged, setIsValueChanged] = useState(false);
   // to show verification on Notes Page
   let match =
     counselorConfiguration?.find(
@@ -104,13 +106,16 @@ function CreateSessionForm({
   const router = useRouter();
   const { forms } = useReferenceContext();
 
-  const clientsDropdown = clients?.map((client) => ({
-    label: `${client.user_first_name} ${client.user_last_name}`,
-    value: client.user_profile_id,
-    serialNumber: client.clam_num || "N/A",
-    has_schedule: client.has_schedule,
-    user_target_outcome: client.user_target_outcome,
-  }));
+  const clientsDropdown = clients
+    ?.filter((client) => !client?.has_schedule)
+    .map((client) => ({
+      label: `${client.user_first_name} ${client.user_last_name}`,
+      value: client.user_profile_id,
+      serialNumber: client.clam_num || "N/A",
+      has_schedule: client.has_schedule,
+      user_target_outcome: client.user_target_outcome,
+    }));
+
   const fetchAllSplit = async () => {
     try {
       // console.log("logging selected", selectTenantId);
@@ -475,16 +480,19 @@ function CreateSessionForm({
     {
       name: "Amt. to Counselor",
       selector: (row) => {
-        if (!match || match === undefined) {
+        if (match == null) {
           match =
             counselorSplit?.find(
               (item) => item?.counselor_info?.email === userObj?.email
             )?.tenant_share_percentage ?? managerSplit?.tenant_share_percentage;
         }
-
-        return userObj?.role_id === 3
-          ? `$${Number(row.session_system_amt).toFixed(2)}`
-          : `${Number((row.session_price * match) / 100).toFixed(2) ?? 0}%`;
+        if (userObj?.role_id === 3) {
+          return `$${Number(row.session_system_amt || 0).toFixed(2)}`;
+        } else {
+          const shareAmount =
+            (Number(row.session_price || 0) * Number(match || 0)) / 100;
+          return `$${shareAmount.toFixed(2)}`;
+        }
       },
       selectorId: "session_counselor_amt",
       maxWidth: "130px",
@@ -743,16 +751,20 @@ function CreateSessionForm({
           toast.success("Therapy request discarded!");
         }
       }
-      if (isClose) {
-        setIsOpen(false);
-      }
+      // if (isClose) {
+      //   setIsOpen(false);
+      // }
     } catch (error) {
       console.log("Error while discarding therapy request :", error);
       toast.error("Error while discarding therapy request.");
     } finally {
       setSessionTableData([]);
       setConfirmationModal(false);
-      setIsOpen(false);
+      console.log(isDiscard,"ios")
+      if (isDiscard) {
+        setIsOpen(false);
+      }
+
       setThrpyReqId(null);
       setLoader(null);
     }
@@ -971,6 +983,14 @@ function CreateSessionForm({
   const handleCloseWorkModal = () => {
     setIsWorkModalOpen(false);
   };
+  useEffect(() => {
+    if (scheduledSession) {
+      const addittionalSession = scheduledSession.filter(
+        (session) => session?.is_additional === 1
+      );
+      setAddittionalSessions(addittionalSession);
+    }
+  }, [scheduledSession, initialData]);
 
   return (
     <CreateSessionFormWrapper>
@@ -1098,7 +1118,7 @@ function CreateSessionForm({
                           onChange={(value) => {
                             field.onChange(value);
                             // setSessionTableData([]);
-                            if (sessionTableData.length > 0) {
+                            if (sessionTableData?.length > 0) {
                               setConfirmationModal(true);
                             }
                             setShowGeneratedSession(false);
@@ -1149,7 +1169,7 @@ function CreateSessionForm({
                             // setSessionTableData([]);
                             field.onChange(selectedOption);
                             setShowGeneratedSession(false);
-                            if (sessionTableData.length > 0) {
+                            if (sessionTableData?.length > 0) {
                               setConfirmationModal(true);
                             }
                           }}
@@ -1178,7 +1198,7 @@ function CreateSessionForm({
                             field.onChange(value);
                             setShowGeneratedSession(false);
                             // setSessionTableData([]);
-                            if (sessionTableData.length > 0) {
+                            if (sessionTableData?.length > 0) {
                               setConfirmationModal(true);
                             }
                           }}
@@ -1252,7 +1272,9 @@ function CreateSessionForm({
                   columns={sessionTableColumns}
                   data={
                     initialData
-                      ? scheduledSession
+                      ? scheduledSession.filter((data) => {
+                          return data?.is_additional === 0;
+                        })
                       : sessionTableData
                       ? sessionTableData?.filter((data) => {
                           return data?.is_additional === 0;
@@ -1396,7 +1418,10 @@ function CreateSessionForm({
       </CustomModal>
       <ConfirmationModal
         isOpen={confirmationModal}
-        onClose={() => setConfirmationModal(false)}
+        onClose={() => {
+          setIsDiscard(true);
+          setConfirmationModal(false);
+        }}
         affirmativeAction="Yes"
         discardAction="No"
         content="Are you sure you want to discard the changes?"
