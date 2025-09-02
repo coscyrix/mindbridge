@@ -319,30 +319,39 @@ export default class Service {
     try {
       let query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select(
+          'service.*',
+          'tenant.tenant_id as tenant_tenant_id',
+          'tenant.tenant_name',
+          'tenant.tenant_generated_id',
+          'tenant.admin_fee',
+          'tenant.tax_percent',
+        )
         .from('service')
-        .where('status_yn', 1);
+        .leftJoin('tenant', 'service.tenant_id', 'tenant.tenant_generated_id')
+        .where('service.status_yn', 1);
 
         console.log('data', data);
         
 
       if (data.service_id) {
         if (Array.isArray(data.service_id)) {
-          query = query.whereIn('service_id', data.service_id);
+          query = query.whereIn('service.service_id', data.service_id);
         } else {
-          query = query.where('service_id', data.service_id);
+          query = query.where('service.service_id', data.service_id);
         }
       }
 
       if (data.is_report) {
-        query = query.andWhere('is_report', data.is_report);
+        query = query.andWhere('service.is_report', data.is_report);
       }
 
       if (data.service_code) {
-        query = query.andWhere('service_code', data.service_code);
+        query = query.andWhere('service.service_code', data.service_code);
       }
 
       if (data.tenant_id) {
-        query = query.andWhere('tenant_id', data.tenant_id);
+        query = query.andWhere('service.tenant_id', data.tenant_id);
       }
 
       console.log('query', query.toQuery());
@@ -355,7 +364,32 @@ export default class Service {
         return { message: 'Service not found', error: -1 };
       }
 
-      return { message: 'Service retrieved successfully', rec };
+      // Transform the data to include tenant object
+      const transformedRec = rec.map(service => {
+        const {
+          tenant_tenant_id,
+          tenant_name,
+          tenant_generated_id,
+          admin_fee,
+          tax_percent,
+          tenant_status_yn,
+          ...serviceData
+        } = service;
+
+        return {
+          ...serviceData,
+          tenant: {
+            tenant_id: tenant_tenant_id,
+            tenant_name,
+            tenant_generated_id,
+            admin_fee,
+            tax_percent,
+            status_yn: tenant_status_yn
+          }
+        };
+      });
+
+      return { message: 'Service retrieved successfully', rec: transformedRec };
     } catch (error) {
       logger.error(error);
       console.error(error);

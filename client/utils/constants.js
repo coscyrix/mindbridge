@@ -793,6 +793,13 @@ export const SERVICES_TABLE_COLUMNS = (
     selectorId: "service_code",
   },
   {
+    name: "Tenant",
+    selector: (row) => row.tenant?.tenant_name || 'N/A',
+    sortable: true,
+    selectorId: "tenant_name",
+    width: "150px",
+  },
+  {
     name: "Total Invoice",
     selector: (row) => `$${Number(row.total_invoice) - Number(row?.gst)}`,
     sortable: true,
@@ -1469,7 +1476,7 @@ export const IPF_FORM_QUESTIONS = {
     },
     {
       id: "item4",
-      text: "I showed interest in my spouse or partner’s activities.",
+      text: "I showed interest in my spouse or partner's activities.",
     },
     {
       id: "item5",
@@ -1636,7 +1643,7 @@ export const IPF_FORM_QUESTIONS = {
     },
     {
       id: "item49",
-      text: "I was interested in my children’s activities.",
+      text: "I was interested in my children's activities.",
     },
     {
       id: "item50",
@@ -1674,7 +1681,7 @@ export const IPF_FORM_QUESTIONS = {
     { id: "item60", text: "I arrived on time for my classes." },
     {
       id: "item61",
-      text: "I had trouble being supportive of my classmates’ achievements.",
+      text: "I had trouble being supportive of my classmates' achievements.",
     },
     { id: "item62", text: "I turned in assignments late." },
     {
@@ -1723,7 +1730,7 @@ export const IPF_FORM_QUESTIONS = {
     },
     {
       id: "item75",
-      text: "I had trouble managing my medical care (for example, medications, doctors’ appointments, physical therapy, etc).",
+      text: "I had trouble managing my medical care (for example, medications, doctors' appointments, physical therapy, etc).",
     },
     { id: "item76", text: "I ate healthy and nutritious meals." },
     {
