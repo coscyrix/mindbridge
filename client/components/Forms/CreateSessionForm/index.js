@@ -489,8 +489,9 @@ function CreateSessionForm({
             )?.tenant_share_percentage ?? managerSplit?.tenant_share_percentage;
         }
         if (userObj?.role_id === 3) {
+          console.log('feeSplitDetails?.counselor_share_percentage',initialData?.fee_split_management?.counselor_share_percentage);
           
-          return `$${Number(row.session_price * (feeSplitDetails?.counselor_share_percentage / 100) || 0).toFixed(4)}`;
+          return `$${Number(row.session_price * (initialData?.fee_split_management?.counselor_share_percentage / 100) || 0).toFixed(4)}`;
         } else {
           const shareAmount =
             (Number(row.session_price || 0) * (initialData?.fee_split_management?.counselor_share_percentage / 100) || 0)
