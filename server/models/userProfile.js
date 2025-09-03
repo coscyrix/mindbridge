@@ -440,7 +440,14 @@ export default class UserProfile {
     try {
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select('v_user_profile.*', 't.tenant_generated_id')
+        .select(
+          'v_user_profile.*',
+          't.tenant_id as tenant_tenant_id',
+          't.tenant_generated_id',
+          't.tenant_name',
+          't.admin_fee',
+          't.tax_percent'
+        )
         .from('v_user_profile')
         .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id');
 
@@ -504,7 +511,34 @@ export default class UserProfile {
         return { message: 'User profile not found', rec: [] };
       }
 
-      return { message: 'User profile found', rec };
+      // Transform the data to include a tenant object
+      const transformedRec = rec.map(profile => {
+        const {
+          tenant_tenant_id,
+          tenant_generated_id,
+          tenant_name,
+          admin_fee,
+          tax_percent,
+          ...userProfileData
+        } = profile;
+
+        // Create tenant object
+        const tenant = {
+          tenant_id: tenant_tenant_id,
+          tenant_generated_id,
+          tenant_name,
+          admin_fee,
+          tax_percent
+        };
+
+        // Return user profile with tenant object
+        return {
+          ...userProfileData,
+          tenant
+        };
+      });
+
+      return { message: 'User profile found', rec: transformedRec };
     } catch (error) {
       console.log('error', error);
       return { message: 'Error getting user profile', error: -1, rec: [] };
