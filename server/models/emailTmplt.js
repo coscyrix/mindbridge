@@ -92,6 +92,17 @@ export default class EmailTmplt {
         return { message: 'User profile not found', error: -1 };
       }
 
+
+
+      // Check if we should send automatic attendance report after every 4 sessions
+      await this.checkAndSendAutomaticAttendanceReport(
+        recSession[0].thrpy_req_id,
+        data.session_id,
+        recThrpy[0],
+        recUser[0],
+        tenantId
+      );
+
       for (const session of recSession) {
         // Get form mode from environment variable
         const formMode = process.env.FORM_MODE || 'auto';
@@ -562,4 +573,124 @@ export default class EmailTmplt {
       return { message: 'Something went wrong' };
     }
   }
+
+  //////////////////////////////////////////
+
+  /**
+   * Check if attendance report should be sent after every 4 sessions and send it automatically
+   * @param {number} thrpy_req_id - Therapy request ID
+   * @param {number} session_id - Current session ID
+   * @param {Object} thrpyReq - Therapy request object
+   * @param {Object} userProfile - User profile object
+   * @param {Object} tenantId - Tenant ID object
+   */
+  async checkAndSendAutomaticAttendanceReport(thrpy_req_id, session_id, thrpyReq, userProfile, tenantId) {
+    try {
+      // Get all completed sessions for this therapy request (excluding report sessions)
+      const sessions = thrpyReq.session_obj || [];
+      const nonReportSessions = sessions.filter(session => 
+        session.is_report !== 1 && 
+        session.session_status === 'SHOW' || session.session_status === 'NO-SHOW'
+      );
+
+      // Check if we have a multiple of 4 completed sessions (4, 8, 12, 16, etc.)
+      if (nonReportSessions.length > 0 && nonReportSessions.length % 4 === 0) {
+        const milestone = nonReportSessions.length;
+        logger.info(`Sending automatic attendance report for therapy request ${thrpy_req_id} after ${milestone} sessions`);
+
+        // Check if we've already sent an attendance report for this milestone
+        const hasSentReport = await this.feedback.checkAttendanceFeedbackExists(thrpy_req_id, milestone);
+        
+        if (hasSentReport) {
+          logger.info(`Attendance report already sent for therapy request ${thrpy_req_id} at ${milestone} sessions`);
+          return;
+        }
+
+        // Generate and send attendance report
+        await this.generateAndSendAttendanceReport(
+          thrpy_req_id,
+          session_id,
+          thrpyReq,
+          userProfile,
+          tenantId
+        );
+      }
+    } catch (error) {
+      logger.error('Error in checkAndSendAutomaticAttendanceReport:', error);
+      // Don't fail the main function if attendance report fails
+    }
+  }
+
+
+
+  /**
+   * Generate and send attendance report
+   * @param {number} thrpy_req_id - Therapy request ID
+   * @param {number} session_id - Current session ID
+   * @param {Object} thrpyReq - Therapy request object
+   * @param {Object} userProfile - User profile object
+   * @param {Object} tenantId - Tenant ID object
+   */
+  async generateAndSendAttendanceReport(thrpy_req_id, session_id, thrpyReq, userProfile, tenantId) {
+    try {
+      const sessions = thrpyReq.session_obj || [];
+      const nonReportSessions = sessions.filter(session => session.is_report !== 1);
+      
+      // Count attended and cancelled sessions
+      const attendedSessions = nonReportSessions.filter(
+        session => session.session_status === 'SHOW'
+      ).length;
+      const cancelledSessions = nonReportSessions.filter(
+        session => session.session_status === 'NO-SHOW'
+      ).length;
+
+      const client_full_name = `${userProfile.user_first_name} ${userProfile.user_last_name}`;
+      const counselor_full_name = `${thrpyReq.counselor_first_name} ${thrpyReq.counselor_last_name}`;
+
+      // Generate attendance PDF
+      const attendancePDFTemplt = AttendancePDF(
+        counselor_full_name,
+        client_full_name,
+        userProfile.clam_num || userProfile.user_profile_id.toString(),
+        nonReportSessions.length,
+        attendedSessions,
+        cancelledSessions
+      );
+
+      const attendancePDF = await PDFGenerator(attendancePDFTemplt);
+
+      // Create attendance email
+      const attendanceEmail = attendanceSummaryEmail(
+        userProfile.email,
+        client_full_name,
+        attendancePDF
+      );
+
+      // Send email
+      const emailResult = await this.sendEmail.sendMail(attendanceEmail);
+
+      if (emailResult.error) {
+        logger.error('Failed to send automatic attendance report email:', emailResult.message);
+        return;
+      }
+
+      // Post attendance feedback to track that report was sent
+      await this.feedback.postATTENDANCEFeedback({
+        client_id: userProfile.user_profile_id,
+        session_id: session_id,
+        total_sessions: nonReportSessions.length,
+        total_attended_sessions: attendedSessions,
+        total_cancelled_sessions: cancelledSessions,
+        tenant_id: tenantId,
+        session_count: nonReportSessions.length // Mark this as the actual session milestone
+      });
+
+      logger.info(`Automatic attendance report sent successfully for therapy request: ${thrpy_req_id}`);
+
+    } catch (error) {
+      logger.error('Error generating and sending automatic attendance report:', error);
+    }
+  }
+
+
 }

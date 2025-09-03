@@ -1171,4 +1171,46 @@ export default class Feedback {
       return { message: 'Error creating feedback', error: -1 };
     }
   }
+
+  //////////////////////////////////////////
+
+  /**
+   * Check if attendance feedback already exists for a therapy request at a specific session count
+   * @param {number} thrpy_req_id - Therapy request ID
+   * @param {number} session_count - Number of sessions completed
+   * @returns {Promise<boolean>} - True if attendance feedback already exists
+   */
+  async checkAttendanceFeedbackExists(thrpy_req_id, session_count) {
+    try {
+      // Get all sessions for this therapy request
+      const sessions = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('session')
+        .select('session_id')
+        .where('thrpy_req_id', thrpy_req_id)
+        .where('status_yn', 1)
+        .where('is_report', 0) // Exclude report sessions
+        .orderBy('session_id', 'asc');
+
+      // Check if we have the required number of sessions
+      if (sessions.length < session_count) {
+        return false;
+      }
+
+      // Get the session at the specified count
+      const targetSession = sessions[session_count - 1];
+      
+      // Check if attendance feedback exists for this session
+      const existingFeedback = await this.getFeedbackById({
+        session_id: targetSession.session_id,
+        form_id: 24, // Attendance form ID
+      });
+
+      return existingFeedback && existingFeedback.length > 0;
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return false;
+    }
+  }
 }
