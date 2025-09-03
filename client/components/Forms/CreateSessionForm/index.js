@@ -493,7 +493,7 @@ function CreateSessionForm({
           return `$${Number(row.session_price * (feeSplitDetails.counselor_share_percentage / 100) || 0).toFixed(4)}`;
         } else {
           const shareAmount =
-            (Number(row.session_price || 0) * Number(match || 0)) / 100;
+            (Number(row.session_price || 0) * Number(feeSplitDetails.counselor_share_percentage || 0)) / 100;
           return `$${shareAmount.toFixed(4)}`;
         }
       },
