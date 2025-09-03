@@ -327,7 +327,10 @@ function ClientSession() {
         `${ApiConfig.homeworkUpload.fetchHomeworkUploadStatus}?tenant_id=${userObj?.tenant?.tenant_id}&feature_name=homework_upload_enabled`
       );
       if (response?.status == 200) {
-        setHomeWorkUpload(response?.data[0]?.feature_value);
+        if (response?.data[0]?.feature_value === "true") {
+          setHomeWorkUpload(true);
+        }
+
         toast.success(response.data?.message);
       }
     } catch (error) {
@@ -398,6 +401,7 @@ function ClientSession() {
       >
         <CreateSessionForm
           isHomeworkUpload={isHomeworkUpload}
+          fetchHomeWorkUploadStatus={fetchHomeWorkUploadStatus}
           setHomeWorkUpload={setHomeWorkUpload}
           isOpen={showFlyout}
           setIsOpen={setShowFlyout}
@@ -564,7 +568,9 @@ function ClientSession() {
                   summaryLoading ? (
                     <Skeleton width={120} height={40} />
                   ) : (
-                    `$${Number(summaryData?.sum_session_system_amt)?.toFixed(4)}`
+                    `$${Number(summaryData?.sum_session_system_amt)?.toFixed(
+                      4
+                    )}`
                   )
                 }
               />
@@ -576,7 +582,9 @@ function ClientSession() {
                     summaryLoading ? (
                       <Skeleton width={120} height={40} />
                     ) : (
-                     `$${Number(summaryData?.sum_session_system_amt)?.toFixed(4)}`
+                      `$${Number(summaryData?.sum_session_system_amt)?.toFixed(
+                        4
+                      )}`
                     )
                   }
                 />

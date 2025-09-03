@@ -138,8 +138,9 @@ function AssessmentResults({ assessmentResultsData }) {
       setGraphDataHeading("");
       setConsentFormData("");
       const response = await CommonServices.getFeedbackFormDetails({
-        form_id: row.form_id,
-        client_id: row.client_id,
+        // form_id: row.form_id,
+        // client_id: row.client_id,
+        feedback_id: row.feedback_id,
       });
       if (response.status === 200) {
         const { data } = response;

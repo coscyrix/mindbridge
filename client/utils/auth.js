@@ -22,6 +22,8 @@ export const login = async (credentials) => {
       loginToken = token;
       Cookies.set("user", JSON.stringify(usr));
       Cookies.set("email", credentials.email);
+       Cookies.set("accountVerified", true);
+       Cookies.set("token", loginToken);
       return response.data;
     } else {
       throw new Error("Login failed");
