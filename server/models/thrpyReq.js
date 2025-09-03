@@ -163,16 +163,27 @@ export default class ThrpyReq {
       
 
       // Get tenant-specific discharge service
-      const drService = await this.service.getServiceById({
-        service_code: process.env.DISCHARGE_SERVICE_CODE || 'DR',
-        tenant_id: tenantId[0].tenant_generated_id,
+      // First try to find by service_code 'DR' in the current tenant
+      let drService = await this.service.getServiceById({
+        service_code: 'DR',
+        tenant_id: data.tenant_id,
+        is_report: 1,
       });
+
+      // If not found, try to find by service_code 'DR' in the tenant_generated_id
+      if (!drService || !drService.rec || !drService.rec[0]) {
+        drService = await this.service.getServiceById({
+          service_code: 'DR',
+          tenant_id: tenantId[0].tenant_generated_id,
+          is_report: 1,
+        });
+      }
 
       console.log('drService', drService);
 
       if (!drService || !drService.rec || !drService.rec[0]) {
-        logger.error(`Discharge report service not found for service_code: ${process.env.DISCHARGE_SERVICE_CODE}`);
-        return { message: `Discharge report service not found for service_code: ${process.env.DISCHARGE_SERVICE_CODE}`, error: -1 };
+        logger.error(`Discharge report service not found for tenant_id: ${data.tenant_id}`);
+        return { message: `Discharge report service not found for tenant_id: ${data.tenant_id}`, error: -1 };
       }
 
       const drSvc = drService.rec[0];
@@ -328,46 +339,63 @@ export default class ThrpyReq {
             svc.svc_report_formula.position.includes(i + 1)
           ) {
             const reportIndex = svc.svc_report_formula.position.indexOf(i + 1);
-            const templateReportServiceId = svc.svc_report_formula.service_id[reportIndex];
+            const reportServiceId = svc.svc_report_formula.service_id[reportIndex];
             
-            // Get the template report service to find its service_code
-            const templateReportService = await this.service.getServiceById({
-              service_id: templateReportServiceId,
+            console.log('Looking for report service (days formula):', {
+              reportServiceId,
+              currentTenantId: data.tenant_id,
+              serviceTenantId: svc.tenant_id,
+              position: i + 1
+            });
+
+            // First try to find the report service in the current tenant
+            let reportService = await this.service.getServiceById({
+              service_id: reportServiceId,
+              tenant_id: data.tenant_id,
               is_report: 1,
             });
 
-            if (templateReportService && templateReportService.rec && templateReportService.rec[0]) {
-              const templateReportCode = templateReportService.rec[0].service_code;
+            // If not found in current tenant, try to find by service_code in current tenant
+            if (!reportService || !reportService.rec || !reportService.rec[0]) {
+              console.log(`Report service ${reportServiceId} not found in tenant ${data.tenant_id}, trying to find by service_code`);
               
-              // Find the tenant-specific report service with the same code
-              const tenantReportService = await this.service.getServiceById({
-                service_code: templateReportCode,
-                tenant_id: data.tenant_id,
+              // Get the service details to find its service_code
+              const originalService = await this.service.getServiceById({
+                service_id: reportServiceId,
                 is_report: 1,
               });
 
-              if (tenantReportService && tenantReportService.rec && tenantReportService.rec[0]) {
-                tmpSession.session_code = `${svc.service_code}_${tenantReportService.rec[0].service_code}`;
-                tmpSession.session_description = `${svc.service_code} ${tenantReportService.rec[0].service_name}`;
-                tmpSession.service_id = tenantReportService.rec[0].service_id;
-                tmpSession.is_report = tenantReportService.rec[0].is_report === 1 ? 1 : 0;
-                tmpSession.is_additional =
-                  tenantReportService.rec[0].is_additional &&
-                  tenantReportService.rec[0].is_additional[0] === 1
-                    ? 1
-                    : 0;
-              } else {
-                // Fallback to template service if tenant-specific service not found
-                tmpSession.session_code = `${svc.service_code}_${templateReportService.rec[0].service_code}`;
-                tmpSession.session_description = `${svc.service_code} ${templateReportService.rec[0].service_name}`;
-                tmpSession.service_id = templateReportServiceId;
-                tmpSession.is_report = templateReportService.rec[0].is_report === 1 ? 1 : 0;
-                tmpSession.is_additional =
-                  templateReportService.rec[0].is_additional &&
-                  templateReportService.rec[0].is_additional[0] === 1
-                    ? 1
-                    : 0;
+              if (originalService && originalService.rec && originalService.rec[0]) {
+                const serviceCode = originalService.rec[0].service_code;
+                console.log(`Found service_code: ${serviceCode}, looking for it in tenant ${data.tenant_id}`);
+                
+                // Look for service with same code in current tenant
+                reportService = await this.service.getServiceById({
+                  service_code: serviceCode,
+                  tenant_id: data.tenant_id,
+                  is_report: 1,
+                });
               }
+            }
+
+            console.log('Final reportService result (days formula):', reportService);
+
+            if (reportService && reportService.rec && reportService.rec[0]) {
+              // Use the tenant-specific report service
+              tmpSession.session_code = `${svc.service_code}_${reportService.rec[0].service_code}`;
+              tmpSession.session_description = `${svc.service_code} ${reportService.rec[0].service_name}`;
+              tmpSession.service_id = reportService.rec[0].service_id;
+              tmpSession.is_report = reportService.rec[0].is_report === 1 ? 1 : 0;
+              tmpSession.is_additional = reportService.rec[0].is_additional === 1 ? 1 : 0;
+              
+              console.log(`Successfully configured report session (days formula): ${tmpSession.session_code} with service_id: ${tmpSession.session_id}`);
+            } else {
+              // Log error if report service not found
+              logger.error(`Report service not found for service_id: ${reportServiceId}, tenant_id: ${data.tenant_id}`);
+              console.log(`Report service not found for service_id: ${reportServiceId}, tenant_id: ${data.tenant_id}`);
+              
+              // Continue without report - this session will be a regular session
+              console.log(`Continuing without report for position ${i + 1} (days formula)`);
             }
           }
 
@@ -501,44 +529,63 @@ export default class ThrpyReq {
             svc.svc_report_formula.position.includes(i + 1)
           ) {
             const reportIndex = svc.svc_report_formula.position.indexOf(i + 1);
-            const templateReportServiceId = svc.svc_report_formula.service_id[reportIndex];
+            const reportServiceId = svc.svc_report_formula.service_id[reportIndex];
             
-            // Get the template report service to find its service_code
-            const templateReportService = await this.service.getServiceById({
-              service_id: templateReportServiceId,
+            console.log('Looking for report service:', {
+              reportServiceId,
+              currentTenantId: data.tenant_id,
+              serviceTenantId: svc.tenant_id,
+              position: i + 1
+            });
+
+            // First try to find the report service in the current tenant
+            let reportService = await this.service.getServiceById({
+              service_id: reportServiceId,
+              tenant_id: data.tenant_id,
               is_report: 1,
             });
 
-            console.log('templateReportService', templateReportService);
-            console.log('templateReportServiceId', templateReportServiceId);
-            console.log('templateReportService.rec', templateReportService.rec);
-
-            if (templateReportService && templateReportService.rec && templateReportService.rec[0]) {
-              const templateReportCode = templateReportService.rec[0].service_code;
+            // If not found in current tenant, try to find by service_code in current tenant
+            if (!reportService || !reportService.rec || !reportService.rec[0]) {
+              console.log(`Report service ${reportServiceId} not found in tenant ${data.tenant_id}, trying to find by service_code`);
               
-              // Find the tenant-specific report service with the same code
-              const tenantReportService = await this.service.getServiceById({
-                service_code: templateReportCode,
-                tenant_id: data.tenant_id,
+              // Get the service details to find its service_code
+              const originalService = await this.service.getServiceById({
+                service_id: reportServiceId,
                 is_report: 1,
               });
 
-              if (tenantReportService && tenantReportService.rec && tenantReportService.rec[0]) {
-                tmpSession.session_code = `${svc.service_code}_${tenantReportService.rec[0].service_code}`;
-                tmpSession.session_description = `${svc.service_code} ${tenantReportService.rec[0].service_name}`;
-                tmpSession.service_id = tenantReportService.rec[0].service_id;
-                tmpSession.is_report = tenantReportService.rec[0].is_report === 1 ? 1 : 0;
-                tmpSession.is_additional =
-                  tenantReportService.rec[0].is_additional[0] === 1 ? 1 : 0;
-              } else {
-                // Fallback to template service if tenant-specific service not found
-                tmpSession.session_code = `${svc.service_code}_${templateReportService.rec[0].service_code}`;
-                tmpSession.session_description = `${svc.service_code} ${templateReportService.rec[0].service_name}`;
-                tmpSession.service_id = templateReportServiceId;
-                tmpSession.is_report = templateReportService.rec[0].is_report === 1 ? 1 : 0;
-                tmpSession.is_additional =
-                  templateReportService.rec[0].is_additional[0] === 1 ? 1 : 0;
+              if (originalService && originalService.rec && originalService.rec[0]) {
+                const serviceCode = originalService.rec[0].service_code;
+                console.log(`Found service_code: ${serviceCode}, looking for it in tenant ${data.tenant_id}`);
+                
+                // Look for service with same code in current tenant
+                reportService = await this.service.getServiceById({
+                  service_code: serviceCode,
+                  tenant_id: data.tenant_id,
+                  is_report: 1,
+                });
               }
+            }
+
+            console.log('Final reportService result:', reportService);
+
+            if (reportService && reportService.rec && reportService.rec[0]) {
+              // Use the tenant-specific report service
+              tmpSession.session_code = `${svc.service_code}_${reportService.rec[0].service_code}`;
+              tmpSession.session_description = `${svc.service_code} ${reportService.rec[0].service_name}`;
+              tmpSession.service_id = reportService.rec[0].service_id;
+              tmpSession.is_report = reportService.rec[0].is_report === 1 ? 1 : 0;
+              tmpSession.is_additional = reportService.rec[0].is_additional === 1 ? 1 : 0;
+              
+              console.log(`Successfully configured report session: ${tmpSession.session_code} with service_id: ${tmpSession.service_id}`);
+            } else {
+              // Log error if report service not found
+              logger.error(`Report service not found for service_id: ${reportServiceId}, tenant_id: ${data.tenant_id}`);
+              console.log(`Report service not found for service_id: ${reportServiceId}, tenant_id: ${data.tenant_id}`);
+              
+              // Continue without report - this session will be a regular session
+              console.log(`Continuing without report for position ${i + 1}`);
             }
           }
 
