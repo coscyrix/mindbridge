@@ -51,6 +51,16 @@ export default class UserFormController {
     const userForm = new UserFormService();
     const rec = await userForm.getUserFormById(data);
 
+    // For "No data found" or similar informational messages, return 200 status
+    if (rec.error && rec.message && (
+      rec.message.includes('No data found') || 
+      rec.message.includes('No records found') ||
+      rec.message.includes('No forms found')
+    )) {
+      res.status(200).json(rec);
+      return;
+    }
+
     if (rec.error) {
       res.status(400).json(rec);
       return;
