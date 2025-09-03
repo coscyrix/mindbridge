@@ -70,7 +70,7 @@ export default class ServiceTemplateService {
       // First, try to find the original template service to get its service_code
       const originalTemplateService = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('service_template')
+        .from('service_templates')
         .where('template_service_id', originalServiceId)
         .first();
       
@@ -230,7 +230,7 @@ export default class ServiceTemplateService {
           // First, try to find the original template service to get its service_code
           const originalTemplateService = await db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
-            .from('service_template')
+            .from('service_templates')
             .where('template_service_id', originalServiceId)
             .first();
           
