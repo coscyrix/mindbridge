@@ -39,23 +39,9 @@ export default class ThrpyReq {
 
   // Helper function to calculate session amounts
   calculateSessionAmounts(totalInvoice, refFees, serviceGst) {
-    // totalInvoice already includes tax, so we need to extract the base price
-    // If service has GST stored, use it to calculate base price
-    let basePrice = totalInvoice;
-    let taxAmount = 0;
-    
-    if (serviceGst && serviceGst > 0) {
-      // Calculate base price by removing the tax that's already included
-      // totalInvoice = basePrice + (basePrice * serviceGst / 100)
-      // totalInvoice = basePrice * (1 + serviceGst / 100)
-      // basePrice = totalInvoice / (1 + serviceGst / 100)
-      basePrice = totalInvoice / (1 + serviceGst / 100);
-      taxAmount = totalInvoice - basePrice;
-    } else {
-      // Fallback: use ref_fees tax percentage if service GST is not available
-      taxAmount = totalInvoice * (refFees.tax_pcnt / 100);
-      basePrice = totalInvoice - taxAmount;
-    }
+    // ALWAYS use tenant's tax percentage, not service GST
+    const taxAmount = totalInvoice * (refFees.tax_pcnt / 100);
+    const basePrice = totalInvoice - taxAmount;
     
     // Calculate system amount based on base price
     const systemAmount = basePrice * (refFees.system_pcnt / 100);
