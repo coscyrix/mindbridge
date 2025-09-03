@@ -490,7 +490,7 @@ function CreateSessionForm({
         }
         if (userObj?.role_id === 3) {
           
-          return `$${Number(row.session_price * (feeSplitDetails.counselor_share_percentage / 100) || 0).toFixed(4)}`;
+          return `$${Number(row.session_price * (feeSplitDetails?.counselor_share_percentage / 100) || 0).toFixed(4)}`;
         } else {
           const shareAmount =
             (Number(row.session_price || 0) * (initialData?.fee_split_management?.counselor_share_percentage / 100) || 0)
