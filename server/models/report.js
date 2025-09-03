@@ -246,9 +246,15 @@ export default class Report {
         }
       }
 
-      // Apply tenant filtering to consent forms query if role_id is 3 and tenant_id is provided
-      if (data.role_id == 3 && data.tenant_id && consentFormsQuery) {
-        consentFormsQuery.where('tenant_id', Number(data.tenant_id));
+      // Apply filtering to consent forms query based on role_id
+      if (consentFormsQuery) {
+        if (data.role_id == 2 && data.counselor_id) {
+          // For role_id=2 (counselor), filter by counselor_id
+          consentFormsQuery.where('counselor_id', Number(data.counselor_id));
+        } else if (data.role_id == 3 && data.tenant_id) {
+          // For role_id=3 (manager), filter by tenant_id
+          consentFormsQuery.where('tenant_id', Number(data.tenant_id));
+        }
       }
 
       // Execute queries
