@@ -26,7 +26,7 @@ export default class SessionService {
     }
 
     const session = new Session();
-    return session.postAdditionalSession(data);
+    return session.postSession(data);
   }
 
   //////////////////////////////////////////

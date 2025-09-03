@@ -259,8 +259,18 @@ export default class Feedback {
         // Execute consent query
         const consentResults = await consentQuery;
 
-        // Combine both results
-        const combinedResults = [...treatmentTargetResults, ...consentResults];
+        // Filter out null/empty consent results and only include when feedback_id is not specified
+        // or when consent forms actually exist
+        const validConsentResults = consentResults.filter(result => 
+          result.feedback_id !== null && 
+          result.form_id !== null && 
+          result.client_id !== null
+        );
+
+        // Only include consent results if they're valid or if we're not filtering by specific feedback_id
+        const combinedResults = data.feedback_id 
+          ? [...treatmentTargetResults] // Only include treatment target results when filtering by feedback_id
+          : [...treatmentTargetResults, ...validConsentResults]; // Include both when not filtering
 
         // Check if feedback already exists for this session
         if (data.is_submitted) {
