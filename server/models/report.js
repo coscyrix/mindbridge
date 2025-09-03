@@ -30,6 +30,13 @@ export default class Report {
           .join('user_profile as counselor', 'tt.counselor_id', 'counselor.user_profile_id')
           .join('forms as f', 'tt.form_id', 'f.form_id')
           .join('thrpy_req as tr', 'tt.req_id', 'tr.req_id')
+          .leftJoin('feedback as fb', function() {
+            this.on('fb.form_id', '=', 'tt.form_id')
+                .andOn(function() {
+                  this.on('fb.session_id', '=', 'tt.session_id')
+                      .orOnNull('fb.session_id');
+                });
+          })
           .select(
             'client.user_first_name as client_first_name',
             'client.user_last_name as client_last_name',
@@ -40,6 +47,7 @@ export default class Report {
             'f.form_cde as form_cde',
             'tt.req_id as thrpy_req_id',
             'tt.tenant_id',
+            'fb.feedback_id',
             db.raw('MAX(tt.sent_at) as date_sent'),
             db.raw(`
                 COALESCE(
@@ -60,81 +68,100 @@ export default class Report {
             'tt.counselor_id',
             'tt.req_id',
             'tt.tenant_id',
+            'fb.feedback_id',
           ])
           .orderBy('date_sent', 'desc');
 
         // Also get consent forms from v_user_form view for treatment target mode
         consentFormsQuery = db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
-          .from('v_user_form')
+          .from('v_user_form as vuf')
+          .leftJoin('feedback as fb', function() {
+            this.on('fb.form_id', '=', 'vuf.form_id')
+                .andOn(function() {
+                  this.on('fb.session_id', '=', 'vuf.session_id')
+                      .orOnNull('fb.session_id');
+                });
+          })
           .select(
-            'client_first_name',
-            'client_last_name',
-            'client_clam_num',
-            'client_id',
-            'counselor_id',
-            'form_id',
-            'form_cde',
-            'thrpy_req_id',
-            'tenant_id',
-            db.raw('MAX(updated_at) as date_sent'),
+            'vuf.client_first_name',
+            'vuf.client_last_name',
+            'vuf.client_clam_num',
+            'vuf.client_id',
+            'vuf.counselor_id',
+            'vuf.form_id',
+            'vuf.form_cde',
+            'vuf.thrpy_req_id',
+            'vuf.tenant_id',
+            'fb.feedback_id',
+            db.raw('MAX(vuf.updated_at) as date_sent'),
             db.raw(`
                 COALESCE(
-                  MAX(due_date), 
-                  DATE_ADD(MAX(updated_at), INTERVAL 7 DAY)
+                  MAX(vuf.due_date), 
+                  DATE_ADD(MAX(vuf.updated_at), INTERVAL 7 DAY)
                 ) as due_date
               `),
           )
-          .where('is_sent', 1)
-          .andWhere('client_status_yn', 'y')
-          .andWhere('form_cde', 'CONSENT') // Only get consent forms
+          .where('vuf.is_sent', 1)
+          .andWhere('vuf.client_status_yn', 'y')
+          .andWhere('vuf.form_cde', 'CONSENT') // Only get consent forms
           .groupBy([
-            'client_first_name',
-            'client_last_name',
-            'client_clam_num',
-            'form_id',
-            'form_cde',
-            'client_id',
-            'counselor_id',
-            'thrpy_req_id',
-            'tenant_id',
+            'vuf.client_first_name',
+            'vuf.client_last_name',
+            'vuf.client_clam_num',
+            'vuf.form_id',
+            'vuf.form_cde',
+            'vuf.client_id',
+            'vuf.counselor_id',
+            'vuf.thrpy_req_id',
+            'vuf.tenant_id',
+            'fb.feedback_id',
           ])
           .orderBy('date_sent', 'desc');
       } else {
         // Service mode or auto mode: query user forms (service-based forms)
         query = db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
-          .from('v_user_form')
+          .from('v_user_form as vuf')
+          .leftJoin('feedback as fb', function() {
+            this.on('fb.form_id', '=', 'vuf.form_id')
+                .andOn(function() {
+                  this.on('fb.session_id', '=', 'vuf.session_id')
+                      .orOnNull('fb.session_id');
+                });
+          })
           .select(
-            'client_first_name',
-            'client_last_name',
-            'client_clam_num',
-            'client_id',
-            'counselor_id',
-            'form_id',
-            'form_cde',
-            'thrpy_req_id',
-            'tenant_id',
-            db.raw('MAX(updated_at) as date_sent'),
+            'vuf.client_first_name',
+            'vuf.client_last_name',
+            'vuf.client_clam_num',
+            'vuf.client_id',
+            'vuf.counselor_id',
+            'vuf.form_id',
+            'vuf.form_cde',
+            'vuf.thrpy_req_id',
+            'vuf.tenant_id',
+            'fb.feedback_id',
+            db.raw('MAX(vuf.updated_at) as date_sent'),
             db.raw(`
                 COALESCE(
-                  MAX(due_date), 
-                  DATE_ADD(MAX(updated_at), INTERVAL 7 DAY)
+                  MAX(vuf.due_date), 
+                  DATE_ADD(MAX(vuf.updated_at), INTERVAL 7 DAY)
                 ) as due_date
               `),
           )
-          .where('is_sent', 1)
-          .andWhere('client_status_yn', 'y')
+          .where('vuf.is_sent', 1)
+          .andWhere('vuf.client_status_yn', 'y')
           .groupBy([
-            'client_first_name',
-            'client_last_name',
-            'client_clam_num',
-            'form_id',
-            'form_cde',
-            'client_id',
-            'counselor_id',
-            'thrpy_req_id',
-            'tenant_id',
+            'vuf.client_first_name',
+            'vuf.client_last_name',
+            'vuf.client_clam_num',
+            'vuf.form_id',
+            'vuf.form_cde',
+            'vuf.client_id',
+            'vuf.counselor_id',
+            'vuf.thrpy_req_id',
+            'vuf.tenant_id',
+            'fb.feedback_id',
           ])
           .orderBy('date_sent', 'desc');
       }
@@ -144,7 +171,7 @@ export default class Report {
           if (formMode === 'treatment_target') {
             query.where('tt.counselor_id', data.counselor_id);
           } else {
-            query.where('counselor_id', data.counselor_id);
+            query.where('vuf.counselor_id', data.counselor_id);
           }
           
           // Get tenant_id for the counselor and filter by it
@@ -155,7 +182,7 @@ export default class Report {
             if (formMode === 'treatment_target') {
               query.where('tt.tenant_id', Number(tenantId[0].tenant_id));
             } else {
-              query.where('tenant_id', Number(tenantId[0].tenant_id));
+              query.where('vuf.tenant_id', Number(tenantId[0].tenant_id));
             }
           }
         }
@@ -164,7 +191,7 @@ export default class Report {
           if (formMode === 'treatment_target') {
             query.where('tt.client_id', data.client_id);
           } else {
-            query.where('client_id', data.client_id);
+            query.where('vuf.client_id', data.client_id);
           }
         }
 
@@ -172,7 +199,7 @@ export default class Report {
           if (formMode === 'treatment_target') {
             query.where('tt.form_id', data.form_id);
           } else {
-            query.where('form_id', data.form_id);
+            query.where('vuf.form_id', data.form_id);
           }
         }
       }
@@ -195,7 +222,7 @@ export default class Report {
             if (formMode === 'treatment_target') {
               query.where('tt.tenant_id', Number(tenantId[0].tenant_id));
             } else {
-              query.where('tenant_id', Number(tenantId[0].tenant_id));
+              query.where('vuf.tenant_id', Number(tenantId[0].tenant_id));
             }
           }
         }
@@ -205,7 +232,7 @@ export default class Report {
           if (formMode === 'treatment_target') {
             query.where('tt.counselor_id', data.counselor_id);
           } else {
-            query.where('counselor_id', data.counselor_id);
+            query.where('vuf.counselor_id', data.counselor_id);
           }
         }
         
@@ -213,7 +240,7 @@ export default class Report {
           if (formMode === 'treatment_target') {
             query.andWhere('tt.intake_date', '>=', data.start_date);
           } else {
-            query.andWhere('intake_date', '>=', data.start_date);
+            query.andWhere('vuf.intake_date', '>=', data.start_date);
           }
         }
 
@@ -221,7 +248,7 @@ export default class Report {
           if (formMode === 'treatment_target') {
             query.andWhere('tt.intake_date', '<=', data.end_date);
           } else {
-            query.andWhere('intake_date', '<=', data.end_date);
+            query.andWhere('vuf.intake_date', '<=', data.end_date);
           }
         }
       }
@@ -235,14 +262,14 @@ export default class Report {
           if (formMode === 'treatment_target') {
             query.where('tt.tenant_id', Number(tenantId[0].tenant_id));
           } else {
-            query.where('tenant_id', Number(tenantId[0].tenant_id));
+            query.where('vuf.tenant_id', Number(tenantId[0].tenant_id));
           }
         }
         
         if (formMode === 'treatment_target') {
           query.where('tt.counselor_id', data.counselor_id);
         } else {
-          query.where('counselor_id', data.counselor_id);
+          query.where('vuf.counselor_id', data.counselor_id);
         }
       }
 
@@ -250,10 +277,10 @@ export default class Report {
       if (consentFormsQuery) {
         if (data.role_id == 2 && data.counselor_id) {
           // For role_id=2 (counselor), filter by counselor_id
-          consentFormsQuery.where('counselor_id', Number(data.counselor_id));
+          consentFormsQuery.where('vuf.counselor_id', Number(data.counselor_id));
         } else if (data.role_id == 3 && data.tenant_id) {
           // For role_id=3 (manager), filter by tenant_id
-          consentFormsQuery.where('tenant_id', Number(data.tenant_id));
+          consentFormsQuery.where('vuf.tenant_id', Number(data.tenant_id));
         }
       }
 
