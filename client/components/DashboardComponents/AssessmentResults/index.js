@@ -21,7 +21,7 @@ function AssessmentResults({ assessmentResultsData }) {
   const [consentFormData, setConsentFormData] = useState([]);
   const [graphDataHeading, setGraphDataHeading] = useState("");
   const [attendanceData, setAttendanceData] = useState([]);
-
+  const [tenant_id, setTenant_Id] = useState(null);
   const keyNameArr = [
     {
       formName: "gad",
@@ -113,6 +113,10 @@ function AssessmentResults({ assessmentResultsData }) {
   ];
 
   const handleTreatmentTools = async (row) => {
+    console.log(row);
+    if (row.form_cde === "CONSENT") {
+      setTenant_Id(row.tenant_id);
+    }
     try {
       setFormName(row.form_cde);
       row.form_cde == "SMART-GOAL"
@@ -123,7 +127,10 @@ function AssessmentResults({ assessmentResultsData }) {
         ? setLoading("consentData")
         : row?.form_cde == "ATTENDENCE"
         ? setLoading("attendanceData")
+        : row?.form_cde == "GAS"
+        ? setLoading("graphData")
         : setLoading("graphData");
+
       setShowReportDetails(true);
       setSmartGoalsData([]);
       setIpfData([]);
@@ -152,6 +159,74 @@ function AssessmentResults({ assessmentResultsData }) {
           setGraphDataHeading(
             `Attendence Details of ${row.client_first_name} ${row.client_last_name}`
           );
+        } else if (row.form_cde == "GAS") {
+          const gasEntries = data || [];
+          const gasLabels = {
+            "-2": "Much Worse (-2)",
+            "-1": "Worse (-1)",
+            0: "Expected (0)",
+            1: "Better (+1)",
+            2: "Much Better (+2)",
+          };
+
+          const yAxisConfig = {
+            type: "value",
+            min: -2,
+            max: 2,
+            interval: 1,
+            axisLabel: {
+              formatter: (value) => gasLabels[value] || value,
+            },
+          };
+
+          setGraphDataHeading(
+            `Goal Attainment Scaling (GAS) - ${gasEntries[0]?.feedback_json?.goal?.replace(
+              /_/g,
+              " "
+            )}`
+          );
+          const lastWeeks = gasEntries.slice(-7);
+
+          const xLabels = lastWeeks.map((_, i) => `Week ${i + 1}`);
+
+          const weekAverages = lastWeeks.map((entry) => {
+            const scores =
+              entry.feedback_json?.responses?.map((r) => r.score ?? 0) || [];
+            return scores.length > 0
+              ? scores.reduce((a, b) => a + b, 0) / scores.length
+              : 0;
+          });
+
+      const seriesWithTooltip = [
+        {
+          name: "Client Progress",
+          type: "line",
+          smooth: true,
+          data: weekAverages.map((avg, i) => ({
+            value: Number(avg.toFixed(2)),
+            tooltipLabel: `Week ${i + 1}`,
+          })),
+          lineStyle: { color: "#007bff", width: 2 },
+          itemStyle: { color: "#007bff" },
+          label: {
+            show: true,
+            position: "top",
+            fontSize: 12,
+            color: "#333",
+            formatter: (params) =>
+              gasLabels[Math.round(params.value)] || params.value,
+          },
+        },
+        {
+          name: "Expected Goal",
+          type: "line",
+          data: Array(lastWeeks.length).fill(0),
+          lineStyle: { color: "gray", type: "dashed" },
+          symbol: "none",
+        },
+      ];
+          setXAxisLabels(xLabels);
+          setSeriesData(seriesWithTooltip);
         } else {
           setXAxisLabels(data.map((item) => item.session_dte));
           const formattedFormName =
@@ -246,7 +321,6 @@ function AssessmentResults({ assessmentResultsData }) {
 
   return (
     <AssessmentResultsContainer>
-  
       <CustomCard title="Homework And Assessment Tools Results">
         <CustomClientDetails
           tableData={{
@@ -276,6 +350,7 @@ function AssessmentResults({ assessmentResultsData }) {
             <IpfGraph ipfData={ipfData} loading={loading == "ipfData"} />
           ) : formName == "CONSENT" ? (
             <ConsentForm
+              tenant_ID={tenant_id}
               initialData={consentFormData}
               loader={loading == "consentData"}
             />
@@ -283,6 +358,36 @@ function AssessmentResults({ assessmentResultsData }) {
             <AttendanceGraph
               attendanceData={attendanceData}
               loading={loading == "attendanceData"}
+            />
+          ) : formName == "GAS" ? (
+            <BarGraph
+              xAxisTitle="Period"
+              yAxisTitle="Score"
+              xAxisLabels={xAxisLabels}
+              seriesData={seriesData}
+              loading={loading === "graphData"}
+              formName={formName}
+              customOptions={{
+                xAxis: {
+                  axisLabel: {
+                    rotate: -45,
+                    color: "red",
+                    formatter: (value) =>
+                      value.length > 50 ? value.slice(0, 50) + "…" : value,
+                    interval: 0,
+                    tooltip: { show: true },
+                  },
+                },
+                tooltip: {
+                  trigger: "axis",
+                  formatter: (params) => {
+                    const data = params[0];
+                    const fullQuestion =
+                      responses[data.dataIndex]?.question || data.name;
+                    return `<b>${fullQuestion}</b><br/>Score: ${data.value}`;
+                  },
+                },
+              }}
             />
           ) : (
             <BarGraph

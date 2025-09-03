@@ -123,9 +123,21 @@ export default class SessionController {
   async getSessionTodayAndTomorrow(req, res) {
     const data = req.query;
 
-    if (!data.role_id || !data.counselor_id) {
+    if (!data.role_id) {
       res.status(400).json({ message: 'Missing mandatory fields' });
       return;
+    }
+
+    // For non-admin roles (role_id !== 4), counselor_id is required
+    // Exception: When role_id=3 and tenant_id is provided, show all counselors for that tenant
+    if (Number(data.role_id) !== 4 && !data.counselor_id) {
+      // Special case for role_id=3 with tenant_id - allow showing all counselors
+      if (Number(data.role_id) === 3 && data.tenant_id) {
+        // Allow this case - will show data for all counselors in the tenant
+      } else {
+        res.status(400).json({ message: 'Missing mandatory fields' });
+        return;
+      }
     }
 
     const session = new SessionService();

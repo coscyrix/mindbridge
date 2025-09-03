@@ -9,7 +9,7 @@ import CommonServices from "../../services/CommonServices";
 
 const PHQPage = () => {
   const router = useRouter();
-  const { form_id, session_id } = router.query;
+  const { form_id, session_id, client_name } = router.query;
 
   const [formAlreadySubmitted, setFormAlreadySubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -41,18 +41,18 @@ const PHQPage = () => {
     fetchFormSubmissionDetails();
   }, [session_id]);
 
-  if (loading) {
-    return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center" }}>
-        <Spinner color="#525252" />
-      </div>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <div style={{ height: "100vh", display: "flex", alignItems: "center" }}>
+  //       <Spinner color="#525252" />
+  //     </div>
+  //   );
+  // }
 
   return formAlreadySubmitted ? (
     <FormSubmission alreadySubmitted />
   ) : (
-    <PHQForm />
+    <PHQForm client_name={client_name} />
   );
 };
 

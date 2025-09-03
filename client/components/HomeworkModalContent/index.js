@@ -6,7 +6,11 @@ import CustomInputField from "../CustomInputField/index";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import CustomButton from "../CustomButton";
 import { CrossIcon, UploadIcon } from "../../public/assets/icons";
-const HomeworkModal = ({ isOpen, onClose }) => {
+import ApiConfig from "../../config/apiConfig";
+import { api } from "../../utils/auth";
+import { toast } from "react-toastify";
+import { useReferenceContext } from "../../context/ReferenceContext";
+const HomeworkModal = ({ isOpen, id, onClose, session_id }) => {
   const [selectedFile, setSelectedFile] = useState("Upload file");
   const methods = useForm();
 
@@ -16,13 +20,50 @@ const HomeworkModal = ({ isOpen, onClose }) => {
       setSelectedFile(file.name);
     }
   };
-  
-
-  const handleUploadHomeWork = (data) => {
-    console.log("Title:", data.homework_title);
-    console.log("File:", data.homework); 
+  const { userObj } = useReferenceContext();
+  const fetchHomeworkDetails = async () => {
+    try {
+      const response = await api.get(
+        `${ApiConfig.homeworkUpload.gethomeworkdetail}/${session_id}`
+      );
+      if (response.status == 200) {
+        console.log(response);
+        setSelectedFile(response?.data[0]?.homework_filename);
+        methods.setValue("homework_title", response?.data[0]?.homework_title);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
   };
-  
+  useEffect(() => {
+    fetchHomeworkDetails();
+  }, []);
+  const handleUploadHomeWork = async (data) => {
+    try {
+      let payload = {
+        homework_file: data.homework,
+        homework_title: data.homework_title,
+        tenant_id: userObj?.tenant_id,
+        session_id: session_id,
+      };
+      console.log(data);
+      const response = await api.post(
+        ApiConfig.homeworkUpload.submitHomeworkdetails,
+        payload,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      if (response.status == 200) {
+        toast.success(response?.data?.message);
+        onClose();
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
+  };
 
   const handleReset = () => {
     methods.setValue("homework", null);
@@ -42,6 +83,7 @@ const HomeworkModal = ({ isOpen, onClose }) => {
       onRequestClose={onClose}
     >
       <FormProvider {...methods}>
+        {console.log(methods.getValues("homework"))}
         <form onSubmit={methods.handleSubmit(handleUploadHomeWork)}>
           <HomeWorkModalWrapper>
             <div className="field">
@@ -59,7 +101,7 @@ const HomeworkModal = ({ isOpen, onClose }) => {
                     render={({ field }) => (
                       <input
                         type="file"
-                        accept=".pdf"
+                        // accept=".pdf"
                         onChange={(e) => {
                           field.onChange(e.target.files[0]);
                           handleSelectFile(e);

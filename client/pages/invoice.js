@@ -25,8 +25,11 @@ import CustomPagination from "../components/CustomPagination";
 import { DOWNLOAD_OPTIONS, SERVICE_FEE_INFO } from "../utils/constants";
 import moment from "moment";
 import { useReferenceContext } from "../context/ReferenceContext";
+import ApiConfig from "../config/apiConfig";
+import { Skeleton } from "@mui/material";
 
 const Invoice = () => {
+  const { userObj } = useReferenceContext();
   const [invoices, setInvoices] = useState(null);
   const [roleId, setRoleId] = useState(null);
   const [user, setUser] = useState(null);
@@ -38,7 +41,7 @@ const Invoice = () => {
   const [filterText, setFilterText] = useState(null);
   const [loading, setLoading] = useState("tableData");
   const [counselors, setCounselors] = useState([
-    { label: "All counselors", value: "allCounselors" },
+    { label: "All counselors", value: "allCounselors", email: "" },
   ]);
   const [invoiceData, setInvoiceData] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -49,7 +52,9 @@ const Invoice = () => {
   const [allManagers, setAllManagers] = useState(null);
   const { allCounselors } = useReferenceContext();
   const uniqueManagersMap = new Map();
-
+  const [selectCounselorEmail, setSelectCounselorEmail] = useState(null);
+  const [counselorConfiguration, setCounselorConfiguration] = useState(null);
+  const [managerSplitDetails, setManagerSplitDetails] = useState(null);
   allManagers?.forEach((user) => {
     if (!uniqueManagersMap.has(user.user_id)) {
       uniqueManagersMap.set(user.user_id, {
@@ -60,13 +65,15 @@ const Invoice = () => {
     }
   });
 
-  const managerOptions = Array.from(uniqueManagersMap.values());
-
+  const managerOptions = [
+    { label: "All Manager", value: "allManager", tenant_id: 0 },
+    ...Array.from(uniqueManagersMap.values()),
+  ];
   const [selectedManager, setSelectedManager] = useState(null);
   const [filteredCounselors, setFilteredCounselors] = useState([]);
   const handleSelectManager = (selected) => {
     setSelectedManager(selected);
-    //match 
+    //match
     const matchingCounselors = allCounselors?.filter(
       (c) => c.tenant_id === selected.tenant_id
     );
@@ -75,7 +82,7 @@ const Invoice = () => {
       if (!uniqueCounselorsMap.has(user.user_id)) {
         uniqueCounselorsMap.set(user.user_id, {
           label: `${user.user_first_name} ${user.user_last_name}`,
-          value: user.user_id,
+          value: user.user_profile_id,
           tenant_id: user.tenant_id,
         });
       }
@@ -83,9 +90,30 @@ const Invoice = () => {
     const counselorOptions = Array.from(uniqueCounselorsMap.values());
     setCounselors(counselorOptions);
     setFilteredCounselors(matchingCounselors);
-
+    const tenant_id = selected?.tenant_id;
+    fetchFilteredInvoices({ startDate, endDate, tenant_id });
     const counselorId = selected?.value;
     setSelectCounselor(counselorId);
+  };
+  const fetchAllSplit = async () => {
+    if (selectCounselor === "allCounselors" && userObj.role_id === 3) {
+      return;
+    }
+    try {
+      const tenant_id = userObj?.tenant_id;
+      const response = await api.get(
+        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}` // this is to be changed using 1 for dummy data
+      );
+      if (response.status == 200) {
+        console.log(response);
+        setCounselorConfiguration(
+          response?.data?.data?.counselor_specific_configurations
+        );
+        setManagerSplitDetails(response?.data?.data?.default_configuration);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
   };
   const formatDate = (date) => date.toLocaleDateString("en-CA");
 
@@ -111,11 +139,11 @@ const Invoice = () => {
       0,
       0,
       0
-    ); 
-    const timeUntilNextMonth = nextMonth.getTime() - now.getTime(); 
+    );
+    const timeUntilNextMonth = nextMonth.getTime() - now.getTime();
 
     const timeout = setTimeout(() => {
-      setDefaultDates(); 
+      setDefaultDates();
       fetchFilteredInvoices({
         counselorId: selectCounselor,
         startDate: formatDate(
@@ -129,7 +157,6 @@ const Invoice = () => {
 
     return () => clearTimeout(timeout);
   }, [selectCounselor, user, roleId]);
-  
 
   const handleAddInvoiceNumber = (row) => {
     setOpen(true);
@@ -221,27 +248,24 @@ const Invoice = () => {
     },
     {
       name: "Total Amount",
-      selector: (row) =>
-        `$${(
-          Number(row.session_counselor_amt) + Number(row.session_system_amt)
-        ).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_price).toFixed(4)}`,
       selectorId: "session_price",
     },
     {
       name: "Tax",
       selector: (row) =>
-        row.session_taxes ? `$${Number(row.session_taxes).toFixed(2)}` : "NA",
+        row.session_taxes ? `$${Number(row.session_taxes).toFixed(4)}` : "NA",
       selectorId: "session_taxes",
     },
     {
       name: "Amt. to Counselor",
-      selector: (row) => `$${Number(row.session_counselor_amt).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_price * (row.fee_split_management.counselor_share_percentage / 100)).toFixed(4)}`,
       selectorId: "session_counselor_amt",
       minWidth: "150px",
     },
     {
       name: "Amt. to Admin",
-      selector: (row) => `$${Number(row.session_system_amt).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_system_amt).toFixed(4)}`,
       selectorId: "session_system_amt",
     },
   ];
@@ -339,6 +363,7 @@ const Invoice = () => {
           return {
             label: item?.user_first_name + " " + item?.user_last_name,
             value: item?.user_profile_id,
+            email: item?.email,
           };
         });
         setCounselors([...counselors, ...counselorOptions]);
@@ -358,8 +383,17 @@ const Invoice = () => {
     try {
       setLoading("tableData");
       const params = new URLSearchParams();
-      params.append("role_id", roleId);
-
+      params.append("role_id", Number(roleId));
+      if (startDate) params.append("start_dte", startDate);
+      if (endDate) params.append("end_dte", endDate);
+      if (tenant_id || tenant_id !== undefined) {
+        if (tenant_id) params.append("tenant_id", tenant_id);
+        const response = await api.get(`/invoice/multi?${params}`);
+        if (response?.status === 200) {
+          setInvoices(response?.data?.rec);
+          setInvoiceTableData(response?.data?.rec?.rec_list);
+        }
+      }
       // Only append counselor_id if it's not "allCounselors"
       if (counselorId && counselorId !== "allCounselors") {
         params.append("counselor_id", counselorId);
@@ -367,13 +401,8 @@ const Invoice = () => {
         // If role is counselor (2), always send their own ID
         params.append("counselor_id", user?.user_profile_id);
       }
-
-      if (startDate) params.append("start_dte", startDate);
-      if (endDate) params.append("end_dte", endDate);
-      if (tenant_id) params.append("tenant_id", tenant_id);
-
-      const response = await api.get(`/invoice/multi?${params.toString()}`);
-
+      // if (tenant_id) params.append("tenant_id", tenant_id);
+      const response = await api.get(`/invoice/multi?${params}`);
       if (response?.status === 200) {
         setInvoices(response?.data?.rec);
         setInvoiceTableData(response?.data?.rec?.rec_list);
@@ -388,6 +417,7 @@ const Invoice = () => {
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
     setSelectCounselor(counselorId);
+    setSelectCounselorEmail(data.email);
     const counselor = allCounselors.find((c) => c.user_id === counselorId);
     const tenant_id = counselor?.tenant_id;
     fetchFilteredInvoices({ counselorId, startDate, endDate, tenant_id });
@@ -520,6 +550,7 @@ const Invoice = () => {
           counselorId: "allCounselors",
           startDate,
           endDate,
+          ...(userObj?.role_id === 3 && { tenant_id: userObj?.tenant_id }),
         });
       } else {
         getInvoice();
@@ -541,10 +572,15 @@ const Invoice = () => {
       subHeadings: columnTitles,
     });
   }
-
+  useEffect(() => {
+    fetchAllSplit();
+  }, [selectCounselorEmail]);
   if (roleId === null) {
     return null;
   }
+
+  console.log(invoices , "invoices::::")
+
   return (
     <InvoiceContainer>
       <div className="top-section-wrapper">
@@ -557,57 +593,177 @@ const Invoice = () => {
         </p>
 
         <div className="tab-and-search-container">
-          <div className="tab-container">
+          <div className="tab-container" style={{marginTop:"12px"}}>
             <CustomTab
               heading={"Total Amount For A Month"}
-              value={`$${
-                invoices
-                  ? (
-                      Number(invoices?.summary?.sum_session_counselor_amt) +
+              value={
+                loading ? (
+                  <Skeleton width={120} height={40} />
+                ) : userObj?.role_id === 2 ? (
+                 `$${Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}`
+                ) : userObj?.role_id === 3 ? (
+                  <>
+                    Total Amount :{" $"}
+                    {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
+                  
+                  </>
+                ) : userObj?.role_id === 4 ? (
+                  <>
+                    Total Amount :{" $"}
+                    {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
+                  
+                  </>
+                ) : (
+                  ""
+                )
+              }
+            />
+            {userObj?.role_id !== 4 && (
+              <CustomTab
+                heading="Total Amount to Associate for a Month:"
+                value={
+                  loading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : userObj?.role_id === 2 ? (
+                    `$${Number(
+                      invoices?.summary?.sum_session_counselor_tenant_amt
+                    ).toFixed(4)}`
+                  ) : userObj?.role_id === 3 ? (
+                    `$${Number(invoices?.summary?.sum_session_counselor_amt).toFixed(4)}`
+                  ) : (
+                    ""
+                  )
+                }
+              />
+            )}
+            <CustomTab
+              heading="Detail breakdown"
+              value={
+                loading ? (
+                  <Skeleton width={200} height={40} />
+                ) : userObj?.role_id === 2 ? (
+                  <>
+                    <p>
+                      Counsellor Share:{" $"}
+                      {Number(invoices?.summary?.sum_session_counselor_amt).toFixed(
+                        4
+                      )}{" "}
+                      (
+                      {
+                        invoices?.summary?.fee_split_management
+                          ?.counselor_share_percentage
+                      }
+                      %)
+                    </p>
+                    Tenant Share:{" $"}
+                    {(
+                      Number(invoices?.summary?.sum_session_tenant_amt) +
                       Number(invoices?.summary?.sum_session_system_amt)
-                    ).toFixed(2) || 0
-                  : 0
-              }`}
+                    ).toFixed(4)}{" "}
+                    (
+                    {invoices?.summary?.fee_split_management?.tenant_share_percentage}
+                    %)
+                  </>
+                ) : userObj?.role_id === 3 ? (
+                  <>
+                    {/* Counsellor Share:{" "}
+                    {Number(invoices?.summary?.sum_session_counselor_amt).toFixed(4)}
+                    <br /> */}
+                    Your Share:{" $"}
+                    {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(4)}
+                  </>
+                ) : userObj?.role_id === 4 ? (
+                  <>
+                    <p>
+                      All Practice Amount:{" $"}
+                      {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
+                    </p>
+
+                    <>
+                      Counsellor Amount:{" $"}
+                      {Number(
+                        invoices?.summary?.sum_session_counselor_tenant_amt
+                      ).toFixed(4)}{" "}
+                      <br />
+                      Tenant Amount:{" $"}
+                      {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(4)}
+                    </>
+                  </>
+                ) : (
+                  ""
+                )
+              }
             />
-            <CustomTab
-              heading={"Total Amount to Associate for a Month: "}
-              value={`$${
-                invoices
-                  ? Number(
-                      invoices?.summary?.sum_session_counselor_amt
-                    ).toFixed(2)
-                  : 0
-              }`}
-            />
-            <CustomTab
-              heading={"Total Amount to Vapendama for a Month:"}
-              value={`$${
-                invoices
-                  ? Number(invoices?.summary?.sum_session_system_amt).toFixed(2)
-                  : 0
-              }`}
-            />
+
+            {(userObj?.role_id == 3 || userObj?.role_id == 4) && (
+              <CustomTab
+                heading={"Tax (GST) "}
+                value={
+                  loading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : (
+                    `$${Number(invoices?.summary?.sum_session_taxes)?.toFixed(4)}`
+                  )
+                }
+              />
+            )}
+
+            {userObj?.role_id == 4 ? (
+              <CustomTab
+                heading={"Total Amount to Vapendama for a Month:"}
+                value={
+                  loading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : (
+                    `$${Number(invoices?.summary?.sum_session_system_amt)?.toFixed(4)}`
+                  )
+                }
+              />
+            ) : (
+              userObj?.role_id !== 2 && (
+                <CustomTab
+                  heading={"Admin Fee:"}
+                  value={
+                    loading ? (
+                      <Skeleton width={120} height={40} />
+                    ) : (
+                      `$${Number(invoices?.summary?.sum_session_system_amt)?.toFixed(4)}`
+                    )
+                  }
+                />
+              )
+            )}
             <CustomTab
               heading={"Total Amount of Units:"}
-              value={invoices?.summary?.sum_session_system_units || 0}
+              value={
+                loading ? (
+                  <Skeleton width={120} height={40} />
+                ) : (
+                  invoices?.summary?.sum_session_system_units || 0
+                )
+              }
             />
-            <CustomTab heading="Service Fees" lines={SERVICE_FEE_INFO} />
+            
           </div>
           <div className="search-container">
             <div className="search-and-select">
               <div className="custom-select-container">
                 {[3, 4].includes(roleId) ? (
                   <>
-                    <div key="counselor-select">
-                      <label>Managers</label>
-                      <CustomMultiSelect
-                        options={managerOptions}
-                        placeholder="Select manager"
-                        isMulti={false}
-                        onChange={handleSelectManager}
-                        value={selectedManager}
-                      />
-                    </div>
+                    {[4].includes(roleId) ? (
+                      <div key="counselor-select">
+                        <label>Managers</label>
+                        <CustomMultiSelect
+                          options={managerOptions}
+                          placeholder="Select manager"
+                          isMulti={false}
+                          onChange={handleSelectManager}
+                          value={selectedManager}
+                        />
+                      </div>
+                    ) : (
+                      <></>
+                    )}
                     <div key="counselor-select">
                       <label>Counselor</label>
                       {/* <CustomSelect

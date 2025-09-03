@@ -6,19 +6,24 @@ import CustomButton from "../../components/CustomButton";
 import CustomInputField from "../../components/CustomInputField";
 import { FeeSplitManagementWrapper } from "../../styles/fee-split-management";
 import { splitFeeManagementSchema } from "../../utils/validationSchema/validationSchema";
+import FeeSplitForm from "../../components/Forms/FeeSplitForm";
+import { api } from "../../utils/auth";
+import ApiConfig from "../../config/apiConfig";
+import { useReferenceContext } from "../../context/ReferenceContext";
+import { toast } from "react-toastify";
+import { CardListWrapper } from "../../components/FeeSplitCard/style";
+import FeeSplitCard from "../../components/FeeSplitCard";
+import SmartTab from "../../components/SmartTab";
 const FeeSplitManagement = () => {
   const [isEnabled, setIsEnabled] = useState(false);
+  const [managerSplitDetails, setManagerSplitDetails] = useState(null);
+  const [counselorConfiguration, setCounselorConfiguration] = useState(null);
   const handleToggle = (event) => {
     const checked = event.target.value;
     setIsEnabled(event.target.checked);
   };
-  const onSubmit = (data) => {
-    console.log(data);
-    // e.preventDefault()
-    // try {
-    // } catch (error) {}
-    return;
-  };
+  const { userObj } = useReferenceContext();
+  const manager = userObj?.role_id == 3;
   const methods = useForm({
     resolver: zodResolver(splitFeeManagementSchema),
     defaultValues: {
@@ -33,17 +38,48 @@ const FeeSplitManagement = () => {
     trigger,
     formState: { errors },
   } = methods;
+  const [activeTab, setActiveTab] = useState(0);
+  const tabLabels = [
+    { id: 0, label: "Managers", value: "managers" },
+    { id: 1, label: "Counselors", value: "counselors" },
+  ];
+  const fetchAllSplit = async () => {
+    try {
+      const tenant_id = userObj.tenant_id;
+      const response = await api.get(
+        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}` // this is to be changed using 1 for dummy data
+      );
+      if (response.status == 200) {
+        setCounselorConfiguration(
+          response?.data?.data?.counselor_specific_configurations
+        );
+        setManagerSplitDetails(response?.data?.data?.default_configuration);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
+  };
+  const handleFilterData = (tab) => {
+    return;
+  };
+  useEffect(() => {
+    fetchAllSplit();
+  }, []);
   return (
     <FeeSplitManagementWrapper>
       <Box className="consent-box">
         <Typography variant="h6" mb={1}>
-          Fee Split Management
+          Enable Fee Split Management
         </Typography>
 
         <div className="description-text">
-          Lorem Ipsum is simply dummy text of the printing and typesetting
-          industry. Lorem Ipsum has been the industry’s standard dummy text ever
-          since the 1500s.
+          Enable Fee Split Management allows organizations to define, manage,
+          and automate how service fees are divided between multiple parties
+          (e.g., counselors, tenant). When enabled,
+          administrators can configure percentage-based or fixed-amount splits,
+          track payouts, and generate reports for transparent revenue sharing.
+          This feature ensures accuracy, compliance, and fairness in financial
+          distribution while reducing manual calculations and errors.
         </div>
 
         <div className="toggle-section">
@@ -55,57 +91,40 @@ const FeeSplitManagement = () => {
                 color="primary"
               />
             }
-            label="Fee Split management"
+            label="Fee Split management for Default Manager"
           />
         </div>
 
         {isEnabled && (
-          <div className="form-wrapper">
-            <FormProvider {...methods}>
-              <form className="consent-form" onSubmit={handleSubmit(onSubmit)}>
-                <div className="form-row">
-                  <Controller
-                    name="tenant_share"
-                    control={control}
-                    render={({ field }) => (
-                      <CustomInputField
-                        label="Tenant share (%)"
-                        {...field}
-                        value={field.value}
-                        onChange={(e) => field.onChange(e.target.value)}
-                        error={!!errors?.tenant_share}
-                        helperText={errors?.tenant_share?.message}
-                      />
-                    )}
+          <SmartTab
+            tabLabels={tabLabels}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            handleFilterData={handleFilterData}
+          />
+        )}
+        {isEnabled && activeTab === 0 && (
+          <FeeSplitForm
+            fetchAllSplit={fetchAllSplit}
+            share_percentage={managerSplitDetails}
+          />
+        )}
+        {isEnabled && activeTab === 1 && (
+          <div className="card-main">
+            <h2> All Counselor share details: </h2>
+            <CardListWrapper>
+              {counselorConfiguration && counselorConfiguration.length > 0 ? (
+                counselorConfiguration.map((config) => (
+                  <FeeSplitCard
+                    fetchAllSplit={fetchAllSplit}
+                    key={config.counselor_user_id}
+                    config={config}
                   />
-                </div>
-
-                <div className="form-row">
-                  <Controller
-                    name="counselor_share"
-                    control={control}
-                    render={({ field }) => (
-                      <CustomInputField
-                        label="Counselor share (%)"
-                        {...field}
-                        value={field.value}
-                        onChange={(e) => field.onChange(e.target.value)}
-                        error={!!errors?.counselor_share}
-                        helperText={errors?.counselor_share?.message}
-                      />
-                    )}
-                  />
-                </div>
-                <span className="note">Note: The sum of both input must be equal to 100</span>
-                <div className="form-row">
-                  <CustomButton
-                    className="button-blue"
-                    title="Submit"
-                    type="submit"
-                  />
-                </div>
-              </form>
-            </FormProvider>
+                ))
+              ) : (
+                <h2 style={{ textAlign: "center" }}>No Counselor Available</h2>
+              )}
+            </CardListWrapper>
           </div>
         )}
       </Box>

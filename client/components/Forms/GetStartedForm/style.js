@@ -62,6 +62,7 @@ const GetStartedFormTemplateWrapper = styled.div`
       text-align: center;
       font-family: Playfair Display;
       margin-left: 10px;
+      margin-top: 68px;
     }
   }
 
@@ -265,6 +266,63 @@ const GetStartedFormTemplateWrapper = styled.div`
   .feature-select {
     border: 1px solid red;
     border-radius: 6px;
+  }
+  .phone-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+  }
+
+  /* Label */
+  .phone-label {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #333;
+  }
+
+  /* Input field */
+  .phone-input {
+    width: 100%;
+    height: 44px;
+    padding-left: 48px !important; /* space for flag */
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+
+  .phone-input:focus {
+    border-color: #4f46e5; /* Indigo focus */
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+    outline: none;
+  }
+
+  /* Error state */
+  .phone-input.error {
+    border-color: #dc2626;
+  }
+
+  .phone-error {
+    font-size: 12px;
+    color: #dc2626;
+    margin-top: 4px;
+  }
+
+  /* Dropdown button */
+  .phone-dropdown {
+    border-radius: 8px 0 0 8px;
+    border: 1px solid #d1d5db !important;
+    background: #f9fafb !important;
+  }
+
+  /* Dropdown menu */
+  .phone-dropdown-menu {
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    max-height: 250px;
+    display: flex;
+    flex-direction: column;
   }
 `;
 

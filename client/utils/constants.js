@@ -22,6 +22,71 @@ import moment from "moment";
 import { TooltipButton, TooltipContainer } from "../components/Tooltip";
 import { convertUTCToLocalTime } from "./helper";
 import { CgProfile } from "react-icons/cg";
+import React, { useState, useRef } from "react";
+import {
+  IconButton,
+  Popover,
+  List,
+  ListItem,
+  ListItemText,
+} from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import { Direction } from "react-data-table-component";
+
+const ActionMenu = ({ row, handleEdit, handleDelete }) => {
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+
+  return (
+    <>
+      <IconButton onClick={handleClick}>
+        <MoreVertIcon />
+      </IconButton>
+
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: "top", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+      >
+        <List dense style={{ flexDirection: "column" }}>
+          <ListItem
+            style={{ gap: "10px" }}
+            button
+            onClick={() => {
+              handleEdit(row);
+              handleClose();
+            }}
+          >
+            <EditIcon fontSize="small" sx={{ mr: 1 }} />
+            <ListItemText primary="Edit" />
+          </ListItem>
+          <ListItem
+            style={{ gap: "10px" }}
+            button
+            onClick={() => {
+              handleDelete(row);
+              handleClose();
+            }}
+          >
+            <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+            <ListItemText primary="Delete" />
+          </ListItem>
+        </List>
+      </Popover>
+    </>
+  );
+};
 
 function exportToCSV(columns, data, tableCaption) {
   const headings = columns
@@ -197,6 +262,12 @@ export const SIDEBAR_HEADINGS = [
     url: "/fee-split-management",
     title: "Fee Split Management",
   },
+  // {
+  //   id: 10,
+  //   icon: <DashboardIcon />,
+  //   url: "/logo-management",
+  //   title: "Logo Managment",
+  // },
 ];
 
 export const TABLE_DATA = (handleCellClick, handleEdit, handleDelete) => {
@@ -723,20 +794,19 @@ export const SERVICES_TABLE_COLUMNS = (
   },
   {
     name: "Total Invoice",
-    selector: (row) => `$${Number(row.total_invoice).toFixed(2)}`,
+    selector: (row) => `$${Number(row.total_invoice) - Number(row?.gst)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
   {
     name: "Tax",
-    selector: (row) => `$${Number(row.gst).toFixed(2)}`,
+    selector: (row) => `$${Number(row.gst).toFixed(4)}`,
     sortable: true,
     selectorId: "gst",
   },
   {
     name: "Total Invoice + Tax",
-    selector: (row) =>
-      `$${(Number(row.total_invoice) + Number(row.gst)).toFixed(2)}`,
+    selector: (row) => `$${Number(row.total_invoice).toFixed(4)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
@@ -749,10 +819,8 @@ export const SERVICES_TABLE_COLUMNS = (
   {
     name: "",
     cell: (row) => (
-      <Dropdown
-        ref={dropdownRef} // Pass the ref to the Dropdown component
+      <ActionMenu
         row={row}
-        handleCellClick={handleCellClick}
         handleEdit={handleEdit}
         handleDelete={handleDelete}
       />
@@ -1006,7 +1074,8 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
   handleCellClick,
   handleEdit,
   handleDelete,
-  dropdownRef
+  dropdownRef,
+  feeSplitData = null
 ) => [
   {
     name: "ID",
@@ -1028,19 +1097,32 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
   {
     name: "Total Amount",
     selector: (row) =>
-      `$${Number(row.session_price + row.session_taxes).toFixed(2)}`,
+      `$${Number(row.session_price).toFixed(4)}`,
   },
   {
     name: "Tax",
-    selector: (row) => `$${Number(row.session_taxes).toFixed(2)}`,
+    selector: (row) => `$${Number(row.session_taxes).toFixed(4)}`,
   },
   {
     name: "Amt. to Counselor",
-    selector: (row) => `$${Number(row.session_counselor_amt).toFixed(2)}`,
+    selector: (row) => {
+      console.log("feeSplitData",feeSplitData);
+      if (feeSplitData && feeSplitData.is_fee_split_enabled) {
+        const counselorAmount = (Number(row.session_price || 0) * feeSplitData.counselor_share_percentage) / 100;
+        return `$${counselorAmount.toFixed(4)}`;
+      } else {
+        // Default: full amount to counselor
+        return `$${Number(row.session_price || 0).toFixed(4)}`;
+      }
+    },
   },
   {
     name: "Amt. to Admin",
-    selector: (row) => `$${Number(row.session_system_amt).toFixed(2)}`,
+    selector: (row) => {      
+        // Default: system amount
+        return `$${Number(row.session_system_amt || 0).toFixed(4)}`;
+      
+    },
   },
   {
     name: "",
@@ -1401,7 +1483,7 @@ export const IPF_FORM_QUESTIONS = {
     },
     {
       id: "item4",
-      text: "I showed interest in my spouse or partner’s activities.",
+      text: "I showed interest in my spouse or partner's activities.",
     },
     {
       id: "item5",
@@ -1568,7 +1650,7 @@ export const IPF_FORM_QUESTIONS = {
     },
     {
       id: "item49",
-      text: "I was interested in my children’s activities.",
+      text: "I was interested in my children's activities.",
     },
     {
       id: "item50",
@@ -1606,7 +1688,7 @@ export const IPF_FORM_QUESTIONS = {
     { id: "item60", text: "I arrived on time for my classes." },
     {
       id: "item61",
-      text: "I had trouble being supportive of my classmates’ achievements.",
+      text: "I had trouble being supportive of my classmates' achievements.",
     },
     { id: "item62", text: "I turned in assignments late." },
     {
@@ -1655,7 +1737,7 @@ export const IPF_FORM_QUESTIONS = {
     },
     {
       id: "item75",
-      text: "I had trouble managing my medical care (for example, medications, doctors’ appointments, physical therapy, etc).",
+      text: "I had trouble managing my medical care (for example, medications, doctors' appointments, physical therapy, etc).",
     },
     { id: "item76", text: "I ate healthy and nutritious meals." },
     {
@@ -1936,10 +2018,10 @@ export const service_templates = [
 ];
 
 export const gasQuestionBank = {
-  Improving_Emotional_Regulation_in_Therapy: [
+  1: [
     {
       question:
-        "How often do you use emotional regulation techniques (e.g., breathing exercises, cognitive reframing ,mindfulness)?",
+        "How often do you use anxiety management techniques (eg deep breathing grounding exercises progressive muscle relaxation)",
       name: "q1",
       options: [
         { label: "Never (0 times per week)", value: -2 },
@@ -1950,8 +2032,7 @@ export const gasQuestionBank = {
       ],
     },
     {
-      question:
-        "How effective are these techniques in reducing your emotional distress?",
+      question: "How effective are these techniques in reducing your anxiety??",
       name: "q2",
       options: [
         {
@@ -1980,8 +2061,7 @@ export const gasQuestionBank = {
       ],
     },
     {
-      question:
-        "Do you apply emotional regulation techniques outside of therapy sessions?",
+      question: " How well do you manage anxious thoughts without avoidance?",
       name: "q3",
       options: [
         {
@@ -2008,7 +2088,7 @@ export const gasQuestionBank = {
     },
     {
       question:
-        "How confident do you feel in managing emotional distress on your own?",
+        "How confident are you in handling anxiety-provoking situations?",
       name: "q4",
       options: [
         {
@@ -2036,8 +2116,7 @@ export const gasQuestionBank = {
       ],
     },
     {
-      question:
-        "Have you noticed a change in your emotional well-being since starting therapy?",
+      question: "How much has your overall anxiety decreased over time?",
       name: "q5",
       options: [
         {
@@ -2064,7 +2143,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Depression: [
+  2: [
     {
       question: "How often do you engage in activities that improve your mood?",
       name: "q1",
@@ -2143,7 +2222,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Stress_Management: [
+  3: [
     {
       question:
         "How often do you use stress management techniques (e.g., relaxation exercises, time management, self-care)?",
@@ -2230,7 +2309,302 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Self_Esteem_and_Self_Confidence_Issues: [
+  4: [
+    {
+      question: "How often do you engage in open and healthy communication?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once or twice a week)", value: -1 },
+        { label: "Sometimes (a few times a week)", value: 0 },
+        { label: "Often (most days)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question: "How effectively do you handle conflict without escalation?",
+      name: "q2",
+      options: [
+        { label: "Not at all effectively", value: -2 },
+        { label: "Slightly effectively", value: -1 },
+        { label: "Somewhat effectively", value: 0 },
+        { label: "Effectively", value: 1 },
+        { label: "Very effectively", value: 2 },
+      ],
+    },
+    {
+      question: "How much trust do you feel in your relationships?",
+      name: "q3",
+      options: [
+        { label: "No trust at all", value: -2 },
+        { label: "Low trust", value: -1 },
+        { label: "Moderate trust", value: 0 },
+        { label: "High trust", value: 1 },
+        { label: "Complete trust", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in setting and maintaining boundaries?",
+      name: "q4",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Moderately confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question: "How much have your relationships improved over time?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
+  5: [
+    {
+      question:
+        "How often do you allow yourself to acknowledge and process grief?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once or twice a week)", value: -1 },
+        { label: "Sometimes (a few times a week)", value: 0 },
+        { label: "Often (most days)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question: "How well can you manage emotions related to the loss?",
+      name: "q2",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Poorly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How frequently do you engage in meaningful activities that honor your loved one?",
+      name: "q3",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once or twice a week)", value: -1 },
+        { label: "Sometimes (a few times a week)", value: 0 },
+        { label: "Often (most days)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How confident are you in navigating life changes after the loss?",
+      name: "q4",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Moderately confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question: "How much has your ability to cope with grief improved?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
+  6: [
+    {
+      question:
+        "How effectively can you identify and challenge trauma-related thoughts?",
+      name: "q1",
+      options: [
+        { label: "Not at all effectively", value: -2 },
+        { label: "Slightly effectively", value: -1 },
+        { label: "Somewhat effectively", value: 0 },
+        { label: "Effectively", value: 1 },
+        { label: "Very effectively", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How often do you use grounding techniques to manage trauma responses?",
+      name: "q2",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once or twice a week)", value: -1 },
+        { label: "Sometimes (a few times a week)", value: 0 },
+        { label: "Often (most days)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question: "How frequently do you feel safe and in control in daily life?",
+      name: "q3",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Always", value: 2 },
+      ],
+    },
+    {
+      question: "How well can you regulate emotional triggers?",
+      name: "q4",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Poorly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How much have your trauma symptoms decreased over time?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
+  7: [
+    {
+      question:
+        "How often do you reflect on and embrace your personal values and beliefs?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once or twice a week)", value: -1 },
+        { label: "Sometimes (a few times a week)", value: 0 },
+        { label: "Often (most days)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in expressing your authentic self?",
+      name: "q2",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Moderately confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How frequently do you make choices aligned with your identity?",
+      name: "q3",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Always", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How well do you navigate identity-related challenges (e.g., cultural, gender, personal growth)?",
+      name: "q4",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Poorly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How much has your self-awareness and acceptance improved?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
+  8: [
+    {
+      question:
+        "How often do you use effective communication techniques with family members?",
+      name: "q1",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How well do you set and enforce healthy boundaries within your family?",
+      name: "q2",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in handling parenting challenges?",
+      name: "q3",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+    {
+      question: "How frequently do you engage in positive family interactions?",
+      name: "q4",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+    {
+      question: "How much have family dynamics improved?",
+      name: "q5",
+      options: [
+        { label: "Never (0 times per week)", value: -2 },
+        { label: "Rarely (1-2 times per week)", value: -1 },
+        { label: "Occasionally (3-4 times per week)", value: 0 },
+        { label: "Regularly (5-6 times per week)", value: 1 },
+        { label: "Daily (7+ times per week)", value: 2 },
+      ],
+    },
+  ],
+  9: [
     {
       question: "How often do you engage in positive self-talk?",
       name: "q1",
@@ -2320,7 +2694,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Addiction_and_Substance_Abuse: [
+  10: [
     {
       question:
         "How often do you use alternative coping strategies instead of substances?",
@@ -2385,7 +2759,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Work_and_Career_Related_Issues: [
+  11: [
     {
       question: "How often do you feel motivated and engaged in your work?",
       name: "q1",
@@ -2450,7 +2824,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Anger_Management: [
+  12: [
     {
       question:
         "How often do you use anger management techniques (e.g., deep breathing, cognitive reframing)?",
@@ -2540,7 +2914,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Eating_Disorders_and_Body_Image_Issues: [
+  13: [
     {
       question: "How often do you engage in mindful eating habits?",
       name: "q1",
@@ -2624,7 +2998,7 @@ export const gasQuestionBank = {
       ],
     },
   ],
-  Life_Transitions: [
+  14: [
     {
       question: "How often do you engage in self-care during life transitions?",
       name: "q1",
@@ -2705,31 +3079,223 @@ export const gasQuestionBank = {
       ],
     },
   ],
+  15: [
+    {
+      question: "How often do you engage in adaptive coping strategies?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once in a while)", value: -1 },
+        { label: "Sometimes (a few times a month)", value: 0 },
+        { label: "Often (weekly)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question: "How well do you advocate for accessibility and support?",
+      name: "q2",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Poorly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in managing daily activities?",
+      name: "q3",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Moderately confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How frequently do you engage in self-care and emotional regulation?",
+      name: "q4",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Very often", value: 2 },
+      ],
+    },
+    {
+      question: "How much has your overall well-being improved?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
+  16: [
+    {
+      question:
+        "How often do you engage in self-care and health management activities?",
+      name: "q1",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely (once in a while)", value: -1 },
+        { label: "Sometimes (a few times a month)", value: 0 },
+        { label: "Often (weekly)", value: 1 },
+        { label: "Always (daily)", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How well do you cope emotionally with health-related challenges?",
+      name: "q2",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "Poorly", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Well", value: 1 },
+        { label: "Very well", value: 2 },
+      ],
+    },
+    {
+      question: "How confident are you in advocating for your health needs?",
+      name: "q3",
+      options: [
+        { label: "Not confident at all", value: -2 },
+        { label: "Slightly confident", value: -1 },
+        { label: "Moderately confident", value: 0 },
+        { label: "Confident", value: 1 },
+        { label: "Very confident", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How frequently do you engage in supportive social interactions?",
+      name: "q4",
+      options: [
+        { label: "Never", value: -2 },
+        { label: "Rarely", value: -1 },
+        { label: "Sometimes", value: 0 },
+        { label: "Often", value: 1 },
+        { label: "Very often", value: 2 },
+      ],
+    },
+    {
+      question:
+        "How much has your ability to manage your health condition improved?",
+      name: "q5",
+      options: [
+        { label: "Not at all", value: -2 },
+        { label: "A little", value: -1 },
+        { label: "Somewhat", value: 0 },
+        { label: "Quite a bit", value: 1 },
+        { label: "Significantly", value: 2 },
+      ],
+    },
+  ],
 };
 
 export const treatment_goals = [
   {
-    label: "Improving Emotional Regulation in Therapy",
-    value: "Improving_Emotional_Regulation_in_Therapy",
+    label: "Coping With Disability",
+    value: "Coping_With_Disability",
+    goal: "Improve emotional adjustment and daily functioning with a disability",
+    id: 1,
   },
-  { label: "Depression", value: "Depression" },
-  { label: "Stress Management", value: "Stress_Management" },
+  {
+    label: "Chronic Illness and Health Related Concerns",
+    value: "Chronic_Illness_and_Health_Related_Concerns",
+    goal: "Improve emotional coping with chronic illness and maintain well-being.",
+    id: 2,
+  },
+  {
+    label: "Relationship Issues",
+    value: "Relationship_Issues",
+    goal: "Improve communication, trust, and emotional connection in relationships.",
+    id:3
+  },
+  {
+    label: "Grief and Loss",
+    value: "Grief_and_Loss",
+    goal: "Develop coping strategies to process grief and integrate loss into daily life.",
+    id:4
+  },
+  {
+    label: "Trauma and PTSD",
+    value: "Trauma_and_PTSD",
+    goal: "Reduce trauma-related symptoms and increase emotional regulation.",
+    id:5
+  },
+  {
+    label: "Identity and Self Exploration",
+    value: "Identity_and_Self_Exploration",
+    goal: "Develop a strong sense of self and personal identity.",
+    id:6
+  },
+  {
+    label: "Family and Parenting Issues",
+    value: "Family_and_Parenting_Issues",
+    goal: "Strengthen family relationships and develop effective parenting strategies.",
+    id:7
+  },
+
+  {
+    label: "Anxiety Management",
+    value: "Anxiety_Management",
+    goal: "Reduce anxiety symptoms and increase the ability to handle stressful situations.",
+    id:8
+  },
+  {
+    label: "Depression",
+    value: "Depression",
+    goal: "Improve mood, motivation, and ability to engage in daily activities.",
+    id:9
+  },
+  {
+    label: "Stress Management",
+    value: "Stress_Management",
+    goal: "Develop healthier coping mechanisms to handle stress effectively.",
+    id:10
+  },
   {
     label: "Self-Esteem and Self-Confidence Issues",
     value: "Self_Esteem_and_Self_Confidence_Issues",
+    goal: "Build a more positive self-image and increase self-worth.",
+    id:11
   },
   {
     label: "Addiction and Substance Abuse",
     value: "Addiction_and_Substance_Abuse",
+    goal: "Reduce substance use and develop healthier coping mechanisms.",
+    id:12
   },
   {
     label: "Work and Career-Related Issues",
     value: "Work_and_Career_Related_Issues",
+    goal: "Increase job satisfaction, career confidence, and work-life balance.",
+    id:13
   },
-  { label: "Anger Management", value: "Anger_Management" },
+  {
+    label: "Anger Management",
+    value: "Anger_Management",
+    goal: "Develop healthier ways to express and regulate anger.",
+    id:14
+  },
   {
     label: "Eating Disorders and Body Image Issues",
     value: "Eating_Disorders_and_Body_Image_Issues",
+    goal: "Develop a healthier relationship with food and body image.",
+    id:15
   },
-  { label: "Life Transitions", value: "Life_Transitions" },
+  {
+    label: "Life Transitions",
+    value: "Life_Transitions",
+    goal: "Adjust to major life changes with resilience and stability.",
+    id:16
+  },
 ];

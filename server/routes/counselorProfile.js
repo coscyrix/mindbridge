@@ -46,4 +46,10 @@ router.post('/send-appointment-email',
   AsyncWrapper(counselorProfileController.sendAppointmentEmail.bind(counselorProfileController))
 );
 
+// Get appointment email history for a counselor
+router.get('/:counselor_profile_id/email-history',
+  authenticate,
+  AsyncWrapper(counselorProfileController.getAppointmentEmailHistory.bind(counselorProfileController))
+);
+
 export const counselorProfileRouter = { baseUrl: '/api/counselor-profile', router }; 

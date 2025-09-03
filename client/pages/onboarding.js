@@ -14,9 +14,10 @@ import {
   RightPanel,
   Wrapper,
   LeftPanel,
+  StepContent,
 } from "../styles/onboarding";
 import { toast } from "react-toastify";
-import { api, onBoarding, updateProfile } from "../utils/auth";
+import { api, logout, onBoarding, updateProfile } from "../utils/auth";
 import styled from "styled-components";
 import LicenseFileUpload from "../components/LicenseFileUpload";
 import CommonServices from "../services/CommonServices";
@@ -25,12 +26,19 @@ import WeeklyAvailability from "../components/WeeklyAvailability";
 import LocationSearch from "../components/LocationSearch";
 import axios from "axios";
 import { TREATMENT_TARGET } from "../utils/constants";
+import Spinner from "../components/common/Spinner";
+import ApiConfig from "../config/apiConfig";
+import { FaRegFilePdf } from "react-icons/fa";
+import { CiCircleRemove } from "react-icons/ci";
 
 const StepIndicator = styled.div`
   display: flex;
   justify-content: space-between;
   margin-bottom: 32px;
   position: relative;
+  @media (max-width: 800px) {
+    margin: 10px;
+  }
 
   &::before {
     content: "";
@@ -92,8 +100,9 @@ const StepIndicator = styled.div`
 
 const ButtonContainer = styled.div`
   display: flex;
-  justify-content: space-between;
-  margin-top: 32px;
+  justify-content: space-evenly;
+  // margin: 0px 64px;
+  gap: 20px;
   button {
     min-width: 120px;
   }
@@ -145,53 +154,120 @@ const ProfilePictureUpload = styled.div`
 `;
 
 const DocumentUpload = styled.div`
-  margin-top: 24px;
-
-  .document-list {
-    margin-top: 16px;
+  .document-slot {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border: 1px solid #e0e0e0;
+    padding: 1rem;
+    border-radius: 12px;
+    background: #fafafa;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
   }
 
-  .document-item {
+  .document-slot:hover {
+    border-color: #007bff;
+    background: #f5f9ff;
+  }
+
+  .upload-dropzone {
+    border: 2px dashed #bbb;
+    padding: 2rem;
+    text-align: center;
+    border-radius: 12px;
+    background: #fdfdfd;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .upload-dropzone:hover {
+    border-color: #007bff;
+    background: #eef6ff;
+  }
+  .add-more-documents {
+    margin-top: 1rem;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .upload-label {
+    color: blue;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .upload-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .file-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    margin-bottom: 8px;
+    gap: 1rem;
+  }
 
-    .document-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+  .file-preview {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f0f0f0;
+    flex-shrink: 0;
+  }
 
-      .document-icon {
-        font-size: 24px;
-        color: #666;
-      }
+  .preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 
-      .document-details {
-        .document-name {
-          font-weight: 500;
-          margin-bottom: 4px;
-        }
+  .pdf-preview {
+    font-size: 2rem;
+    color: #d9534f;
+  }
 
-        .document-type {
-          font-size: 14px;
-          color: #666;
-        }
-      }
-    }
+  .file-meta {
+    display: flex;
+    flex-direction: column;
+  }
 
-    .document-actions {
-      display: flex;
-      gap: 8px;
-    }
+  .file-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+
+  .file-size {
+    font-size: 0.8rem;
+    color: #888;
+  }
+
+  .document-details {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .document-details .document-name,
+  .document-details .document-expiry {
+    flex: 1;
+  }
+
+  .document-actions {
+    margin-top: 0.5rem;
+    text-align: right;
   }
 `;
 
 const FormField = styled.div`
-  margin-bottom: 24px;
+  margin-bottom: 14px;
   width: 100%;
 
   &.half-width {
@@ -202,7 +278,7 @@ const FormField = styled.div`
 const FormRow = styled.div`
   display: flex;
   gap: 24px;
-  margin-bottom: 24px;
+  // margin-bottom: 24px;
   width: 100%;
 `;
 
@@ -261,6 +337,7 @@ const SignUp = () => {
   const userObj = userData && JSON.parse(userData);
   const methods = useForm({
     mode: "onTouched",
+    shouldUnregister: false,
     defaultValues: {
       location: "",
       public_phone: "",
@@ -275,6 +352,9 @@ const SignUp = () => {
       license_file_url: "",
       license_provider: "",
       availability: {},
+      documentFiles: [],
+      documentNames: [],
+      documentExpiryDates: [],
     },
   });
   const [loading, setLoading] = useState(false);
@@ -447,31 +527,31 @@ const SignUp = () => {
         if (documentFiles.length > 0) {
           const documentUploadPromises = documentFiles.map(
             async (file, index) => {
-              if (file) {
-                try {
-                  const formData = new FormData();
-                  formData.append("document", file);
-                  formData.append("counselor_profile_id", idToUpdate);
-                  formData.append("document_type", "other");
-                  formData.append("document_name", documentNames[index]);
-                  formData.append("expiry_date", documentExpiryDates[index]);
-
-                  await CommonServices.uploadOnboardingDocuments(formData);
+              try {
+                if (!(file instanceof File)) {
                   return true;
-                } catch (error) {
-                  console.error(
-                    `Error uploading document ${index + 1}:`,
-                    error
-                  );
-                  return false;
                 }
+
+                const formData = new FormData();
+                formData.append("counselor_profile_id", idToUpdate);
+                formData.append("document_type", "other");
+                formData.append("document_name", documentNames[index]);
+                formData.append("expiry_date", documentExpiryDates[index]);
+                formData.append("document", file);
+
+                await CommonServices.uploadOnboardingDocuments(formData);
+                return true;
+              } catch (error) {
+                toast.error(error?.message);
+                console.error(`Error uploading document ${index + 1}:`, error);
+                return false;
               }
-              return true;
             }
           );
 
           const documentResults = await Promise.all(documentUploadPromises);
-          documentsSuccess = documentResults.every((result) => result);
+          const documentsSuccess = documentResults.every((result) => result);
+
           if (!documentsSuccess) {
             toast.warning("Some documents failed to upload");
           }
@@ -485,9 +565,8 @@ const SignUp = () => {
           );
 
           if (!type) {
-            toast.success("Onboarding Success Please login again")
-            logout()
-
+            toast.success("Onboarding Success Please login again");
+            logout();
           } else {
             router.push("/dashboard");
           }
@@ -509,7 +588,6 @@ const SignUp = () => {
       setLoading(false);
     }
   };
-  
 
   const nextStep = async () => {
     const isValid = await validateStep(currentStep);
@@ -573,18 +651,57 @@ const SignUp = () => {
     const newFiles = [...documentFiles];
     newFiles[index] = file;
     setDocumentFiles(newFiles);
+    methods.setValue("documentFiles", newFiles);
   };
 
   const handleDocumentNameChange = (index, name) => {
     const newNames = [...documentNames];
     newNames[index] = name;
     setDocumentNames(newNames);
+    methods.setValue(`documentNames.${index}`, name);
   };
 
   const handleDocumentExpiryChange = (index, date) => {
     const newDates = [...documentExpiryDates];
     newDates[index] = date;
     setDocumentExpiryDates(newDates);
+    methods.setValue(`documentExpiryDates.${index}`, date);
+  };
+  const handleDeleteDocument = async (index) => {
+    try {
+      const document_id = documentFiles[index]?.id;
+      console.log(document_id);
+      if (document_id) {
+        const response = await api.delete(
+          `${ApiConfig.onboarding.uploadDocuments}/${document_id}`
+        );
+        if (response.status === 200) {
+          toast.success(response?.data?.message);
+          const newFiles = [...documentFiles];
+          const newNames = [...documentNames];
+          const newDates = [...documentExpiryDates];
+          newFiles.splice(index, 1);
+          newNames.splice(index, 1);
+          newDates.splice(index, 1);
+          setDocumentFiles(newFiles);
+          setDocumentNames(newNames);
+          setDocumentExpiryDates(newDates);
+          // fetchDocuments();
+        }
+      } else {
+        const newFiles = [...documentFiles];
+        const newNames = [...documentNames];
+        const newDates = [...documentExpiryDates];
+        newFiles.splice(index, 1);
+        newNames.splice(index, 1);
+        newDates.splice(index, 1);
+        setDocumentFiles(newFiles);
+        setDocumentNames(newNames);
+        setDocumentExpiryDates(newDates);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
   };
 
   const uploadAllDocuments = async (counselorProfileId) => {
@@ -610,6 +727,53 @@ const SignUp = () => {
     const results = await Promise.all(uploadPromises);
     return results.every((result) => result);
   };
+  const fetchDocuments = async () => {
+    try {
+      if (!onBoardingDetails?.documents?.length) return;
+
+      const results = await Promise.allSettled(
+        onBoardingDetails.documents.map(async (doc) => {
+          const response = await axios.get(
+            `${imageBaseUrl}${doc.document_url}`,
+            {
+              responseType: "blob",
+            }
+          );
+          const blob = response.data;
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              resolve({
+                base64: reader.result,
+                name: doc.document_name,
+                expiry: doc.expiry_date,
+                type: doc.document_type,
+                id: doc.document_id,
+              });
+            };
+            reader.readAsDataURL(blob);
+          });
+        })
+      );
+      const successfulFiles = results
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => r.value);
+      setDocumentFiles(successfulFiles);
+      setDocumentNames(successfulFiles.map((f) => f.name));
+      setDocumentExpiryDates(successfulFiles.map((f) => f.expiry));
+      methods.setValue(
+        "documentNames",
+        successfulFiles.map((f) => f.name)
+      );
+      methods.setValue(
+        "documentExpiryDates",
+        successfulFiles.map((f) => f.expiry)
+      );
+      console.log("Prefilled docs:", successfulFiles);
+    } catch (err) {
+      console.error("Error fetching documents:", err);
+    }
+  };
 
   useEffect(() => {
     if (type && userId) {
@@ -632,10 +796,16 @@ const SignUp = () => {
         label: specialty.service_name,
       }));
 
-      const serviceModalities = onBoardingDetails.service_modalities.map(
+      const serviceModalities = onBoardingDetails.service_modalities?.map(
         (modality) => ({
           value: modality.toLowerCase().replace(" ", "_"),
           label: modality,
+        })
+      );
+      const treatment_target = onBoardingDetails.target_outcomes?.map(
+        (item) => ({
+          label: item.target_name,
+          value: item.target_outcome_id,
         })
       );
 
@@ -661,9 +831,10 @@ const SignUp = () => {
           label: onBoardingDetails.race,
         },
         license_number: onBoardingDetails.license_number,
-
+        license_provider: onBoardingDetails.license_provider,
         license_file_url: onBoardingDetails.license_file_url,
         availability: onBoardingDetails.availability || {},
+        treatment_target: treatment_target || [],
       });
 
       const fetchProfileImage = async () => {
@@ -673,9 +844,9 @@ const SignUp = () => {
               `${imageBaseUrl}${onBoardingDetails.profile_picture_url}`,
               {
                 responseType: "blob", // Important: get raw binary data
-                headers: {
-                  "ngrok-skip-browser-warning": "true",
-                },
+                // headers: {
+                //   "ngrok-skip-browser-warning": "true",
+                // },
               }
             );
 
@@ -705,9 +876,9 @@ const SignUp = () => {
               `${imageBaseUrl}${onBoardingDetails.license_file_url}`,
               {
                 responseType: "blob",
-                headers: {
-                  "ngrok-skip-browser-warning": "true",
-                },
+                // headers: {
+                //   "ngrok-skip-browser-warning": "true",
+                // },
               }
             );
 
@@ -728,6 +899,12 @@ const SignUp = () => {
 
       if (onBoardingDetails.license_file_url) {
         fetchLicenseImage();
+      }
+      if (
+        onBoardingDetails.documents &&
+        onBoardingDetails.documents.length > 0
+      ) {
+        fetchDocuments();
       }
     }
   }, [onBoardingDetails]);
@@ -785,45 +962,23 @@ const SignUp = () => {
                 />
               </FormField>
               <FormField className="half-width">
-              <label>License File</label>
                 <Controller
-                  name="license_file_url"
+                  name="license_provider"
                   control={methods.control}
-                  rules={{ required: "License file is required" }}
+                  rules={{ required: "License provider is required" }}
                   render={({ field, fieldState: { error } }) => (
-                    <LicenseFileUpload
-                      counselorProfileId={123}
-                      onUploadComplete={handleUploadComplete}
-                      errormsg={error?.message}
-                      label="License Number"
-                      onFileSelect={handleLicenseFileSelect}
-                      hideUploadButton={true}
-                      licenseFile={licenseFile}
-                      value={field.value}
-                      onChange={field.onChange}
+                    <CustomInputField
+                      {...field}
+                      label="License Provider*"
+                      required
+                      customClass="license-provider-input"
+                      placeholder="Enter your license provider"
+                      error={error?.message}
                     />
                   )}
                 />
               </FormField>
             </FormRow>
-            <FormField className="half-width">
-              <Controller
-                name="license_provider"
-                control={methods.control}
-                rules={{ required: "License provider is required" }}
-                render={({ field, fieldState: { error } }) => (
-                  <CustomInputField
-                    {...field}
-                    label="License Provider*"
-                    required
-                    customClass="license-provider-input"
-                    placeholder="Enter your license provider"
-                    error={error?.message}
-                  />
-                )}
-              />
-            </FormField>
-
             <FormField>
               <Controller
                 name="location"
@@ -907,9 +1062,9 @@ const SignUp = () => {
               />
             </FormField>
 
-            <FormRow>
+            {/* <FormRow>
               <FormField className="half-width">
-                {/* <Controller
+                <Controller
                   name="services_offered"
                   control={methods.control}
                   rules={{ required: "Services offered is required" }}
@@ -923,26 +1078,9 @@ const SignUp = () => {
                       error={error?.message}
                     />
                   )}
-                /> */}
-              </FormField>
-              <FormField className="half-width">
-                <Controller
-                  name="treatment_target"
-                  control={methods.control}
-                  rules={{ required: "Treatment target is required" }}
-                  render={({ field, fieldState: { error } }) => (
-                    <CustomMultiSelect
-                      {...field}
-                      label="Treatment Target"
-                      placeholder="Select your Treatment Target"
-                      isMulti={true}
-                      options={TREATMENT_TARGET}
-                      error={error?.message}
-                    />
-                  )}
                 />
               </FormField>
-            </FormRow>
+            </FormRow> */}
 
             <FormRow>
               <FormField className="half-width">
@@ -999,6 +1137,47 @@ const SignUp = () => {
                   )}
                 />
               </FormField>
+              <FormField className="half-width">
+                <Controller
+                  name="treatment_target"
+                  control={methods.control}
+                  rules={{ required: "Treatment target is required" }}
+                  render={({ field, fieldState: { error } }) => (
+                    <CustomMultiSelect
+                      {...field}
+                      className="min-multi"
+                      label="Treatment Target"
+                      placeholder="Select Treatment Target"
+                      isMulti={true}
+                      options={TREATMENT_TARGET}
+                      error={error?.message}
+                    />
+                  )}
+                />
+              </FormField>
+            </FormRow>
+            <FormRow>
+              <FormField>
+                <label>License File</label>
+                <Controller
+                  name="license_file_url"
+                  control={methods.control}
+                  rules={{ required: "License file is required" }}
+                  render={({ field, fieldState: { error } }) => (
+                    <LicenseFileUpload
+                      counselorProfileId={123}
+                      onUploadComplete={handleUploadComplete}
+                      errormsg={error?.message}
+                      label="License Number"
+                      onFileSelect={handleLicenseFileSelect}
+                      hideUploadButton={true}
+                      licenseFile={licenseFile}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </FormField>
             </FormRow>
           </>
         );
@@ -1011,120 +1190,153 @@ const SignUp = () => {
                 Upload any additional certifications, insurance documents, or
                 other relevant files.
               </p>
-              <div className="document-list">
-                {documentFiles.map((file, index) => (
-                  <div key={index} className="document-item">
-                    <div className="document-info">
+              {documentFiles.map((file, index) => (
+                <div key={index} className="document-slot">
+                  {!file && (
+                    <div
+                      className="upload-dropzone"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (e.dataTransfer.files.length > 0) {
+                          handleDocumentFileChange(
+                            index,
+                            e.dataTransfer.files[0]
+                          );
+                        }
+                      }}
+                    >
+                      <input
+                        accept="image/*,.pdf"
+                        id={`document-upload-${index}`}
+                        type="file"
+                        style={{ display: "none" }}
+                        onChange={(e) =>
+                          e.target.files?.[0] &&
+                          handleDocumentFileChange(index, e.target.files[0])
+                        }
+                      />
                       <label
-                        htmlFor={`document-file-${index}`}
-                        className="document-upload-label"
-                        style={{ cursor: "pointer" }}
+                        htmlFor={`document-upload-${index}`}
+                        className="upload-label"
                       >
-                        {file ? (
-                          <span style={{ fontSize: 14, color: "#2196F3" }}>
-                            {file.name}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: 24, color: "#666" }}>
-                            📎
-                          </span>
-                        )}
-                        <input
-                          id={`document-file-${index}`}
-                          type="file"
-                          accept="image/*,application/pdf"
-                          style={{ display: "none" }}
-                          onChange={(e) =>
-                            handleDocumentFileChange(index, e.target.files[0])
-                          }
-                        />
+                        <span className="upload-icon">⬆️</span>
+                        <p>
+                          Drag and Drop here
+                          <br />
+                          or <span className="browse-link">Browse files</span>
+                        </p>
                       </label>
-                      <div className="document-details">
-                        <div className="document-name">
-                          <Controller
-                            name={`documentNames.${index}`}
-                            control={methods.control}
-                            rules={{ required: "Document name is required" }}
-                            render={({ field, fieldState: { error } }) => (
-                              <CustomInputField
-                                {...field}
-                                label="Document Name"
-                                required
-                                customClass="document-name-input"
-                                placeholder="Enter document name"
-                                error={error?.message}
-                                onChange={(e) =>
-                                  handleDocumentNameChange(
-                                    index,
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            )}
-                          />
-                        </div>
-                        <div className="document-type">
-                          <Controller
-                            name={`documentExpiryDates.${index}`}
-                            control={methods.control}
-                            rules={{
-                              required: "Document expiry date is required",
-                            }}
-                            render={({ field, fieldState: { error } }) => (
-                              <CustomInputField
-                                {...field}
-                                label="Expiry Date"
-                                required
-                                customClass="document-expiry-input"
-                                placeholder="Enter expiry date"
-                                error={error?.message}
-                                onChange={(e) =>
-                                  handleDocumentExpiryChange(
-                                    index,
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            )}
-                          />
-                        </div>
-                      </div>
                     </div>
-                    <div className="document-actions">
-                      <CustomButton
-                        title="Delete"
-                        type="button"
-                        onClick={() => {
-                          const newFiles = [...documentFiles];
-                          const newNames = [...documentNames];
-                          const newDates = [...documentExpiryDates];
-                          newFiles.splice(index, 1);
-                          newNames.splice(index, 1);
-                          newDates.splice(index, 1);
-                          setDocumentFiles(newFiles);
-                          setDocumentNames(newNames);
-                          setDocumentExpiryDates(newDates);
-                        }}
-                        className="secondary-button"
+                  )}
+                  {file && (
+                    <div className="file-item">
+                      <div className="file-preview">
+                        {file?.type?.startsWith("image/") ||
+                        file?.base64?.startsWith("data:image") ? (
+                          <img
+                            src={
+                              file.base64
+                                ? file.base64
+                                : URL.createObjectURL(file)
+                            }
+                            alt={file.name || "document"}
+                            className="preview-image"
+                            onLoad={(e) => {
+                              if (file instanceof File) {
+                                URL.revokeObjectURL(e.currentTarget.src);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <FaRegFilePdf color="red" />
+                        )}
+                      </div>
+
+                      <div className="file-meta">
+                        <p className="file-name">{file.name}</p>
+                      </div>
+                      {file instanceof File && (
+                        <CiCircleRemove
+                        size={30}
+                          color="red"
+                          onClick={() => {
+                            const updatedFiles = [...documentFiles];
+                            updatedFiles[index] = null;
+                            setDocumentFiles(updatedFiles);
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  <div className="document-details">
+                    <div className="document-name">
+                      <Controller
+                        name={`documentNames.${index}`}
+                        control={methods.control}
+                        rules={{ required: "Document name is required" }}
+                        render={({ field, fieldState: { error } }) => (
+                          <CustomInputField
+                            disabled={documentFiles[index]?.id ? true : false}
+                            {...field}
+                            label="Document Name"
+                            required
+                            customClass="document-name-input"
+                            placeholder="Enter document name"
+                            error={error?.message}
+                            onChange={(e) =>
+                              handleDocumentNameChange(index, e.target.value)
+                            }
+                          />
+                        )}
+                      />
+                    </div>
+
+                    <div className="document-expiry">
+                      <Controller
+                        disabled={documentFiles[index]?.id ? true : false}
+                        name={`documentExpiryDates.${index}`}
+                        control={methods.control}
+                        rules={{ required: "Document expiry date is required" }}
+                        render={({ field, fieldState: { error } }) => (
+                          <CustomInputField
+                            {...field}
+                            label="Expiry Date"
+                            required
+                            customClass="document-expiry-input"
+                            placeholder="DD-MM-YYYY"
+                            error={error?.message}
+                            onChange={(e) =>
+                              handleDocumentExpiryChange(index, e.target.value)
+                            }
+                          />
+                        )}
                       />
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  <div className="document-actions">
+                    <CustomButton
+                      title="Delete"
+                      type="button"
+                      onClick={() => handleDeleteDocument(index)}
+                      className="secondary-button"
+                    />
+                  </div>
+                </div>
+              ))}
+
               <div className="add-more-documents">
                 <CustomButton
                   title="Add More Documents"
                   type="button"
-                  onClick={() => {
-                    setDocumentFiles((prev) => [...prev, null]);
-                    setDocumentNames((prev) => [...prev, ""]);
-                    setDocumentExpiryDates((prev) => [...prev, ""]);
-                  }}
+                  onClick={handleAddMoreDocument}
                   className="secondary-button"
                 />
               </div>
             </DocumentUpload>
-            <ButtonContainer>
+            <div className="skip-add-more-documents">
               <CustomButton
                 title="Skip Documents"
                 type="button"
@@ -1136,14 +1348,14 @@ const SignUp = () => {
                 }}
                 className="secondary-button"
               />
-            </ButtonContainer>
+            </div>
           </>
         );
       case 3:
         return (
-          <div className="step-content">
+          <StepContent>
             <h2>Availability</h2>
-            <p>Please set your weekly availability for sessions.</p>
+            {/* <p>Please set your weekly availability for sessions.</p> */}
             <Controller
               name="availability"
               control={methods.control}
@@ -1155,7 +1367,7 @@ const SignUp = () => {
                 />
               )}
             />
-          </div>
+          </StepContent>
         );
       default:
         return null;
@@ -1198,7 +1410,12 @@ const SignUp = () => {
     try {
       const { data, status } = await CommonServices.getCounselorProfile(userId);
       if (data && status === 200) {
-        setOnBoardingDetails(data?.rec[0]);
+        const profile = data?.rec?.[0] || {};
+        const documents = data?.documents || [];
+        setOnBoardingDetails({
+          ...profile,
+          documents,
+        });
       }
     } catch (error) {
       console.log("Error while fetching counselor details:", error);
@@ -1263,8 +1480,19 @@ const SignUp = () => {
                   disabled={loading}
                 />
               )} */}
-              {(
+              {
                 <ButtonContainer>
+                  {currentStep === 1 && (
+                    <CustomButton
+                      title="Back"
+                      type="button"
+                      onClick={() => {
+                        router.push("/dashboard");
+                      }}
+                      customClass="secondary-button"
+                      onboardingStep={true}
+                    />
+                  )}
                   {currentStep > 1 && (
                     <CustomButton
                       title="Previous"
@@ -1281,6 +1509,8 @@ const SignUp = () => {
                       customClass="primary-button"
                       onboardingStep={true}
                     />
+                  ) : loading ? (
+                    <Spinner color="#628acdff" position="end" />
                   ) : (
                     <CustomButton
                       title="Submit"
@@ -1291,7 +1521,7 @@ const SignUp = () => {
                     />
                   )}
                 </ButtonContainer>
-              )}
+              }
             </form>
           </FormProvider>
         </FormContainer>
@@ -1351,6 +1581,7 @@ const SignUp = () => {
 
         .add-more-documents {
           margin-top: 1rem;
+          margin-bottom: 10px;
           text-align: center;
         }
 

@@ -104,6 +104,7 @@ export const CreateSessionFormWrapper = styled.div`
       display: flex;
       align-items: baseline;
       gap: 50px;
+      padding-top: 20px;
       .session-details {
         display: flex;
         column-gap: 40px;
@@ -112,7 +113,7 @@ export const CreateSessionFormWrapper = styled.div`
     }
 
     .discharge-delete-button {
-      color: #FFFFFF;
+      color: #ffffff;
       padding: 10px;
       border: none;
       box-shadow: none;
@@ -122,14 +123,14 @@ export const CreateSessionFormWrapper = styled.div`
       }
       &_disabled {
         opacity: 0.5;
-        color: #FFFFFF;
+        color: #ffffff;
         padding: 10px;
         border: none;
         box-shadow: none;
         cursor: auto;
         font-size: 15px;
         &:hover {
-          color: #FF9;
+          color: #ff9;
         }
       }
     }

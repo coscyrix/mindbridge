@@ -57,6 +57,7 @@ function Sidebar({ showSideBar, setShowSideBar }) {
 
   const handleCloseSideBar = () => {
     setShowSideBar(false);
+    setShowProfileModal(false);
   };
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -115,6 +116,18 @@ function Sidebar({ showSideBar, setShowSideBar }) {
       document.removeEventListener("keydown", handleEsc);
     };
   }, []);
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1023) {
+        setShowProfileModal(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   return (
     <>
@@ -142,13 +155,16 @@ function Sidebar({ showSideBar, setShowSideBar }) {
           </div>
           <div className="headings">
             {SIDEBAR_HEADINGS.filter((item) => {
+              // if (!isAdmin && item.title === "Logo Managment") {
+              //   return false;
+              // }
               if ((isManager || isAdmin) && item.title === "Profile")
                 return false;
-              if (!isManager && item.title === "Consent Management") return false;
+              if (!isManager && item.title === "Consent Management")
+                return false;
               if (!isManager && item.title === "Fee Split Management") {
                 return false;
               }
-
               return true;
             }).map((heading, index) => (
               <div key={heading.title || index}>
@@ -236,12 +252,12 @@ function Sidebar({ showSideBar, setShowSideBar }) {
         open={showPasswordModal}
         onClose={handleClosePasswordModal}
       />
-      {showProfileModal && (
+      {showProfileModal && showSideBar && (
         <div
           ref={profileDropdownRef}
           onClick={() => setShowProfileModal((prev) => !prev)}
           style={{
-            position: "absolute",
+            position: "fixed",
             bottom: "120px",
             left: "20px",
             zIndex: 1000,

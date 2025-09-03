@@ -79,17 +79,48 @@ export default class InvoiceService {
   async getInvoiceByMulti(data) {
     data.role_id = Number(data.role_id);
 
-    if (data.role_id === 4) {
-      // delete data.counselor_id;
+    if (data.role_id === 4 && data.counselor_id) {
+      // For role_id=4, if counselor_id is provided, get their tenant_id to calculate tenant amount
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+      data.tenant_id = Number(tenantId[0].tenant_id);
+    }
+
+    if (data.role_id === 2 && data.counselor_id) {
+      // For role_id=2 (counselor), get their tenant_id to calculate tenant amount
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+      data.tenant_id = Number(tenantId[0].tenant_id);
     }
 
     if (data.role_id === 3) {
       if (data.counselor_id && data.counselor_id !== 'allCounselors') {
+        // If specific counselor is provided, get their tenant_id
         const tenantId = await this.common.getUserTenantId({
           user_profile_id: data.counselor_id,
         });
         data.tenant_id = Number(tenantId[0].tenant_id);
       }
+      // If no counselor_id is provided but tenant_id is provided, 
+      // we want to show all counselors for that tenant
+      // The model will handle filtering by tenant_id only
+    }
+
+    // Set current month start and end dates if not provided
+    if (!data.start_dte && !data.end_dte) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      
+      // First day of current month
+      data.start_dte = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
+      
+      // Last day of current month
+      data.end_dte = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+      
+      console.log('Auto-setting dates - start_dte:', data.start_dte, 'end_dte:', data.end_dte);
     }
 
     console.log(

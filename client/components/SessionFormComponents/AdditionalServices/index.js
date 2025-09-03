@@ -87,13 +87,22 @@ const AdditionalServicesForm = ({
     }
   };
 
-  const additionalServiceDropdown = additionalServicesArray?.map((service) => {
-    return {
-      label: service?.service_name,
-      value: service?.service_code,
-      service_id: service?.service_id,
-    };
-  });
+const seen = new Set();
+
+const additionalServiceDropdown = additionalServicesArray
+  ?.filter((service) => {
+    if (seen.has(service?.service_code)) {
+      return false;
+    } else {
+      seen.add(service?.service_code);
+      return true;
+    }
+  })
+  .map((service) => ({
+    label: service?.service_name,
+    value: service?.service_code,
+    service_id: service?.service_id,
+  }));
 
   useEffect(() => {
     if (initialData) {

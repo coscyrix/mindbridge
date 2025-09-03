@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import ReactPaginate from "react-paginate";
 import { PaginationContainer } from "./style";
 import CustomButton from "../CustomButton";
@@ -10,12 +11,17 @@ const CustomPagination = ({
   currentPage,
   setCurrentPage,
 }) => {
+  const { pageSize } = useWindowResize();
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const handlePageChange = ({ selected }) => {
     setCurrentPage(selected);
   };
 
-  const { pageSize } = useWindowResize();
+  useEffect(() => {
+    if (currentPage > totalPages - 1) {
+      setCurrentPage(0);
+    }
+  }, [totalItems, itemsPerPage, totalPages]);
 
   return (
     <PaginationContainer>
@@ -38,6 +44,7 @@ const CustomPagination = ({
         breakLabel={"..."}
         pageCount={totalPages}
         onPageChange={handlePageChange}
+        forcePage={currentPage}
         containerClassName={"pagination"}
         activeClassName={"active"}
         marginPagesDisplayed={pageSize.width < 500 ? 1 : 2}

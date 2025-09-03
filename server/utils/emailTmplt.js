@@ -7,6 +7,18 @@ import {
 
 dotenv.config();
 
+// Email disclaimer for all communications
+const EMAIL_DISCLAIMER = `
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; line-height: 1.4;">
+  <p><strong>DISCLAIMER:</strong></p>
+  <p>Assessment tools are used with proper author permissions for clinical purposes.<br/>
+  Emails and attachments may contain confidential and legally protected information.<br/>
+  Email transmission is not guaranteed to be secure or error-free. The sender assumes no liability for issues arising from electronic delivery.<br/>
+  Unauthorized access, use, or distribution is prohibited.<br/>
+  If received in error, please notify the sender and delete the message immediately.</p>
+</div>
+`;
+
 export const forgetPasswordEmail = (email, newPassword) => {
   return {
     to: email,
@@ -20,6 +32,7 @@ export const forgetPasswordEmail = (email, newPassword) => {
       <p>If you did not request this password reset, please contact our support team immediately.</p>
       <p>Thank you,</p>
       <p>MindBridge</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -37,6 +50,7 @@ export const otpEmail = (email, otp) => {
       <p>If you did not request this OTP, please contact our support team immediately to secure your account.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -54,6 +68,7 @@ export const clientWelcomeEmail = (email, password) => {
       <p> <strong>We recommend you change your password once you log in. </strong></p>
       <p>Thank you for choosing MindBridge!</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -71,6 +86,7 @@ export const accountRestoredEmail = (email, newPassword) => {
       <p> <strong>We recommend you change your password once you log in. </strong></p>
       <p>Thank you for choosing MindBridge!</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -85,6 +101,7 @@ export const emailUpdateEmail = (email) => {
       <p>Your email address has been successfully updated. If you did not make this change, please contact our support team immediately.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -100,6 +117,7 @@ export const accountVerificationEmail = (email) => {
       <p>If you have any questions or need assistance, please contact our support team.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -114,6 +132,7 @@ export const accountDeactivatedEmail = (email) => {
       <p>Your account is currently deactivated. If you want to restore your account, please contact our support team.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -128,6 +147,7 @@ export const changePasswordEmail = (email) => {
       <p>Your password has been successfully changed. If you did not make this change, please contact our support team immediately.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -140,7 +160,11 @@ export const treatmentToolsEmail = (
   form_id,
   client_id,
   session_id,
+  target_outcome_id = null,
 ) => {
+  // Encode client name for URL parameter
+  const encodedClientName = encodeURIComponent(client_full_name);
+  
   return {
     to: email,
     subject: `${tools_name} Assessment`,
@@ -150,10 +174,11 @@ export const treatmentToolsEmail = (
       <p>As part of our commitment to providing personalized care, we invite you to participate in the ${tools_name} assessment. This brief questionnaire will help us tailor our approach to your unique needs.</p>
       <p>Participation is completely voluntary, and all information remains confidential. Your input will be invaluable in enhancing the quality of care we provide.</p>
       <p>Please click the link below to complete the assessment:</p>
-      <p><a href="${process.env.BASE_URL}${process.env.FORMS}${tools_name.toLowerCase()}?form_id=${form_id}&client_id=${client_id}&session_id=${session_id}">Complete ${tools_name} Assessment</a></p>
+      <p><a href="${process.env.BASE_URL}${process.env.FORMS}${tools_name.toLowerCase()}?form_id=${form_id}&client_id=${client_id}&session_id=${session_id}&client_name=${encodedClientName}${target_outcome_id ? `&target_outcome_id=${target_outcome_id}` : ''}">Complete ${tools_name} Assessment</a></p>
       <p>If you have any questions or concerns, feel free to reach out. We're here to support you.</p>
       <p>Thank you,</p>
       <p>The Counselling Team Member</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -173,6 +198,7 @@ export const attendanceSummaryEmail = (
       <p>Let us know if you have any questions.</p>
       <p>Thank you,</p>
       <p>The Counselling Team Member</p>
+      ${EMAIL_DISCLAIMER}
     `,
     attachments: [
       { filename: 'attendance-record.pdf', content: pdfAttachment },
@@ -181,7 +207,7 @@ export const attendanceSummaryEmail = (
 };
 
 // This function sends an email to the client with the consent form for their review and submission.
-export const consentFormEmail = (email, clientName, consentFormLink) => {
+export const consentFormEmail = (email, clientName, consentFormLink, counselor_id, tenant_id) => {
   return {
     to: email,
     subject: 'Consent Form for Your Review and Submission',
@@ -194,6 +220,7 @@ export const consentFormEmail = (email, clientName, consentFormLink) => {
       <p>If you have any concerns or need assistance, don't hesitate to reach out.</p>
       <p>Thank you,</p>
       <p>The Counselling Team Member</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -293,6 +320,7 @@ export const welcomeAccountDetailsEmail = (
     <p>We're here to support you every step of the way.</p>
     <p>Thank you,</p>
     <p>The Counselling Team Member</p>
+    ${EMAIL_DISCLAIMER}
     `,
   };
 };
@@ -394,6 +422,7 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
         
         <p style="text-align: left;">Thank you,</p>
         <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>
+        ${EMAIL_DISCLAIMER}
       </div>
     `,
   };
@@ -411,6 +440,7 @@ export const dischargeEmail = (email, clientName) => {
         <p>Thank you for trusting me to be part of your journey. I wish you continued strength, growth, and fulfillment in the path ahead.</p>
         <p style="text-align: left;">Thank you,</p>
         <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>
+        ${EMAIL_DISCLAIMER}
       </div>
     `,
   };
@@ -449,6 +479,7 @@ export const additionalServiceEmail = (
         <p>If you have any questions or need to reschedule, please contact your assigned counselor or us at <strong>${process.env.SUPPORT_EMAIL}</strong> or <strong>${process.env.SUPPORT_PHONE}</strong>.</p>
         <p>Thank you,</p>
         <p><strong>The MindBridge Team</strong></p>
+        ${EMAIL_DISCLAIMER}
       </div>
     `,
   };
@@ -459,16 +490,64 @@ export const homeworkEmailAttachment = (
   homework_title,
   fileBuffer,
   fileName,
+  clientName = null,
 ) => {
+  const greeting = clientName ? `Hello ${capitalizeFirstLetter(clientName)},` : 'Hello,';
+  
   return {
     to: email,
-    subject: `${homework_title} Assignment`,
+    subject: `Homework Assignment: ${homework_title}`,
     html: `
-        <p>Hello,</p>
-        <p>Please find attached the homework assignment for your review and completion.</p>
-        <p>Thank you,</p>
-        <p>The Counselling Team Member</p>
-      `,
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Homework Assignment</h1>
+        </div>
+        
+        <div style="padding: 30px; background: #f9f9f9; border-radius: 0 0 8px 8px; border: 1px solid #ddd;">
+          <p style="font-size: 16px; margin-bottom: 20px;">${greeting}</p>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            I hope this message finds you well. As part of your ongoing therapy journey, I've prepared a homework assignment titled <strong>"${homework_title}"</strong> to support your progress and reinforce the skills we've been working on.
+          </p>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;">
+            <h3 style="color: #667eea; margin-top: 0;">📋 Assignment Details</h3>
+            <p style="margin-bottom: 15px;"><strong>Title:</strong> ${homework_title}</p>
+            <p style="margin-bottom: 15px;"><strong>File:</strong> ${fileName}</p>
+            <p style="margin-bottom: 0;"><strong>Instructions:</strong> Please review the attached document and complete the exercises as outlined. Take your time and be honest with your responses.</p>
+          </div>
+          
+          <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #2c5aa0; margin-top: 0;">💡 Tips for Success</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>Set aside dedicated time in a quiet, comfortable space</li>
+              <li>Be honest and authentic in your responses</li>
+              <li>Don't rush - take time to reflect on each question</li>
+              <li>Feel free to reach out if you have any questions</li>
+            </ul>
+          </div>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            This homework is designed to help you practice and integrate the therapeutic techniques we've discussed. Your engagement with these assignments plays a crucial role in your healing journey.
+          </p>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            Please complete this assignment before our next session so we can discuss your progress and address any challenges you may have encountered.
+          </p>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            If you have any questions about the assignment or need clarification on any part, please don't hesitate to reach out. I'm here to support you every step of the way.
+          </p>
+          
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <p style="margin-bottom: 10px; font-weight: bold; color: #667eea;">Warm regards,</p>
+            <p style="margin: 0; font-weight: bold;">Your Counselling Team</p>
+            <p style="margin: 5px 0; color: #666; font-size: 14px;">MindBridge</p>
+          </div>
+        </div>
+      </div>
+      ${EMAIL_DISCLAIMER}
+    `,
     attachments: [{ filename: fileName, content: fileBuffer }],
   };
 };
@@ -507,6 +586,7 @@ export const onboardingAdminEmail = (data) => {
         <li><strong>Contact Number:</strong> ${data.phone}</li>
       </ul>
       <p>Submitted at: ${new Date().toLocaleString()}</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
 };

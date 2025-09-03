@@ -13,14 +13,30 @@ import { useReferenceContext } from "../../context/ReferenceContext";
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 import "react-quill/dist/quill.snow.css";
 import { toast } from "react-toastify";
+import Spinner from "../../components/common/Spinner";
 
 const ConsentManagement = () => {
   const [isEnabled, setIsEnabled] = useState(false);
   const [userData, setUserData] = useState(null);
   const [counselors, setCounselors] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const { userObj, allCounselors } = useReferenceContext();
+  const [consentBody, setConsentBody] = useState(null);
+  const methods = useForm({
+    resolver: zodResolver(getConsentManagementSchema(userData)),
+    defaultValues: {
+      consent_Editor_Values: "",
+      counselorSelect: null,
+    },
+    mode: "onSubmit",
+  });
 
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = methods;
   useEffect(() => {
     if (userObj) setUserData(userObj);
     if (allCounselors) setCounselors(allCounselors);
@@ -37,40 +53,47 @@ const ConsentManagement = () => {
       setCounselors(formattedCounselors);
     }
   }, [allCounselors]);
-  console.log(allCounselors);
-  const methods = useForm({
-    resolver: zodResolver(getConsentManagementSchema(userData)),
-    defaultValues: {
-      agreeTerms: false,
-      consent_Editor_Values: "",
-      counselorSelect: null,
-    },
-    mode: "onSubmit",
-  });
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = methods;
-
+  const getConsentBody = async () => {
+    try {
+      const tenant_id = userObj?.tenant_id;
+      const result = await api.get(
+        `${ApiConfig.consentFormSubmittion.consentForm}?tenant_id=${tenant_id}`
+      );
+      if (result.status === 200) {
+        setConsentBody(result?.data?.description);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+      console.log(error);
+    }
+  };
+  const { reset } = methods;
+  useEffect(() => {
+    getConsentBody();
+  }, []);
+  useEffect(() => {
+    if (consentBody) {
+      reset((prev) => ({
+        ...prev,
+        consent_Editor_Values: consentBody,
+      }));
+    }
+  }, [consentBody, reset]);
   const handleToggle = (event) => {
     setIsEnabled(event.target.checked);
   };
 
   const onSubmit = async (data) => {
-    
-
-    console.log(data);
-    const isAdmin = userData?.role_id === 4;
-    const payload = {
-      description: data.consent_Editor_Values,
-      tenant_id: isAdmin
-        ? data?.counselorSelect?.tenant_id
-        : userData?.tenant?.tenant_generated_id || "",
-      ...(!isAdmin && { counselor_id: userData?.counselor_profile_id }),
-    };
     try {
+      setLoading(true);
+      const isAdmin = userData?.role_id === 4;
+      const payload = {
+        description: data.consent_Editor_Values,
+        tenant_id: isAdmin
+          ? data?.counselorSelect?.tenant_id
+          : userData?.tenant?.tenant_generated_id || "",
+        ...(!isAdmin && { counselor_id: userData?.counselor_profile_id }),
+      };
       const response = await api.post(
         ApiConfig.consentFormSubmittion.consentForm,
         payload
@@ -78,7 +101,7 @@ const ConsentManagement = () => {
       if (response.status === 201) {
         toast.success(response?.data?.message);
       }
-      console.log("Consent submitted:", response);
+      setLoading(false);
     } catch (error) {
       toast.error(error?.response?.data?.message);
       console.error("Submission failed:", error);
@@ -91,11 +114,8 @@ const ConsentManagement = () => {
         <Typography variant="h6" mb={1}>
           Consent Management & Form Editor
         </Typography>
-        {console.log(methods.formState.errors)}
         <div className="description-text">
-          Lorem Ipsum is simply dummy text of the printing and typesetting
-          industry. Lorem Ipsum has been the industry’s standard dummy text ever
-          since the 1500s.
+          Update your consent details as per your convenience
         </div>
 
         <div className="toggle-section">
@@ -163,22 +183,26 @@ const ConsentManagement = () => {
                   />
                 </div>
 
-                <label className="disclaimer">
+                {/* <label className="disclaimer">
                   <input type="checkbox" {...methods.register("agreeTerms")} />{" "}
                   I agree to the terms and conditions and consent to receive
                   services through Mindbridge.
                   {errors.agreeTerms && (
                     <p className="error-text">{errors.agreeTerms.message}</p>
                   )}
-                </label>
+                </label> */}
 
                 <div className="form-row">
-                  <CustomButton
-                    className="button-blue"
-                    title="Submit"
-                    type="button"
-                    onClick={handleSubmit(onSubmit)}
-                  />
+                  {loading ? (
+                    <Spinner color="blue" />
+                  ) : (
+                    <CustomButton
+                      className="button-blue"
+                      title="Submit"
+                      type="button"
+                      onClick={handleSubmit(onSubmit)}
+                    />
+                  )}
                 </div>
               </form>
             </FormProvider>

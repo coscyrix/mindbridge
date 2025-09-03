@@ -201,6 +201,13 @@ export default class User {
         const usrPro = await this.common.getUserProfileByUserId(
           checkEmail[0].user_id,
         );
+        
+        // Check if user has role_id = 1 and prevent login
+        if (usrPro[0].role_id === 1) {
+          logger.warn('User with role_id = 1 is not allowed to login');
+          return { message: 'Access denied. This account type is not allowed to login.', error: -1 };
+        }
+        
         var usr = {
           user_profile_id: usrPro[0].user_profile_id,
           user_first_name: usrPro[0].user_first_name,
@@ -264,9 +271,17 @@ export default class User {
           
           // Check if tenant has any services
           const service = new Service();
-          const servicesResult = await service.getServiceById({ tenant_id: usr.tenant_id });
+          const servicesResult = await service.getServiceById({ tenant_id: usr.tenant.tenant_generated_id });
           usr.has_services = !servicesResult.error && servicesResult.rec && servicesResult.rec.length > 0;
           usr.services_count = servicesResult.rec ? servicesResult.rec.length : 0;
+          console.log('Services check result:', { has_services: usr.has_services, services_count: usr.services_count, tenant_id: usr.tenant.tenant_generated_id });
+          
+          // If there was an error checking services, default to false
+          if (servicesResult.error) {
+            console.log('Error checking services for tenant:', servicesResult.message);
+            usr.has_services = false;
+            usr.services_count = 0;
+          }
         }
       }
 

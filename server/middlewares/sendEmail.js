@@ -13,11 +13,19 @@ export default class SendEmail {
         user: process.env.EMAIL_FROM, // Your Gmail address
         pass: process.env.EMAIL_PASSWORD, // Your App Password (without spaces)
       },
+      port: 587,
+      secure: false, // true for 465, false for other ports
+      tls: {
+        rejectUnauthorized: false
+      }
     });
   }
 
   async sendMail(msg) {
     try {
+      // Verify connection configuration
+      await this.transporter.verify();
+      
       const info = await this.transporter.sendMail({
         from: `"MindBridge" <${process.env.EMAIL_FROM}>`, // Sender's address and name
         to: msg.to,
@@ -36,6 +44,18 @@ export default class SendEmail {
       return { message: 'Email sent successfully' };
     } catch (error) {
       logger.error('Error sending email:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to send email';
+      if (error.code === 'ECONNREFUSED') {
+        errorMessage = 'Email service connection refused. Please check your email configuration.';
+      } else if (error.code === 'EAUTH') {
+        errorMessage = 'Email authentication failed. Please check your email credentials.';
+      } else if (error.code === 'ETIMEDOUT') {
+        errorMessage = 'Email service connection timed out.';
+      }
+      
+      return { message: errorMessage, error: -1 };
     }
   }
 }

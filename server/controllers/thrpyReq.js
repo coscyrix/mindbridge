@@ -41,6 +41,9 @@ export default class ThrpyReqController {
     const req_id = req.query.req_id;
     const role_id = req.query.role_id;
     const data = req.body;
+    if (!data.tenant_id) {
+      data.tenant_id = req.decoded.tenant_id;
+    }
     data.req_id = req_id;
     data.role_id = role_id;
     if (!data.req_id) {
@@ -165,4 +168,74 @@ export default class ThrpyReqController {
 
     res.status(200).json(rec);
   }
+
+  //////////////////////////////////////////
+
+  async loadSessionFormsWithMode(req, res) {
+    try {
+      const data = req.body;
+      
+      // Get tenant ID from token if available
+      if (req.decoded && req.decoded.tenant_id) {
+        data.tenant_id = req.decoded.tenant_id;
+      }
+
+      // Get counselor_id from token if not provided
+      if (!data.counselor_id && req.decoded && req.decoded.user_profile_id) {
+        data.counselor_id = req.decoded.user_profile_id;
+      }
+
+      const thrpyReqService = new ThrpyReqService();
+      const result = await thrpyReqService.loadSessionFormsWithMode(data);
+
+      if (result.error) {
+        res.status(400).json(result);
+        return;
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: 'Internal server error',
+        error: -1
+      });
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getThrpyReqByIdWithTreatmentTargetForms(req, res) {
+    try {
+      const data = req.query;
+      
+      // Get tenant ID from token if available
+      if (req.decoded && req.decoded.tenant_id) {
+        data.tenant_id = req.decoded.tenant_id;
+      }
+
+      // Get user_profile_id from token if not provided
+      if (!data.user_profile_id && req.decoded && req.decoded.user_profile_id) {
+        data.user_profile_id = req.decoded.user_profile_id;
+      }
+
+      const thrpyReqService = new ThrpyReqService();
+      const result = await thrpyReqService.getThrpyReqByIdWithTreatmentTargetForms(data);
+
+      if (result.error) {
+        res.status(400).json(result);
+        return;
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: 'Internal server error',
+        error: -1
+      });
+    }
+  }
+
+  //////////////////////////////////////////
 }

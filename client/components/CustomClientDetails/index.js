@@ -19,35 +19,112 @@ import { useReferenceContext } from "../../context/ReferenceContext";
 import CommonServices from "../../services/CommonServices";
 import CustomMultiSelect from "../CustomMultiSelect";
 import Cookies from "js-cookie";
+import { toast } from "react-toastify";
+import ToggleSwitch from "../CustomButton/ToggleButton";
+import ApiConfig from "../../config/apiConfig";
+import { api } from "../../utils/auth";
+import { useRouter } from "next/router";
 
 function CustomClientDetails({
   title,
   overview,
-  itemsPerPage = 13,
+  itemsPerPage = 10,
   tableData = TABLE_DATA(),
   children,
   primaryButton,
   handleCreate,
   selectCounselor,
   handleSelectCounselor,
+  handleSelectService,
+  serviceOptions,
   tableCaption = "",
   loading,
   customTab,
+  isHomeworkUpload,
+  setHomeWorkUpload,
+  session,
+  counselor,
+  setSelectedTenantId,
+  getInvoice,
   ...props
 }) {
   const [currentPage, setCurrentPage] = useState(0);
   const { userObj } = useReferenceContext();
   const { allCounselors } = useReferenceContext();
-  const dropdownAdjustedCounselors =
-    allCounselors?.map((counselor) => ({
-      label: counselor.user_first_name + " " + counselor.user_last_name,
-      value: counselor.user_profile_id,
-    })) || [];
 
-  const counselors = [
+  // const dropdownAdjustedCounselors =
+  //   allCounselors?.map((counselor) => ({
+  //     label: counselor.user_first_name + " " + counselor.user_last_name,
+  //     value: counselor.user_profile_id,
+  //     tenant_id: counselor.tenant_id,
+  //   })) || [];
+
+  const [counselors, setCounselors] = useState([
     { label: "All counselors", value: "allCounselors" },
-    ...dropdownAdjustedCounselors,
+  ]);
+  const uniqueManagersMap = new Map();
+  const [allManager, setAllManagers] = useState(null);
+  const [selectedManager, setSelectedManager] = useState(null);
+  allManager?.forEach((user) => {
+    if (!uniqueManagersMap.has(user.user_id)) {
+      uniqueManagersMap.set(user.user_id, {
+        label: `${user.user_first_name} ${user.user_last_name}`,
+        value: user.user_id,
+        tenant_id: user.tenant_id,
+      });
+    }
+  });
+
+  const managerOptions = [
+    { label: "All Manager", value: "allManager", tenant_id: 0 },
+    ...Array.from(uniqueManagersMap.values()),
   ];
+  const fetchManagers = async () => {
+    try {
+      // setClientsLoading(true);
+      const response = await CommonServices.getClients();
+      if (response.status === 200) {
+        const { data } = response;
+        const filteredManagers = response?.data?.rec?.filter(
+          (manager) => manager.role_id === 3
+        );
+
+        setAllManagers(filteredManagers);
+      }
+    } catch (error) {
+      console.error("Error fetching clients", error);
+    } finally {
+      // setClientsLoading(false);
+    }
+  };
+  const handleSelectManager = (selected) => {
+    setSelectedManager(selected);
+    setSelectedTenantId(selected);
+    const matchingCounselors = allCounselors?.filter(
+      (c) => c.tenant_id === selected.tenant_id
+    );
+    const uniqueCounselorsMap = new Map();
+    matchingCounselors?.forEach((user) => {
+      if (!uniqueCounselorsMap.has(user.user_id)) {
+        uniqueCounselorsMap.set(user.user_id, {
+          label: `${user.user_first_name} ${user.user_last_name}`,
+          value: user.user_profile_id,
+          tenant_id: user.tenant_id,
+        });
+      }
+    });
+    const counselorOptions = Array.from(uniqueCounselorsMap.values());
+    setCounselors([
+      { label: "All Counselor", value: "allCounselor", tenant_id: 0 },
+      ...counselorOptions,
+    ]);
+
+    getInvoice("", selected?.tenant_id);
+  };
+  useEffect(() => {
+    fetchManagers();
+  }, []);
+
   const [visibleColumns, setVisibleColumns] = useState(
     tableData?.columns?.map((col) => ({ ...col, omit: false }))
   );
@@ -64,6 +141,11 @@ function CustomClientDetails({
   };
 
   const currentData = tableData?.data?.filter((row) => {
+    // If no filter text, include all rows
+    if (!filterText || filterText.trim() === "") {
+      return true;
+    }
+
     return Object.keys(row).some((columnKey) => {
       const value = row[columnKey];
 
@@ -163,6 +245,10 @@ function CustomClientDetails({
     setCurrentPage(selected);
   };
 
+  const handleServiceChange = (selected) => {
+    handleSelectService(selected);
+    setCurrentPage(0);
+  };
   const renderFooter = () => (
     <div
       style={{
@@ -218,9 +304,35 @@ function CustomClientDetails({
 
   useEffect(() => {
     const userData = Cookies.get("user");
-    setUser(JSON.parse(userData));
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
   }, []);
 
+  const manager = userObj?.role_id == 3;
+  const handleToggle = async (newState) => {
+    try {
+      let payload = {
+        tenant_id: userObj?.tenant?.tenant_id,
+        feature_name: "homework_upload_enabled",
+        feature_value: newState.toString(),
+      };
+      const response = await api.put(
+        `${ApiConfig.homeworkUpload.enableAndDisableUpload}`,
+        payload
+      );
+      if (response?.status == 200) {
+        setHomeWorkUpload(newState);
+      }
+      toast.success(response.data?.message);
+    } catch (error) {
+      console.log(error);
+      toast.error(error?.response?.data?.message);
+    }
+  };
+  const router = useRouter();
+  const shouldHideButton =
+    userObj?.role_id === 4 && router.pathname.includes("/services");
   return (
     <>
       <ClientDetailsContainer icon={<SearchIcon />}>
@@ -246,19 +358,6 @@ function CustomClientDetails({
                 {children && <div className="children-wrapper">{children}</div>}
               </div> */}
               <div>
-                {[3, 4].includes(user?.role_id) && handleSelectCounselor ? (
-                  <div
-                    key="counselor-select"
-                    className="custom-select-container"
-                  >
-                    <CustomMultiSelect
-                      options={counselors}
-                      onChange={handleSelectCounselor}
-                      isMulti={false}
-                      placeholder="Select a counselor"
-                    />
-                  </div>
-                ) : null}
                 <div className="mobile-button-group">
                   <div className="search">
                     <CustomSearch
@@ -269,7 +368,7 @@ function CustomClientDetails({
                     />
                   </div>
                   <div className="dropdowns-container">
-                    <div className="action-button-wrapper">
+                    {/* <div className="action-button-wrapper">
                       <CustomButton
                         icon={<MenuIcon />}
                         title="More Option"
@@ -279,14 +378,91 @@ function CustomClientDetails({
                           tableCaption
                         )}
                       />
-                    </div>
-                    <div className="action-button-wrapper">
+                    </div> */}
+                    {/* <div className="action-button-wrapper">
                       <CustomButton
                         icon={<SettingsIcon />}
                         dropdownOptions={columnOptions}
                         renderFooter={renderFooter}
                       />
-                    </div>
+                    </div> */}
+                    {/* {!shouldHideButton && primaryButton && (
+                      <CustomButton
+                        icon={<AddIcon />}
+                        title={primaryButton}
+                        onClick={handleCreate}
+                        customClass="create-client-button"
+                      />
+                    )} */}
+                  </div>
+                  <div className="function-button">
+                    {[3, 4].includes(user?.role_id) && handleSelectCounselor ? (
+                      <div
+                        key="counselor-select"
+                        className="custom-select-container"
+                      >
+                        <CustomMultiSelect
+                          options={
+                            userObj.role_id === 4 ? counselors : counselor
+                          }
+                          onChange={handleSelectCounselor}
+                          isMulti={false}
+                          placeholder="Select a counselor"
+                        />
+                      </div>
+                    ) : null}
+                    {[4].includes(user?.role_id) &&
+                      router.pathname === "/client-session" && (
+                        <div
+                          key="counselor-select"
+                          className="custom-select-container"
+                        >
+                          <CustomMultiSelect
+                            options={managerOptions}
+                            onChange={handleSelectManager}
+                            isMulti={false}
+                            value={selectedManager}
+                            placeholder="Select a manager"
+                          />
+                        </div>
+                      )}
+                    {router.pathname === "/services" &&
+                    [4].includes(user?.role_id) ? (
+                      <div
+                        key="manager-select"
+                        className="custom-select-container"
+                      >
+                        <CustomMultiSelect
+                          options={serviceOptions}
+                          onChange={handleServiceChange}
+                          isMulti={false}
+                          placeholder="Select a manager"
+                        />
+                      </div>
+                    ) : null}
+                    <CustomButton
+                      icon={<DownloadIcon />}
+                      title="Download"
+                      dropdownOptions={DOWNLOAD_OPTIONS(
+                        tableData?.columns,
+                        tableData?.data,
+                        tableCaption
+                      )}
+                    />
+                    <CustomButton
+                      icon={<SettingsIcon />}
+                      title="Columns"
+                      dropdownOptions={columnOptions}
+                      renderFooter={renderFooter}
+                    />
+                    {!shouldHideButton && primaryButton && (
+                      <CustomButton
+                        icon={<AddIcon />}
+                        title={primaryButton}
+                        onClick={handleCreate}
+                        customClass="create-client-button"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -306,10 +482,39 @@ function CustomClientDetails({
                       className="custom-select-container"
                     >
                       <CustomMultiSelect
-                        options={counselors}
+                        options={userObj.role_id === 4 ? counselors : counselor}
                         onChange={handleSelectCounselor}
                         isMulti={false}
                         placeholder="Select a counselor"
+                      />
+                    </div>
+                  ) : null}
+                  {[4].includes(user?.role_id) &&
+                    router.pathname === "/client-session" && (
+                      <div
+                        key="counselor-select"
+                        className="custom-select-container"
+                      >
+                        <CustomMultiSelect
+                          options={managerOptions}
+                          onChange={handleSelectManager}
+                          isMulti={false}
+                          value={selectedManager}
+                          placeholder="Select a manager"
+                        />
+                      </div>
+                    )}
+                  {router.pathname === "/services" &&
+                  [4].includes(user?.role_id) ? (
+                    <div
+                      key="manager-select"
+                      className="custom-select-container"
+                    >
+                      <CustomMultiSelect
+                        options={serviceOptions}
+                        onChange={handleServiceChange}
+                        isMulti={false}
+                        placeholder="Select a manager"
                       />
                     </div>
                   ) : null}
@@ -328,7 +533,7 @@ function CustomClientDetails({
                     dropdownOptions={columnOptions}
                     renderFooter={renderFooter}
                   />
-                  {primaryButton && (
+                  {!shouldHideButton && primaryButton && (
                     <CustomButton
                       icon={<AddIcon />}
                       title={primaryButton}
@@ -339,6 +544,13 @@ function CustomClientDetails({
                 </div>
               </div>
             </div>
+            {manager && router.pathname === "/client-session" && (
+              <ToggleSwitch
+                isOn={isHomeworkUpload}
+                title={"Enable Homwork upload for this counselor"}
+                onToggle={handleToggle}
+              />
+            )}
           </div>
 
           <div className="table-filter">

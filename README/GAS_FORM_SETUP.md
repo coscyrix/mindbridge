@@ -77,7 +77,15 @@ The GAS form email includes:
 - Personalized greeting with client name
 - Form name (GAS)
 - Direct link to complete the form
-- Form parameters (form_id, client_id, session_id)
+- Form parameters (form_id, client_id, session_id, target_outcome_id)
+
+## Client Target Outcome Tracking
+
+The GAS form automatically tracks the client's target outcome when submitted:
+- Retrieves the client's current target outcome from the `user_target_outcome` table
+- Stores the target outcome ID in the `feedback_gas` table
+- Links the form submission to the specific treatment goal the client is working on
+- Enables analysis of progress against specific target outcomes
 
 ## Testing
 

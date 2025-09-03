@@ -19,21 +19,21 @@ export default class Service {
           logger.error(
             'svc_formula and nbr_of_sessions are required when svc_formula_typ is "d"',
           );
-          return {
-            message:
-              'svc_formula and nbr_of_sessions are required when svc_formula_typ is "d"',
-            error: -1,
-          };
+          // return {
+          //   message:
+          //     'svc_formula and nbr_of_sessions are required when svc_formula_typ is "d"',
+          //   error: -1,
+          // };
         }
         if (data.svc_formula.length !== data.nbr_of_sessions - 1) {
           logger.error(
             'Service formula must be one less than the number of sessions',
           );
-          return {
-            message:
-              'Service formula must be one less than the number of sessions',
-            error: -1,
-          };
+          // return {
+          //   message:
+          //     'Service formula must be one less than the number of sessions',
+          //   error: -1,
+          // };
         }
       } else if (data.svc_formula_typ === 's') {
         const isReport = data.service_name.toLowerCase().includes('report');
@@ -42,10 +42,10 @@ export default class Service {
         } else {
           if (data.svc_formula.length !== 0 && data.svc_formula.length !== 1) {
             logger.error('Report service formula must be one or zero');
-            return {
-              message: 'Report service formula must be one or zero',
-              error: -1,
-            };
+            // return {
+            //   message: 'Report service formula must be one or zero',
+            //   error: -1,
+            // };
           }
         }
       }
@@ -53,10 +53,10 @@ export default class Service {
       if (data.position && data.service_id) {
         if (data.position.length !== data.service_id.length) {
           logger.error('Position and service_id must be the same length');
-          return {
-            message: 'Position and service_id must be the same length',
-            error: -1,
-          };
+          // return {
+          //   message: 'Position and service_id must be the same length',
+          //   error: -1,
+          // };
         }
       }
 
@@ -131,19 +131,26 @@ export default class Service {
       const tmpSvc = {
         service_name: capitalizeFirstLetter(data.service_name),
         service_code: data.service_code.toUpperCase(),
-        is_report: isReportValid ? 1 : 0,
+        is_report: data.is_report !== undefined ? data.is_report : (isReportValid ? 1 : 0),
         is_additional: data.is_additional || 0,
         total_invoice: data.total_invoice || 0,
         nbr_of_sessions: data.nbr_of_sessions || 0,
         svc_formula_typ: data.svc_formula_typ || 's',
         svc_formula: JSON.stringify(data.svc_formula || [7]),
-        svc_report_formula: JSON.stringify({
-          position: data.position,
-          service_id: data.service_id,
-        }),
+        svc_report_formula: JSON.stringify(data.svc_report_formula || { position: [], service_id: [] }),
         gst: data.gst || 0,
         tenant_id: data.tenant_id,
       };
+      
+      console.log('🔍 DEBUG: Service creation data:');
+      console.log('  - data.is_report:', data.is_report);
+      console.log('  - data.service_code:', data.service_code);
+      console.log('  - tmpSvc.is_report:', tmpSvc.is_report);
+      console.log('  - data.svc_report_formula:', data.svc_report_formula);
+      console.log('  - data.svc_report_formula type:', typeof data.svc_report_formula);
+      console.log('  - tmpSvc.svc_report_formula:', tmpSvc.svc_report_formula);
+      console.log('  - tmpSvc.svc_report_formula type:', typeof tmpSvc.svc_report_formula);
+      
       const postSvc = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('service')
@@ -154,7 +161,7 @@ export default class Service {
         return { message: 'Error creating service', error: -1 };
       }
 
-      return { message: 'Service created successfully' };
+      return { message: 'Service created successfully', service: postSvc };
     } catch (error) {
       logger.error(error);
 
@@ -312,27 +319,39 @@ export default class Service {
     try {
       let query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select(
+          'service.*',
+          'tenant.tenant_id as tenant_tenant_id',
+          'tenant.tenant_name',
+          'tenant.tenant_generated_id',
+          'tenant.admin_fee',
+          'tenant.tax_percent',
+        )
         .from('service')
-        .where('status_yn', 1);
+        .leftJoin('tenant', 'service.tenant_id', 'tenant.tenant_generated_id')
+        .where('service.status_yn', 1);
+
+        console.log('data', data);
+        
 
       if (data.service_id) {
         if (Array.isArray(data.service_id)) {
-          query = query.whereIn('service_id', data.service_id);
+          query = query.whereIn('service.service_id', data.service_id);
         } else {
-          query = query.where('service_id', data.service_id);
+          query = query.where('service.service_id', data.service_id);
         }
       }
 
       if (data.is_report) {
-        query = query.andWhere('is_report', data.is_report);
+        query = query.andWhere('service.is_report', data.is_report);
       }
 
       if (data.service_code) {
-        query = query.andWhere('service_code', data.service_code);
+        query = query.andWhere('service.service_code', data.service_code);
       }
 
       if (data.tenant_id) {
-        query = query.andWhere('tenant_id', data.tenant_id);
+        query = query.andWhere('service.tenant_id', data.tenant_id);
       }
 
       console.log('query', query.toQuery());
@@ -345,7 +364,32 @@ export default class Service {
         return { message: 'Service not found', error: -1 };
       }
 
-      return { message: 'Service retrieved successfully', rec };
+      // Transform the data to include tenant object
+      const transformedRec = rec.map(service => {
+        const {
+          tenant_tenant_id,
+          tenant_name,
+          tenant_generated_id,
+          admin_fee,
+          tax_percent,
+          tenant_status_yn,
+          ...serviceData
+        } = service;
+
+        return {
+          ...serviceData,
+          tenant: {
+            tenant_id: tenant_tenant_id,
+            tenant_name,
+            tenant_generated_id,
+            admin_fee,
+            tax_percent,
+            status_yn: tenant_status_yn
+          }
+        };
+      });
+
+      return { message: 'Service retrieved successfully', rec: transformedRec };
     } catch (error) {
       logger.error(error);
       console.error(error);

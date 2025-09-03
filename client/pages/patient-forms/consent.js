@@ -10,7 +10,7 @@ import CommonServices from "../../services/CommonServices";
 
 const ConsentPage = () => {
   const router = useRouter();
-  const { form_id, client_id } = router.query;
+  const { form_id, client_id, client_name } = router.query;
 
   const [formAlreadySubmitted, setFormAlreadySubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -52,7 +52,7 @@ const ConsentPage = () => {
   return formAlreadySubmitted ? (
     <FormSubmission alreadySubmitted />
   ) : (
-    <ConsentForm />
+    <ConsentForm client_name={client_name} />
   );
 };
 

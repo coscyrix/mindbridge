@@ -267,6 +267,7 @@ export default class UserProfile {
           client_name: `${data.user_first_name} ${data.user_last_name}`,
           client_id: postUsrProfile[0],
           tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id,
+          counselor_id: data.user_profile_id,
         });
       }
 
@@ -379,6 +380,20 @@ export default class UserProfile {
       }
 
       if (data.email || data.role_id) {
+        // If email is being updated, check if it already exists for a different user
+        if (data.email) {
+          const checkEmail = await this.common.getUserByEmail(data.email);
+          const getUsr = await this.getUserProfileById({
+            user_profile_id: user_profile_id,
+          });
+          
+          // Check if email exists for a different user
+          if (checkEmail.length > 0 && checkEmail[0].user_id !== getUsr.rec[0].user_id) {
+            logger.error('Email already exists for another user');
+            return { message: 'Email already exists', error: -1 };
+          }
+        }
+
         const tmpUsr = {
           ...(data.email && { email: data.email.toLowerCase() }),
           ...(data.role_id && { role_id: data.role_id }),
@@ -425,8 +440,9 @@ export default class UserProfile {
     try {
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .from('v_user_profile');
+        .select('v_user_profile.*', 't.tenant_generated_id')
+        .from('v_user_profile')
+        .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id');
 
       if (!(data.role_id === 4) || !data.role_id) {
         if (data.user_profile_id) {
@@ -438,7 +454,7 @@ export default class UserProfile {
         }
 
         if (data.tenant_id) {
-          query.where('tenant_id', data.tenant_id);
+          query.where('v_user_profile.tenant_id', data.tenant_id);
         }
 
         if (Object.keys(data).length === 1 && data.hasOwnProperty('role_id')) {
@@ -490,7 +506,7 @@ export default class UserProfile {
 
       return { message: 'User profile found', rec };
     } catch (error) {
-      logger.error(error);
+      console.log('error', error);
       return { message: 'Error getting user profile', error: -1, rec: [] };
     }
   }

@@ -31,8 +31,8 @@ export const ClientValidationSchema = z
   .object({
     clam_num: z
       .preprocess(
-        (value) => Number(value),
-        z.number().min(1, { message: "Serial Number is required" })
+        (value) => value === "" || value === undefined ? undefined : Number(value),
+        z.number().min(1, { message: "Serial Number is required" }).optional()
       )
       .optional(),
     tenant_name: z
@@ -54,12 +54,13 @@ export const ClientValidationSchema = z
           required_error: "Number is required",
           invalid_type_error: "Please enter phone number",
         })
-        .min(1, { message: "Phone number is required" })
+        .min(10, { message: "Phone must be equal to 10 dizit" })
+        .max(10,{message:"Phone must be equal to 10 dizit"})
         .regex(/^[\d\s\(\)\-\+]+$/, { message: "Invalid phone number format" })
         .transform((value) => value.replace(/[\D]/g, ""))
-        .refine((value) => value.length >= 10 && value.length <= 15, {
-          message: "Phone number must be between 10 and 15 digits",
-        })
+        // .refine((value) => value.length!==10, {
+        //   message: "Phone number must be 10 digit",
+        // })
     ),
     email: z
       .string()
@@ -73,14 +74,19 @@ export const ClientValidationSchema = z
       )
       .optional(),
     target_outcome_id: z
-      .object({
-        label: z.string(),
-        value: z.preprocess(
-          (val) => Number(val),
-          z.number().min(1, { message: "Target Outcomes is required" })
-        ),
-      })
-      .optional(),
+      .union([
+        z.object({
+          label: z.string().optional(),
+          value: z.preprocess(
+            (val) => Number(val),
+            z.number().min(1, { message: "Target Outcomes is required" })
+          ).optional()
+        }).optional(),
+        z.string().optional(),
+        z.number().optional()
+      ])
+      .optional()
+      .nullable(),
     tax: z.preprocess((val) => {
       const num = Number(val);
       return isNaN(num) ? undefined : num;
@@ -92,6 +98,32 @@ export const ClientValidationSchema = z
     }, z.number().nullable().optional()),
     description: z.string().nullable().optional(),
   })
+  .refine(
+    (data) => {
+      // Check if role_id is 1 (client) - require clam_num and target_outcome_id
+      if (data.role_id === 1) {
+        const clamNumValid = data.clam_num && data.clam_num > 0;
+        const targetOutcomeValid = data.target_outcome_id && (
+          (typeof data.target_outcome_id === 'object' && data.target_outcome_id.value) ||
+          (typeof data.target_outcome_id === 'string' && data.target_outcome_id.length > 0) ||
+          (typeof data.target_outcome_id === 'number' && data.target_outcome_id > 0)
+        );
+        return clamNumValid && targetOutcomeValid;
+      }
+      // If role_id is 3 (manager) - require admin_fee and tax
+      if (data.role_id === 3) {
+        const adminFeeValid = data.admin_fee && data.admin_fee > 0;
+        const taxValid = data.tax && data.tax >= 0;
+        return adminFeeValid && taxValid;
+      }
+      // For other roles, skip validation for clam_num and target_outcome_id
+      return true;
+    },
+    {
+      message: "Serial Number and Target Outcomes are required for clients, Admin Fees and Tax are required for managers",
+      path: ["clam_num", "target_outcome_id", "admin_fee", "tax"],
+    }
+  )
   .refine(
     (data) => {
       // Check if role_id is 2
@@ -300,11 +332,11 @@ export const getConsentManagementSchema = (userData) => {
   const isAdmin = userData?.role_id === 4;
 
   return z.object({
-    agreeTerms: z.literal(true, {
-      errorMap: () => ({
-        message: "You must agree to the Terms and condition outlined above.",
-      }),
-    }),
+    // agreeTerms: z.literal(true, {
+    //   errorMap: () => ({
+    //     message: "You must agree to the Terms and condition outlined above.",
+    //   }),
+    // }), 
     consent_Editor_Values: z
       .string()
       .min(1, "Consent text is required")
@@ -341,10 +373,9 @@ export const createGasSchema = (goalKey) => {
     goal: z
       .object({
         label: z.string(),
-        value: z.string(),
+        value: z.number(),
       })
-      .nullable()
-      .refine((val) => !!val?.value, {
+      .refine(val => typeof val?.value === "number", {
         message: "Treatment goal is required",
       }),
     ...dynamicQuestionSchema,

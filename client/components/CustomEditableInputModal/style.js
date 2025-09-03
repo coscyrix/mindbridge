@@ -5,13 +5,13 @@ export const CustomEditableInputModalWrapper = styled.div`
   // margin: 20px;
   .service-row {
     display: grid;
-    grid-template-columns: 2fr 2fr 2fr;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
     align-items: center;
     gap: 0.75rem;
     margin-bottom: 1rem;
 
     @media (max-width: 768px) {
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
 
       gap: 0.5rem;
     }
@@ -30,7 +30,6 @@ export const CustomEditableInputModalWrapper = styled.div`
     white-space: nowrap;
   }
   .scroll-wrapper {
-    max-height: 300px;
     overflow-y: auto;
     padding-right: 8px;
   }
@@ -63,7 +62,8 @@ export const CustomEditableInputModalWrapper = styled.div`
     justify-content: center;
     margin-top: 25px;
     width: 50px;
-    height: 40px;background: white;
+    height: 40px;
+    background: white;
     @media (max-width: 768px) {
       width: 100px;
       //   margin-top: 0px;

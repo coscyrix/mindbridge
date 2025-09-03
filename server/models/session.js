@@ -45,7 +45,7 @@ export default class Session {
       //   session_system_amt: data.session_system_amt,
       // };
       // console.log('data', data);
-      // console.log('tmpSession', tmpSession);
+      // console.log('tmpSession', tmpSession);      
 
       const postSession = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -113,14 +113,32 @@ export default class Session {
 
       // Calculate session amounts
       const total_invoice = Number(svc.total_invoice);
+      const service_gst = Number(svc.gst) || 0;
       const tax_pcnt = Number(ref_fees[0].tax_pcnt);
       const counselor_pcnt = Number(ref_fees[0].counselor_pcnt);
       const system_pcnt = Number(ref_fees[0].system_pcnt);
 
-      const session_price = total_invoice;
-      const session_taxes = total_invoice * tax_pcnt;
-      const session_counselor_amt = (total_invoice + session_taxes) * counselor_pcnt;
-      const session_system_amt = (total_invoice + session_taxes) * system_pcnt;
+      // total_invoice already includes tax, so we need to extract the base price
+      let basePrice = total_invoice;
+      let session_taxes = 0;
+      
+      if (service_gst && service_gst > 0) {
+        // Calculate base price by removing the tax that's already included
+        // total_invoice = basePrice + (basePrice * service_gst / 100)
+        // total_invoice = basePrice * (1 + service_gst / 100)
+        // basePrice = total_invoice / (1 + service_gst / 100)
+        basePrice = total_invoice / (1 + service_gst / 100);
+        session_taxes = total_invoice - basePrice;
+      } else {
+        // Fallback: use ref_fees tax percentage if service GST is not available
+        session_taxes = total_invoice * (tax_pcnt / 100);
+        basePrice = total_invoice - session_taxes;
+      }
+
+      const session_price = total_invoice; // Keep the original total_invoice as session_price
+      const session_system_amt = basePrice * (system_pcnt / 100);
+      // Counselor gets the remaining amount after system fees
+      const session_counselor_amt = basePrice - session_system_amt;
 
       tmpSession = {
         thrpy_req_id: data.thrpy_req_id,
@@ -165,14 +183,16 @@ export default class Session {
 
   async putSessionById(data) {
     try {
+      console.log('data', data);
       // Check if session is ongoing
       const checkSessionIfOngoing = await this.checkSessionONGOING(
         data.session_id,
       );
 
       if (!data.invoice_nbr) {
-        if (data.role_id != 4) {
+        if (data.role_id != 4 && data.role_id != 3) {
           if (checkSessionIfOngoing.rec.length > 0) {
+            console.log('checkSessionIfOngoing', checkSessionIfOngoing);
             logger.error('Session is ongoing');
             return { message: 'Session is ongoing', error: -1 };
           }
@@ -390,15 +410,53 @@ export default class Session {
                   );
                 }
 
-                const uptUserForm = await this.userForm.putUserFormBySessionId({
-                  session_id: data.session_id,
-                  is_sent: 1,
-                });
+                // Update forms based on environment variable
+                const formMode = process.env.FORM_MODE || 'auto';
+                
+                if (formMode === 'treatment_target') {
+                  // Treatment target mode: only update treatment target session forms
+                  const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+                  const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+                  
+                  const updateTreatmentTargetForms = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormsBySessionId({
+                    session_id: data.session_id,
+                    is_sent: true,
+                  });
 
-                if (uptUserForm.error) {
-                  console.log('error updating user form', uptUserForm.error);
-                  logger.error('Error updating user form');
-                  return { message: 'Error updating user form', error: -1 };
+                  if (updateTreatmentTargetForms.error) {
+                    console.log('error updating treatment target session forms', updateTreatmentTargetForms.error);
+                    logger.error('Error updating treatment target session forms');
+                    return { message: 'Error updating treatment target session forms', error: -1 };
+                  }
+                } else {
+                  // Service mode or auto mode: update user forms (service-based forms)
+                  const uptUserForm = await this.userForm.putUserFormBySessionId({
+                    session_id: data.session_id,
+                    is_sent: 1,
+                  });
+
+                  if (uptUserForm.error) {
+                    console.log('error updating user form', uptUserForm.error);
+                    logger.error('Error updating user form');
+                    return { message: 'Error updating user form', error: -1 };
+                  }
+                  
+                  // In auto mode, also try to update treatment target forms if they exist
+                  if (formMode === 'auto') {
+                    const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+                    const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+                    
+                    const updateTreatmentTargetForms = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormsBySessionId({
+                      session_id: data.session_id,
+                      is_sent: true,
+                    });
+
+                    // Don't return error for treatment target forms in auto mode, just log it
+                    if (updateTreatmentTargetForms.error) {
+                      console.log('error updating treatment target session forms', updateTreatmentTargetForms.error);
+                      logger.error('Error updating treatment target session forms');
+                    }
+                  }
                 }
               }
             }
@@ -592,15 +650,35 @@ export default class Session {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
         .where('intake_date_formatted', formattedCurrentDate)
-        .andWhere('counselor_id', data.counselor_id)
         .andWhere('thrpy_status', 'ONGOING');
 
-      if (data.counselor_id && data.role_id === 2) {
+      // Apply role-based filtering
+      console.log('Session filtering - role_id:', data.role_id, 'tenant_id:', data.tenant_id, 'counselor_id:', data.counselor_id);
+      
+      console.log('data',{data});
+      
+
+      if (data.role_id == 2 && data.counselor_id) {
         query.andWhere('counselor_id', data.counselor_id);
-      } else if (data.counselor_id && data.role_id === 3 && data.tenant_id) {
+        console.log('Filtering by counselor_id:', data.counselor_id);
+      } else if (data.role_id == 3 && data.tenant_id) {
         query.andWhere('tenant_id', data.tenant_id);
-      } else if (data.counselor_id && data.role_id === 4) {
-        // No additional filtering needed for admin role
+        console.log('Filtering by tenant_id:', data.tenant_id);
+        
+        // If counselor_id is provided, also filter by specific counselor
+        if (data.counselor_id) {
+          query.andWhere('counselor_id', data.counselor_id);
+          console.log('Also filtering by counselor_id:', data.counselor_id);
+        }
+      } else if (data.role_id == 4) {
+        // No additional filtering needed for admin role - show all sessions
+        console.log('No filtering for admin role');
+      } else if (data.counselor_id) {
+        // Default case: filter by counselor_id if provided
+        query.andWhere('counselor_id', data.counselor_id);
+        console.log('Default filtering by counselor_id:', data.counselor_id);
+      } else {
+        console.log('No filtering applied');
       }
       const recToday = await query;
 
@@ -613,15 +691,23 @@ export default class Session {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
         .where('intake_date_formatted', formattedTomorrowDate)
-        .andWhere('counselor_id', data.counselor_id)
         .andWhere('thrpy_status', 'ONGOING');
 
-      if (data.counselor_id && data.role_id === 2) {
-        query.andWhere('counselor_id', data.counselor_id);
-      } else if (data.counselor_id && data.role_id === 3 && data.tenant_id) {
-        query.andWhere('tenant_id', data.tenant_id);
-      } else if (data.counselor_id && data.role_id === 4) {
-        // No additional filtering needed for admin role
+      // Apply role-based filtering for tomorrow's sessions
+      if (data.role_id == 2 && data.counselor_id) {
+        query2.andWhere('counselor_id', data.counselor_id);
+      } else if (data.role_id == 3 && data.tenant_id) {
+        query2.andWhere('tenant_id', data.tenant_id);
+        
+        // If counselor_id is provided, also filter by specific counselor
+        if (data.counselor_id) {
+          query2.andWhere('counselor_id', data.counselor_id);
+        }
+      } else if (data.role_id == 4) {
+        // No additional filtering needed for admin role - show all sessions
+      } else if (data.counselor_id) {
+        // Default case: filter by counselor_id if provided
+        query2.andWhere('counselor_id', data.counselor_id);
       }
       const recTomorrow = await query2;
 

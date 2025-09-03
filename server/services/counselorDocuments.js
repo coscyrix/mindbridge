@@ -9,6 +9,18 @@ export default class CounselorDocumentsService {
 
   async addDocument(data, file) {
     try {
+      // Parse date strings to Date objects before validation
+      if (data.expiry_date && typeof data.expiry_date === 'string') {
+        // Handle DD-MM-YYYY format
+        const dateParts = data.expiry_date.split('-');
+        if (dateParts.length === 3) {
+          const day = parseInt(dateParts[0]);
+          const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed
+          const year = parseInt(dateParts[2]);
+          data.expiry_date = new Date(year, month, day);
+        }
+      }
+
       const schema = joi.object({
         counselor_profile_id: joi.number().required(),
         document_type: joi.string().valid(
@@ -48,8 +60,8 @@ export default class CounselorDocumentsService {
         return { message: 'File too large. Maximum size is 10MB', error: -1 };
       }
 
-      // Save file
-      const documentUrl = await saveFile(file, 'counselor_documents');
+      // File is already saved by multer, just get the path
+      const documentUrl = `/uploads/counselor-documents/${file.filename}`;
       data.document_url = documentUrl;
 
       return this.counselorDocuments.addDocument(data);

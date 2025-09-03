@@ -149,7 +149,7 @@ const LicenseFileUpload = ({
   const [blob,setBlob] = useState(null);
   useEffect(() => {
     const fetchFile = async () => {
-      if (licenseFile) {
+      if (licenseFile && typeof licenseFile === "string") {
         try {
           const response = await fetch(licenseFile);
           const blob = await response.blob();

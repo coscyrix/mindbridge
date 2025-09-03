@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import { api } from "../../../../utils/auth";
 import CustomInputField from "../../../CustomInputField";
 import CommonServices from "../../../../services/CommonServices";
+import FormHeader from "../../../FormsHeader";
 
 const allQuestions = [
   {
@@ -300,6 +301,12 @@ const WHODASForm = () => {
   };
   return (
     <WHODasFormContainer>
+      <FormHeader
+        tittle={"WHODAS Tracker Questionnaire"}
+        description={
+          "The WHODAS 2.0 is a Patient-Reported-Outcome (PRO) instrument that uses 36 question to asses the global health status of patients across 6 health domains, independent of disease"
+        }
+      />
       <h1>WHODAS</h1>
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(onSubmit)}>

@@ -4,7 +4,7 @@ export const CustomMultiSelectContainer = styled.div`
   width: 100%;
   margin-bottom: 16px;
   position: relative;
-  z-index: 1000;
+  // z-index: 1000;
 
   .select-container label {
     display: block;
@@ -13,12 +13,12 @@ export const CustomMultiSelectContainer = styled.div`
   .select-container {
     width: 100%;
     position: relative;
-    z-index: 1000;
+    // z-index: 1000;
     .multi-select {
       padding-bottom: 8px;
       width: 100%;
       position: relative;
-      z-index: 1000;
+      // z-index: 1000;
       /* z-index: 9; */
 
       .select__control {

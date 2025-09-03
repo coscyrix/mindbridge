@@ -6,7 +6,6 @@ export const FeeSplitManagementWrapper = styled.div`
   min-height: 100vh;
 
   .consent-box {
-    max-width: 600px;
     margin: 0 auto;
     padding: 2rem;
     background: white;
@@ -70,5 +69,19 @@ export const FeeSplitManagementWrapper = styled.div`
   }
   .note {
     color: #747474;
+  }
+  .card-main {
+    margin-top: 32px;
+    // padding: 16px 24px;
+    // background-color: #fff;
+    // border-radius: 12px;
+    // border: 1px solid #e0e0e0;
+    // box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  }
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: #222;
   }
 `;

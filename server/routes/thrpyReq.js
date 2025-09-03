@@ -32,4 +32,10 @@ router.put(
 
 router.get('/', authenticate, AsyncWrapper(thrpyReqController.getThrpyReqById));
 
+// Load session forms with mode selection (service-based or treatment target-based)
+router.post('/load-session-forms', authenticate, AsyncWrapper(thrpyReqController.loadSessionFormsWithMode));
+
+// Get therapy request with treatment target forms information
+router.get('/with-treatment-target-forms', authenticate, AsyncWrapper(thrpyReqController.getThrpyReqByIdWithTreatmentTargetForms));
+
 export const thrpyReqRouter = { baseUrl: '/api/thrpyReq', router };

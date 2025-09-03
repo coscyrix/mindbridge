@@ -7,7 +7,7 @@ export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "https://mindbridge-backend.kmz6b6.easypanel.host/api",
   headers: {
     "Content-Type": "application/json",
-    "ngrok-skip-browser-warning": "true",
+    // "ngrok-skip-browser-warning": "true",
   },
 });
 
@@ -41,6 +41,7 @@ export const otpVerication = async (credentials) => {
       Cookies.set("token", loginToken);
       toast.success(data?.message || "OTP is verified!");
     }
+    return response;
   } catch (error) {
     console.log(error, "error");
     toast.error(

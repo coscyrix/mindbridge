@@ -25,7 +25,8 @@ POST /api/feedback/gas
     }
   ],
   "session_id": 123,
-  "client_id": 456
+  "client_id": 456,
+  "target_outcome_id": 789
 }
 ```
 
@@ -39,6 +40,9 @@ POST /api/feedback/gas
   - `score` (number): The score value (-2 to +2)
 - `session_id` (number): The session ID
 - `client_id` (number): The client ID
+
+### Optional Fields
+- `target_outcome_id` (number): The client's target outcome ID (if not provided, will be automatically retrieved from database)
 
 ### Available Goals
 - `Improving_Emotional_Regulation_in_Therapy`
@@ -79,9 +83,14 @@ CREATE TABLE feedback_gas (
   responses_json JSON NOT NULL,
   feedback_id INT NOT NULL,
   tenant_id INT NOT NULL,
+  client_target_outcome_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (feedback_id) REFERENCES feedback(feedback_id) ON DELETE CASCADE
+  FOREIGN KEY (feedback_id) REFERENCES feedback(feedback_id) ON DELETE CASCADE,
+  FOREIGN KEY (client_target_outcome_id) REFERENCES ref_target_outcomes(target_id) ON DELETE SET NULL,
+  INDEX idx_feedback_id (feedback_id),
+  INDEX idx_tenant_id (tenant_id),
+  INDEX idx_client_target_outcome_id (client_target_outcome_id)
 );
 ```
 
@@ -92,6 +101,7 @@ CREATE TABLE feedback_gas (
 - Stores responses as JSON for flexibility
 - Supports tenant-based data isolation
 - Integrates with existing feedback system
+- Automatically retrieves and stores client's target outcome ID
 
 ## Client Integration
 The frontend can use the `CommonServices.submitGASForm(payload)` method to submit GAS form data.

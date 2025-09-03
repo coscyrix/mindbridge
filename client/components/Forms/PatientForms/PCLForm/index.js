@@ -8,6 +8,7 @@ import { api } from "../../../../utils/auth";
 import { getBaseURL } from "../../../../utils/helper";
 import { useRouter } from "next/router";
 import CommonServices from "../../../../services/CommonServices";
+import FormHeader from "../../../FormsHeader";
 
 const questions = [
   {
@@ -113,6 +114,12 @@ const PCL5Form = () => {
 
   return (
     <PCL5FormContainer>
+      <FormHeader
+        tittle={"PCL Tracker Questionnaire"}
+        description={
+          "The PCL-5 is a 20-item self-report questionnaire designrd to assess the symptoms of Post-Traumatic Stress Disorder (PTSD) based on the DSM-5 Criteria"
+        }
+      />
       <h1>PCL-5</h1>
       <p>
         Instructions: Below is a list of problems that people sometimes have in

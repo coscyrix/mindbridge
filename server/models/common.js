@@ -89,9 +89,10 @@ export default class Common {
     try {
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .where('user_id', id)
-        .from('v_user_profile');
+        .select('v_user_profile.*', 't.tenant_generated_id')
+        .from('v_user_profile')
+        .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id')
+        .where('user_id', id);
 
       return rec;
     } catch (error) {
@@ -105,9 +106,10 @@ export default class Common {
     try {
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .where('user_profile_id', id)
-        .from('v_user_profile');
+        .select('v_user_profile.*', 't.tenant_generated_id')
+        .from('v_user_profile')
+        .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id')
+        .where('user_profile_id', id);
 
       return rec;
     } catch (error) {
@@ -400,9 +402,10 @@ export default class Common {
     try {
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .where('user_profile_id', data.user_profile_id)
-        .from('v_user_profile');
+        .select('v_user_profile.*', 't.tenant_generated_id')
+        .from('v_user_profile')
+        .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id')
+        .where('user_profile_id', data.user_profile_id);
 
       if (!rec) {
         return { message: 'User not found', error: -1 };
@@ -482,25 +485,98 @@ export default class Common {
         };
       }
 
-      const getAllSessionUserForm = await this.userForm.getUserFormById({
-        session_id: data.session_id,
-      });
+      // Check forms based on environment variable
+      const formMode = process.env.FORM_MODE || 'auto';
+      
+      if (formMode === 'auto') {
+        // Auto mode: check treatment target forms first, then service forms
+        const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+        const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+        
+        const getTreatmentTargetSessionForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
+          session_id: data.session_id,
+        });
 
-      if (getAllSessionUserForm.error) {
-        logger.error('Error getting user form');
-        return { message: 'Error getting user form', error: -1 };
-      }
+        // If treatment target forms exist, check their sent status
+        if (!getTreatmentTargetSessionForms.error && getTreatmentTargetSessionForms.rec && getTreatmentTargetSessionForms.rec.length > 0) {
+          const checkTreatmentTargetFormsSentStatus = getTreatmentTargetSessionForms.rec.filter(
+            (item) => item.is_sent == 1,
+          );
 
-      const checkTreatmentToolsSentStatus = getAllSessionUserForm.filter(
-        (item) => item.is_sent == 1,
-      );
+          if (checkTreatmentTargetFormsSentStatus.length > 0) {
+            logger.warn('The treatment target forms have already been sent');
+            return {
+              message: 'The treatment target forms have already been sent',
+              error: -1,
+            };
+          }
+        } else {
+          // If no treatment target forms, check regular user forms
+          const getAllSessionUserForm = await this.userForm.getUserFormById({
+            session_id: data.session_id,
+          });
 
-      if (checkTreatmentToolsSentStatus.length > 0) {
-        logger.warn('The treatment tools have already been sent');
-        return {
-          message: 'The treatment tools have already been sent',
-          error: -1,
-        };
+          if (getAllSessionUserForm.error) {
+            logger.error('Error getting user form');
+            return { message: 'Error getting user form', error: -1 };
+          }
+
+          const checkTreatmentToolsSentStatus = getAllSessionUserForm.filter(
+            (item) => item.is_sent == 1,
+          );
+
+          if (checkTreatmentToolsSentStatus.length > 0) {
+            logger.warn('The treatment tools have already been sent');
+            return {
+              message: 'The treatment tools have already been sent',
+              error: -1,
+            };
+          }
+        }
+      } else if (formMode === 'treatment_target') {
+        // Treatment target mode: only check treatment target forms
+        const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+        const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+        
+        const getTreatmentTargetSessionForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
+          session_id: data.session_id,
+        });
+
+        if (!getTreatmentTargetSessionForms.error && getTreatmentTargetSessionForms.rec && getTreatmentTargetSessionForms.rec.length > 0) {
+          const checkTreatmentTargetFormsSentStatus = getTreatmentTargetSessionForms.rec.filter(
+            (item) => item.is_sent == 1,
+          );
+
+          if (checkTreatmentTargetFormsSentStatus.length > 0) {
+            logger.warn('The treatment target forms have already been sent');
+            return {
+              message: 'The treatment target forms have already been sent',
+              error: -1,
+            };
+          }
+        }
+      } else if (formMode === 'service') {
+        // Service mode: only check service-based forms
+        const getAllSessionUserForm = await this.userForm.getUserFormById({
+          session_id: data.session_id,
+        });
+
+        if (getAllSessionUserForm.error) {
+          logger.error('Error getting user form');
+          return { message: 'Error getting user form', error: -1 };
+        }
+
+        const checkTreatmentToolsSentStatus = getAllSessionUserForm.filter(
+          (item) => item.is_sent == 1,
+        );
+
+        if (checkTreatmentToolsSentStatus.length > 0) {
+          logger.warn('The treatment tools have already been sent');
+          return {
+            message: 'The treatment tools have already been sent',
+            error: -1,
+          };
+        }
       }
 
       return {
@@ -516,6 +592,8 @@ export default class Common {
     }
   }
 
+
+
   ///////////////////////////////////////////
 
   async getUserTenantId(data) {
@@ -524,8 +602,9 @@ export default class Common {
       
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .from('v_user_profile');
+        .select('v_user_profile.*', 't.tenant_generated_id')
+        .from('v_user_profile')
+        .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id');
 
       if (data.user_profile_id) {
         query.where('user_profile_id', data.user_profile_id);
@@ -645,6 +724,43 @@ export default class Common {
       } catch (feeSplitError) {
         // Log the error but don't fail the tenant creation
         console.warn(`Warning: Could not create default fee split management for tenant ${tenantRecord.tenant_id}:`, feeSplitError.message);
+      }
+
+      // Copy treatment target form templates to new tenant
+      try {
+        // Get all template configurations
+        const templateConfigs = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('treatment_target_session_forms_template')
+          .where('is_active', 1)
+          .select('*');
+
+        if (templateConfigs.length > 0) {
+          // Prepare configurations for the new tenant
+          const tenantConfigs = templateConfigs.map(config => ({
+            treatment_target: config.treatment_target,
+            form_name: config.form_name,
+            service_name: config.service_name,
+            purpose: config.purpose,
+            sessions: JSON.stringify(config.sessions), // Ensure JSON serialization
+            tenant_id: tenantRecord.tenant_id,
+            created_at: new Date(),
+            updated_at: new Date()
+          }));
+
+          // Insert configurations for the new tenant
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('treatment_target_feedback_config')
+            .insert(tenantConfigs);
+
+          console.log(`Treatment target templates copied for tenant ${tenantRecord.tenant_id}: ${tenantConfigs.length} configurations`);
+        } else {
+          console.warn(`Warning: No treatment target templates found to copy for tenant ${tenantRecord.tenant_id}`);
+        }
+      } catch (templateError) {
+        // Log the error but don't fail the tenant creation
+        console.warn(`Warning: Could not copy treatment target templates for tenant ${tenantRecord.tenant_id}:`, templateError.message);
       }
 
       return tenantRecord.tenant_id;

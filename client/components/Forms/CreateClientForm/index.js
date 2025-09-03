@@ -44,7 +44,7 @@ function CreateClientForm({
       if (initialData) return true;
       if (Counselor) return roledetail?.role_id === 1;
       if (admin) return roledetail?.role_id === 3;
-      if (manager) return roledetail?.role_id ===2;
+      if (manager) return roledetail?.role_id === 2;
       return true;
     })
     .map((roledetail) => ({
@@ -84,7 +84,7 @@ function CreateClientForm({
     user_first_name: "",
     user_last_name: "",
     email: "",
-    role_id: Counselor ? 1 : "",
+    role_id: Counselor ? 1 : manager ? 2 : admin ? 3 : 3, // Default to 3 (Manager) for admin
     clam_num: "",
     tenant_name: "",
     target_outcome_id: initialData
@@ -93,6 +93,7 @@ function CreateClientForm({
           value: initialData?.user_target_outcome?.at(0)?.target_outcome_id,
         }
       : "",
+
     user_phone_nbr: "",
     admin_fee: "",
     tax: "",
@@ -101,6 +102,7 @@ function CreateClientForm({
     // service: serviceTemplates,
   };
   const methods = useForm({
+    mode: "onSubmit",
     resolver: zodResolver(ClientValidationSchema),
     defaultValues: defaultValues,
   });
@@ -125,7 +127,7 @@ function CreateClientForm({
   ];
 
   const handleCreateClient = async (data) => {
-  
+    const role = methods.watch("role_id");
     let processedData;
     if (role == 1) {
       processedData = {
@@ -139,7 +141,7 @@ function CreateClientForm({
         user_phone_nbr: data?.user_phone_nbr,
         tenant_name: data?.tenant_name,
       };
-    } else if(role ===2){
+    } else if (role === 2) {
       processedData = {
         user_profile_id: user?.user_profile_id,
         user_first_name: data?.user_first_name,
@@ -150,10 +152,7 @@ function CreateClientForm({
         tenant_name: data?.tenant_name,
         // description: data.description,
       };
-    }
-    else if(role === 3){
-      
-    
+    } else if (role === 3) {
       processedData = {
         user_profile_id: user?.user_profile_id,
         user_first_name: data?.user_first_name,
@@ -164,9 +163,8 @@ function CreateClientForm({
         tenant_name: data?.tenant_name,
         admin_fee: data.admin_fee,
         tax_percent: data.tax,
-        
       };
-    }else{
+    } else {
       processedData = {
         user_profile_id: user?.user_profile_id,
         user_first_name: data?.user_first_name,
@@ -194,7 +192,7 @@ function CreateClientForm({
             position: "top-right",
           });
         }
-      
+
         // setTableData((prev) => [processedData, ...prev]);
         fetchClients();
         methods.reset(defaultValues);
@@ -220,26 +218,31 @@ function CreateClientForm({
       description,
       tax,
       admin_fee,
+      clam_num,
     } = data;
-   
     const processedData = {
       user_first_name,
       user_last_name,
       email,
       role_id,
       user_phone_nbr,
-      target_outcome_id: target_outcome_id?.value,
+      ...(role_id === 1 && {
+        target_outcome_id: target_outcome_id?.value,
+      }),
       ...(role_id === 3 && {
         tenant_name: tenant_name || "",
         admin_fee,
-        tax,
-       
+        tax_percent: tax,
+
         tenant_name,
       }),
-      ...(role_id === 2 && {
-        // description: description,
-      }),
+      ...(role_id === 2 &&
+        {
+          // description: description,
+        }),
+      ...(role_id === 1 && { clam_num: clam_num }),
     };
+
 
     try {
       setLoading(true);
@@ -266,7 +269,7 @@ function CreateClientForm({
             position: "top-right",
           });
         }
-      
+
         fetchClients();
         setIsOpen(false);
         methods.reset(defaultValues);
@@ -296,7 +299,7 @@ function CreateClientForm({
       setFormButton("Create");
       methods.reset(defaultValues);
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   const handleDiscard = (e) => {
     e.preventDefault();
@@ -338,12 +341,15 @@ function CreateClientForm({
   // }, [isOpen, role, serviceTemplates, initialData]);
 
   return (
-
     <CreateClientWrapper>
       <FormProvider {...methods}>
         <form
           onSubmit={methods.handleSubmit(
-            initialData ? handleUpdateClient : handleCreateClient
+            initialData ? handleUpdateClient : handleCreateClient,
+            (errors) => {
+              console.log("Form validation errors:", errors);
+              console.log("Form values:", methods.getValues());
+            }
           )}
         >
           <div>
@@ -360,7 +366,7 @@ function CreateClientForm({
                   <CustomSelect
                     {...field}
                     options={RoleIds}
-                    disable={Counselor || initialData}
+                    disable={Counselor || manager || admin || initialData}
                     dropdownIcon={
                       <ArrowIcon style={{ transform: "rotate(90deg)" }} />
                     }
@@ -381,13 +387,14 @@ function CreateClientForm({
               <div className="fields">
                 <CustomInputField
                   name="clam_num"
+                  disabled={formButton === "Create" ? false : true}
                   label="Serial Number"
                   placeholder="Enter Serial Number"
                   type="number"
                 />
               </div>
             )}
-            {role == 2 && user?.role_id == 4 && (
+            {/* {role == 2 && user?.role_id == 4 && (
               <div className="fields">
                 <CustomInputField
                   name="description"
@@ -396,7 +403,7 @@ function CreateClientForm({
                   type="text"
                 />
               </div>
-            )}
+            )} */}
             <div className="fields-wrapper-name">
               <div className="fields">
                 <CustomInputField
@@ -425,6 +432,7 @@ function CreateClientForm({
             <div className="fields">
               <CustomInputField
                 name="email"
+                disabled={formButton === "Create" ? false : true}
                 label="Email*"
                 placeholder="Enter your email"
                 type="email"

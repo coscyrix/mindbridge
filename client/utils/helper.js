@@ -54,6 +54,15 @@ export function convertUTCToLocalTime(utcTimeString) {
 
   const date = new Date(dateString);
 
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    console.warn('Invalid date string provided to convertUTCToLocalTime:', utcTimeString);
+    return {
+      date: "",
+      time: "",
+    };
+  }
+
   const optionsDate = { year: "numeric", month: "short", day: "2-digit" };
   const optionsTime = {
     hour: "2-digit",

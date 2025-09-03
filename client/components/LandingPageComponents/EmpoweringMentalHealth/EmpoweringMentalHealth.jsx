@@ -4,6 +4,8 @@ import CustomButton from "../../CustomButton";
 import { CheckIcon } from "../assets/icons";
 import empowermentImage1 from "../assets/images/empowerment-img-1.png";
 import empowermentImage2 from "../assets/images/empowerment-img-2.png";
+import empowermentImage3 from "../assets/images/empowerment-img-3.png";
+import empowermentImage4 from "../assets/images/empowerment-img-4.png";
 import ButtonRow from "../../CustomButton/CustomButtonRow";
 import { useRouter } from "next/router";
 import ApiConfig from "../../../config/apiConfig";
@@ -44,18 +46,18 @@ const EmpoweringMentalHealth = () => {
       title: "Clinics and Group Practices",
       description:
         "Designed for clinics and group practices to streamline team operation and boost productivity.",
-      imagePlaceholder: empowermentImage1.src,
+      imagePlaceholder: empowermentImage2.src,
     },
     {
       title: "Educational or Vocational Counselling Centers",
       description: "Support for Educational & Vocationals counseling centers.",
-      imagePlaceholder: empowermentImage2.src,
+      imagePlaceholder: empowermentImage3.src,
     },
     {
       title: "Registered and Non-profit",
       description:
         "Empowring care, not profit. Join our mission to streamline therapy services -with every session supporting comumunity well-bring.",
-      imagePlaceholder: empowermentImage1.src,
+      imagePlaceholder: empowermentImage4.src,
     },
   ];
   const router = useRouter();

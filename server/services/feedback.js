@@ -412,6 +412,7 @@ export default class FeedbackService {
       ).required(),
       session_id: joi.number().required(),
       client_id: joi.number().required(),
+      target_outcome_id: joi.number().optional().allow(null),
       tenant_id: joi.number().required(),
     });
 
@@ -432,6 +433,7 @@ export default class FeedbackService {
       client_id: joi.number().required(),
       imgBase64: joi.string().required(),
       tenant_id: joi.number().required(),
+      form_id: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

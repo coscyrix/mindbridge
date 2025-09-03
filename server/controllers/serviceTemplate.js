@@ -37,4 +37,10 @@ export const copyMultipleTemplatesToTenant = async (req, res) => {
   const { service_templates, tenant_id } = req.body;
   const result = await serviceTemplateService.copyMultipleTemplatesToTenant(service_templates, tenant_id);
   res.status(result.error ? 400 : 200).json(result);
+};
+
+export const checkFormsAffectedByTemplate = async (req, res) => {
+  const { template_service_id, tenant_id } = req.query;
+  const result = await serviceTemplateService.checkFormsAffectedByTemplate(template_service_id, tenant_id);
+  res.status(result.error ? 400 : 200).json(result);
 }; 

@@ -14,14 +14,15 @@ const dbConn = {
       multipleStatements: true,
       timezone: 'Z',
       dateStrings: true,
+      connectTimeout: 120000, // 2 minutes connection timeout
     },
     pool: {
       max: 50,
       min: 0,
-      idleTimeoutMillis: 10000, // Supported Tarn.js option
-      acquireTimeoutMillis: 20000, // Supported Tarn.js option
+      idleTimeoutMillis: 30000, // Increased from 10000
+      acquireTimeoutMillis: 60000, // Increased from 20000
     },
-    acquireConnectionTimeout: 50000, // Wait up to 30 seconds to establish a connection
+    acquireConnectionTimeout: 120000, // Increased from 50000 to 2 minutes
     debug: true,
   },
   production: {
@@ -35,14 +36,15 @@ const dbConn = {
       multipleStatements: true,
       timezone: 'Z',
       dateStrings: true,
+      connectTimeout: 120000, // 2 minutes connection timeout
     },
     pool: {
       max: 50,
       min: 0,
-      idleTimeoutMillis: 10000, // Supported Tarn.js option
-      acquireTimeoutMillis: 20000, // Supported Tarn.js option
+      idleTimeoutMillis: 30000, // Increased from 10000
+      acquireTimeoutMillis: 60000, // Increased from 20000
     },
-    acquireConnectionTimeout: 30000, // Wait up to 30 seconds to establish a connection
+    acquireConnectionTimeout: 120000, // Increased from 30000 to 2 minutes
     debug: false,
   },
 };

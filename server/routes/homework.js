@@ -39,11 +39,20 @@ const upload = multer({
   }
 });
 
-// Create homework with file upload
+// Create homework with file upload (file is required)
 router.post(
   '/',
   authenticate,
   upload.single('homework_file'),
+  (req, res, next) => {
+    // Check if file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ 
+        message: 'Homework file is required. Please upload a file.' 
+      });
+    }
+    next();
+  },
   AsyncWrapper(homeworkController.createHomework),
 );
 

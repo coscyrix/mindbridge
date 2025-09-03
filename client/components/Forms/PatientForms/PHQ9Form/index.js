@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import CustomInputField from "../../../CustomInputField";
 import { PHQFormContainer } from "./style";
@@ -10,18 +10,19 @@ import { getBaseURL } from "../../../../utils/helper";
 import Spinner from "../../../common/Spinner";
 import { useRouter } from "next/router";
 import CommonServices from "../../../../services/CommonServices";
+import FormHeader from "../../../FormsHeader";
 
-const PHQ9Form = () => {
+const PHQ9Form = ({ client_name = "N/A" }) => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const methods = useForm({
     defaultValues: {
-      name: "Test",
+      name: client_name,
       date: moment().format("DD/MM/YYYY"),
     },
   });
 
-  const { handleSubmit, control, reset, register } = methods;
+  const { handleSubmit, control, reset, register, setValue } = methods;
 
   const questions = [
     {
@@ -81,8 +82,17 @@ const PHQ9Form = () => {
       setTimeout(() => setLoading(false), 3000);
     }
   };
+  useEffect(() => {
+    setValue("name", client_name);
+  }, [client_name, setValue]);
   return (
     <PHQFormContainer>
+      <FormHeader
+        tittle={"Phq9 Tracker Questionnaire"}
+        description={
+          "The Patient Health Questionnaire-9 (PHQ-9) is a standardized instrument designed to help healthcare providers  assess the presence and severity of depression in patients"
+        }
+      />
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="phq9-form">
           <h1>Patient Health Questionnaire (PHQ-9)</h1>

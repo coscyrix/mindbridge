@@ -3,6 +3,8 @@ import { CustomEditableInputModalWrapper } from "./style";
 import { MdDelete } from "react-icons/md";
 import Spinner from "../common/Spinner";
 import { DeleteIcon } from "../../public/assets/icons";
+import { useReferenceContext } from "../../context/ReferenceContext";
+
 const sanitizeService = (service) => {
   const id =
     service.service_id ??
@@ -16,6 +18,7 @@ const sanitizeService = (service) => {
       service.service_price ?? service.total_invoice ?? service.price ?? 0
     ),
     name: service.name ?? service.service_name ?? "",
+    tax: Number(service?.gst ?? service?.tax ?? 0),
   };
 };
 
@@ -25,9 +28,12 @@ const CustomEditableInputModal = ({
   onChange,
   loading = false,
 }) => {
+  const { userObj } = useReferenceContext();
+  console.log(userObj);
   const [activeServices, setActiveServices] = useState(() =>
     initialTemplates.map(sanitizeService)
   );
+  console.log(initialTemplates);
 
   const [deletedServices, setDeletedServices] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
@@ -180,7 +186,7 @@ const CustomEditableInputModal = ({
               />
             </div>
             <div className="field-group">
-              <label>Service Price</label>
+              <label>Service Price before tax</label>
               <input
                 type="number"
                 className="input"
@@ -189,6 +195,25 @@ const CustomEditableInputModal = ({
                   handleChange(index, "service_price", e.target.value)
                 }
                 placeholder="Service Price"
+              />
+            </div>
+            <div className="field-group">
+              <label>Tax %</label>
+              <input
+                className="input"
+                disabled
+                value={`${userObj?.tenant?.tax_percent}%`}
+              />
+            </div>
+            <div className="field-group">
+              <label>Service Price after tax</label>
+              <input
+                className="input"
+                disabled
+                value={
+                  service.service_price +
+                  (service.service_price * userObj?.tenant?.tax_percent) / 100
+                }
               />
             </div>
             <div className="delete-btn-container">

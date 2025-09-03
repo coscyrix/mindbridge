@@ -13,9 +13,13 @@ import CustomButton from "../../components/CustomButton";
 import { AddIcon } from "../../public/assets/icons";
 import { useReferenceContext } from "../../context/ReferenceContext";
 import Skeleton from "@mui/material/Skeleton";
-
+import ApiConfig from "../../config/apiConfig";
+import { useRouter } from "next/router";
 
 function ClientSession() {
+  const router = useRouter();
+  const [counselorId, setCounselorId] = useState(null);
+  const { open } = router.query;
   const [showFlyout, setShowFlyout] = useState(false);
   const [activeData, setActiveData] = useState();
   const [confirmationModal, setConfirmationModal] = useState(false);
@@ -27,15 +31,18 @@ function ClientSession() {
     { label: "All counselors", value: "allCounselors" },
   ]);
   const [selectCounselor, setSelectCounselor] = useState("allCounselors");
+  const [selectCounselorEmail, setSelectCounselorEmail] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   const { userObj } = useReferenceContext();
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState("");
 
   const tabLabels = [
     { id: 0, label: "Current Session", value: "currentSession" },
     { id: 1, label: "All Sessions", value: "allSessions" },
   ];
-
+  const [counselorConfiguration, setCounselorConfiguration] = useState(null);
+  const [managerSplitDetails, setManagerSplitDetails] = useState(null);
   const handleFilterData = () => {
     console.log("handleFilterData has been called");
   };
@@ -45,14 +52,14 @@ function ClientSession() {
       setSessionsLoading(true);
       let response;
       if (userObj?.role_id === 3) {
-        if(counselorId== "allCounselors"){
+        if (counselorId == "allCounselors") {
           response = await CommonServices.getSessionsByCounselor({
-            role_id:3,
-            tenant_id:userObj?.tenant?.tenant_generated_id
-          })
+            role_id: 3,
+            tenant_id: userObj?.tenant_id,
+          });
         }
         // Always fetch with role_id: 3 for role 3 users
-        else{
+        else {
           response = await CommonServices.getSessionsByCounselor({
             role_id: 3,
             counselor_id: counselorId,
@@ -98,25 +105,71 @@ function ClientSession() {
           (client) =>
             client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
         );
-        
+
         const counselorOptions = allCounselors?.map((item) => ({
           label: item?.user_first_name + " " + item?.user_last_name,
           value: item?.user_profile_id,
+          tenant_id: item?.tenant_id,
+          email: item?.email,
         }));
-        setCounselors([{ label: "All counselors", value: "allCounselors" }, ...counselorOptions]);
+        setCounselors([
+          {
+            label: "All counselors",
+            value: "allCounselors",
+            tenant_id: selectTenantId,
+          },
+          ...counselorOptions,
+        ]);
       }
     } catch (error) {
       console.log("Error fetching clients", error);
     }
   };
+  const [selectTenantId, setSelectTenantId] = useState(null);
+  const [userId, setUserId] = useState(null);
+
+  // const handleSelectCounselor = (data) => {
+  //   console.log(data, "getting data::::::");
+  //   const counselorId = data?.value;
+  //   const tenant_id = data?.tenant_id;
+  //   setUserId(data.user_id);
+
+  //   setSelectTenantId(tenant_id);
+
+  //   setSelectCounselor(counselorId);
+  //   setSelectCounselorEmail(data.email);
+  //   if (data?.value === "allCounselor") {
+  //     fetchSessions();
+  //   } else {
+  //     fetchSessions(counselorId);
+  //   }
+
+  //   getInvoice(counselorId, tenant_id);
+  // };
 
   const handleSelectCounselor = (data) => {
+    console.log(data, "getting data::::::");
     const counselorId = data?.value;
+
+    if (counselorId !== "allCounselor") {
+      setUserId(data.user_id);
+      setSelectTenantId(data.tenant_id);
+      setSelectCounselorEmail(data.email);
+    }
+
     setSelectCounselor(counselorId);
-    fetchSessions(counselorId);
-    getInvoice(counselorId);
+
+    if (counselorId === "allCounselor") {
+      fetchSessions();
+    } else {
+      fetchSessions(counselorId);
+    }
+
+    getInvoice(
+      counselorId,
+      counselorId === "allCounselor" ? selectTenantId : data.tenant_id
+    );
   };
-  
 
   const handleClickOutside = (e) => {
     if (
@@ -155,6 +208,11 @@ function ClientSession() {
   const handleEdit = (row) => {
     setShowFlyout(true);
     setActiveData(row);
+    console.log(row);
+    if (row?.tenant_id) {
+      setSelectTenantId(row.tenant_id);
+    }
+    setCounselorId(row?.counselor_id);
   };
 
   const handleDelete = async (row) => {
@@ -192,20 +250,40 @@ function ClientSession() {
     actionDropdownRef
   );
 
-  const handleShowAddClientSession = () => {
+  const handleShowAddClientSession = (row) => {
+    console.log(row);
     setShowFlyout(true);
   };
 
-  const getInvoice = async (counselorIdParam) => {
-    setSummaryLoading(true); 
+  const getInvoice = async (counselorIdParam, tenantId) => {
+    console.log(tenantId, "tenantid::::");
+    setSummaryLoading(true);
     try {
       let response;
       if (userObj?.role_id === 2) {
         response = await api.get(
           `/invoice/multi?counselor_id=${userObj?.user_profile_id}&role_id=${userObj?.role_id}`
         );
-      } else {
+      } else if (userObj.role_id === 4) {
         let url = `/invoice/multi?role_id=${userObj?.role_id}`;
+        if (tenantId) {
+          url += `&tenant_id=${tenantId}`;
+        }
+        if (
+          counselorIdParam &&
+          counselorIdParam !== "allCounselors" &&
+          counselorIdParam !== "allCounselor"
+        ) {
+          url += `&counselor_id=${counselorIdParam}`;
+        }
+
+        response = await api.get(url);
+
+        if (response.status === 200) {
+          setSummaryData(response?.data?.rec?.summary);
+        }
+      } else {
+        let url = `/invoice/multi?role_id=${userObj?.role_id}&tenant_id=${userObj?.tenant_id}`;
         if (counselorIdParam && counselorIdParam !== "allCounselors") {
           url += `&counselor_id=${counselorIdParam}`;
         }
@@ -215,12 +293,11 @@ function ClientSession() {
         setSummaryData(response?.data?.rec?.summary);
       }
     } catch (error) {
-      console.log(":: Invoice.getInvoice()", error);
-    }finally{
-      setSummaryLoading(false); 
+      console.error(":: Invoice.getInvoice()", error);
+    } finally {
+      setSummaryLoading(false);
     }
   };
-  
 
   useEffect(() => {
     window.addEventListener("mousedown", handleClickOutside);
@@ -235,20 +312,78 @@ function ClientSession() {
       fetchCounsellor();
     }
     fetchSessions(selectCounselor);
-    getInvoice();
+    getInvoice(selectCounselor, selectedTenantId?.tenant_id);
   }, [userObj]);
+
+  const [isHomeworkUpload, setHomeWorkUpload] = useState(false);
+  const fetchHomeWorkUploadStatus = async () => {
+    // Skip API call for admin users (role_id === 4)
+    if (userObj?.role_id === 4) {
+      return;
+    }
+
+    try {
+      const response = await api.get(
+        `${ApiConfig.homeworkUpload.fetchHomeworkUploadStatus}?tenant_id=${userObj?.tenant?.tenant_id}&feature_name=homework_upload_enabled`
+      );
+      if (response?.status == 200) {
+        setHomeWorkUpload(response?.data[0]?.feature_value);
+        toast.success(response.data?.message);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
+  };
+  useEffect(() => {
+    fetchHomeWorkUploadStatus();
+  }, []);
+  const fetchAllSplit = async () => {
+    if (selectCounselor === "allCounselors" && userObj.role_id === 3) {
+      return;
+    }
+
+    try {
+      const tenant_id =
+        userObj?.role_id === 2 ? userObj?.tenant_id : selectTenantId;
+      const response = await api.get(
+        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}`
+      );
+      if (response.status == 200) {
+        setCounselorConfiguration(
+          response?.data?.data?.counselor_specific_configurations
+        );
+        setManagerSplitDetails(response?.data?.data?.default_configuration);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
+  };
+  useEffect(() => {
+    if (
+      userObj.role_id === 2 ||
+      userObj.role_id == 3 ||
+      (userObj.role_id == 4 && selectTenantId)
+    ) {
+      fetchAllSplit();
+    }
+  }, [selectCounselor, selectTenantId]);
+  useEffect(() => {
+    if (open === "true") {
+      setShowFlyout(true);
+    }
+  }, []);
 
   return (
     <ClientSessionWrapper>
       <div className="client-session-heading">
         <div className="heading-wrapper">
           <h2 className="heading">Client Session Schedule</h2>
-          <CustomButton
+          {/* <CustomButton
             icon={<AddIcon />}
             title="Add Client Session"
             onClick={handleShowAddClientSession}
             customClass="session-create-mobile-button"
-          />
+          /> */}
         </div>
         <p className="sub-heading">
           A detailed table tracking client session schedules, session times, and
@@ -262,6 +397,8 @@ function ClientSession() {
         setConfirmationModal={setConfirmationModal}
       >
         <CreateSessionForm
+          isHomeworkUpload={isHomeworkUpload}
+          setHomeWorkUpload={setHomeWorkUpload}
           isOpen={showFlyout}
           setIsOpen={setShowFlyout}
           initialData={activeData}
@@ -269,11 +406,16 @@ function ClientSession() {
           confirmationModal={confirmationModal}
           setConfirmationModal={setConfirmationModal}
           setSessions={setSessions}
+          session={activeData}
           fetchSessions={fetchSessions}
           fetchCounselorClient={fetchSessions}
+          counselorConfiguration={counselorConfiguration}
+          counselor_id={counselorId}
         />
       </CreateSessionLayout>
       <CustomClientDetails
+        isHomeworkUpload={isHomeworkUpload}
+        setHomeWorkUpload={setHomeWorkUpload}
         customTab={
           <div className="tab-container">
             {/* <CustomTab
@@ -281,54 +423,166 @@ function ClientSession() {
               value={moment().format("dddd, D MMMM YYYY")}
             /> */}
             <CustomTab
-              heading={"Total Amount For A Month"}
+              heading="Total Amount For A Month"
               value={
                 summaryLoading ? (
                   <Skeleton width={120} height={40} />
+                ) : userObj?.role_id === 2 ? (
+                  `$${Number(summaryData?.sum_session_total_amount).toFixed(4)}`
+                ) : userObj?.role_id === 3 ? (
+                  <>
+                    Total Amount :{" $"}
+                    {Number(summaryData?.sum_session_total_amount).toFixed(4)}
+                    {/* <p>
+                      Total Tax:{" "}
+                      {(
+                        Number(summaryData?.sum_session_price) -
+                        Number(summaryData?.sum_session_pre_tax_amount)
+                      ).toFixed(4)}
+                    </p>
+                    <p>
+                      Amount After Tax :{" "}
+                      {Number(summaryData?.sum_session_price).toFixed(4)}
+                    </p> */}
+                  </>
+                ) : userObj?.role_id === 4 ? (
+                  <>
+                    Total Amount :{" $"}
+                    {Number(summaryData?.sum_session_total_amount).toFixed(4)}
+                    {/* <p>
+                      Tax Amount :{" "}
+                      {(
+                        Number(summaryData?.sum_session_price) -
+                        Number(summaryData?.sum_session_pre_tax_amount)
+                      ).toFixed(4)}
+                    </p> */}
+                    {/* <p>Amount After Tax : {summaryData?.sum_session_price} </p> */}
+                  </>
                 ) : (
-                  `$${
-                    summaryData
-                      ? (
-                          Number(summaryData?.sum_session_system_amt) +
-                          Number(summaryData?.sum_session_counselor_amt)
-                        ).toFixed(2) || 0
-                      : 0
-                  }`
+                  ""
                 )
               }
             />
+
+            {userObj?.role_id !== 4 && (
+              <CustomTab
+                heading="Total Amount to Associate for a Month:"
+                value={
+                  summaryLoading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : userObj?.role_id === 2 ? (
+                    `$${Number(
+                      summaryData?.sum_session_counselor_tenant_amt
+                    ).toFixed(2)}`
+                  ) : userObj?.role_id === 3 ? (
+                    `$${Number(summaryData?.sum_session_counselor_amt).toFixed(
+                      4
+                    )}`
+                  ) : (
+                    ""
+                  )
+                }
+              />
+            )}
+
             <CustomTab
-              heading={"Total Amount to Associate for a Month: "}
+              heading="Detail breakdown"
               value={
                 summaryLoading ? (
-                  <Skeleton width={120} height={40} />
+                  <Skeleton width={200} height={40} />
+                ) : userObj?.role_id === 2 ? (
+                  <>
+                    <p>
+                      Counsellor Share:{" $"}
+                      {Number(summaryData?.sum_session_counselor_amt).toFixed(
+                        4
+                      )}{" "}
+                      (
+                      {
+                        summaryData?.fee_split_management
+                          ?.counselor_share_percentage
+                      }
+                      %)
+                    </p>
+                    Tenant Share:{" $"}
+                    {(
+                      Number(summaryData?.sum_session_tenant_amt) +
+                      Number(summaryData?.sum_session_system_amt)
+                    ).toFixed(4)}{" "}
+                    (
+                    {summaryData?.fee_split_management?.tenant_share_percentage}
+                    %)
+                  </>
+                ) : userObj?.role_id === 3 ? (
+                  <>
+                    {/* Counsellor Share:{" "}
+                    {Number(summaryData?.sum_session_counselor_amt).toFixed(4)} */}
+                    {/* <br /> */}
+                    Your Share:{" $"}
+                    {Number(summaryData?.sum_session_tenant_amt).toFixed(4)}
+                  </>
+                ) : userObj?.role_id === 4 ? (
+                  <>
+                    <p>
+                      All Practice Amount:{" $"}
+                      {Number(summaryData?.sum_session_total_amount).toFixed(4)}
+                    </p>
+
+                    <>
+                      Counsellor Amount:{" $"}
+                      {Number(
+                        summaryData?.sum_session_counselor_tenant_amt
+                      ).toFixed(4)}{" "}
+                      <br />
+                      Tenant Amount:{" $"}
+                      {Number(summaryData?.sum_session_tenant_amt).toFixed(4)}
+                    </>
+                  </>
                 ) : (
-                  `$${
-                    summaryData
-                      ? Number(summaryData?.sum_session_counselor_amt).toFixed(
-                          2
-                        ) || 0
-                      : 0
-                  }`
+                  ""
                 )
               }
             />
-            <CustomTab
-              heading={"Total Amount to Vapendama for a Month:"}
-              value={
-                summaryLoading ? (
-                  <Skeleton width={120} height={40} />
-                ) : (
-                  `$${
-                    summaryData
-                      ? Number(summaryData?.sum_session_system_amt).toFixed(
-                          2
-                        ) || 0
-                      : 0
-                  }`
-                )
-              }
-            />
+
+            {(userObj?.role_id == 3 || userObj?.role_id == 4) && (
+              <CustomTab
+                heading={"Tax (GST) "}
+                value={
+                  summaryLoading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : (
+                    `$${Number(summaryData?.sum_session_taxes)?.toFixed(4)}`
+                  )
+                }
+              />
+            )}
+
+            {userObj?.role_id == 4 ? (
+              <CustomTab
+                heading={"Total Amount to Vapendama for a Month:"}
+                value={
+                  summaryLoading ? (
+                    <Skeleton width={120} height={40} />
+                  ) : (
+                    `$${Number(summaryData?.sum_session_system_amt)?.toFixed(4)}`
+                  )
+                }
+              />
+            ) : (
+              userObj?.role_id !== 2 && (
+                <CustomTab
+                  heading={"Admin Fee:"}
+                  value={
+                    summaryLoading ? (
+                      <Skeleton width={120} height={40} />
+                    ) : (
+                     `$${Number(summaryData?.sum_session_system_amt)?.toFixed(4)}`
+                    )
+                  }
+                />
+              )
+            )}
+
             <CustomTab
               heading={"Total Amount of Units:"}
               value={
@@ -353,7 +607,9 @@ function ClientSession() {
         }
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
-        counselors={counselors}
+        setSelectedTenantId={setSelectedTenantId}
+        getInvoice={getInvoice}
+        counselor={counselors}
         handleCreate={handleShowAddClientSession}
         onRowClicked={handleEdit}
         loading={sessionsLoading}

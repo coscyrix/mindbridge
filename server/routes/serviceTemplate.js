@@ -6,7 +6,8 @@ import {
   updateTemplate,
   deleteTemplate,
   copyTemplateToTenantService,
-  copyMultipleTemplatesToTenant
+  copyMultipleTemplatesToTenant,
+  checkFormsAffectedByTemplate
 } from '../controllers/serviceTemplate.js';
 
 const router = express.Router();
@@ -18,5 +19,6 @@ router.put('/:id', updateTemplate);
 router.delete('/:id', deleteTemplate);
 router.post('/copy-to-tenant', copyTemplateToTenantService);
 router.post('/copy-multiple-to-tenant', copyMultipleTemplatesToTenant);
+router.get('/check-forms-affected', checkFormsAffectedByTemplate);
 
 export const serviceTemplateRouter = { baseUrl: '/api/service-templates', router }; 

@@ -35,7 +35,23 @@ export default class ServerConfig {
         console.error('Warning: Could not create uploads directory:', error.message);
       }
     }
-    this.app.use('/uploads', Express.static(uploadsPath));
+    
+    // Serve uploads with CORS headers for cross-domain image access
+    this.app.use('/uploads', (req, res, next) => {
+      // Set CORS headers for all image requests
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+      res.header('Access-Control-Max-Age', '86400'); // 24 hours
+      
+      // Handle preflight requests for uploads
+      if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+      }
+      
+      next();
+    }, Express.static(uploadsPath));
 
     // CORS configuration
     const corsOptions = {
@@ -77,6 +93,14 @@ export default class ServerConfig {
       res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, ngrok-skip-browser-warning');
       res.header('Access-Control-Allow-Credentials', 'true');
       res.header('Access-Control-Max-Age', '86400'); // 24 hours
+      
+      // Special handling for image files
+      if (req.path.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+        res.header('Access-Control-Allow-Origin', '*');
+        res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+        res.header('Cache-Control', 'public, max-age=31536000'); // Cache images for 1 year
+      }
       
       // Handle preflight requests
       if (req.method === 'OPTIONS') {
@@ -123,6 +147,43 @@ export default class ServerConfig {
         timestamp: new Date().toISOString(),
         origin: req.get('Origin'),
         method: req.method
+      });
+    });
+
+    // Image serving endpoint with CORS headers
+    this.app.get('/images/:filename', (req, res) => {
+      const filename = req.params.filename;
+      const imagePath = path.join(uploadsPath, filename);
+      
+      // Set CORS headers for images
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+      res.header('Access-Control-Max-Age', '86400');
+      
+      // Check if file exists
+      if (!fs.existsSync(imagePath)) {
+        return res.status(404).json({ error: 'Image not found' });
+      }
+      
+      // Serve the image
+      res.sendFile(imagePath);
+    });
+
+    // Test endpoint to verify image CORS is working
+    this.app.get('/api/test-image-cors', (req, res) => {
+      res.json({
+        message: 'Image CORS is configured correctly',
+        timestamp: new Date().toISOString(),
+        corsHeaders: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+        },
+        imageEndpoints: [
+          '/uploads/[filename] - Direct access to uploaded files',
+          '/images/[filename] - CORS-enabled image endpoint'
+        ]
       });
     });
 

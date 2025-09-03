@@ -13,6 +13,8 @@ import CreateSessionForm from "../../components/Forms/CreateSessionForm";
 import Spinner from "../../components/common/Spinner";
 import { useReferenceContext } from "../../context/ReferenceContext";
 import SmartTab from "../../components/SmartTab";
+import { useRouter } from "next/router";
+import ApiConfig from "../../config/apiConfig";
 const CreateClientForm = dynamic(
   () => import("../../components/Forms/CreateClientForm"),
   { ssr: false }
@@ -25,10 +27,16 @@ const CreateSessionLayout = dynamic(
   { ssr: false }
 );
 function ClientManagement() {
+  const [counselorId, setCounselorId] = useState(null);
+  const [selectTenantId, setSelectTenantId] = useState(null);
+  const [counselorConfiguration, setCounselorConfiguration] = useState(null);
+  const [managerSplitDetails, setManagerSplitDetails] = useState(null);
+  const router = useRouter();
   const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState();
   const [showCreateSessionLayout, setShowCreateSessionLayout] = useState(false);
   const [activeData, setActiveData] = useState();
+  const [clientFormData, setClientFormData] = useState();
   const [clientData, setClientData] = useState([]);
   const [showFlyout, setShowFlyout] = useState(false);
   const [initialDataLoading, setInitialDataLoading] = useState(false);
@@ -126,9 +134,15 @@ function ClientManagement() {
 
   const handleEditSessionInfo = async (row) => {
     if (
-      ![3, 4].includes(userObj?.role_id) ||
-      ([3, 4].includes(userObj?.role_id) && row.has_schedule)
+      ![3, 4, 2].includes(userObj?.role_id) ||
+      ([3, 4, 2].includes(userObj?.role_id) && row.has_schedule)
     ) {
+      if (row?.tenant_id) {
+        console.log(row);
+        setSelectTenantId(row?.tenant_id);
+        setCounselorId(row?.user_target_outcome?.at(0).counselor_id);
+        await fetchAllSplit(row?.tenant_id);
+      }
       try {
         setInitialDataLoading(true);
         setUserProfileId({
@@ -159,6 +173,10 @@ function ClientManagement() {
       } finally {
         setInitialDataLoading(false);
       }
+    } else {
+      if (userObj?.role_id === 2) {
+        router.push("/client-session?open=true");
+      }
     }
   };
 
@@ -181,8 +199,28 @@ function ClientManagement() {
   };
 
   const handleEdit = (row) => {
+    setClientFormData(row);
     setShowCreateSessionLayout(true);
-    setActiveData(row);
+  };
+  const fetchAllSplit = async (tenant_id) => {
+    if (userObj.role_id === 3) {
+      return;
+    }
+
+    try {
+      console.log("logging selected", selectTenantId);
+      const response = await api.get(
+        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}`
+      );
+      if (response.status == 200) {
+        setCounselorConfiguration(
+          response?.data?.data?.counselor_specific_configurations
+        );
+        setManagerSplitDetails(response?.data?.data?.default_configuration);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
   };
 
   const handleDelete = async (row) => {
@@ -261,6 +299,7 @@ function ClientManagement() {
       fetchCounsellor();
     }
   }, [userObj]);
+
   return (
     <ClientManagementContainer role={userObj?.role_id}>
       {[3, 4].includes(userObj?.role_id) && (
@@ -281,8 +320,8 @@ function ClientManagement() {
         <CreateClientForm
           isOpen={showCreateSessionLayout}
           setIsOpen={setShowCreateSessionLayout}
-          initialData={activeData}
-          setInitialData={setActiveData}
+          initialData={clientFormData}
+          setInitialData={setClientFormData}
           tableData={clientData}
           setTableData={setClientData}
           fetchClients={fetchClients}
@@ -290,7 +329,27 @@ function ClientManagement() {
           setActiveTab={setActiveTab}
         />
       </CreateSessionLayout>
-      {console.log(userObj)}
+      <CreateSessionLayout isOpen={showFlyout} setIsOpen={setShowFlyout}>
+        {activeData ? (
+          <CreateSessionForm
+            isOpen={showFlyout}
+            setIsOpen={setShowFlyout}
+            initialData={activeData}
+            setInitialData={setActiveData}
+            confirmationModal={confirmationModal}
+            setConfirmationModal={setConfirmationModal}
+            setSessions={() => {}}
+            session={activeData?.session_Obj}
+            fetchSessions={() => {}}
+            counselorConfiguration={counselorConfiguration}
+            managerSplitDetails={managerSplitDetails}
+            counselor_id={counselorId}
+          />
+        ) : (
+          <Spinner color="blue" />
+        )}
+      </CreateSessionLayout>
+
       <CustomClientDetails
         title="Client List"
         overview="Your Clients at a Glance: Explore, Manage, and Stay Connected with Your Entire Client List in One Place!"

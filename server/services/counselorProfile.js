@@ -5,6 +5,7 @@ import SendEmail from '../middlewares/sendEmail.js';
 import logger from '../config/winston.js';
 import CounselorDocumentsService from './counselorDocuments.js';
 import CounselorTargetOutcome from '../models/counselorTargetOutcome.js';
+import AppointmentEmailTracking from '../models/appointmentEmailTracking.js';
 
 export default class CounselorProfileService {
   constructor() {
@@ -12,14 +13,95 @@ export default class CounselorProfileService {
     this.sendEmail = new SendEmail();
     this.counselorDocumentsService = new CounselorDocumentsService();
     this.counselorTargetOutcome = new CounselorTargetOutcome();
+    this.appointmentEmailTracking = new AppointmentEmailTracking();
   }
 
   async createCounselorProfile(data) {
+    // Validate the input data
+    const schema = joi.object({
+      user_profile_id: joi.number().optional(),
+      counselor_profile_id: joi.number().optional(),
+      location_lat: joi.alternatives().try(
+        joi.number(),
+        joi.string()
+      ).optional(),
+      location_lng: joi.alternatives().try(
+        joi.number(),
+        joi.string()
+      ).optional(),
+      profile_picture_url: joi.string().optional(),
+      license_number: joi.string().optional(),
+      license_provider: joi.string().optional(),
+      license_file_url: joi.string().optional(),
+      profile_notes: joi.string().optional(),
+      location: joi.string().optional(),
+      service_modalities: joi.string().optional(),
+      availability: joi.string().optional(),
+      is_verified: joi.boolean().optional(),
+      patients_seen: joi.number().optional(),
+      gender: joi.string().optional(),
+      race: joi.string().optional(),
+      public_phone: joi.string().optional(),
+      treatment_target: joi.alternatives().try(
+        joi.number(),
+        joi.array().items(joi.number())
+      ).optional(),
+      target_outcome_id: joi.alternatives().try(
+        joi.number(),
+        joi.array().items(joi.number())
+      ).optional()
+    });
+
+    const { error } = schema.validate(data);
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
     // Directly pass to model, which now handles multiple target outcomes
     return this.counselorProfile.createCounselorProfile(data);
   }
 
   async updateCounselorProfile(counselor_profile_id, data) {
+    // Validate the input data
+    const schema = joi.object({
+      user_profile_id: joi.number().optional(),
+      counselor_profile_id: joi.number().optional(),
+      location_lat: joi.alternatives().try(
+        joi.number(),
+        joi.string()
+      ).optional(),
+      location_lng: joi.alternatives().try(
+        joi.number(),
+        joi.string()
+      ).optional(),
+      profile_picture_url: joi.string().optional(),
+      license_number: joi.string().optional(),
+      license_provider: joi.string().optional(),
+      license_file_url: joi.string().optional(),
+      profile_notes: joi.string().optional(),
+      location: joi.string().optional(),
+      service_modalities: joi.string().optional(),
+      availability: joi.string().optional(),
+      is_verified: joi.boolean().optional(),
+      patients_seen: joi.number().optional(),
+      gender: joi.string().optional(),
+      race: joi.string().optional(),
+      public_phone: joi.string().optional(),
+      treatment_target: joi.alternatives().try(
+        joi.number(),
+        joi.array().items(joi.number())
+      ).optional(),
+      target_outcome_id: joi.alternatives().try(
+        joi.number(),
+        joi.array().items(joi.number())
+      ).optional()
+    });
+
+    const { error } = schema.validate(data);
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
     // Directly pass to model, which now handles multiple target outcomes
     return this.counselorProfile.updateCounselorProfile(counselor_profile_id, data);
   }
@@ -49,10 +131,22 @@ export default class CounselorProfileService {
     // Fetch documents if profile exists and has an ID
     let documents = [];
     if (profile.rec && profile.rec.length > 0) {
-      const counselor_profile_id = profile.rec[0].counselor_profile_id;
-      const docsResult = await this.counselorDocumentsService.getDocuments(counselor_profile_id);
-      if (!docsResult.error) {
-        documents = docsResult.rec || [];
+      // If specific counselor_profile_id is requested, fetch documents for that profile
+      if (filters.counselor_profile_id) {
+        const docsResult = await this.counselorDocumentsService.getDocuments(filters.counselor_profile_id);
+        if (!docsResult.error) {
+          documents = docsResult.rec || [];
+        }
+      } else {
+        // If no specific profile requested, fetch documents for all profiles
+        const allDocuments = [];
+        for (const profileItem of profile.rec) {
+          const docsResult = await this.counselorDocumentsService.getDocuments(profileItem.counselor_profile_id);
+          if (!docsResult.error && docsResult.rec) {
+            allDocuments.push(...docsResult.rec);
+          }
+        }
+        documents = allDocuments;
       }
     }
     return { ...profile, documents };
@@ -201,6 +295,20 @@ export default class CounselorProfileService {
       return { message: error.details[0].message, error: -1 };
     }
     try {
+      // Check if email has already been sent to this customer for this counselor
+      const emailAlreadySent = await this.appointmentEmailTracking.checkEmailAlreadySent(
+        data.counselor_profile_id,
+        data.customer_email
+      );
+      
+      if (emailAlreadySent) {
+        return { 
+          message: 'Appointment email has already been sent to this customer for this counselor', 
+          error: -1,
+          alreadySent: true
+        };
+      }
+
       const counselorProfile = await this.counselorProfile.getCounselorProfile({
         counselor_profile_id: data.counselor_profile_id,
       });
@@ -231,13 +339,41 @@ export default class CounselorProfileService {
         `,
       };
       const emailResult = await this.sendEmail.sendMail(emailMsg);
-      if (emailResult.error) {
-        logger.error('Error sending appointment email to counselor:', emailResult.message);
+      if (!emailResult || emailResult.error) {
+        const errorMessage = emailResult?.message || 'Failed to send appointment email';
+        logger.error('Error sending appointment email to counselor:', errorMessage);
         return { message: 'Failed to send appointment email', error: -1 };
       }
+
+      // Record that the email was sent successfully
+      await this.appointmentEmailTracking.recordEmailSent(data);
+      
       return { message: 'Appointment email sent successfully' };
     } catch (err) {
       logger.error('Error in sendAppointmentEmail service:', err);
+      return { message: 'Internal server error', error: -1 };
+    }
+  }
+
+  async getAppointmentEmailHistory(counselor_profile_id, limit = 10) {
+    try {
+      const schema = joi.object({
+        counselor_profile_id: joi.number().required(),
+        limit: joi.number().min(1).max(100).optional()
+      });
+      
+      const { error } = schema.validate({ counselor_profile_id, limit });
+      if (error) {
+        return { message: error.details[0].message, error: -1 };
+      }
+
+      const emailHistory = await this.appointmentEmailTracking.getEmailHistory(counselor_profile_id, limit);
+      return { 
+        message: 'Email history retrieved successfully',
+        data: emailHistory
+      };
+    } catch (err) {
+      logger.error('Error in getAppointmentEmailHistory service:', err);
       return { message: 'Internal server error', error: -1 };
     }
   }

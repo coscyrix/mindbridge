@@ -40,9 +40,9 @@ const upload = multer({
 });
 
 // Routes
-router.post('/', authenticate, upload.single('document'), AsyncWrapper(counselorDocumentsController.addDocument));
-router.get('/:counselor_profile_id', authenticate, AsyncWrapper(counselorDocumentsController.getDocuments));
-router.put('/:document_id', authenticate, AsyncWrapper(counselorDocumentsController.updateDocument));
-router.delete('/:document_id', authenticate, AsyncWrapper(counselorDocumentsController.deleteDocument));
+router.post('/', authenticate, upload.single('document'), AsyncWrapper(counselorDocumentsController.addDocument.bind(counselorDocumentsController)));
+router.get('/:counselor_profile_id', authenticate, AsyncWrapper(counselorDocumentsController.getDocuments.bind(counselorDocumentsController)));
+router.put('/:document_id', authenticate, AsyncWrapper(counselorDocumentsController.updateDocument.bind(counselorDocumentsController)));
+router.delete('/:document_id', authenticate, AsyncWrapper(counselorDocumentsController.deleteDocument.bind(counselorDocumentsController)));
 
 export const counselorDocumentsRouter = { baseUrl: '/api/counselor-documents', router }; 

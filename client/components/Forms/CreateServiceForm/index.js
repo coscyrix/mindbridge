@@ -41,6 +41,20 @@ export default function CreateServiceForm({
     setOptionValue(value);
     methods.setValue("svc_formula_typ", value);
   };
+  console.log(userObj);
+  const calculateTotalInvoiceTaxes = () => {
+    // const totalInvoice = parseFloat(methods.getValues("total_invoice")) || 0;
+    // const gst = parseFloat(methods.getValues("gst")) || 0;
+    // const total = totalInvoice + gst;
+    // methods.setValue("totalInvoiceTaxes", parseFloat(total.toFixed(2)));
+    const totalInvoice = parseFloat(methods.getValues("total_invoice")) || 0;
+    const tax_percent = initialData?.tenant?.tax_percent;
+    methods.setValue("gst", (totalInvoice * tax_percent) / 100);
+    methods.setValue(
+      "totalInvoiceTaxes",
+      totalInvoice + (totalInvoice * tax_percent) / 100
+    );
+  };
 
   useEffect(() => {
     if (userData) {
@@ -51,13 +65,19 @@ export default function CreateServiceForm({
 
   const handleSaveService = async (data) => {
     const svcFormula = methods.getValues("svc_formula");
-    const svcFormulaArray =
-      svcFormula &&
-      svcFormula
-        ?.split(",")
-        .map((item) => item.trim())
-        .filter((item) => item !== "")
-        ?.map(Number);
+    let svcFormulaArray = [];
+
+    if (svcFormula) {
+      if (typeof svcFormula === "string") {
+        svcFormulaArray = svcFormula
+          .split(",")
+          .map((item) => item.trim())
+          .filter((item) => item !== "")
+          .map(Number);
+      } else if (Array.isArray(svcFormula)) {
+        svcFormulaArray = svcFormula;
+      }
+    }
 
     const createPayload = {
       service_name: data.service_name,
@@ -66,11 +86,11 @@ export default function CreateServiceForm({
       nbr_of_sessions: Number(data.nbr_of_sessions),
       svc_formula: svcFormulaArray || [],
       total_invoice: parseFloat(data.total_invoice),
-      gst: data.gst,
+      gst: data.tax_percent,
       tenant_id: userDetails?.tenant_id,
-      user_profile_id: userDetails?.user_profile_id,
+      // user_profile_id: userDetails?.user_profile_id,
     };
-    
+
     const payload = {
       service_name: data.service_name,
       service_code: data.service_code,
@@ -79,10 +99,10 @@ export default function CreateServiceForm({
       // svc_formula: svcFormulaArray || [],
       total_invoice: parseFloat(data.total_invoice),
       gst: data.gst,
-      tenant_id: userDetails?.tenant_id,
-      user_profile_id:userDetails?.user_profile_id,
+      // tenant_id: userDetails?.tenant_id,
+      // user_profile_id:userDetails?.user_profile_id,
       discount_pcnt: data.discount_pcnt,
-      total_invoice_and_taxes: data.totalInvoiceTaxes,
+      // total_invoice_and_taxes: data.totalInvoiceTaxes,
     };
 
     if (initialData) {
@@ -139,7 +159,11 @@ export default function CreateServiceForm({
       setFormButton("Update");
       setIsAdvanceUpdate(false);
       const { id, active, ...processedData } = initialData;
-      methods.reset(processedData);
+      // methods.reset(processedData);
+      methods.reset({
+        ...processedData,
+        tax_percent: initialData?.tenant?.tax_percent || "",
+      });
     } else {
       setFormButton("Create");
       setIsAdvanceUpdate(false);
@@ -159,10 +183,17 @@ export default function CreateServiceForm({
   }, [isOpen]);
   useEffect(() => {
     if (initialData?.gst && initialData?.total_invoice) {
-      const gst = parseFloat(initialData.gst) || 0;
+      const tax_percent = parseFloat(initialData?.tenant?.tax_percent) || 0;
       const invoice = parseFloat(initialData.total_invoice) || 0;
-      const total = gst + invoice;
-      methods.setValue("totalInvoiceTaxes", parseFloat(total.toFixed(2)));
+      const gst = parseFloat(initialData?.gst) || 0;
+      const netInvoice = invoice - gst;
+      const totalWithTax = netInvoice + (netInvoice * tax_percent) / 100;
+
+      methods.setValue("total_invoice", parseFloat(netInvoice.toFixed(2)));
+      methods.setValue(
+        "totalInvoiceTaxes",
+        parseFloat(totalWithTax.toFixed(2))
+      );
     }
   }, [initialData]);
   return (
@@ -277,24 +308,48 @@ export default function CreateServiceForm({
                   label="Invoice Amount"
                   type="number"
                   step="0.01"
+                  onChange={(e) => {
+                    methods.setValue("total_invoice", e.target.value);
+                    calculateTotalInvoiceTaxes();
+                  }}
                 />
               </div>
               <div className="fields">
                 <CustomInputField
-                  name="gst"
+                  name="tax_percent"
                   label="Tax (%)"
-                  placeholder="Enter GST"
-                  type="text"
+                  placeholder="Enter tax %"
+                  type="number"
+                  disabled={true}
+                  onChange={(e) => {
+                    methods.setValue("tax_percent", e.target.value);
+                    calculateTotalInvoiceTaxes();
+                  }}
                 />
               </div>
+
               {formButton === "Update" ? (
                 <>
+                  <div className="fields">
+                    <CustomInputField
+                      name="gst"
+                      label="Tax Amount"
+                      placeholder="Enter tax Amount"
+                      type="number"
+                      disabled={true}
+                      // onChange={(e) => {
+                      //   methods.setValue("tax_percent", e.target.value);
+                      //   calculateTotalInvoiceTaxes();
+                      // }}
+                    />
+                  </div>
                   <div className="fields">
                     <CustomInputField
                       name="discount_pcnt"
                       label="Discount"
                       placeholder="Enter discount"
                       type="number"
+                      disabled={true}
                     />
                   </div>
                   <div className="fields">
@@ -303,6 +358,7 @@ export default function CreateServiceForm({
                       label="Total invoice + taxes"
                       placeholder="Enter total invoice + taxes"
                       type="number"
+                      disabled={true}
                     />
                   </div>
                 </>

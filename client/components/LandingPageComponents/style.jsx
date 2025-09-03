@@ -46,6 +46,7 @@ export const HeaderWrapper = styled.div`
   @media (max-width: 768px) {
     display:flex;
     position: fixed;
+    top:0;
     z-index: 10;
     width: 100%;
 

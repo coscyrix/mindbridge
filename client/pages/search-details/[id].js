@@ -75,7 +75,7 @@ const SearchDetails = () => {
   useEffect(() => {
     if (selectedDate) {
       methods.reset({
-        ...methods.getValues(), 
+        ...methods.getValues(),
         appointment_date: selectedDate,
       });
     }
@@ -97,6 +97,7 @@ const SearchDetails = () => {
       if (id) {
         const response = await CommonServices.getCounselorProfile(id);
         if (response.status === 200 && response.data && response.data.rec) {
+          console.log(response);
           setCounselorDetails(response.data.rec);
           setRelatedCounselors(response.data.related_counselors);
         } else {
@@ -260,7 +261,10 @@ const SearchDetails = () => {
       }
     } catch (error) {
       console.error("Form submission error:", error);
-      toast.error(error.response?.data?.message || "An error occurred while sending the appointment request");
+      toast.error(
+        error.response?.data?.message ||
+          "An error occurred while sending the appointment request"
+      );
     } finally {
       setIsSendingAppointment(false);
     }
@@ -297,7 +301,16 @@ const SearchDetails = () => {
                     {counselor.is_verified && <VerifiedBadge type="verified" />}
                   </Badges> */}
                 </NameBadges>
-                <Address>{counselor.location}</Address>
+                <Address>
+                  {(() => {
+                    const parts = counselor.location
+                      ?.split(",")
+                      .map((p) => p.trim());
+                    return parts?.length >= 2
+                      ? `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`
+                      : counselor.location;
+                  })()}
+                </Address>
               </div>
               {/* <Rating>
                 {"★".repeat(Math.floor(counselor.average_rating))}
@@ -331,16 +344,21 @@ const SearchDetails = () => {
                   </span>
                   <div>
                     <h3>Specialties</h3>
-                    {TREATMENT_TARGET.map((specialties, index) => (
-                      <p key={specialties.label}> {specialties.label}</p>
+
+                    {counselor?.target_outcomes?.map((item, index) => (
+                      <p key={index}>
+                        {item.target_name}
+                        {index < counselor.target_outcomes.length - 1 && ", "}
+                      </p>
                     ))}
+
                     {/* <p>{specialties.join(", ")}</p> */}
                   </div>
                 </DetailItem>
                 <DetailItem>
                   <span className="icon">
                     <img src="/assets/icons/fontisto_person.svg" />
-                  </span>s
+                  </span>
                   <div>
                     <h3>Service Modalities</h3>
                     <p>{(counselor.service_modalities || []).join(", ")}</p>
@@ -480,7 +498,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="customer_name"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Customer Name
               </label>
@@ -513,7 +531,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="customer_email"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Customer Email
               </label>
@@ -546,7 +564,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="contact_number"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Customer Contact No.
               </label>
@@ -579,7 +597,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="service"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Select Service
               </label>
@@ -617,7 +635,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="appointment_date"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Appointment Date
               </label>
@@ -649,7 +667,7 @@ const SearchDetails = () => {
             <div style={{ marginBottom: 18 }}>
               <label
                 htmlFor="description"
-                style={{ display: "block", fontWeight: 500, marginBottom: 6 }}
+                style={{ display: "block", fontWeight: 500 }}
               >
                 Description
               </label>
@@ -682,7 +700,11 @@ const SearchDetails = () => {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                marginTop: 24,
+                padding: "16px 20px",
+                borderTop: "1px solid #eee",
+                background: "#fff",
+                position: "sticky",
+                bottom: 0,
               }}
             >
               <button

@@ -18,6 +18,7 @@ import {
   dischargeEmail,
 } from '../utils/emailTmplt.js';
 import SendEmail from '../middlewares/sendEmail.js';
+import UserTargetOutcome from './userTargetOutcome.js';
 
 dotenv.config();
 const db = knex(DBconn.dbConn.development);
@@ -33,7 +34,42 @@ export default class ThrpyReq {
     this.sendEmail = new SendEmail();
     this.emailTmplt = new EmailTmplt();
     this.common = new Common();
+    this.userTargetOutcome = new UserTargetOutcome();
   }
+
+  // Helper function to calculate session amounts
+  calculateSessionAmounts(totalInvoice, refFees, serviceGst) {
+    // totalInvoice already includes tax, so we need to extract the base price
+    // If service has GST stored, use it to calculate base price
+    let basePrice = totalInvoice;
+    let taxAmount = 0;
+    
+    if (serviceGst && serviceGst > 0) {
+      // Calculate base price by removing the tax that's already included
+      // totalInvoice = basePrice + (basePrice * serviceGst / 100)
+      // totalInvoice = basePrice * (1 + serviceGst / 100)
+      // basePrice = totalInvoice / (1 + serviceGst / 100)
+      basePrice = totalInvoice / (1 + serviceGst / 100);
+      taxAmount = totalInvoice - basePrice;
+    } else {
+      // Fallback: use ref_fees tax percentage if service GST is not available
+      taxAmount = totalInvoice * (refFees.tax_pcnt / 100);
+      basePrice = totalInvoice - taxAmount;
+    }
+    
+    // Calculate system amount based on base price
+    const systemAmount = basePrice * (refFees.system_pcnt / 100);
+    // Counselor gets the remaining amount after taxes and system fees
+    const counselorAmount = basePrice - systemAmount;
+    
+    return {
+      session_price: totalInvoice, // Keep the original total_invoice as session_price
+      session_taxes: taxAmount,
+      session_system_amt: systemAmount,
+      session_counselor_amt: counselorAmount
+    };
+  }
+
   //////////////////////////////////////////
 
   async postThrpyReq(data) {
@@ -76,6 +112,8 @@ export default class ThrpyReq {
         user_profile_id: data.client_id,
       });
 
+      console.log('recClient--------->', tenantId[0].tenant_id);
+
       if (!recClient || !recClient.rec || !recClient.rec[0]) {
         logger.error('Client profile not found');
         return { message: 'Client profile not found', error: -1 };
@@ -89,6 +127,28 @@ export default class ThrpyReq {
         };
       }
 
+      // Get client's target outcome to determine treatment target
+      let treatmentTarget = null;
+      try {
+        const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
+          user_profile_id: data.client_id,
+        });
+
+        if (clientTargetOutcome && clientTargetOutcome.length > 0) {
+          const targetOutcomeId = clientTargetOutcome[0].target_outcome_id;
+          
+          // Get the treatment target name from ref_target_outcomes
+          const targetOutcome = await this.common.getTargetOutcomeById(targetOutcomeId);
+          if (targetOutcome && targetOutcome.length > 0) {
+            treatmentTarget = targetOutcome[0].target_name;
+            logger.info(`Mapped client target outcome ${targetOutcomeId} to treatment target: ${treatmentTarget}`);
+          }
+        }
+      } catch (error) {
+        logger.warn('Could not determine treatment target from client target outcome:', error);
+        // Continue without treatment target - will use service-based forms
+      }
+
       // Retrieve the service details from the database
       const servc = await this.service.getServiceById({
         service_id: data.service_id,
@@ -100,9 +160,12 @@ export default class ThrpyReq {
       }
 
       const svc = servc.rec[0];
+      
 
+      // Get tenant-specific discharge service
       const drService = await this.service.getServiceById({
         service_code: process.env.DISCHARGE_SERVICE_CODE || 'DR',
+        tenant_id: tenantId[0].tenant_generated_id,
       });
 
       console.log('drService', drService);
@@ -132,7 +195,7 @@ export default class ThrpyReq {
 
       // Use the tenant ID for the next phase
 
-      const ref_fees = await this.common.getRefFeesByTenantId();
+      const ref_fees = await this.common.getRefFeesByTenantId(tenantId[0].tenant_id);
 
       if (!ref_fees) {
         logger.error('Error getting reference fees');
@@ -185,6 +248,7 @@ export default class ThrpyReq {
         req_time: req_time,
         session_desc: svc.service_code,
         tenant_id: data.tenant_id,
+        treatment_target: treatmentTarget, // Add treatment target to therapy request
       };
 
       // Insert the therapy request into the database
@@ -237,6 +301,7 @@ export default class ThrpyReq {
           const intakeDate = currentDate.toISOString().split('T')[0];
 
           // Prepare the session object
+          const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
           const tmpSession = {
             thrpy_req_id: postThrpyReq[0],
             service_id: data.service_id,
@@ -246,18 +311,15 @@ export default class ThrpyReq {
             session_code: svc.service_code,
             session_description: svc.service_code,
             tenant_id: data.tenant_id,
-            session_price: Number(svc.total_invoice),
-            session_taxes:
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
-            session_counselor_amt:
-              (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-              Number(ref_fees[0].counselor_pcnt),
-            session_system_amt:
-              (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-              Number(ref_fees[0].system_pcnt),
+            ...sessionAmounts
           };
+
+          console.log('session_system_amt--------->1', {
+            total_invoice: Number(svc.total_invoice),
+            tax_pcnt: Number(ref_fees[0].tax_pcnt),
+            counselor_pcnt: Number(ref_fees[0].counselor_pcnt),
+            system_pcnt: Number(ref_fees[0].system_pcnt),
+          });
 
           // Handle reports based on svc_report_formula
           if (
@@ -266,23 +328,46 @@ export default class ThrpyReq {
             svc.svc_report_formula.position.includes(i + 1)
           ) {
             const reportIndex = svc.svc_report_formula.position.indexOf(i + 1);
-            const reportServiceId =
-              svc.svc_report_formula.service_id[reportIndex];
-            const reportName = await this.service.getServiceById({
-              service_id: reportServiceId,
+            const templateReportServiceId = svc.svc_report_formula.service_id[reportIndex];
+            
+            // Get the template report service to find its service_code
+            const templateReportService = await this.service.getServiceById({
+              service_id: templateReportServiceId,
               is_report: 1,
             });
 
-            if (reportName && reportName.rec && reportName.rec[0]) {
-              tmpSession.session_code = `${svc.service_code}_${reportName.rec[0].service_code}`;
-              tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
-              tmpSession.service_id = reportServiceId;
-              tmpSession.is_report = reportName.rec[0].is_report === 1 ? 1 : 0;
-              tmpSession.is_additional =
-                reportName.rec[0].is_additional &&
-                reportName.rec[0].is_additional[0] === 1
-                  ? 1
-                  : 0;
+            if (templateReportService && templateReportService.rec && templateReportService.rec[0]) {
+              const templateReportCode = templateReportService.rec[0].service_code;
+              
+              // Find the tenant-specific report service with the same code
+              const tenantReportService = await this.service.getServiceById({
+                service_code: templateReportCode,
+                tenant_id: data.tenant_id,
+                is_report: 1,
+              });
+
+              if (tenantReportService && tenantReportService.rec && tenantReportService.rec[0]) {
+                tmpSession.session_code = `${svc.service_code}_${tenantReportService.rec[0].service_code}`;
+                tmpSession.session_description = `${svc.service_code} ${tenantReportService.rec[0].service_name}`;
+                tmpSession.service_id = tenantReportService.rec[0].service_id;
+                tmpSession.is_report = tenantReportService.rec[0].is_report === 1 ? 1 : 0;
+                tmpSession.is_additional =
+                  tenantReportService.rec[0].is_additional &&
+                  tenantReportService.rec[0].is_additional[0] === 1
+                    ? 1
+                    : 0;
+              } else {
+                // Fallback to template service if tenant-specific service not found
+                tmpSession.session_code = `${svc.service_code}_${templateReportService.rec[0].service_code}`;
+                tmpSession.session_description = `${svc.service_code} ${templateReportService.rec[0].service_name}`;
+                tmpSession.service_id = templateReportServiceId;
+                tmpSession.is_report = templateReportService.rec[0].is_report === 1 ? 1 : 0;
+                tmpSession.is_additional =
+                  templateReportService.rec[0].is_additional &&
+                  templateReportService.rec[0].is_additional[0] === 1
+                    ? 1
+                    : 0;
+              }
             }
           }
 
@@ -304,6 +389,7 @@ export default class ThrpyReq {
         const dischargeDate = currentDate.toISOString().split('T')[0];
 
         // Prepare the discharge session object
+        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
         const dischargeSession = {
           thrpy_req_id: postThrpyReq[0],
           service_id: drSvc.service_id,
@@ -314,18 +400,15 @@ export default class ThrpyReq {
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
           tenant_id: data.tenant_id,
-          session_price: Number(svc.total_invoice),
-          session_taxes:
-            Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
-          session_counselor_amt:
-            (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-            Number(ref_fees[0].counselor_pcnt),
-          session_system_amt:
-            (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-            Number(ref_fees[0].system_pcnt),
+          ...dischargeSessionAmounts
         };
+
+        console.log('session_system_amt--------->2', {
+          total_invoice: Number(svc.total_invoice),
+          tax_pcnt: Number(ref_fees[0].tax_pcnt),
+          counselor_pcnt: Number(ref_fees[0].counselor_pcnt),
+          system_pcnt: Number(ref_fees[0].system_pcnt),
+        });
 
         // Add the discharge session to the array
         tmpSessionObj.push(dischargeSession);
@@ -391,6 +474,7 @@ export default class ThrpyReq {
           const intakeDate = currentDate.toISOString().split('T')[0];
 
           // Prepare the session object
+          const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
           const tmpSession = {
             thrpy_req_id: postThrpyReq[0],
             service_id: data.service_id,
@@ -400,18 +484,15 @@ export default class ThrpyReq {
             session_code: svc.service_code,
             session_description: svc.service_code,
             tenant_id: data.tenant_id,
-            session_price: Number(svc.total_invoice),
-            session_taxes:
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
-            session_counselor_amt:
-              (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-              Number(ref_fees[0].counselor_pcnt),
-            session_system_amt:
-              (Number(svc.total_invoice) +
-                Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-              Number(ref_fees[0].system_pcnt),
+            ...sessionAmounts
           };
+
+          console.log('session_system_amt--------->3', {
+            total_invoice: Number(svc.total_invoice),
+            tax_pcnt: Number(ref_fees[0].tax_pcnt),
+            counselor_pcnt: Number(ref_fees[0].counselor_pcnt),
+            system_pcnt: Number(ref_fees[0].system_pcnt),
+          });
 
           // Handle reports based on svc_report_formula
           if (
@@ -420,20 +501,44 @@ export default class ThrpyReq {
             svc.svc_report_formula.position.includes(i + 1)
           ) {
             const reportIndex = svc.svc_report_formula.position.indexOf(i + 1);
-            const reportServiceId =
-              svc.svc_report_formula.service_id[reportIndex];
-            const reportName = await this.service.getServiceById({
-              service_id: reportServiceId,
+            const templateReportServiceId = svc.svc_report_formula.service_id[reportIndex];
+            
+            // Get the template report service to find its service_code
+            const templateReportService = await this.service.getServiceById({
+              service_id: templateReportServiceId,
               is_report: 1,
             });
 
-            if (reportName && reportName.rec && reportName.rec[0]) {
-              tmpSession.session_code = `${svc.service_code}_${reportName.rec[0].service_code}`;
-              tmpSession.session_description = `${svc.service_code} ${reportName.rec[0].service_name}`;
-              tmpSession.service_id = reportServiceId;
-              tmpSession.is_report = reportName.rec[0].is_report === 1 ? 1 : 0;
-              tmpSession.is_additional =
-                reportName.rec[0].is_additional[0] === 1 ? 1 : 0;
+            console.log('templateReportService', templateReportService);
+            console.log('templateReportServiceId', templateReportServiceId);
+            console.log('templateReportService.rec', templateReportService.rec);
+
+            if (templateReportService && templateReportService.rec && templateReportService.rec[0]) {
+              const templateReportCode = templateReportService.rec[0].service_code;
+              
+              // Find the tenant-specific report service with the same code
+              const tenantReportService = await this.service.getServiceById({
+                service_code: templateReportCode,
+                tenant_id: data.tenant_id,
+                is_report: 1,
+              });
+
+              if (tenantReportService && tenantReportService.rec && tenantReportService.rec[0]) {
+                tmpSession.session_code = `${svc.service_code}_${tenantReportService.rec[0].service_code}`;
+                tmpSession.session_description = `${svc.service_code} ${tenantReportService.rec[0].service_name}`;
+                tmpSession.service_id = tenantReportService.rec[0].service_id;
+                tmpSession.is_report = tenantReportService.rec[0].is_report === 1 ? 1 : 0;
+                tmpSession.is_additional =
+                  tenantReportService.rec[0].is_additional[0] === 1 ? 1 : 0;
+              } else {
+                // Fallback to template service if tenant-specific service not found
+                tmpSession.session_code = `${svc.service_code}_${templateReportService.rec[0].service_code}`;
+                tmpSession.session_description = `${svc.service_code} ${templateReportService.rec[0].service_name}`;
+                tmpSession.service_id = templateReportServiceId;
+                tmpSession.is_report = templateReportService.rec[0].is_report === 1 ? 1 : 0;
+                tmpSession.is_additional =
+                  templateReportService.rec[0].is_additional[0] === 1 ? 1 : 0;
+              }
             }
           }
 
@@ -455,6 +560,7 @@ export default class ThrpyReq {
         const dischargeDate = currentDate.toISOString().split('T')[0];
 
         // Prepare the discharge session object
+        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
         const dischargeSession = {
           thrpy_req_id: postThrpyReq[0],
           service_id: drSvc.service_id,
@@ -465,22 +571,20 @@ export default class ThrpyReq {
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
           tenant_id: data.tenant_id,
-          session_price: Number(svc.total_invoice),
-          session_taxes:
-            Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt),
-          session_counselor_amt:
-            (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-            Number(ref_fees[0].counselor_pcnt),
-          session_system_amt:
-            (Number(svc.total_invoice) +
-              Number(svc.total_invoice) * Number(ref_fees[0].tax_pcnt)) *
-            Number(ref_fees[0].system_pcnt),
+          ...dischargeSessionAmounts
         };
+
+        console.log('session_system_amt--------->4', {
+          total_invoice: Number(svc.total_invoice),
+          tax_pcnt: Number(ref_fees[0].tax_pcnt),
+          counselor_pcnt: Number(ref_fees[0].counselor_pcnt),
+          system_pcnt: Number(ref_fees[0].system_pcnt),
+        });
 
         // Add the discharge session to the array
         tmpSessionObj.push(dischargeSession);
       } else {
+        
         // Handle unexpected svc_formula_typ values
         logger.error(`Unsupported svc_formula_typ: ${svc.svc_formula_typ}`);
         return { message: 'Unsupported formula type', error: -1 };
@@ -497,11 +601,17 @@ export default class ThrpyReq {
         };
       }
 
-      const loadForms = this.loadSessionForms(postThrpyReq[0]);
+      // Load forms using the new mode-based system
+      const loadForms = await this.loadSessionFormsWithMode({
+        req_id: postThrpyReq[0],
+        tenant_id: data.tenant_id
+      });
 
-      if (!loadForms) {
-        logger.error('Error loading session forms');
-        return { message: 'Error loading session forms', error: -1 };
+      if (loadForms.error) {
+        logger.error('Error loading session forms:', loadForms.message);
+        // Don't return error - continue without forms
+      } else {
+        logger.info('Session forms loaded successfully:', loadForms.message);
       }
 
       const ThrpyReq = await this.getThrpyReqById({
@@ -1021,6 +1131,102 @@ export default class ThrpyReq {
 
       orderSessionObj(rec);
 
+      // Handle form mode selection based on environment variable
+      const formMode = process.env.FORM_MODE || 'auto';
+      
+      if (rec && Array.isArray(rec)) {
+        for (const thrpyReq of rec) {
+          if (thrpyReq.session_obj && Array.isArray(thrpyReq.session_obj)) {
+            for (const session of thrpyReq.session_obj) {
+              // Check if this session has treatment target forms
+              const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+              const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+              
+              const treatmentTargetForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
+                session_id: session.session_id,
+                tenant_id: thrpyReq.tenant_id
+              });
+              
+              const hasTreatmentTargetForms = !treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0;
+              
+              // Determine form mode based on environment variable
+              let sessionFormMode = 'service'; // default
+              let sessionFormsArray = session.forms_array || [];
+              
+              if (formMode === 'auto') {
+                // Auto mode: treatment target forms take precedence if they exist
+                if (hasTreatmentTargetForms) {
+                  sessionFormMode = 'treatment_target';
+                  sessionFormsArray = treatmentTargetForms.rec.map(form => form.form_id);
+                } else {
+                  sessionFormMode = 'service';
+                  // Keep existing service-based forms
+                }
+              } else if (formMode === 'treatment_target') {
+                // Force treatment target mode
+                if (hasTreatmentTargetForms) {
+                  sessionFormMode = 'treatment_target';
+                  sessionFormsArray = treatmentTargetForms.rec.map(form => form.form_id);
+                } else {
+                  sessionFormMode = 'service';
+                  // Fallback to service-based forms if no treatment target forms exist
+                }
+              } else if (formMode === 'service') {
+                // Force service mode
+                sessionFormMode = 'service';
+                // Get original service-based forms for this session
+                const originalServiceForms = await this.getOriginalServiceForms(session.session_id, thrpyReq.service_id);
+                sessionFormsArray = originalServiceForms.length > 0 ? originalServiceForms : session.forms_array || [];
+              }
+              
+              // Update session with determined form mode
+              session.forms_array = sessionFormsArray;
+              session.form_mode = sessionFormMode;
+            }
+          }
+        }
+      }
+
+      // Add fee split management data to each therapy request
+      if (rec && Array.isArray(rec)) {
+        for (const thrpyReq of rec) {
+          try {
+            // Import and instantiate FeeSplitManagement model
+            const FeeSplitManagement = (await import('./feeSplitManagement.js')).default;
+            const feeSplitManagement = new FeeSplitManagement();
+            
+            // Get fee split configuration for this tenant and specific counselor only
+            const feeSplitConfig = await feeSplitManagement.getFeeSplitConfigurationForCounselor(
+              thrpyReq.tenant_id, 
+              thrpyReq.counselor_id
+            );
+            
+            if (!feeSplitConfig.error) {
+              thrpyReq.fee_split_management = feeSplitConfig;
+            } else {
+              // If there's an error, provide default fee split configuration
+              thrpyReq.fee_split_management = {
+                is_fee_split_enabled: false,
+                tenant_share_percentage: 0,
+                counselor_share_percentage: 100,
+                counselor_user_id: thrpyReq.counselor_id,
+                counselor_info: null
+              };
+            }
+          } catch (feeSplitError) {
+            console.error('Error fetching fee split management:', feeSplitError);
+            // Provide default fee split configuration on error
+            thrpyReq.fee_split_management = {
+              is_fee_split_enabled: false,
+              tenant_share_percentage: 0,
+              counselor_share_percentage: 100,
+              counselor_user_id: thrpyReq.counselor_id,
+              counselor_info: null
+            };
+          }
+        }
+      }
+
       if (!rec) {
         logger.error('Error getting therapy request');
         return { message: 'Error getting therapy request', error: -1 };
@@ -1031,6 +1237,58 @@ export default class ThrpyReq {
       console.error(error);
       logger.error(error);
       return { message: 'Error getting therapy request', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getThrpyReqByIdWithTreatmentTargetForms(data) {
+    try {
+      // First get the regular therapy request data
+      const rec = await this.getThrpyReqById(data);
+      
+      if (rec.error) {
+        return rec;
+      }
+
+      // Enhance with treatment target forms information
+      if (rec && Array.isArray(rec)) {
+        for (const thrpyReq of rec) {
+          if (thrpyReq.session_obj && Array.isArray(thrpyReq.session_obj)) {
+            const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+            const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+            
+            for (const session of thrpyReq.session_obj) {
+              // Get treatment target forms for this session
+              const treatmentTargetForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
+                session_id: session.session_id,
+                tenant_id: thrpyReq.tenant_id
+              });
+              
+              // Add treatment target forms information to session
+              if (!treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0) {
+                session.treatment_target_forms = treatmentTargetForms.rec.map(form => ({
+                  form_id: form.form_id,
+                  form_name: form.form_name,
+                  treatment_target: form.treatment_target,
+                  purpose: form.purpose,
+                  session_number: form.session_number,
+                  is_sent: form.is_sent,
+                  sent_at: form.sent_at
+                }));
+              } else {
+                session.treatment_target_forms = [];
+              }
+            }
+          }
+        }
+      }
+
+      return rec;
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error getting therapy request with treatment target forms', error: -1 };
     }
   }
 
@@ -1399,4 +1657,185 @@ export default class ThrpyReq {
       };
     }
   }
+
+  //////////////////////////////////////////
+
+  /**
+   * Load session forms with mode selection (service-based or treatment target-based)
+   * @param {Object} data - Request data
+   * @param {number} data.req_id - Therapy request ID
+   * @param {string} data.mode - Form attachment mode ('service' or 'treatment_target')
+   * @param {string} data.treatment_target - Treatment target (required when mode is 'treatment_target')
+   * @param {number} data.tenant_id - Tenant ID
+   */
+  async loadSessionFormsWithMode(data) {
+    try {
+      const { req_id, mode, treatment_target, tenant_id } = data;
+
+      if (!req_id) {
+        logger.error('Missing required field: req_id');
+        return { message: 'Missing required field: req_id', error: -1 };
+      }
+
+      // Always use environment variable for form mode (no frontend control)
+      const envFormMode = process.env.FORM_MODE || 'auto';
+      const effectiveMode = mode || envFormMode;
+
+      // Validate mode
+      if (!['service', 'treatment_target', 'auto'].includes(effectiveMode)) {
+        logger.error('Invalid mode specified');
+        return { message: 'Invalid mode specified. Must be "service", "treatment_target", or "auto"', error: -1 };
+      }
+
+      // For treatment_target mode, we need to get the treatment target from the therapy request
+      let effectiveTreatmentTarget = treatment_target;
+      if (effectiveMode === 'treatment_target' && !effectiveTreatmentTarget) {
+        // Get therapy request to find the treatment target
+        const query = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('thrpy_req')
+          .where('req_id', req_id);
+
+        const [rec] = await query;
+        
+        if (rec && rec.treatment_target) {
+          effectiveTreatmentTarget = rec.treatment_target;
+          logger.info(`Found treatment target: ${effectiveTreatmentTarget} for req_id: ${req_id}`);
+        } else {
+          logger.error('Treatment target not found for therapy request');
+          return { message: 'Treatment target not found for therapy request', error: -1 };
+        }
+      }
+
+      if (effectiveMode === 'service') {
+        // Use existing service-based form loading
+        return await this.loadSessionForms(req_id);
+      } else if (effectiveMode === 'treatment_target') {
+        // Use treatment target-based form loading
+        const TreatmentTargetFeedbackConfig = (await import('./treatmentTargetFeedbackConfig.js')).default;
+        const treatmentTargetConfig = new TreatmentTargetFeedbackConfig();
+        
+        return await treatmentTargetConfig.loadSessionFormsByTreatmentTarget({
+          req_id,
+          treatment_target: effectiveTreatmentTarget,
+          tenant_id
+        });
+      } else if (effectiveMode === 'auto') {
+        // Auto mode: check if treatment target forms exist, otherwise use service-based
+        const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+        const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+        
+        // Get therapy request to check sessions
+        const query = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('thrpy_req')
+          .where('req_id', req_id);
+
+        const [rec] = await query;
+        
+        if (!rec) {
+          logger.error('Therapy request not found');
+          return { message: 'Therapy request not found', error: -1 };
+        }
+
+        // Check if any session has treatment target forms
+        let hasTreatmentTargetForms = false;
+        for (const session of rec.session_obj) {
+          const treatmentTargetForms = await treatmentTargetSessionForms.getTreatmentTargetSessionFormsBySessionId({
+            session_id: session.session_id,
+            tenant_id: tenant_id
+          });
+          
+          if (!treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0) {
+            hasTreatmentTargetForms = true;
+            break;
+          }
+        }
+
+        if (hasTreatmentTargetForms) {
+          // Use treatment target-based form loading
+          // Get the actual treatment target from the therapy request
+          const TreatmentTargetFeedbackConfig = (await import('./treatmentTargetFeedbackConfig.js')).default;
+          const treatmentTargetConfig = new TreatmentTargetFeedbackConfig();
+          
+          // Get the treatment target from the therapy request
+          const actualTreatmentTarget = rec.treatment_target || 'Anxiety'; // Default fallback
+          
+          return await treatmentTargetConfig.loadSessionFormsByTreatmentTarget({
+            req_id,
+            treatment_target: actualTreatmentTarget,
+            tenant_id
+          });
+        } else {
+          // Use service-based form loading
+          return await this.loadSessionForms(req_id);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error loading session forms with mode', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Get original service-based forms for a session
+   * @param {number} session_id - Session ID
+   * @param {number} service_id - Service ID
+   */
+  async getOriginalServiceForms(session_id, service_id) {
+    try {
+      // Get service-based forms for this service
+      const recForm = await this.form.getFormForSessionById({
+        service_id: service_id,
+      });
+
+      if (!recForm || recForm.length === 0) {
+        return [];
+      }
+
+      // Get session to determine session position
+      const session = await this.session.getSessionById({
+        session_id: session_id,
+      });
+
+      if (!session || !Array.isArray(session) || session.length === 0) {
+        return [];
+      }
+
+      // Find session position in therapy request
+      const query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_thrpy_req')
+        .where('req_id', session[0].thrpy_req_id);
+
+      const [rec] = await query;
+      
+      if (!rec || !rec.session_obj) {
+        return [];
+      }
+
+      // Find session position (1-based index)
+      const sessionIndex = rec.session_obj.findIndex(s => s.session_id === session_id);
+      const sessionPosition = sessionIndex + 1;
+
+      // Get forms for this session position
+      const sessionForms = [];
+      recForm.forEach((form) => {
+        if (form.frequency_typ === 'static' && form.session_position.includes(sessionPosition)) {
+          sessionForms.push(form.form_id);
+        }
+      });
+
+      return sessionForms;
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return [];
+    }
+  }
+
+  //////////////////////////////////////////
 }

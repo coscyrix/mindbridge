@@ -60,7 +60,15 @@ const DateSelectorWrapper = styled.div`
     gap: 8px;
     margin-bottom: 24px;
     white-space: nowrap;
+    @media (max-width: 810px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    @media (max-width: 480px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
+
   .blocked-icon {
     margin-left: 4px;
     color: red;

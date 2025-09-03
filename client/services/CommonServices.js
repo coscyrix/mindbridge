@@ -114,7 +114,7 @@ const CommonServices = {
 
   async uploadOnboardingDocuments(formData) {
     try {
-      const response = await axios.post(
+      const response = await api.post(
         ApiConfig.onboarding.uploadDocuments,
         formData,
         {

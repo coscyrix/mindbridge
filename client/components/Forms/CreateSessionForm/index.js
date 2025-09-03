@@ -45,9 +45,16 @@ function CreateSessionForm({
   userProfileId,
   fetchCounselorClient,
   fetchSessions,
+  session,
+  isHomeworkUpload,
+  setHomeWorkUpload,
+  counselorConfiguration,
+  managerSplitDetails,
+  counselor_id,
 }) {
   const methods = useForm();
-  const { servicesData, userObj } = useReferenceContext();
+  const { userObj } = useReferenceContext();
+  const [servicesData, setServicesData] = useState(null);
   const [formButton, setFormButton] = useState("Submit");
   const [editSessionModal, setEditSessionModal] = useState(false);
   const [showAdditionalService, setShowAdditionalService] = useState(false);
@@ -69,7 +76,17 @@ function CreateSessionForm({
   const [loading, setLoading] = useState(false);
   const [countNotes, setCountNotes] = useState([]);
   const [additionalSessions, setAddittionalSessions] = useState([]);
+  const [counselorSplit, setCounselorSplit] = useState(null);
+  const [managerSplit, setManagerSplit] = useState(null);
+  const [isDiscard, setIsDiscard] = useState(false);
+  const [isValueChanged, setIsValueChanged] = useState(false);
+  const [feeSplitDetails, setFeeSplitDetails] = useState(null);
   // to show verification on Notes Page
+  let match =
+    counselorConfiguration?.find(
+      (item) => item?.counselor_info?.user_id == counselor_id
+    )?.tenant_share_percentage ?? managerSplitDetails?.tenant_share_percentage;
+
   const [showVerification, setShowVerification] = useState(true);
   const [user, setUser] = useState(null);
   const [sessionRange, setSessionRange] = useState({
@@ -90,14 +107,53 @@ function CreateSessionForm({
   const router = useRouter();
   const { forms } = useReferenceContext();
 
-  const clientsDropdown = clients?.map((client) => ({
-    label: `${client.user_first_name} ${client.user_last_name}`,
-    value: client.user_profile_id,
-    serialNumber: client.clam_num || "N/A",
-    has_schedule: client.has_schedule,
-    user_target_outcome: client.user_target_outcome,
-  }));
+  const clientsDropdown = clients
+    ?.filter((client) => !client?.has_schedule)
+    .map((client) => ({
+      label: `${client.user_first_name} ${client.user_last_name}`,
+      value: client.user_profile_id,
+      serialNumber: client.clam_num || "N/A",
+      has_schedule: client.has_schedule,
+      user_target_outcome: client.user_target_outcome,
+    }));
 
+  const fetchAllSplit = async () => {
+    try {
+      // console.log("logging selected", selectTenantId);
+      const response = await api.get(
+        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${userObj?.tenant_id}`
+      );
+      if (response.status == 200) {
+        setCounselorSplit(
+          response?.data?.data?.counselor_specific_configurations
+        );
+        setManagerSplit(response?.data?.data?.default_configuration);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    }
+  };
+  const fetchServices = async () => {
+    try {
+      let tenant_id = userObj?.tenant?.tenant_generated_id;
+      const response = await api.get(`/service?tenant_id=${tenant_id}`);
+      if (response.status === 200) {
+        const { data } = response;
+        const serviceList = data?.rec || [];
+        setServicesData(serviceList);
+        // if (Array.isArray(allManagers) && allManagers.length > 0) {
+        //   combineManagersWithServices(serviceList, allManagers);
+        // }
+      }
+    } catch (error) {
+      console.log(error?.response?.data?.message);
+    }
+  };
+  useEffect(() => {
+    if (userObj.role_id !== 4) {
+      fetchServices();
+    }
+  }, []);
   const infoTooltipContent =
     methods?.watch("client_first_name")?.user_target_outcome;
 
@@ -150,6 +206,7 @@ function CreateSessionForm({
       );
       if (response?.status === 200) {
         const scheduledSession = response?.data[0]?.session_obj;
+        setFeeSplitDetails(response?.data[0]?.fee_split_management);
         const result =
           scheduledSession &&
           scheduledSession?.some(
@@ -295,69 +352,67 @@ function CreateSessionForm({
           sessionStatus != "discharged";
         return (
           <div style={{ cursor: "pointer" }}>
-            {![3, 4].includes(userObj?.role_id) &&
-              showNoShowButtonDisplay &&
-              isWithin24Hours(row.intake_date, row.scheduled_time) && (
-                <div
-                  className="action-buttons-container"
-                  style={{ display: "flex" }}
-                >
-                  <CustomButton
-                    type="button"
-                    title="Show"
-                    customClass="show-button"
-                    onClick={() => {
+            {![3, 4].includes(userObj?.role_id) && showNoShowButtonDisplay && (
+              <div
+                className="action-buttons-container"
+                style={{ display: "flex" }}
+              >
+                <CustomButton
+                  type="button"
+                  title="Show"
+                  customClass="show-button"
+                  onClick={() => {
+                    setActiveRow(row);
+                    setShowStatusConfirmationModal(true);
+                  }}
+                />
+                <CustomButton
+                  type="button"
+                  title="No Show"
+                  customClass="no-show-button"
+                  onClick={() => handleNoShowStatus(row)}
+                />
+                <CustomButton
+                  type="button"
+                  title="Edit"
+                  customClass="edit-button"
+                  onClick={() => {
+                    if (row?.is_additional === 1) {
+                      setShowAdditionalService(true);
                       setActiveRow(row);
-                      setShowStatusConfirmationModal(true);
-                    }}
-                  />
-                  <CustomButton
-                    type="button"
-                    title="No Show"
-                    customClass="no-show-button"
-                    onClick={() => handleNoShowStatus(row)}
-                  />
-                  <CustomButton
-                    type="button"
-                    title="Edit"
-                    customClass="edit-button"
-                    onClick={() => {
-                      if (row?.is_additional === 1) {
-                        setShowAdditionalService(true);
-                        setActiveRow(row);
-                      } else {
-                        setEditSessionModal(true);
-                        setActiveRow({ ...row, rowIndex });
-                      }
-                      const tempData = initialData
-                        ? scheduledSession
-                        : sessionTableData
-                        ? sessionTableData?.filter((data) => {
-                            return data?.is_additional === 0;
-                          })
-                        : [];
+                    } else {
+                      setEditSessionModal(true);
+                      setActiveRow({ ...row, rowIndex });
+                    }
+                    const tempData = initialData
+                      ? scheduledSession
+                      : sessionTableData
+                      ? sessionTableData?.filter((data) => {
+                          return data?.is_additional === 0;
+                        })
+                      : [];
 
-                      if (rowIndex < tempData.length - 1) {
-                        let minDate = new Date(row.intake_date);
-                        let maxDate = new Date(
-                          tempData[rowIndex + 1].intake_date
-                        );
-                        setSessionRange((prev) => ({
-                          ...prev,
-                          min: formatDate(minDate),
-                          max: formatDate(maxDate),
-                        }));
-                      } else {
-                        setSessionRange((prev) => ({
-                          ...prev,
-                          min: false,
-                          max: false,
-                        }));
-                      }
-                    }}
-                  />
-                </div>
-              )}
+                    if (rowIndex < tempData.length - 1) {
+                      let minDate = new Date(row.intake_date);
+                      let maxDate = new Date(
+                        tempData[rowIndex + 1].intake_date
+                      );
+                      setSessionRange((prev) => ({
+                        ...prev,
+                        min: formatDate(minDate),
+                        max: formatDate(maxDate),
+                      }));
+                    } else {
+                      setSessionRange((prev) => ({
+                        ...prev,
+                        min: false,
+                        max: false,
+                      }));
+                    }
+                  }}
+                />
+              </div>
+            )}
             {initialData &&
               [3, 4].includes(userObj?.role_id) &&
               isWithin24Hours(row.intake_date, row.scheduled_time) && (
@@ -414,26 +469,52 @@ function CreateSessionForm({
     },
     {
       name: "Total Amt.",
-      selector: (row) =>
-        `$${Number(row.session_price + row.session_taxes).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_price).toFixed(4)}`,
       selectorId: "session_price",
       maxWidth: "100px",
     },
     {
       name: "Tax",
-      selector: (row) => `$${Number(row.session_taxes).toFixed(2)}`,
+      selector: (row) => `$${Number(row.session_taxes).toFixed(4)}`,
       selectorId: "session_gst",
       maxWidth: "70px",
     },
     {
       name: "Amt. to Counselor",
-      selector: (row) => `$${Number(row.session_counselor_amt).toFixed(2)}`,
+      selector: (row) => {
+        if (match == null) {
+          match =
+            counselorSplit?.find(
+              (item) => item?.counselor_info?.email === userObj?.email
+            )?.tenant_share_percentage ?? managerSplit?.tenant_share_percentage;
+        }
+        if (userObj?.role_id === 3) {
+          console.log('feeSplitDetails?.counselor_share_percentage',initialData?.fee_split_management?.counselor_share_percentage);
+          
+          return `$${Number(row.session_price * (initialData?.fee_split_management?.counselor_share_percentage / 100) || 0).toFixed(4)}`;
+        } else {
+          const shareAmount =
+            (Number(row.session_price || 0) * (initialData?.fee_split_management?.counselor_share_percentage / 100) || 0)
+          return `$${shareAmount.toFixed(4)}`;
+        }
+      },
       selectorId: "session_counselor_amt",
       maxWidth: "130px",
     },
     {
-      name: "Amt. to Admin",
-      selector: (row) => `$${Number(row.session_system_amt).toFixed(2)}`,
+      name: userObj?.role_id === 3 ? "Amt. to Admin" : "Amount to Practice",
+      selector: (row) => {
+        if (!match || match === undefined) {
+          match =
+            counselorSplit?.find(
+              (item) => item?.counselor_info?.email === userObj?.email
+            )?.tenant_share_percentage ?? managerSplit?.tenant_share_percentage;
+        }
+
+        return userObj?.role_id === 3
+          ? `$${Number(row.session_system_amt).toFixed(4)}`
+          : `${match ?? 0}%`;
+      },
       selectorId: "session_system_amt",
       maxWidth: "120px",
     },
@@ -660,12 +741,12 @@ function CreateSessionForm({
     }
   };
 
-  const handleAffirmativeAction = async () => {
+  const handleAffirmativeAction = async (isClose = true) => {
     try {
       setLoader("discardChanges");
       if (thrpyReqId) {
         const response = await api.put(
-          `/thrpyReq/?req_id=${thrpyReqId}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
+          `/thrpyReq?req_id=${thrpyReqId}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
           {
             status_yn: "n",
           }
@@ -674,20 +755,27 @@ function CreateSessionForm({
           toast.success("Therapy request discarded!");
         }
       }
-      setIsOpen(false);
+      // if (isClose) {
+      //   setIsOpen(false);
+      // }
     } catch (error) {
       console.log("Error while discarding therapy request :", error);
       toast.error("Error while discarding therapy request.");
     } finally {
       setSessionTableData([]);
       setConfirmationModal(false);
-      setIsOpen(false);
+      console.log(isDiscard,"ios")
+      if (isDiscard) {
+        setIsOpen(false);
+      }
+
       setThrpyReqId(null);
       setLoader(null);
     }
   };
 
   const handleGenerateSchedule = async () => {
+    fetchAllSplit();
     const formData = methods.getValues();
     const { client_first_name } = formData;
     const hasOngoingSession =
@@ -889,11 +977,6 @@ function CreateSessionForm({
       setSessionTableData([]);
     }
   };
-  const [isEnabled, setIsEnabled] = useState(false);
-  const handleToggle = (newState) => {
-    setIsEnabled(newState);
-    console.log("Toggled:", newState);
-  };
 
   const counselor = userObj?.role_id == 2;
   const manager = userObj?.role_id == 3;
@@ -904,6 +987,14 @@ function CreateSessionForm({
   const handleCloseWorkModal = () => {
     setIsWorkModalOpen(false);
   };
+  useEffect(() => {
+    if (scheduledSession) {
+      const addittionalSession = scheduledSession.filter(
+        (session) => session?.is_additional === 1
+      );
+      setAddittionalSessions(addittionalSession);
+    }
+  }, [scheduledSession, initialData]);
 
   return (
     <CreateSessionFormWrapper>
@@ -1028,6 +1119,14 @@ function CreateSessionForm({
                       render={({ field }) => (
                         <CustomMultiSelect
                           {...field}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            // setSessionTableData([]);
+                            if (sessionTableData?.length > 0) {
+                              setConfirmationModal(true);
+                            }
+                            setShowGeneratedSession(false);
+                          }}
                           options={clientsDropdown}
                           placeholder="Select a client"
                           isMulti={false}
@@ -1071,8 +1170,12 @@ function CreateSessionForm({
                           isMulti={false}
                           isDisabled={initialData}
                           onChange={(selectedOption) => {
-                            setSessionTableData([]);
+                            // setSessionTableData([]);
                             field.onChange(selectedOption);
+                            setShowGeneratedSession(false);
+                            if (sessionTableData?.length > 0) {
+                              setConfirmationModal(true);
+                            }
                           }}
                         />
                       )}
@@ -1095,6 +1198,14 @@ function CreateSessionForm({
                       render={({ field }) => (
                         <CustomMultiSelect
                           {...field}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            setShowGeneratedSession(false);
+                            // setSessionTableData([]);
+                            if (sessionTableData?.length > 0) {
+                              setConfirmationModal(true);
+                            }
+                          }}
                           options={sessionFormatDropdown}
                           placeholder="Select a format"
                           isMulti={false}
@@ -1134,7 +1245,8 @@ function CreateSessionForm({
                 )}
               {/* Create Session Schedule ->  Generate Seesion Schedule button  */}
               {![3, 4].includes(userObj?.role_id) &&
-                allSessionsStatusScheduled && (
+                allSessionsStatusScheduled &&
+                !showGeneratedSession && (
                   <button
                     type="button"
                     onClick={handleGenerateSchedule}
@@ -1158,21 +1270,15 @@ function CreateSessionForm({
                   />
                 </HomeworkButtonWrapper>
               )}
-
-              {initialData && manager && (
-                <ToggleSwitch
-                  isOn={isEnabled}
-                  title={"Enable Homwork upload for this counselor"}
-                  onToggle={handleToggle}
-                />
-              )}
               {/* session Table  */}
               {(initialData || sessionTableData) && (
                 <CustomTable
                   columns={sessionTableColumns}
                   data={
                     initialData
-                      ? scheduledSession
+                      ? scheduledSession.filter((data) => {
+                          return data?.is_additional === 0;
+                        })
                       : sessionTableData
                       ? sessionTableData?.filter((data) => {
                           return data?.is_additional === 0;
@@ -1316,7 +1422,10 @@ function CreateSessionForm({
       </CustomModal>
       <ConfirmationModal
         isOpen={confirmationModal}
-        onClose={() => setConfirmationModal(false)}
+        onClose={() => {
+          setIsDiscard(true);
+          setConfirmationModal(false);
+        }}
         affirmativeAction="Yes"
         discardAction="No"
         content="Are you sure you want to discard the changes?"
@@ -1366,14 +1475,16 @@ function CreateSessionForm({
           setShowVerification={setShowVerification}
         />
       )}
-
+      {console.log(initialData)}
       {isWorkModalOpen && (
         <HomeworkModal
+          email={initialData?.email}
+          session_id={session?.session_obj[0]?.session_id}
+          id={initialData}
           isOpen={isWorkModalOpen}
           onClose={handleCloseWorkModal}
         />
       )}
-
       <NotesModalContent
         noteData={noteData}
         setNoteData={setNoteData}

@@ -3,7 +3,12 @@ import styled from "styled-components";
 export const AnxietyDisorderFormContainer = styled.div`
   padding: 20px 30px;
   h2 {
-    margin: 0px;
+    text-align: center;
+    padding-bottom: 10px;
+  }
+  p {
+    text-align: center;
+    padding-bottom: 20px;
   }
 
   .anxiety-content {

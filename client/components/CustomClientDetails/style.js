@@ -7,7 +7,7 @@ export const ClientDetailsContainer = styled.div`
     }
   .content{
     .tab-and-heading-container{
-      position:sticky;
+      // position:sticky;
       top:60px;
       padding:20px 0px;
     z-index: 5;
@@ -21,7 +21,7 @@ export const ClientDetailsContainer = styled.div`
 
     .heading-container {
     display: flex;
-    gap:10px
+    gap:10px;
     justify-content: space-evenly;
     align-items: start;
     gap:20px;
@@ -106,6 +106,16 @@ export const ClientDetailsContainer = styled.div`
     }
 
     .mobile-button-group{
+    .create-client-button {
+        margin-left: 4px;
+        background: var(--primary-button-color);
+        border-radius: 8px;
+        color: #ffffff;
+
+        &:hover{
+          background:var(--primary-button-hover-color);
+        }
+      }
         display:none;
         width:100%;
         justify-content: space-between;

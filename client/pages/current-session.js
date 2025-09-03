@@ -30,11 +30,16 @@ function CurrentSession() {
     useState("");
   const [tomorrowSessionToBeDisplayed, setTomorrowSessionToBeDisplayed] =
     useState([]);
-  const [counselors, setCounselors] = useState([{ label: "All counselors", value: "allCounselors" }]);
+  const [counselors, setCounselors] = useState([
+    { label: "All counselors", value: "allCounselors" },
+  ]);
   const { userObj } = useReferenceContext();
 
   const [activeRow, setActiveRow] = useState({});
-  const [selectedCounselor, setSelectedCounselor] = useState({ label: "All counselors", value: "allCounselors" });
+  const [selectedCounselor, setSelectedCounselor] = useState({
+    label: "All counselors",
+    value: "allCounselors",
+  });
   const [loading, setLoading] = useState(false);
   const dropdownTodayRef = useRef(null);
   const dropdownTomorrowRef = useState(null);
@@ -48,17 +53,23 @@ function CurrentSession() {
     setLoading(true);
     let response;
     try {
-      if (counselorId && counselorId !== "allCounselors")
+      if (counselorId && counselorId !== "allCounselors") {
         response = await CommonServices.getCurrentSessions({
           counselor_id: counselorId,
-          role_id: role_id===3?4:role_id,
+          role_id: role_id,
         });
-      // } else {
-      //   console.log(counselors, "counselors");
-      //   response = await api.get
-      //     `/session/today?counselor_id=${counselorId}`
-      //   );
-      // }
+      } else {
+        const payload = {
+          // counselor_id: counselorId,
+          role_id: role_id,
+        };
+        if (role_id != 4) {
+          payload.tenant_id = userObj?.tenant_id;
+        }
+
+        // console.log(counselors, "counselors");
+        response = await CommonServices.getCurrentSessions(payload);
+      }
       if (response?.status === 200) {
         setTodaySession(response?.data?.session_today);
         setTodaySessionToBeDisplayed(response?.data?.session_today);
@@ -371,14 +382,22 @@ function CurrentSession() {
       if (response.status === 200) {
         const { data } = response;
         const allCounselors = data?.rec?.filter(
-          (counselor) => counselor?.role_id == 2 && counselor?.tenant_id === userData?.tenant_id
+          (counselor) =>
+            counselor?.role_id == 2 &&
+            counselor?.tenant_id === userData?.tenant_id
         );
         const counselorOptions = allCounselors?.map((item) => ({
           label: item?.user_first_name + " " + item?.user_last_name,
           value: item?.user_profile_id,
         }));
-        setCounselors([{ label: "All counselors", value: "allCounselors" }, ...counselorOptions]);
-        setSelectedCounselor({ label: "All counselors", value: "allCounselors" });
+        setCounselors([
+          { label: "All counselors", value: "allCounselors" },
+          ...counselorOptions,
+        ]);
+        setSelectedCounselor({
+          label: "All counselors",
+          value: "allCounselors",
+        });
       }
     } catch (error) {
       console.log("Error fetching clients", error);
@@ -390,9 +409,9 @@ function CurrentSession() {
   const handleSelectCounselor = (data) => {
     setSelectedCounselor(data);
     const counselorId = data?.value;
-    if(userData.role_id===4 || userData.role_id===3){
-      getCurrentSessionData(counselorId, 4);
-    }else{
+    if (userData.role_id === 4 || userData.role_id === 3) {
+      getCurrentSessionData(counselorId, userData?.role_id);
+    } else {
       getCurrentSessionData(counselorId);
     }
   };
@@ -400,6 +419,7 @@ function CurrentSession() {
   useEffect(() => {
     if (userData?.role_id == 4 || userData?.role_id == 3) {
       fetchCounsellor();
+      getCurrentSessionData("allCounselors", userData?.role_id);
     } else {
       getCurrentSessionData(userData?.user_profile_id, userData?.role_id);
     }

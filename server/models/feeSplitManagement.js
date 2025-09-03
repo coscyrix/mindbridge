@@ -288,6 +288,7 @@ export default class FeeSplitManagement {
       
       if (config.error) {
         return {
+          is_fee_split_enabled: false,
           tenant_share_percentage: 0,
           counselor_share_percentage: 100
         };
@@ -295,20 +296,33 @@ export default class FeeSplitManagement {
 
       // If counselor_user_id is provided, return counselor-specific configuration
       if (counselor_user_id) {
-        return {
-          tenant_share_percentage: config.counselor_specific_configurations.find(c => c.counselor_user_id === counselor_user_id).tenant_share_percentage,
-          counselor_share_percentage: config.counselor_specific_configurations.find(c => c.counselor_user_id === counselor_user_id).counselor_share_percentage
-        };
+        const counselorConfig = config.counselor_specific_configurations.find(c => c.counselor_user_id === counselor_user_id);
+        if (counselorConfig) {
+          return {
+            is_fee_split_enabled: counselorConfig.is_fee_split_enabled,
+            tenant_share_percentage: counselorConfig.tenant_share_percentage,
+            counselor_share_percentage: counselorConfig.counselor_share_percentage
+          };
+        } else {
+          // Fall back to default configuration if no counselor-specific config exists
+          return {
+            is_fee_split_enabled: config.default_configuration.is_fee_split_enabled,
+            tenant_share_percentage: config.default_configuration.tenant_share_percentage,
+            counselor_share_percentage: config.default_configuration.counselor_share_percentage
+          };
+        }
       }
 
       // Otherwise return default configuration
       return {
+        is_fee_split_enabled: config.default_configuration.is_fee_split_enabled,
         tenant_share_percentage: config.default_configuration.tenant_share_percentage,
         counselor_share_percentage: config.default_configuration.counselor_share_percentage
       };
     } catch (error) {
       logger.error('Error getting fee split percentages:', error);
       return {
+        is_fee_split_enabled: false,
         tenant_share_percentage: 0,
         counselor_share_percentage: 100
       };
@@ -424,4 +438,77 @@ export default class FeeSplitManagement {
       return { message: 'Error getting counselors by tenant', error: -1 };
     }
   }
+
+  //////////////////////////////////////////
+
+  async getFeeSplitConfigurationForCounselor(tenant_id, counselor_user_id) {
+    try {
+      // Get default configuration (for all counselors)
+      const defaultConfig = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('fee_split_management')
+        .where('tenant_id', tenant_id)
+        .whereNull('counselor_user_id')
+        .andWhere('status_yn', 1)
+        .first();
+
+      // Default values if no default configuration exists
+      const defaultValues = {
+        is_fee_split_enabled: false,
+        tenant_share_percentage: 0,
+        counselor_share_percentage: 100
+      };
+
+      const defaultConfiguration = defaultConfig ? {
+        is_fee_split_enabled: defaultConfig.is_fee_split_enabled === 1,
+        tenant_share_percentage: defaultConfig.tenant_share_percentage || 0,
+        counselor_share_percentage: defaultConfig.counselor_share_percentage || 100
+      } : defaultValues;
+
+      // Get counselor-specific configuration if it exists
+      let finalConfig = { ...defaultConfiguration };
+      if (counselor_user_id) {
+        const counselorConfig = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('fee_split_management')
+          .where('tenant_id', tenant_id)
+          .where('counselor_user_id', counselor_user_id)
+          .andWhere('status_yn', 1)
+          .first();
+
+        if (counselorConfig) {
+          finalConfig = {
+            is_fee_split_enabled: counselorConfig.is_fee_split_enabled === 1,
+            tenant_share_percentage: counselorConfig.tenant_share_percentage || 0,
+            counselor_share_percentage: counselorConfig.counselor_share_percentage || 100
+          };
+        }
+      }
+
+      // Get counselor info
+      const counselorInfo = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('users')
+        .where('user_id', counselor_user_id)
+        .andWhere('status_yn', 'y')
+        .select('user_id', 'name', 'email', 'role_id')
+        .first();
+
+      // Return single, simplified structure
+      return {
+        ...finalConfig,
+        counselor_user_id: counselor_user_id,
+        counselor_info: counselorInfo ? {
+          user_id: counselorInfo.user_id,
+          name: counselorInfo.name,
+          email: counselorInfo.email
+        } : null
+      };
+    } catch (error) {
+      logger.error('Error getting fee split configuration for counselor:', error);
+      return { message: 'Error getting fee split configuration for counselor', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
 } 
