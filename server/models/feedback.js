@@ -290,7 +290,10 @@ export default class Feedback {
           }
         }
 
-        return { rec: combinedResults };
+        // Return single object if only one result, otherwise return array
+        return { 
+          rec: combinedResults.length === 1 ? combinedResults[0] : combinedResults 
+        };
 
       } else {
         // Service mode or auto mode: query user forms (service-based forms)
@@ -357,7 +360,11 @@ export default class Feedback {
         }
 
         const results = await query;
-        return { rec: results };
+        
+        // Return single object if only one result, otherwise return array
+        return { 
+          rec: results.length === 1 ? results[0] : results 
+        };
       }
     } catch (error) {
       console.error('Error in getFeedbackById:', error);
