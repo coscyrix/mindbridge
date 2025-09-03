@@ -195,89 +195,163 @@ export default class Feedback {
             'tt.tenant_id'
           )
           .where('tt.is_sent', 1);
-              } else {
-          // Service mode or auto mode: query user forms (service-based forms)
-          query = db
-            .withSchema(`${process.env.MYSQL_DATABASE}`)
-            .from('feedback as f')
-            .leftJoin('forms as fm', 'f.form_id', 'fm.form_id')
-            .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
-            .select(
-              'f.feedback_id',
-              'f.session_id',
-              'vs.intake_date as session_dte',
-              'f.form_id',
-              'fm.form_cde',
-              'f.client_id',
-              'f.feedback_json',
-              'f.status_yn',
-              db.raw(`(select json_arrayagg(json_object('id',fg.id,'total_points',fg.total_points,'feedback_id',fg.feedback_id,'created_at',fg.created_at,'updated_at',fg.updated_at)) from feedback_gad fg where (fg.feedback_id = f.feedback_id)) as feedback_gad`),
-              db.raw(`(select json_arrayagg(json_object('id',fi.id,'romantic_scale_score',fi.romantic_scale_score,'family_scale_score',fi.family_scale_score,'work_scale_score',fi.work_scale_score,'friendships_socializing_scale_score',fi.friendships_socializing_scale_score,'parenting_scale_score',fi.parenting_scale_score,'education_scale_score',fi.education_scale_score,'self_care_scale',fi.self_care_scale,'feedback_id',fi.feedback_id,'created_at',fi.created_at,'updated_at',fi.updated_at)) from feedback_ipf fi where (fi.feedback_id = f.feedback_id)) as feedback_ipf`),
-              db.raw(`(select json_arrayagg(json_object('id',fp.id,'total_score',fp.total_score,'difficulty_score',fp.difficulty_score,'feedback_id',fp.feedback_id,'created_at',fp.created_at,'updated_at',fp.updated_at)) from feedback_phq9 fp where (fp.feedback_id = f.feedback_id)) as feedback_phq9`),
-              db.raw(`(select json_arrayagg(json_object('id',fw.id,'understanding_and_communicating',fw.understandingAndCommunicating,'getting_around',fw.gettingAround,'self_care',fw.selfCare,'getting_along_with_people',fw.gettingAlongWithPeople,'life_activities',fw.lifeActivities,'participation_in_society',fw.participationInSociety,'overall_score',fw.overallScore,'difficulty_days',fw.difficultyDays,'unable_days',fw.unableDays,'health_condition_days',fw.healthConditionDays,'feedback_id',fw.feedback_id,'created_at',fw.created_at,'updated_at',fw.updated_at)) from feedback_whodas fw where (fw.feedback_id = f.feedback_id)) as feedback_whodas`),
-              db.raw(`(select json_arrayagg(json_object('id',pcl.id,'total_score',pcl.total_score,'feedback_id',pcl.feedback_id,'created_at',pcl.created_at,'updated_at',pcl.updated_at)) from feedback_pcl5 pcl where (pcl.feedback_id = f.feedback_id)) as feedback_pcl5`),
-              db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'specific_1st_phase',sg.specific_1st_phase,'specific_2nd_phase',sg.specific_2nd_phase,'specific_3rd_phase',sg.specific_3rd_phase,'measurable_1st_phase',sg.measurable_1st_phase,'measurable_2nd_phase',sg.measurable_2nd_phase,'measurable_3rd_phase',sg.measurable_3rd_phase,'achievable_1st_phase',sg.achievable_1st_phase,'achievable_2nd_phase',sg.achievable_2nd_phase,'achievable_3rd_phase',sg.achievable_3rd_phase,'relevant_1st_phase',sg.relevant_1st_phase,'relevant_2nd_phase',sg.relevant_2nd_phase,'relevant_3rd_phase',sg.relevant_3rd_phase,'time_bound_1st_phase',sg.time_bound_1st_phase,'time_bound_2nd_phase',sg.time_bound_2nd_phase,'time_bound_3rd_phase',sg.time_bound_3rd_phase,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
-              db.raw(`(select json_arrayagg(json_object('id',fc.id,'feedback_id',fc.feedback_id,'imgBase64',fc.imgBase64,'status_yn',fc.status_yn,'created_at',fc.created_at,'updated_at',fc.updated_at)) from feedback_consent fc where (fc.feedback_id = f.feedback_id)) as feedback_consent`),
-              db.raw(`(select json_arrayagg(json_object('id',fa.id,'total_sessions',fa.total_sessions,'total_attended_sessions',fa.total_attended_sessions,'total_cancelled_sessions',fa.total_cancelled_sessions,'status_yn',fa.status_yn,'created_at',fa.created_at,'updated_at',fa.updated_at)) from feedback_attendance fa where (fa.feedback_id = f.feedback_id)) as feedback_attendance`),
-              'f.created_at',
-              'f.updated_at',
-              'f.tenant_id'
-            )
-            .where('f.status_yn', 'y');
+
+        // Apply filters for treatment target mode
+        if (data.feedback_id) {
+          query = query.where('f.feedback_id', data.feedback_id);
+        }
+        if (data.session_id) {
+          query = query.where('f.session_id', data.session_id);
+        }
+        if (data.form_id) {
+          query = query.where('f.form_id', data.form_id);
+        }
+        if (data.client_id) {
+          query = query.where('f.client_id', data.client_id);
+        }
+        if (data.tenant_id) {
+          query = query.where('tt.tenant_id', data.tenant_id);
         }
 
-      // Check if feedback already exists for this session
-      if (data.is_submitted) {
-        if (data.client_id && data.form_id && data.session_id) {
-          const existingFeedback = await query.clone()
-            .where('f.client_id', data.client_id)
-            .andWhere('f.form_id', data.form_id)
-            .andWhere('f.session_id', data.session_id);
+        // Execute treatment target query
+        const treatmentTargetResults = await query;
 
-          if (existingFeedback && existingFeedback.length > 0) {
-            return {
-              message: 'Feedback already exists for this session',
-              error: -1,
-            };
+        // Now get consent forms separately using UNION
+        let consentQuery = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('feedback_consent as fc')
+          .join('feedback as f', 'fc.feedback_id', 'f.feedback_id')
+          .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+          .select(
+            'f.feedback_id',
+            'f.session_id',
+            'vs.intake_date as session_dte',
+            'f.form_id',
+            db.raw("'CONSENT' as form_cde"),
+            'f.client_id',
+            'f.feedback_json',
+            'f.status_yn',
+            db.raw(`(select json_arrayagg(json_object('id',fg.id,'total_points',fg.total_points,'feedback_id',fg.feedback_id,'created_at',fg.created_at,'updated_at',fg.updated_at)) from feedback_gad fg where (fg.feedback_id = f.feedback_id)) as feedback_gad`),
+            db.raw(`(select json_arrayagg(json_object('id',fi.id,'romantic_scale_score',fi.romantic_scale_score,'family_scale_score',fi.family_scale_score,'work_scale_score',fi.work_scale_score,'friendships_socializing_scale_score',fi.friendships_socializing_scale_score,'parenting_scale_score',fi.parenting_scale_score,'education_scale_score',fi.education_scale_score,'self_care_scale',fi.self_care_scale,'feedback_id',fi.feedback_id,'created_at',fi.created_at,'updated_at',fi.updated_at)) from feedback_ipf fi where (fi.feedback_id = f.feedback_id)) as feedback_ipf`),
+            db.raw(`(select json_arrayagg(json_object('id',fp.id,'total_score',fp.total_score,'difficulty_score',fp.difficulty_score,'feedback_id',fp.feedback_id,'created_at',fp.created_at,'updated_at',fp.updated_at)) from feedback_phq9 fp where (fp.feedback_id = f.feedback_id)) as feedback_phq9`),
+            db.raw(`(select json_arrayagg(json_object('id',fw.id,'understanding_and_communicating',fw.understandingAndCommunicating,'getting_around',fw.gettingAround,'self_care',fw.selfCare,'getting_along_with_people',fw.gettingAlongWithPeople,'life_activities',fw.lifeActivities,'participation_in_society',fw.participationInSociety,'overall_score',fw.overallScore,'difficulty_days',fw.difficultyDays,'unable_days',fw.unableDays,'health_condition_days',fw.healthConditionDays,'feedback_id',fw.feedback_id,'created_at',fw.created_at,'updated_at',fw.updated_at)) from feedback_whodas fw where (fw.feedback_id = f.feedback_id)) as feedback_whodas`),
+            db.raw(`(select json_arrayagg(json_object('id',pcl.id,'total_score',pcl.total_score,'feedback_id',pcl.feedback_id,'created_at',pcl.created_at,'updated_at',pcl.updated_at)) from feedback_pcl5 pcl where (pcl.feedback_id = f.feedback_id)) as feedback_pcl5`),
+            db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'specific_1st_phase',sg.specific_1st_phase,'specific_2nd_phase',sg.specific_2nd_phase,'specific_3rd_phase',sg.specific_3rd_phase,'measurable_1st_phase',sg.measurable_1st_phase,'measurable_2nd_phase',sg.measurable_2nd_phase,'measurable_3rd_phase',sg.measurable_3rd_phase,'achievable_1st_phase',sg.achievable_1st_phase,'achievable_2nd_phase',sg.achievable_2nd_phase,'achievable_3rd_phase',sg.achievable_3rd_phase,'relevant_1st_phase',sg.relevant_1st_phase,'relevant_2nd_phase',sg.relevant_2nd_phase,'relevant_3rd_phase',sg.relevant_3rd_phase,'time_bound_1st_phase',sg.time_bound_1st_phase,'time_bound_2nd_phase',sg.time_bound_2nd_phase,'time_bound_3rd_phase',sg.time_bound_3rd_phase,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+            db.raw(`(select json_arrayagg(json_object('id',fc.id,'feedback_id',fc.feedback_id,'imgBase64',fc.imgBase64,'status_yn',fc.status_yn,'created_at',fc.created_at,'updated_at',fc.updated_at)) from feedback_consent fc2 where (fc2.feedback_id = f.feedback_id)) as feedback_consent`),
+            db.raw(`(select json_arrayagg(json_object('id',fa.id,'total_sessions',fa.total_sessions,'total_attended_sessions',fa.total_attended_sessions,'total_cancelled_sessions',fa.total_cancelled_sessions,'status_yn',fa.status_yn,'created_at',fa.created_at,'updated_at',fa.updated_at)) from feedback_attendance fa where (fa.feedback_id = f.feedback_id)) as feedback_attendance`),
+            'f.created_at',
+            'f.updated_at',
+            db.raw('NULL as tenant_id')
+          )
+          .where('fc.status_yn', 'y');
+
+        // Apply filters for consent query
+        if (data.feedback_id) {
+          consentQuery = consentQuery.where('f.feedback_id', data.feedback_id);
+        }
+        if (data.session_id) {
+          consentQuery = consentQuery.where('f.session_id', data.session_id);
+        }
+        if (data.client_id) {
+          consentQuery = consentQuery.where('f.client_id', data.client_id);
+        }
+
+        // Execute consent query
+        const consentResults = await consentQuery;
+
+        // Combine both results
+        const combinedResults = [...treatmentTargetResults, ...consentResults];
+
+        // Check if feedback already exists for this session
+        if (data.is_submitted) {
+          if (data.client_id && data.form_id && data.session_id) {
+            const existingFeedback = combinedResults.filter(feedback => 
+              feedback.client_id === data.client_id && 
+              feedback.form_id === data.form_id && 
+              feedback.session_id === data.session_id
+            );
+
+            if (existingFeedback && existingFeedback.length > 0) {
+              return {
+                message: 'Feedback already exists for this session',
+                error: -1,
+              };
+            }
           }
         }
-      }
 
-      // Apply filters
-      if (data.feedback_id) {
-        query = query.where('f.feedback_id', data.feedback_id);
-      }
+        return { rec: combinedResults };
 
-      if (data.session_id) {
-        query = query.where('f.session_id', data.session_id);
-      }
+      } else {
+        // Service mode or auto mode: query user forms (service-based forms)
+        query = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('feedback as f')
+          .leftJoin('forms as fm', 'f.form_id', 'fm.form_id')
+          .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+          .select(
+            'f.feedback_id',
+            'f.session_id',
+            'vs.intake_date as session_dte',
+            'f.form_id',
+            'fm.form_cde',
+            'f.client_id',
+            'f.feedback_json',
+            'f.status_yn',
+            db.raw(`(select json_arrayagg(json_object('id',fg.id,'total_points',fg.total_points,'feedback_id',fg.feedback_id,'created_at',fg.created_at,'updated_at',fg.updated_at)) from feedback_gad fg where (fg.feedback_id = f.feedback_id)) as feedback_gad`),
+            db.raw(`(select json_arrayagg(json_object('id',fi.id,'romantic_scale_score',fi.romantic_scale_score,'family_scale_score',fi.family_scale_score,'work_scale_score',fi.work_scale_score,'friendships_socializing_scale_score',fi.friendships_socializing_scale_score,'parenting_scale_score',fi.parenting_scale_score,'education_scale_score',fi.education_scale_score,'self_care_scale',fi.self_care_scale,'feedback_id',fi.feedback_id,'created_at',fi.created_at,'updated_at',fi.updated_at)) from feedback_ipf fi where (fi.feedback_id = f.feedback_id)) as feedback_ipf`),
+            db.raw(`(select json_arrayagg(json_object('id',fp.id,'total_score',fp.total_score,'difficulty_score',fp.difficulty_score,'feedback_id',fp.feedback_id,'created_at',fp.created_at,'updated_at',fp.updated_at)) from feedback_phq9 fp where (fp.feedback_id = f.feedback_id)) as feedback_phq9`),
+            db.raw(`(select json_arrayagg(json_object('id',fw.id,'understanding_and_communicating',fw.understandingAndCommunicating,'getting_around',fw.gettingAround,'self_care',fw.selfCare,'getting_along_with_people',fw.gettingAlongWithPeople,'life_activities',fw.lifeActivities,'participation_in_society',fw.participationInSociety,'overall_score',fw.overallScore,'difficulty_days',fw.difficultyDays,'unable_days',fw.unableDays,'health_condition_days',fw.healthConditionDays,'feedback_id',fw.feedback_id,'created_at',fw.created_at,'updated_at',fw.updated_at)) from feedback_whodas fw where (fw.feedback_id = f.feedback_id)) as feedback_whodas`),
+            db.raw(`(select json_arrayagg(json_object('id',pcl.id,'total_score',pcl.total_score,'feedback_id',pcl.feedback_id,'created_at',pcl.created_at,'updated_at',pcl.updated_at)) from feedback_pcl5 pcl where (pcl.feedback_id = f.feedback_id)) as feedback_pcl5`),
+            db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'specific_1st_phase',sg.specific_1st_phase,'specific_2nd_phase',sg.specific_2nd_phase,'specific_3rd_phase',sg.specific_3rd_phase,'measurable_1st_phase',sg.measurable_1st_phase,'measurable_2nd_phase',sg.measurable_2nd_phase,'measurable_3rd_phase',sg.measurable_3rd_phase,'achievable_1st_phase',sg.achievable_1st_phase,'achievable_2nd_phase',sg.achievable_2nd_phase,'achievable_3rd_phase',sg.achievable_3rd_phase,'relevant_1st_phase',sg.relevant_1st_phase,'relevant_2nd_phase',sg.relevant_2nd_phase,'relevant_3rd_phase',sg.relevant_3rd_phase,'time_bound_1st_phase',sg.time_bound_1st_phase,'time_bound_2nd_phase',sg.time_bound_2nd_phase,'time_bound_3rd_phase',sg.time_bound_3rd_phase,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+            db.raw(`(select json_arrayagg(json_object('id',fc.id,'feedback_id',fc.feedback_id,'imgBase64',fc.imgBase64,'status_yn',fc.status_yn,'created_at',fc.created_at,'updated_at',fc.updated_at)) from feedback_consent fc where (fc.feedback_id = f.feedback_id)) as feedback_consent`),
+            db.raw(`(select json_arrayagg(json_object('id',fa.id,'total_sessions',fa.total_sessions,'total_attended_sessions',fa.total_attended_sessions,'total_cancelled_sessions',fa.total_cancelled_sessions,'status_yn',fa.status_yn,'created_at',fa.created_at,'updated_at',fa.updated_at)) from feedback_attendance fa where (fa.feedback_id = f.feedback_id)) as feedback_attendance`),
+            'f.created_at',
+            'f.updated_at',
+            'f.tenant_id'
+          )
+          .where('f.status_yn', 'y');
 
-      if (data.form_id) {
-        query = query.where('f.form_id', data.form_id);
-      }
+        // Check if feedback already exists for this session
+        if (data.is_submitted) {
+          if (data.client_id && data.form_id && data.session_id) {
+            const existingFeedback = await query.clone()
+              .where('f.client_id', data.client_id)
+              .andWhere('f.form_id', data.form_id)
+              .andWhere('f.session_id', data.session_id);
 
-      if (data.client_id) {
-        query = query.where('f.client_id', data.client_id);
-      }
+            if (existingFeedback && existingFeedback.length > 0) {
+              return {
+                message: 'Feedback already exists for this session',
+                error: -1,
+              };
+            }
+          }
+        }
 
-      if (data.tenant_id) {
-        if (formMode === 'treatment_target') {
-          query = query.where('tt.tenant_id', data.tenant_id);
-        } else {
+        // Apply filters
+        if (data.feedback_id) {
+          query = query.where('f.feedback_id', data.feedback_id);
+        }
+        if (data.session_id) {
+          query = query.where('f.session_id', data.session_id);
+        }
+        if (data.form_id) {
+          query = query.where('f.form_id', data.form_id);
+        }
+        if (data.client_id) {
+          query = query.where('f.client_id', data.client_id);
+        }
+        if (data.tenant_id) {
           query = query.where('f.tenant_id', data.tenant_id);
         }
-      }
 
-      const rec = await query;
-      if (!rec) {
-        logger.error('Error getting feedback');
-        return { message: 'Error getting feedback', error: -1 };
+        const results = await query;
+        return { rec: results };
       }
-      return rec;
     } catch (error) {
-      console.log('error', error);
-      
-      return { message: 'Error getting feedback', error: -1 };
+      console.error('Error in getFeedbackById:', error);
+      return { message: 'Error fetching feedback', error: -1 };
     }
   }
 

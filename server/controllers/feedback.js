@@ -1,11 +1,30 @@
 //controllers/feedback.js
 
 import FeedbackService from '../services/feedback.js';
+import Common from '../models/common.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 export default class FeedbackController {
+  constructor() {
+    this.common = new Common();
+    
+    // Bind methods to preserve 'this' context
+    this.getFeedbackById = this.getFeedbackById.bind(this);
+    this.postFeedback = this.postFeedback.bind(this);
+    this.putFeedbackById = this.putFeedbackById.bind(this);
+    this.postGAD7Feedback = this.postGAD7Feedback.bind(this);
+    this.postPHQ9Feedback = this.postPHQ9Feedback.bind(this);
+    this.postPCL5Feedback = this.postPCL5Feedback.bind(this);
+    this.postWHODASFeedback = this.postWHODASFeedback.bind(this);
+    this.postIPFSFeedback = this.postIPFSFeedback.bind(this);
+    this.postSMARTGOALFeedback = this.postSMARTGOALFeedback.bind(this);
+    this.postCONSENTFeedback = this.postCONSENTFeedback.bind(this);
+    this.postGASFeedback = this.postGASFeedback.bind(this);
+    this.postATTENDANCEFeedback = this.postATTENDANCEFeedback.bind(this);
+  }
+
   //////////////////////////////////////////
   async postFeedback(req, res) {
     const data = req.body;
@@ -52,6 +71,22 @@ export default class FeedbackController {
 
   async getFeedbackById(req, res) {
     const data = req.query;
+
+    // If no tenant_id is provided but client_id is, extract tenant_id from client_id
+    if (!data.tenant_id && data.client_id) {
+      try {
+        const clientTenant = await this.common.getUserTenantId({ user_profile_id: data.client_id });
+        if (clientTenant && clientTenant.length > 0) {
+          data.tenant_id = Number(clientTenant[0].tenant_id);
+          console.log('Extracted tenant_id:', data.tenant_id, 'for client_id:', data.client_id);
+        }
+      } catch (error) {
+        console.log('Error extracting tenant_id from client_id:', error);
+        // Continue without tenant_id if extraction fails
+      }
+    }
+
+    console.log('Final data for getFeedbackById:', data);
 
     const feedback = new FeedbackService();
     const rec = await feedback.getFeedbackById(data);
