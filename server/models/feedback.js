@@ -169,8 +169,11 @@ export default class Feedback {
           .join('user_profile as client', 'tt.client_id', 'client.user_profile_id')
           .join('forms as fm', 'tt.form_id', 'fm.form_id')
           .join('feedback as f', function() {
-            this.on('f.session_id', '=', 'tt.session_id')
-                .andOn('f.form_id', '=', 'tt.form_id');
+            this.on('f.form_id', '=', 'tt.form_id')
+                .andOn(function() {
+                  this.on('f.session_id', '=', 'tt.session_id')
+                      .orOnNull('f.session_id');
+                });
           })
           .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
           .select(
@@ -267,9 +270,45 @@ export default class Feedback {
           result.client_id !== null
         );
 
+        // If we're filtering by feedback_id and no results found in treatment target, 
+        // also check for standalone feedback records
+        let standaloneFeedbackResults = [];
+        if (data.feedback_id && treatmentTargetResults.length === 0) {
+          const standaloneQuery = db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('feedback as f')
+            .leftJoin('forms as fm', 'f.form_id', 'fm.form_id')
+            .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+            .select(
+              'f.feedback_id',
+              'f.session_id',
+              'vs.intake_date as session_dte',
+              'f.form_id',
+              'fm.form_cde',
+              'f.client_id',
+              'f.feedback_json',
+              'f.status_yn',
+              db.raw(`(select json_arrayagg(json_object('id',fg.id,'total_points',fg.total_points,'feedback_id',fg.feedback_id,'created_at',fg.created_at,'updated_at',fg.updated_at)) from feedback_gad fg where (fg.feedback_id = f.feedback_id)) as feedback_gad`),
+              db.raw(`(select json_arrayagg(json_object('id',fi.id,'romantic_scale_score',fi.romantic_scale_score,'family_scale_score',fi.family_scale_score,'work_scale_score',fi.work_scale_score,'friendships_socializing_scale_score',fi.friendships_socializing_scale_score,'parenting_scale_score',fi.parenting_scale_score,'education_scale_score',fi.education_scale_score,'self_care_scale',fi.self_care_scale,'feedback_id',fi.feedback_id,'created_at',fi.created_at,'updated_at',fi.updated_at)) from feedback_ipf fi where (fi.feedback_id = f.feedback_id)) as feedback_ipf`),
+              db.raw(`(select json_arrayagg(json_object('id',fp.id,'total_score',fp.total_score,'difficulty_score',fp.difficulty_score,'feedback_id',fp.feedback_id,'created_at',fp.created_at,'updated_at',fp.updated_at)) from feedback_phq9 fp where (fp.feedback_id = f.feedback_id)) as feedback_phq9`),
+              db.raw(`(select json_arrayagg(json_object('id',fw.id,'understanding_and_communicating',fw.understandingAndCommunicating,'getting_around',fw.gettingAround,'self_care',fw.selfCare,'getting_along_with_people',fw.gettingAlongWithPeople,'life_activities',fw.lifeActivities,'participation_in_society',fw.participationInSociety,'overall_score',fw.overallScore,'difficulty_days',fw.difficultyDays,'unable_days',fw.unableDays,'health_condition_days',fw.healthConditionDays,'feedback_id',fw.feedback_id,'created_at',fw.created_at,'updated_at',fw.updated_at)) from feedback_whodas fw where (fw.feedback_id = f.feedback_id)) as feedback_whodas`),
+              db.raw(`(select json_arrayagg(json_object('id',pcl.id,'total_score',pcl.total_score,'feedback_id',pcl.feedback_id,'created_at',pcl.created_at,'updated_at',pcl.updated_at)) from feedback_pcl5 pcl where (pcl.feedback_id = f.feedback_id)) as feedback_pcl5`),
+              db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'specific_1st_phase',sg.specific_1st_phase,'specific_2nd_phase',sg.specific_2nd_phase,'specific_3rd_phase',sg.specific_3rd_phase,'measurable_1st_phase',sg.measurable_1st_phase,'measurable_2nd_phase',sg.measurable_2nd_phase,'measurable_3rd_phase',sg.measurable_3rd_phase,'achievable_1st_phase',sg.achievable_1st_phase,'achievable_2nd_phase',sg.achievable_2nd_phase,'achievable_3rd_phase',sg.achievable_3rd_phase,'relevant_1st_phase',sg.relevant_1st_phase,'relevant_2nd_phase',sg.relevant_2nd_phase,'relevant_3rd_phase',sg.relevant_3rd_phase,'time_bound_1st_phase',sg.time_bound_1st_phase,'time_bound_2nd_phase',sg.time_bound_2nd_phase,'time_bound_3rd_phase',sg.time_bound_3rd_phase,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+              db.raw(`(select json_arrayagg(json_object('id',fc.id,'feedback_id',fc.feedback_id,'imgBase64',fc.imgBase64,'status_yn',fc.status_yn,'created_at',fc.created_at,'updated_at',fc.updated_at)) from feedback_consent fc where (fc.feedback_id = f.feedback_id)) as feedback_consent`),
+              db.raw(`(select json_arrayagg(json_object('id',fa.id,'total_sessions',fa.total_sessions,'total_attended_sessions',fa.total_attended_sessions,'total_cancelled_sessions',fa.total_cancelled_sessions,'status_yn',fa.status_yn,'created_at',fa.created_at,'updated_at',fa.updated_at)) from feedback_attendance fa where (fa.feedback_id = f.feedback_id)) as feedback_attendance`),
+              'f.created_at',
+              'f.updated_at',
+              'f.tenant_id'
+            )
+            .where('f.feedback_id', data.feedback_id)
+            .andWhere('f.status_yn', 'y');
+          
+          standaloneFeedbackResults = await standaloneQuery;
+        }
+
         // Only include consent results if they're valid or if we're not filtering by specific feedback_id
         const combinedResults = data.feedback_id 
-          ? [...treatmentTargetResults] // Only include treatment target results when filtering by feedback_id
+          ? [...treatmentTargetResults, ...standaloneFeedbackResults] // Include both treatment target and standalone results when filtering by feedback_id
           : [...treatmentTargetResults, ...validConsentResults]; // Include both when not filtering
 
         // Check if feedback already exists for this session
