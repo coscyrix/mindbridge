@@ -78,8 +78,9 @@ export default class Report {
           .leftJoin('feedback as fb', function() {
             this.on('fb.form_id', '=', 'vuf.form_id')
                 .andOn(function() {
-                  this.on('fb.session_id', '=', 'vuf.session_id')
-                      .orOnNull('fb.session_id');
+                  // For consent forms, match by client_id and form_id since they don't have session_id
+                  this.on('fb.client_id', '=', 'vuf.client_id')
+                      .andOnNull('fb.session_id');
                 });
           })
           .select(
@@ -92,6 +93,7 @@ export default class Report {
             'vuf.form_cde',
             'vuf.thrpy_req_id',
             'vuf.tenant_id',
+            'vuf.user_form_id', // Include user_form_id to make each consent form unique
             db.raw('MAX(fb.feedback_id) as feedback_id'),
             db.raw('MAX(vuf.updated_at) as date_sent'),
             db.raw(`
@@ -114,6 +116,7 @@ export default class Report {
             'vuf.counselor_id',
             'vuf.thrpy_req_id',
             'vuf.tenant_id',
+            'vuf.user_form_id', // Add user_form_id to GROUP BY to make each consent form unique
           ])
           .orderBy('date_sent', 'desc');
       } else {
@@ -124,8 +127,13 @@ export default class Report {
           .leftJoin('feedback as fb', function() {
             this.on('fb.form_id', '=', 'vuf.form_id')
                 .andOn(function() {
+                  // For forms with session_id, match by session_id
                   this.on('fb.session_id', '=', 'vuf.session_id')
-                      .orOnNull('fb.session_id');
+                      .orOn(function() {
+                        // For consent forms without session_id, match by client_id and null session_id
+                        this.on('fb.client_id', '=', 'vuf.client_id')
+                            .andOnNull('fb.session_id');
+                      });
                 });
           })
           .select(
@@ -138,6 +146,7 @@ export default class Report {
             'vuf.form_cde',
             'vuf.thrpy_req_id',
             'vuf.tenant_id',
+            'vuf.user_form_id', // Include user_form_id to make each form unique
             db.raw('MAX(fb.feedback_id) as feedback_id'),
             db.raw('MAX(vuf.updated_at) as date_sent'),
             db.raw(`
@@ -159,6 +168,7 @@ export default class Report {
             'vuf.counselor_id',
             'vuf.thrpy_req_id',
             'vuf.tenant_id',
+            'vuf.user_form_id', // Add user_form_id to GROUP BY to make each form unique
           ])
           .orderBy('date_sent', 'desc');
       }
