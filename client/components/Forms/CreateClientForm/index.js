@@ -231,8 +231,8 @@ function CreateClientForm({
       }),
       ...(role_id === 3 && {
         tenant_name: tenant_name || "",
-        admin_fee,
-        tax_percent: tax,
+        // admin_fee,
+        // tax_percent: tax,
 
         tenant_name,
       }),
@@ -242,7 +242,6 @@ function CreateClientForm({
         }),
       ...(role_id === 1 && { clam_num: clam_num }),
     };
-
 
     try {
       setLoading(true);
@@ -294,6 +293,9 @@ function CreateClientForm({
     } else if (initialData) {
       setFormButton("Update");
       methods.reset(initialData);
+      methods.setValue("tenant_name", initialData?.tenant?.tenant_name);
+      methods.setValue("admin_fee", initialData?.tenant?.admin_fee);
+      methods.setValue("tax", initialData?.tenant?.tax_percent);
       methods.setValue("target_outcome_id", defaultValues?.target_outcome_id);
     } else {
       setFormButton("Create");
@@ -503,12 +505,14 @@ function CreateClientForm({
                     label="Admin Fees*"
                     placeholder="Enter admin fees"
                     type="number"
+                    disabled={formButton === "Create" ? false : true}
                   />
                 </div>
                 <div className="fields">
                   <CustomInputField
                     name="tax"
                     label="Tax*"
+                    disabled={formButton === "Create" ? false : true}
                     placeholder="Enter Tax"
                     type="number"
                   />

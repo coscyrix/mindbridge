@@ -400,6 +400,7 @@ function ClientSession() {
         setConfirmationModal={setConfirmationModal}
       >
         <CreateSessionForm
+          time={activeData?.req_time}
           isHomeworkUpload={isHomeworkUpload}
           fetchHomeWorkUploadStatus={fetchHomeWorkUploadStatus}
           setHomeWorkUpload={setHomeWorkUpload}

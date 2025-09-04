@@ -36,6 +36,7 @@ import { ToggleButton } from "@mui/material";
 import ToggleSwitch from "../../CustomButton/ToggleButton";
 
 function CreateSessionForm({
+  time,
   fetchHomeWorkUploadStatus,
   isOpen,
   initialData,
@@ -305,14 +306,16 @@ function CreateSessionForm({
     },
     {
       name: "Session Date",
-      selector: (row) =>
-        convertUTCToLocalTime(`${row.intake_date}T${row.scheduled_time}`).date,
+      selector: (row) => {
+        if (!row.intake_date) return "";
+        return convertUTCToLocalTime(row.intake_date).date;
+      },
       selectorId: "intake_date",
       maxWidth: "120px",
     },
     {
       name: "Session Time",
-      selector: (row) => convertUTCToLocalTime(row.scheduled_time).time,
+      selector: (row) => convertUTCToLocalTime(time).time,
       selectorId: "session_time",
       maxWidth: "120px",
     },
@@ -611,7 +614,7 @@ function CreateSessionForm({
             const form = forms?.find((form) => form.form_id === Number(id));
             return form?.form_cde || null;
           })
-          .filter((code) => code)
+          ?.filter((code) => code)
           .join(", ");
 
         return <span>{attachedFormCodes?.toLowerCase() || "--"}</span>;
@@ -878,8 +881,8 @@ function CreateSessionForm({
       if (initialData) {
         setLoader("scheduledSessionLoading");
         const list = initialData?.session_obj || [];
-        setScheduledSession(list.filter((s) => s?.is_additional === 0));
-        setAddittionalSessions(list.filter((s) => s?.is_additional === 1));
+        setScheduledSession(list?.filter((s) => s?.is_additional === 0));
+        setAddittionalSessions(list?.filter((s) => s?.is_additional === 1));
       }
     } catch (error) {
       console.error("Error generating schedule:", error);
@@ -1030,7 +1033,7 @@ function CreateSessionForm({
       scheduledSession.some((s) => s?.is_additional === 1)
     ) {
       setAddittionalSessions(
-        scheduledSession.filter((s) => s?.is_additional === 1)
+        scheduledSession?.filter((s) => s?.is_additional === 1)
       );
     }
   }, [scheduledSession]);
@@ -1315,7 +1318,7 @@ function CreateSessionForm({
                   columns={sessionTableColumns}
                   data={
                     initialData
-                      ? scheduledSession.filter((data) => {
+                      ? scheduledSession?.filter((data) => {
                           return data?.is_additional === 0;
                         })
                       : sessionTableData

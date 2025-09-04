@@ -48,6 +48,7 @@ const HomeworkModal = ({ isOpen, id, onClose, session_id }) => {
         homework_title: data.homework_title,
         tenant_id: userObj?.tenant_id,
         session_id: session_id,
+        email: "client@yopmail.com",
       };
       console.log(data);
       const response = await api.post(

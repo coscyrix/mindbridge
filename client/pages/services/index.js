@@ -72,9 +72,7 @@ function Services() {
   };
   const fetchManager = async () => {
     try {
-      const response = await api.get(
-         `${ApiConfig.clients.getClients}`
-      );
+      const response = await api.get(`${ApiConfig.clients.getClients}`);
       if (response.status === 200) {
         const { data } = response;
         const filteredManagers = data?.rec?.filter(

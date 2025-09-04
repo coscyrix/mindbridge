@@ -794,7 +794,8 @@ export const SERVICES_TABLE_COLUMNS = (
   },
   {
     name: "Total Invoice",
-    selector: (row) => `$${Number(row.total_invoice) - Number(row?.gst)}`,
+    selector: (row) =>
+      `$${(Number(row.total_invoice) - Number(row?.gst)).toFixed(4)}`,
     sortable: true,
     selectorId: "total_invoice",
   },
@@ -1096,8 +1097,7 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
   },
   {
     name: "Total Amount",
-    selector: (row) =>
-      `$${Number(row.session_price).toFixed(4)}`,
+    selector: (row) => `$${Number(row.session_price).toFixed(4)}`,
   },
   {
     name: "Tax",
@@ -1106,9 +1106,12 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
   {
     name: "Amt. to Counselor",
     selector: (row) => {
-      console.log("feeSplitData",feeSplitData);
+      console.log("feeSplitData", feeSplitData);
       if (feeSplitData && feeSplitData.is_fee_split_enabled) {
-        const counselorAmount = (Number(row.session_price || 0) * feeSplitData.counselor_share_percentage) / 100;
+        const counselorAmount =
+          (Number(row.session_price || 0) *
+            feeSplitData.counselor_share_percentage) /
+          100;
         return `$${counselorAmount.toFixed(4)}`;
       } else {
         // Default: full amount to counselor
@@ -1118,10 +1121,9 @@ export const CLIENT_SESSION_LIST_DATA_BY_ID = (
   },
   {
     name: "Amt. to Admin",
-    selector: (row) => {      
-        // Default: system amount
-        return `$${Number(row.session_system_amt || 0).toFixed(4)}`;
-      
+    selector: (row) => {
+      // Default: system amount
+      return `$${Number(row.session_system_amt || 0).toFixed(4)}`;
     },
   },
   {
@@ -3217,85 +3219,85 @@ export const treatment_goals = [
     label: "Relationship Issues",
     value: "Relationship_Issues",
     goal: "Improve communication, trust, and emotional connection in relationships.",
-    id:3
+    id: 3,
   },
   {
     label: "Grief and Loss",
     value: "Grief_and_Loss",
     goal: "Develop coping strategies to process grief and integrate loss into daily life.",
-    id:4
+    id: 4,
   },
   {
     label: "Trauma and PTSD",
     value: "Trauma_and_PTSD",
     goal: "Reduce trauma-related symptoms and increase emotional regulation.",
-    id:5
+    id: 5,
   },
   {
     label: "Identity and Self Exploration",
     value: "Identity_and_Self_Exploration",
     goal: "Develop a strong sense of self and personal identity.",
-    id:6
+    id: 6,
   },
   {
     label: "Family and Parenting Issues",
     value: "Family_and_Parenting_Issues",
     goal: "Strengthen family relationships and develop effective parenting strategies.",
-    id:7
+    id: 7,
   },
 
   {
     label: "Anxiety Management",
     value: "Anxiety_Management",
     goal: "Reduce anxiety symptoms and increase the ability to handle stressful situations.",
-    id:8
+    id: 8,
   },
   {
     label: "Depression",
     value: "Depression",
     goal: "Improve mood, motivation, and ability to engage in daily activities.",
-    id:9
+    id: 9,
   },
   {
     label: "Stress Management",
     value: "Stress_Management",
     goal: "Develop healthier coping mechanisms to handle stress effectively.",
-    id:10
+    id: 10,
   },
   {
     label: "Self-Esteem and Self-Confidence Issues",
     value: "Self_Esteem_and_Self_Confidence_Issues",
     goal: "Build a more positive self-image and increase self-worth.",
-    id:11
+    id: 11,
   },
   {
     label: "Addiction and Substance Abuse",
     value: "Addiction_and_Substance_Abuse",
     goal: "Reduce substance use and develop healthier coping mechanisms.",
-    id:12
+    id: 12,
   },
   {
     label: "Work and Career-Related Issues",
     value: "Work_and_Career_Related_Issues",
     goal: "Increase job satisfaction, career confidence, and work-life balance.",
-    id:13
+    id: 13,
   },
   {
     label: "Anger Management",
     value: "Anger_Management",
     goal: "Develop healthier ways to express and regulate anger.",
-    id:14
+    id: 14,
   },
   {
     label: "Eating Disorders and Body Image Issues",
     value: "Eating_Disorders_and_Body_Image_Issues",
     goal: "Develop a healthier relationship with food and body image.",
-    id:15
+    id: 15,
   },
   {
     label: "Life Transitions",
     value: "Life_Transitions",
     goal: "Adjust to major life changes with resilience and stability.",
-    id:16
+    id: 16,
   },
 ];

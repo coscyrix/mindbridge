@@ -140,98 +140,81 @@ function CustomClientDetails({
     );
   };
 
-  const currentData = tableData?.data?.filter((row) => {
-    // If no filter text, include all rows
-    if (!filterText || filterText.trim() === "") {
-      return true;
-    }
+  const currentData = Array.isArray(tableData?.data)
+    ? tableData.data.filter((row) => {
+        if (!filterText || filterText.trim() === "") return true;
 
-    return Object.keys(row).some((columnKey) => {
-      const value = row[columnKey];
+        const columns = tableData?.columns || [];
 
-      const columns = tableData?.columns || [];
-      const isColumnKeyFound = columns.some(
-        (col) => col.selectorId === columnKey
-      );
+        return Object.keys(row).some((columnKey) => {
+          const value = row[columnKey];
 
-      if (isColumnKeyFound) {
-        if (columnKey === "req_time") {
-          const rawTime = row["req_time"];
-          moment(rawTime, "HH:mm:ss.SSSZ").format("h:mm A");
+          const isColumnKeyFound = columns.some(
+            (col) => col?.selectorId === columnKey
+          );
 
-          const formattedTime = moment
-            .utc(row.req_time, "HH:mm:ss.SSSZ")
-            .format("h:mm A");
+          if (!isColumnKeyFound) return false;
 
-          return formattedTime.includes(filterText.toLowerCase().trim());
-        }
+          const filter = filterText.toLowerCase().trim();
 
-        if (columnKey === "created_at") {
-          const rawDate = row["created_at"];
-          const formattedDate = moment(rawDate, "YYYY-MM-DD")
-            .format("D MMMM YY")
-            .toLowerCase()
-            .trim();
+          if (columnKey === "req_time") {
+            const formattedTime = moment
+              .utc(row.req_time, "HH:mm:ss.SSSZ")
+              .format("h:mm A")
+              .toLowerCase();
 
-          return formattedDate.includes(filterText.toLowerCase().trim());
-        }
+            return formattedTime.includes(filter);
+          }
 
-        if (columnKey === "gst") {
-          const gst = row["gst"] || 0;
-          const mergedValue = Number(gst).toFixed(2).toString();
+          if (columnKey === "created_at") {
+            const formattedDate = moment(row.created_at, "YYYY-MM-DD")
+              .format("D MMMM YY")
+              .toLowerCase();
 
-          return mergedValue
-            .toLowerCase()
-            .includes(filterText.toLowerCase().trim());
-        }
+            return formattedDate.includes(filter);
+          }
 
-        if (columnKey === "total_invoice") {
-          const totalInvoice = row["total_invoice"] || 0;
-          const mergedValue = Number(totalInvoice).toFixed(2).toString().trim();
+          if (columnKey === "gst" || columnKey === "total_invoice") {
+            const valueFormatted = Number(value || 0)
+              .toFixed(2)
+              .toString();
+            if (valueFormatted.includes(filter)) return true;
 
-          return mergedValue
-            .toLowerCase()
-            .includes(filterText.toLowerCase().trim());
-        }
+            const gst = Number(row["gst"] || 0);
+            const totalInvoice = Number(row["total_invoice"] || 0);
+            const combinedValue = (gst + totalInvoice).toFixed(2);
 
-        if (columnKey === "total_invoice" || columnKey === "gst") {
-          const totalInvoice = row["total_invoice"] || 0;
-          const gst = row["gst"] || 0;
-          const mergedValue = (Number(totalInvoice) + Number(gst))
-            .toString()
-            .trim();
+            return combinedValue.includes(filter);
+          }
 
-          return mergedValue
-            .toLowerCase()
-            .includes(filterText.toLowerCase().trim());
-        }
-
-        if (columnKey === "user_first_name" || columnKey === "user_last_name") {
-          const fullName = `${row["user_first_name"]} ${row["user_last_name"]}`
-            .toLowerCase()
-            .trim();
-          return fullName.includes(filterText.toLowerCase().trim());
-        }
-
-        if (
-          columnKey === "client_first_name" ||
-          columnKey === "client_last_name"
-        ) {
-          const fullName =
-            `${row["client_first_name"]} ${row["client_last_name"]}`
+          if (
+            columnKey === "user_first_name" ||
+            columnKey === "user_last_name"
+          ) {
+            const fullName = `${row["user_first_name"] || ""} ${
+              row["user_last_name"] || ""
+            }`
               .toLowerCase()
               .trim();
+            return fullName.includes(filter);
+          }
 
-          return fullName.includes(filterText.toLowerCase().trim());
-        }
+          if (
+            columnKey === "client_first_name" ||
+            columnKey === "client_last_name"
+          ) {
+            const fullName = `${row["client_first_name"] || ""} ${
+              row["client_last_name"] || ""
+            }`
+              .toLowerCase()
+              .trim();
+            return fullName.includes(filter);
+          }
 
-        return value
-          ?.toString()
-          .toLowerCase()
-          .includes(filterText.toString().toLowerCase().trim());
-      }
-    });
-  });
+          return value?.toString().toLowerCase().includes(filter);
+        });
+      })
+    : [];
 
   const totalItems = filterText ? currentData.length : tableData?.data?.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
