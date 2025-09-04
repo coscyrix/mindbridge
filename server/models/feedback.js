@@ -258,6 +258,22 @@ export default class Feedback {
         if (data.client_id) {
           consentQuery = consentQuery.where('f.client_id', data.client_id);
         }
+        if (data.form_id) {
+          consentQuery = consentQuery.where('f.form_id', data.form_id);
+        }
+
+        // Add GROUP BY clause to handle MySQL sql_mode=only_full_group_by
+        consentQuery = consentQuery.groupBy([
+          'f.feedback_id',
+          'f.session_id',
+          'vs.intake_date',
+          'f.form_id',
+          'f.client_id',
+          'f.feedback_json',
+          'f.status_yn',
+          'f.created_at',
+          'f.updated_at'
+        ]);
 
         // Execute consent query
         const consentResults = await consentQuery;
