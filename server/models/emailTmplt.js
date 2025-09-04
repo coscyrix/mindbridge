@@ -590,7 +590,7 @@ export default class EmailTmplt {
       const sessions = thrpyReq.session_obj || [];
       const nonReportSessions = sessions.filter(session => 
         session.is_report !== 1 && 
-        session.session_status === 'SHOW' || session.session_status === 'NO-SHOW'
+        (session.session_status === 'SHOW' || session.session_status === 'NO-SHOW')
       );
 
       // Check if we have a multiple of 4 completed sessions (4, 8, 12, 16, etc.)
