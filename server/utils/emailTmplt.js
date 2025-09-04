@@ -342,7 +342,7 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
   } = therapyRequest;
 
   const sessionDetails = session_obj
-    .map((session, index) => {
+    ? session_obj.map((session, index) => {
       // Combine intake_date and scheduled_time into one ISO datetime string
       const localDateTime = new Date(
         `${session.intake_date}T${session.scheduled_time}`,
@@ -377,7 +377,8 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
         </tr>
       `;
     })
-    .join('');
+    .join('')
+    : '<tr><td colspan="5" style="padding: 8px; text-align: center; color: #666;">No session details available</td></tr>';
 
   return {
     to: email,

@@ -47,7 +47,7 @@ export default class Report {
             'f.form_cde as form_cde',
             'tt.req_id as thrpy_req_id',
             'tt.tenant_id',
-            'fb.feedback_id',
+            db.raw('MAX(fb.feedback_id) as feedback_id'),
             db.raw('MAX(tt.sent_at) as date_sent'),
             db.raw(`
                 COALESCE(
@@ -68,7 +68,6 @@ export default class Report {
             'tt.counselor_id',
             'tt.req_id',
             'tt.tenant_id',
-            'fb.feedback_id',
           ])
           .orderBy('date_sent', 'desc');
 
@@ -93,7 +92,7 @@ export default class Report {
             'vuf.form_cde',
             'vuf.thrpy_req_id',
             'vuf.tenant_id',
-            'fb.feedback_id',
+            db.raw('MAX(fb.feedback_id) as feedback_id'),
             db.raw('MAX(vuf.updated_at) as date_sent'),
             db.raw(`
                 COALESCE(
@@ -115,7 +114,6 @@ export default class Report {
             'vuf.counselor_id',
             'vuf.thrpy_req_id',
             'vuf.tenant_id',
-            'fb.feedback_id',
           ])
           .orderBy('date_sent', 'desc');
       } else {
@@ -140,7 +138,7 @@ export default class Report {
             'vuf.form_cde',
             'vuf.thrpy_req_id',
             'vuf.tenant_id',
-            'fb.feedback_id',
+            db.raw('MAX(fb.feedback_id) as feedback_id'),
             db.raw('MAX(vuf.updated_at) as date_sent'),
             db.raw(`
                 COALESCE(
@@ -161,7 +159,6 @@ export default class Report {
             'vuf.counselor_id',
             'vuf.thrpy_req_id',
             'vuf.tenant_id',
-            'fb.feedback_id',
           ])
           .orderBy('date_sent', 'desc');
       }

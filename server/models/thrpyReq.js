@@ -714,13 +714,16 @@ export default class ThrpyReq {
         });
       }
       
-      const postSessionArr = await this.session.postSession(tmpSessionObj);
-      if (!postSessionArr) {
-        logger.error('Error posting session arr');
-        return {
-          message: 'Error posting session arr',
-          error: -1,
-        };
+      // Create sessions individually since postSession expects a single session object
+      for (const sessionData of tmpSessionObj) {
+        const postSessionResult = await this.session.postSession(sessionData);
+        if (!postSessionResult || postSessionResult.error) {
+          logger.error('Error posting session:', postSessionResult?.message || 'Unknown error');
+          return {
+            message: 'Error posting session arr',
+            error: -1,
+          };
+        }
       }
 
       // Load forms using the new mode-based system
