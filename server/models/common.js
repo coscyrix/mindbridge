@@ -274,6 +274,8 @@ export default class Common {
       if (data.session_status) {
         query = query.andWhere('session_status', data.session_status);
       }
+      console.log('data---------->:', data);
+      console.log('query---------->:', query.toQuery());
 
       const rec = await query;
       if (!rec) {

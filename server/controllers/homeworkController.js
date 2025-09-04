@@ -45,15 +45,17 @@ export default class HomeworkController {
 
         // Get session information
         console.log('🔍 Getting session information...');
-        const sessionInfo = await common.getSessionById(data.session_id);
+        console.log('Session id---------->:', data.session_id);
+        const sessionInfo = await common.getSessionById({session_id: data.session_id});
+
         console.log('Session info found:', sessionInfo ? sessionInfo.length : 0, 'records');
         
         if (sessionInfo && sessionInfo.length > 0) {
           console.log('✅ Session found, thrpy_req_id:', sessionInfo[0].thrpy_req_id);
-          
           // Get therapy request to find client_id
           console.log('🔍 Getting therapy request...');
           const therapyRequest = await common.getThrpyReqById(sessionInfo[0].thrpy_req_id);
+          console.log('Therapy request---------->:', therapyRequest);
           console.log('Therapy request found:', therapyRequest ? therapyRequest.length : 0, 'records');
           
           if (therapyRequest && therapyRequest.length > 0) {
@@ -62,6 +64,7 @@ export default class HomeworkController {
             // Get client profile information
             console.log('🔍 Getting client profile...');
             const clientInfo = await common.getUserProfileByUserProfileId(therapyRequest[0].client_id);
+            console.log('Client info:', clientInfo);
             console.log('Client info found:', clientInfo ? clientInfo.length : 0, 'records');
             
             if (clientInfo && clientInfo.length > 0) {
