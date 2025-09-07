@@ -36,6 +36,8 @@ import { ToggleButton } from "@mui/material";
 import ToggleSwitch from "../../CustomButton/ToggleButton";
 
 function CreateSessionForm({
+  time,
+  fetchHomeWorkUploadStatus,
   isOpen,
   initialData,
   setInitialData,
@@ -79,7 +81,8 @@ function CreateSessionForm({
   const [counselorSplit, setCounselorSplit] = useState(null);
   const [managerSplit, setManagerSplit] = useState(null);
   const [isDiscard, setIsDiscard] = useState(false);
-  const [isValueChanged, setIsValueChanged] = useState(false);
+  const [isValueChanged, setIsValueChanged] = useState("yes");
+  const [pendingValueChange, setPendingValueChange] = useState(null);
   const [feeSplitDetails, setFeeSplitDetails] = useState(null);
   // to show verification on Notes Page
   let match =
@@ -303,14 +306,16 @@ function CreateSessionForm({
     },
     {
       name: "Session Date",
-      selector: (row) =>
-        convertUTCToLocalTime(`${row.intake_date}T${row.scheduled_time}`).date,
+      selector: (row) => {
+        if (!row.intake_date) return "";
+        return convertUTCToLocalTime(row.intake_date).date;
+      },
       selectorId: "intake_date",
       maxWidth: "120px",
     },
     {
       name: "Session Time",
-      selector: (row) => convertUTCToLocalTime(row.scheduled_time).time,
+      selector: (row) => convertUTCToLocalTime(time).time,
       selectorId: "session_time",
       maxWidth: "120px",
     },
@@ -489,12 +494,21 @@ function CreateSessionForm({
             )?.tenant_share_percentage ?? managerSplit?.tenant_share_percentage;
         }
         if (userObj?.role_id === 3) {
-          console.log('feeSplitDetails?.counselor_share_percentage',initialData?.fee_split_management?.counselor_share_percentage);
-          
-          return `$${Number(row.session_price * (initialData?.fee_split_management?.counselor_share_percentage / 100) || 0).toFixed(4)}`;
+          console.log(
+            "feeSplitDetails?.counselor_share_percentage",
+            initialData?.fee_split_management?.counselor_share_percentage
+          );
+
+          return `$${Number(
+            row.session_price *
+              (initialData?.fee_split_management?.counselor_share_percentage /
+                100) || 0
+          ).toFixed(4)}`;
         } else {
           const shareAmount =
-            (Number(row.session_price || 0) * (initialData?.fee_split_management?.counselor_share_percentage / 100) || 0)
+            Number(row.session_price || 0) *
+              (initialData?.fee_split_management?.counselor_share_percentage /
+                100) || 0;
           return `$${shareAmount.toFixed(4)}`;
         }
       },
@@ -600,7 +614,7 @@ function CreateSessionForm({
             const form = forms?.find((form) => form.form_id === Number(id));
             return form?.form_cde || null;
           })
-          .filter((code) => code)
+          ?.filter((code) => code)
           .join(", ");
 
         return <span>{attachedFormCodes?.toLowerCase() || "--"}</span>;
@@ -742,6 +756,14 @@ function CreateSessionForm({
   };
 
   const handleAffirmativeAction = async (isClose = true) => {
+    setIsValueChanged("yes");
+
+    if (pendingValueChange) {
+      const { fieldName, value } = pendingValueChange;
+      methods.setValue(fieldName, value);
+      setPendingValueChange(null);
+    }
+
     try {
       setLoader("discardChanges");
       if (thrpyReqId) {
@@ -764,13 +786,30 @@ function CreateSessionForm({
     } finally {
       setSessionTableData([]);
       setConfirmationModal(false);
-      console.log(isDiscard,"ios")
+      console.log(isDiscard, "ios");
       if (isDiscard) {
         setIsOpen(false);
       }
 
       setThrpyReqId(null);
       setLoader(null);
+    }
+  };
+
+  const handleSessionFormatChangeWithConfirmation = (
+    value,
+    field,
+    fieldName
+  ) => {
+    setShowGeneratedSession(false);
+    if (sessionTableData?.length > 0) {
+      setPendingValueChange({
+        fieldName: fieldName,
+        value: value,
+      });
+      setConfirmationModal(true);
+    } else {
+      field.onChange(value);
     }
   };
 
@@ -833,6 +872,7 @@ function CreateSessionForm({
       );
     } finally {
       setLoader(null);
+      setIsValueChanged("no");
     }
   };
 
@@ -840,9 +880,9 @@ function CreateSessionForm({
     try {
       if (initialData) {
         setLoader("scheduledSessionLoading");
-        setScheduledSession(
-          initialData?.session_obj ? initialData?.session_obj : []
-        );
+        const list = initialData?.session_obj || [];
+        setScheduledSession(list?.filter((s) => s?.is_additional === 0));
+        setAddittionalSessions(list?.filter((s) => s?.is_additional === 1));
       }
     } catch (error) {
       console.error("Error generating schedule:", error);
@@ -988,13 +1028,17 @@ function CreateSessionForm({
     setIsWorkModalOpen(false);
   };
   useEffect(() => {
-    if (scheduledSession) {
-      const addittionalSession = scheduledSession.filter(
-        (session) => session?.is_additional === 1
+    if (
+      Array.isArray(scheduledSession) &&
+      scheduledSession.some((s) => s?.is_additional === 1)
+    ) {
+      setAddittionalSessions(
+        scheduledSession?.filter((s) => s?.is_additional === 1)
       );
-      setAddittionalSessions(addittionalSession);
     }
-  }, [scheduledSession, initialData]);
+  }, [scheduledSession]);
+
+  console.log(isValueChanged, "isValueChanges::::::::");
 
   return (
     <CreateSessionFormWrapper>
@@ -1120,12 +1164,11 @@ function CreateSessionForm({
                         <CustomMultiSelect
                           {...field}
                           onChange={(value) => {
-                            field.onChange(value);
-                            // setSessionTableData([]);
-                            if (sessionTableData?.length > 0) {
-                              setConfirmationModal(true);
-                            }
-                            setShowGeneratedSession(false);
+                            handleSessionFormatChangeWithConfirmation(
+                              value,
+                              field,
+                              "client_first_name"
+                            );
                           }}
                           options={clientsDropdown}
                           placeholder="Select a client"
@@ -1169,13 +1212,12 @@ function CreateSessionForm({
                           placeholder="Select a service"
                           isMulti={false}
                           isDisabled={initialData}
-                          onChange={(selectedOption) => {
-                            // setSessionTableData([]);
-                            field.onChange(selectedOption);
-                            setShowGeneratedSession(false);
-                            if (sessionTableData?.length > 0) {
-                              setConfirmationModal(true);
-                            }
+                          onChange={(value) => {
+                            handleSessionFormatChangeWithConfirmation(
+                              value,
+                              field,
+                              "service_id"
+                            );
                           }}
                         />
                       )}
@@ -1199,12 +1241,11 @@ function CreateSessionForm({
                         <CustomMultiSelect
                           {...field}
                           onChange={(value) => {
-                            field.onChange(value);
-                            setShowGeneratedSession(false);
-                            // setSessionTableData([]);
-                            if (sessionTableData?.length > 0) {
-                              setConfirmationModal(true);
-                            }
+                            handleSessionFormatChangeWithConfirmation(
+                              value,
+                              field,
+                              "session_format_id"
+                            );
                           }}
                           options={sessionFormatDropdown}
                           placeholder="Select a format"
@@ -1260,7 +1301,8 @@ function CreateSessionForm({
                       : "Generate Session Schedule"}
                   </button>
                 )}
-              {initialData && counselor && (
+              {console.log(isHomeworkUpload, ":::")}
+              {isHomeworkUpload && initialData && counselor && (
                 <HomeworkButtonWrapper>
                   <CustomButton
                     onClick={handleOpenWorkModal}
@@ -1276,7 +1318,7 @@ function CreateSessionForm({
                   columns={sessionTableColumns}
                   data={
                     initialData
-                      ? scheduledSession.filter((data) => {
+                      ? scheduledSession?.filter((data) => {
                           return data?.is_additional === 0;
                         })
                       : sessionTableData
@@ -1425,6 +1467,7 @@ function CreateSessionForm({
         onClose={() => {
           setIsDiscard(true);
           setConfirmationModal(false);
+          setIsValueChanged("no");
         }}
         affirmativeAction="Yes"
         discardAction="No"

@@ -280,6 +280,7 @@ function CurrentSession() {
           margin: "0px",
           display: "flex",
           alignItems: "center",
+          alignItems: "center",
           gap: "5px",
         }}
         onClick={() => handleShowAllTodaySessionColumns()}

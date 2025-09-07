@@ -339,7 +339,7 @@ function ClientManagement() {
             confirmationModal={confirmationModal}
             setConfirmationModal={setConfirmationModal}
             setSessions={() => {}}
-            session={activeData?.session_Obj}
+            session={activeData}
             fetchSessions={() => {}}
             counselorConfiguration={counselorConfiguration}
             managerSplitDetails={managerSplitDetails}

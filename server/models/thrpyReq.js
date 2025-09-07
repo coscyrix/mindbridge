@@ -39,23 +39,9 @@ export default class ThrpyReq {
 
   // Helper function to calculate session amounts
   calculateSessionAmounts(totalInvoice, refFees, serviceGst) {
-    // totalInvoice already includes tax, so we need to extract the base price
-    // If service has GST stored, use it to calculate base price
-    let basePrice = totalInvoice;
-    let taxAmount = 0;
-    
-    if (serviceGst && serviceGst > 0) {
-      // Calculate base price by removing the tax that's already included
-      // totalInvoice = basePrice + (basePrice * serviceGst / 100)
-      // totalInvoice = basePrice * (1 + serviceGst / 100)
-      // basePrice = totalInvoice / (1 + serviceGst / 100)
-      basePrice = totalInvoice / (1 + serviceGst / 100);
-      taxAmount = totalInvoice - basePrice;
-    } else {
-      // Fallback: use ref_fees tax percentage if service GST is not available
-      taxAmount = totalInvoice * (refFees.tax_pcnt / 100);
-      basePrice = totalInvoice - taxAmount;
-    }
+    // ALWAYS use tenant's tax percentage, not service GST
+    const taxAmount = totalInvoice * (refFees.tax_pcnt / 100);
+    const basePrice = totalInvoice - taxAmount;
     
     // Calculate system amount based on base price
     const systemAmount = basePrice * (refFees.system_pcnt / 100);
@@ -163,16 +149,44 @@ export default class ThrpyReq {
       
 
       // Get tenant-specific discharge service
-      const drService = await this.service.getServiceById({
-        service_code: process.env.DISCHARGE_SERVICE_CODE || 'DR',
+      // First try to find by service_code 'DR' in the current tenant
+      let drService = await this.service.getServiceById({
+        service_code: 'DR',
         tenant_id: tenantId[0].tenant_generated_id,
+        is_report: 1,
       });
 
-      console.log('drService', drService);
+      console.log('🔍 DEBUG: First DR service lookup result:', {
+        tenant_id: tenantId[0].tenant_generated_id,
+        service_code: 'DR',
+        is_report: 1,
+        result: drService
+      });
+
+      // If not found, try to find by service_code 'DR' in the tenant_generated_id
+      if (!drService || !drService.rec || !drService.rec[0]) {
+        console.log('🔍 DEBUG: First lookup failed, trying tenant_generated_id lookup');
+        drService = await this.service.getServiceById({
+          service_code: 'DR',
+          tenant_id: tenantId[0].tenant_generated_id,
+          is_report: 1,
+        });
+        
+        console.log('🔍 DEBUG: Second DR service lookup result:', {
+          tenant_id: tenantId[0].tenant_generated_id,
+          service_code: 'DR',
+          is_report: 1,
+          result: drService
+        });
+      }
+
+      console.log('🔍 DEBUG: Final drService result:', drService);
+      console.log('🔍 DEBUG: tenantId data:', tenantId);
+      console.log('🔍 DEBUG: data.tenant_id:', data.tenant_id);
 
       if (!drService || !drService.rec || !drService.rec[0]) {
-        logger.error(`Discharge report service not found for service_code: ${process.env.DISCHARGE_SERVICE_CODE}`);
-        return { message: `Discharge report service not found for service_code: ${process.env.DISCHARGE_SERVICE_CODE}`, error: -1 };
+        logger.error(`Discharge report service not found for tenant_id: ${tenantId[0].tenant_generated_id}`);
+        return { message: `Discharge report service not found for tenant_id: ${tenantId[0].tenant_generated_id}`, error: -1 };
       }
 
       const drSvc = drService.rec[0];
@@ -328,46 +342,80 @@ export default class ThrpyReq {
             svc.svc_report_formula.position.includes(i + 1)
           ) {
             const reportIndex = svc.svc_report_formula.position.indexOf(i + 1);
-            const templateReportServiceId = svc.svc_report_formula.service_id[reportIndex];
+            const reportServiceId = svc.svc_report_formula.service_id[reportIndex];
             
-            // Get the template report service to find its service_code
-            const templateReportService = await this.service.getServiceById({
-              service_id: templateReportServiceId,
+            console.log('🔍 DEBUG: Found report position:', {
+              position: i + 1,
+              reportServiceId,
+              currentTenantId: data.tenant_id,
+              serviceTenantId: svc.tenant_id
+            });
+
+            // First try to find the report service in the current tenant
+            let reportService = await this.service.getServiceById({
+              service_id: reportServiceId,
+              tenant_id: data.tenant_id,
               is_report: 1,
             });
 
-            if (templateReportService && templateReportService.rec && templateReportService.rec[0]) {
-              const templateReportCode = templateReportService.rec[0].service_code;
+            // If not found in current tenant, try to find by service_code in current tenant
+            if (!reportService || !reportService.rec || !reportService.rec[0]) {
+              console.log(`🔍 DEBUG: Report service ${reportServiceId} not found in tenant ${data.tenant_id}, trying to find by service_code`);
               
-              // Find the tenant-specific report service with the same code
-              const tenantReportService = await this.service.getServiceById({
-                service_code: templateReportCode,
-                tenant_id: data.tenant_id,
+              // Get the service details to find its service_code
+              const originalService = await this.service.getServiceById({
+                service_id: reportServiceId,
+                tenant_id: svc.tenant_id,
                 is_report: 1,
               });
 
-              if (tenantReportService && tenantReportService.rec && tenantReportService.rec[0]) {
-                tmpSession.session_code = `${svc.service_code}_${tenantReportService.rec[0].service_code}`;
-                tmpSession.session_description = `${svc.service_code} ${tenantReportService.rec[0].service_name}`;
-                tmpSession.service_id = tenantReportService.rec[0].service_id;
-                tmpSession.is_report = tenantReportService.rec[0].is_report === 1 ? 1 : 0;
-                tmpSession.is_additional =
-                  tenantReportService.rec[0].is_additional &&
-                  tenantReportService.rec[0].is_additional[0] === 1
-                    ? 1
-                    : 0;
-              } else {
-                // Fallback to template service if tenant-specific service not found
-                tmpSession.session_code = `${svc.service_code}_${templateReportService.rec[0].service_code}`;
-                tmpSession.session_description = `${svc.service_code} ${templateReportService.rec[0].service_name}`;
-                tmpSession.service_id = templateReportServiceId;
-                tmpSession.is_report = templateReportService.rec[0].is_report === 1 ? 1 : 0;
-                tmpSession.is_additional =
-                  templateReportService.rec[0].is_additional &&
-                  templateReportService.rec[0].is_additional[0] === 1
-                    ? 1
-                    : 0;
+              if (originalService && originalService.rec && originalService.rec[0]) {
+                const serviceCode = originalService.rec[0].service_code;
+                console.log(`🔍 DEBUG: Found service_code: ${serviceCode}, looking for it in tenant ${data.tenant_id}`);
+                
+                // Look for service with same code in current tenant
+                reportService = await this.service.getServiceById({
+                  service_code: serviceCode,
+                  tenant_id: tenantId[0].tenant_generated_id,
+                  is_report: 1,
+                });
               }
+            }
+
+            console.log('🔍 DEBUG: Final reportService result:', reportService);
+
+            if (reportService && reportService.rec && reportService.rec[0]) {
+              console.log('reportService.rec[0].total_invoice', reportService.rec[0].total_invoice);
+              console.log('reportService.rec[0].gst', reportService.rec[0].gst);
+              
+              // Create a NEW report session object (don't modify the existing one)
+              const reportSessionAmounts = this.calculateSessionAmounts(Number(reportService.rec[0].total_invoice), ref_fees[0], Number(reportService.rec[0].gst));
+              const reportSession = {
+                thrpy_req_id: postThrpyReq[0],
+                service_id: reportService.rec[0].service_id,
+                intake_date: intakeDate,
+                scheduled_time: req_time,
+                session_format: data.session_format_id,
+                session_code: `${svc.service_code}_${reportService.rec[0].service_code}`,
+                session_description: `${svc.service_code} ${reportService.rec[0].service_name}`,
+                is_report: 1,
+                tenant_id: data.tenant_id,
+                ...reportSessionAmounts
+              };
+              
+              console.log(`🔍 DEBUG: Created additional report session: ${reportSession.session_code} with service_id: ${reportSession.service_id}`);
+              console.log(`🔍 DEBUG: Report session object:`, reportSession);
+              
+              // Add the report session to the array
+              tmpSessionObj.push(reportSession);
+              console.log(`🔍 DEBUG: Added report session to array. Current array length: ${tmpSessionObj.length}`);
+            } else {
+              // Log error if report service not found
+              logger.error(`Report service not found for service_id: ${reportServiceId}, tenant_id: ${tenantId[0].tenant_generated_id}`);
+              console.log(`🔍 DEBUG: Report service not found for service_id: ${reportServiceId}, tenant_id: ${tenantId[0].tenant_generated_id}`);
+              
+              // Continue without report - this session will be a regular session
+              console.log(`🔍 DEBUG: Continuing without report for position ${i + 1}`);
             }
           }
 
@@ -389,7 +437,7 @@ export default class ThrpyReq {
         const dischargeDate = currentDate.toISOString().split('T')[0];
 
         // Prepare the discharge session object
-        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
+        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(drSvc.total_invoice), ref_fees[0], Number(drSvc.gst));
         const dischargeSession = {
           thrpy_req_id: postThrpyReq[0],
           service_id: drSvc.service_id,
@@ -416,10 +464,17 @@ export default class ThrpyReq {
         // Handle days apart formula
         let svcFormula;
 
+        console.log('🔍 DEBUG: Processing days apart formula:', {
+          formula_type: svc.svc_formula_typ,
+          formula: svc.svc_formula,
+          number_of_sessions: svc.nbr_of_sessions
+        });
+
         // Check if svc_formula is a string before parsing
         if (typeof svc.svc_formula === 'string') {
           try {
             svcFormula = JSON.parse(svc.svc_formula);
+            console.log('🔍 DEBUG: Parsed svc_formula from string:', svcFormula);
           } catch (e) {
             logger.error('Failed to parse svc_formula');
             return {
@@ -429,6 +484,7 @@ export default class ThrpyReq {
           }
         } else if (Array.isArray(svc.svc_formula)) {
           svcFormula = svc.svc_formula; // Already an array
+          console.log('🔍 DEBUG: svc_formula is already an array:', svcFormula);
         } else {
           logger.error('svc_formula is neither a string nor an array');
           return { message: 'Unexpected formula format', error: -1 };
@@ -439,6 +495,14 @@ export default class ThrpyReq {
           logger.error('Unexpected formula format for service');
           return { message: 'Unexpected formula format', error: -2 };
         }
+
+        // Debug: Show report formula details
+        console.log('🔍 DEBUG: Report formula details (days apart):', {
+          has_report_formula: !!svc.svc_report_formula,
+          report_formula: svc.svc_report_formula,
+          report_positions: svc.svc_report_formula?.position || [],
+          report_service_ids: svc.svc_report_formula?.service_id || []
+        });
 
         // Initialize currentDate using UTC to avoid timezone issues
         let currentDate = new Date(`${req_dte}T00:00:00Z`);
@@ -487,6 +551,11 @@ export default class ThrpyReq {
             ...sessionAmounts
           };
 
+          console.log('🔍 DEBUG: Created session object (days apart):', {
+            session_number: i + 1,
+            session: tmpSession
+          });
+
           console.log('session_system_amt--------->3', {
             total_invoice: Number(svc.total_invoice),
             tax_pcnt: Number(ref_fees[0].tax_pcnt),
@@ -501,44 +570,75 @@ export default class ThrpyReq {
             svc.svc_report_formula.position.includes(i + 1)
           ) {
             const reportIndex = svc.svc_report_formula.position.indexOf(i + 1);
-            const templateReportServiceId = svc.svc_report_formula.service_id[reportIndex];
+            const reportServiceId = svc.svc_report_formula.service_id[reportIndex];
             
-            // Get the template report service to find its service_code
-            const templateReportService = await this.service.getServiceById({
-              service_id: templateReportServiceId,
+            console.log('🔍 DEBUG: Found report position:', {
+              position: i + 1,
+              reportServiceId,
+              currentTenantId: data.tenant_id,
+              serviceTenantId: svc.tenant_id
+            });
+
+            // First try to find the report service in the current tenant
+            let reportService = await this.service.getServiceById({
+              service_id: reportServiceId,
+              tenant_id: data.tenant_id,
               is_report: 1,
             });
 
-            console.log('templateReportService', templateReportService);
-            console.log('templateReportServiceId', templateReportServiceId);
-            console.log('templateReportService.rec', templateReportService.rec);
-
-            if (templateReportService && templateReportService.rec && templateReportService.rec[0]) {
-              const templateReportCode = templateReportService.rec[0].service_code;
+            // If not found in current tenant, try to find by service_code in current tenant
+            if (!reportService || !reportService.rec || !reportService.rec[0]) {
+              console.log(`🔍 DEBUG: Report service ${reportServiceId} not found in tenant ${data.tenant_id}, trying to find by service_code`);
               
-              // Find the tenant-specific report service with the same code
-              const tenantReportService = await this.service.getServiceById({
-                service_code: templateReportCode,
-                tenant_id: data.tenant_id,
+              // Get the service details to find its service_code
+              const originalService = await this.service.getServiceById({
+                service_id: reportServiceId,
+                tenant_id: svc.tenant_id,
                 is_report: 1,
               });
 
-              if (tenantReportService && tenantReportService.rec && tenantReportService.rec[0]) {
-                tmpSession.session_code = `${svc.service_code}_${tenantReportService.rec[0].service_code}`;
-                tmpSession.session_description = `${svc.service_code} ${tenantReportService.rec[0].service_name}`;
-                tmpSession.service_id = tenantReportService.rec[0].service_id;
-                tmpSession.is_report = tenantReportService.rec[0].is_report === 1 ? 1 : 0;
-                tmpSession.is_additional =
-                  tenantReportService.rec[0].is_additional[0] === 1 ? 1 : 0;
-              } else {
-                // Fallback to template service if tenant-specific service not found
-                tmpSession.session_code = `${svc.service_code}_${templateReportService.rec[0].service_code}`;
-                tmpSession.session_description = `${svc.service_code} ${templateReportService.rec[0].service_name}`;
-                tmpSession.service_id = templateReportServiceId;
-                tmpSession.is_report = templateReportService.rec[0].is_report === 1 ? 1 : 0;
-                tmpSession.is_additional =
-                  templateReportService.rec[0].is_additional[0] === 1 ? 1 : 0;
+              if (originalService && originalService.rec && originalService.rec[0]) {
+                const serviceCode = originalService.rec[0].service_code;
+                console.log(`🔍 DEBUG: Found service_code: ${serviceCode}, looking for it in tenant ${data.tenant_id}`);
+                
+                // Look for service with same code in current tenant
+                reportService = await this.service.getServiceById({
+                  service_code: serviceCode,
+                  tenant_id: tenantId[0].tenant_generated_id,
+                  is_report: 1,
+                });
               }
+            }
+
+            console.log('🔍 DEBUG: Final reportService result:', reportService);
+
+            if (reportService && reportService.rec && reportService.rec[0]) {
+              // Create a NEW report session object (don't modify the existing one)
+              const reportSessionAmounts = this.calculateSessionAmounts(Number(reportService.rec[0].total_invoice), ref_fees[0], Number(reportService.rec[0].gst));
+              const reportSession = {
+                thrpy_req_id: postThrpyReq[0],
+                service_id: reportService.rec[0].service_id,
+                intake_date: intakeDate,
+                scheduled_time: req_time,
+                session_format: data.session_format_id,
+                session_code: `${svc.service_code}_${reportService.rec[0].service_code}`,
+                session_description: `${svc.service_code} ${reportService.rec[0].service_name}`,
+                is_report: 1,
+                tenant_id: data.tenant_id,
+                ...reportSessionAmounts
+              };
+              
+              console.log(`🔍 DEBUG: Created additional report session: ${reportSession.session_code} with service_id: ${reportSession.service_id}`);
+              
+              // Add the report session to the array
+              tmpSessionObj.push(reportSession);
+            } else {
+              // Log error if report service not found
+              logger.error(`Report service not found for service_id: ${reportServiceId}, tenant_id: ${tenantId[0].tenant_generated_id}`);
+              console.log(`🔍 DEBUG: Report service not found for service_id: ${reportServiceId}, tenant_id: ${tenantId[0].tenant_generated_id}`);
+              
+              // Continue without report - this session will be a regular session
+              console.log(`🔍 DEBUG: Continuing without report for position ${i + 1}`);
             }
           }
 
@@ -560,7 +660,7 @@ export default class ThrpyReq {
         const dischargeDate = currentDate.toISOString().split('T')[0];
 
         // Prepare the discharge session object
-        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
+        const dischargeSessionAmounts = this.calculateSessionAmounts(Number(drSvc.total_invoice), ref_fees[0], Number(drSvc.gst));
         const dischargeSession = {
           thrpy_req_id: postThrpyReq[0],
           service_id: drSvc.service_id,
@@ -574,11 +674,13 @@ export default class ThrpyReq {
           ...dischargeSessionAmounts
         };
 
-        console.log('session_system_amt--------->4', {
-          total_invoice: Number(svc.total_invoice),
-          tax_pcnt: Number(ref_fees[0].tax_pcnt),
-          counselor_pcnt: Number(ref_fees[0].counselor_pcnt),
-          system_pcnt: Number(ref_fees[0].system_pcnt),
+        console.log('🔍 DEBUG: Created discharge session object (days apart):', {
+          session: dischargeSession,
+          drSvc_details: {
+            service_id: drSvc.service_id,
+            service_name: drSvc.service_name,
+            service_code: drSvc.service_code
+          }
         });
 
         // Add the discharge session to the array
@@ -592,13 +694,36 @@ export default class ThrpyReq {
 
       // Insert the session array into the database
 
-      const postSessionArr = await this.session.postSession(tmpSessionObj);
-      if (!postSessionArr) {
-        logger.error('Error posting session arr');
-        return {
-          message: 'Error posting session arr',
-          error: -1,
-        };
+      console.log('🔍 DEBUG: About to insert sessions into database');
+      console.log('🔍 DEBUG: Total sessions to create:', tmpSessionObj.length);
+      console.log('🔍 DEBUG: Session objects:', JSON.stringify(tmpSessionObj, null, 2));
+      
+      // Debug: Show session breakdown
+      const regularSessions = tmpSessionObj.filter(s => s.is_report !== 1);
+      const reportSessions = tmpSessionObj.filter(s => s.is_report === 1);
+      
+      console.log('🔍 DEBUG: Session breakdown:');
+      console.log(`  - Regular sessions: ${regularSessions.length}`);
+      console.log(`  - Report sessions: ${reportSessions.length}`);
+      console.log(`  - Total: ${tmpSessionObj.length}`);
+      
+      if (reportSessions.length > 0) {
+        console.log('🔍 DEBUG: Report sessions found:');
+        reportSessions.forEach((session, index) => {
+          console.log(`  ${index + 1}. ${session.session_code} (${session.service_id}) - ${session.session_description}`);
+        });
+      }
+      
+      // Create sessions individually since postSession expects a single session object
+      for (const sessionData of tmpSessionObj) {
+        const postSessionResult = await this.session.postSession(sessionData);
+        if (!postSessionResult || postSessionResult.error) {
+          logger.error('Error posting session:', postSessionResult?.message || 'Unknown error');
+          return {
+            message: 'Error posting session arr',
+            error: -1,
+          };
+        }
       }
 
       // Load forms using the new mode-based system
@@ -1570,7 +1695,7 @@ export default class ThrpyReq {
           }
 
           // Check if the client has an active session for the same therapy request
-          if (activeThrpyReq[0]?.session_obj && activeSessions) {
+          if (activeThrpyReq[0]?.session_obj && activeSessions && Array.isArray(activeSessions)) {
             if (
               activeThrpyReq[0].session_obj.length !== activeSessions.length
             ) {
@@ -1586,7 +1711,7 @@ export default class ThrpyReq {
           }
 
           // Check if the client doesn't have an active session for the same therapy request
-          if (activeThrpyReq[0].session_obj.length === activeSessions.length) {
+          if (activeThrpyReq[0]?.session_obj && activeSessions && Array.isArray(activeSessions) && activeThrpyReq[0].session_obj.length === activeSessions.length) {
             const hardDelThrpyReq = await db
               .withSchema(`${process.env.MYSQL_DATABASE}`)
               .from('thrpy_req')

@@ -28,29 +28,68 @@ export default class Session {
 
   async postSession(data) {
     try {
-      // const tmpSession = {
-      //   thrpy_req_id: data.thrpy_req_id,
-      //   service_id: data.service_id,
-      //   session_format: data.session_format,
-      //   intake_date: data.intake_date,
-      //   scheduled_time: data.scheduled_time,
-      //   session_code: data.session_code,
-      //   session_description: data.session_description,
-      //   is_additional: data.is_additional,
-      //   is_report: data.is_report,
-      //   tenant_id: data.tenant_id,
-      //   session_price: data.session_price,
-      //   session_taxes: data.session_taxes,
-      //   session_counselor_amt: data.session_counselor_amt,
-      //   session_system_amt: data.session_system_amt,
-      // };
-      // console.log('data', data);
-      // console.log('tmpSession', tmpSession);      
+      // Get the therapy request to find the counselor and tenant
+      const counselorId = await this.common.getThrpyReqById(data.thrpy_req_id);
+      if (!counselorId || !counselorId[0]) {
+        logger.error('Therapy request not found');
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: counselorId[0].counselor_id,
+      });
+      if (!tenantId || !tenantId[0]) {
+        logger.error('Tenant not found');
+        return { message: 'Tenant not found', error: -1 };
+      }
+
+      // Get the service details
+      const [svc] = await this.common.getServiceById(data.service_id);
+      if (!svc) {
+        logger.error('Service not found');
+        return { message: 'Service not found', error: -1 };
+      }
+
+      // Get reference fees for the tenant
+      const ref_fees = await this.common.getRefFeesByTenantId(tenantId[0].tenant_id);
+      if (!ref_fees || ref_fees.error) {
+        logger.error('Error getting reference fees');
+        return { message: 'Error getting reference fees', error: -1 };
+      }
+
+      // Calculate session amounts using tenant tax percentage (not service GST)
+      const total_invoice = Number(svc.total_invoice);
+      const taxAmount = total_invoice * (ref_fees[0].tax_pcnt / 100);
+      const basePrice = total_invoice - taxAmount;
+      const systemAmount = basePrice * (ref_fees[0].system_pcnt / 100);
+      const counselorAmount = basePrice - systemAmount;
+
+      // Function to split the date and time from the intake date
+      const { date: req_dte, time: req_time } = splitIsoDatetime(
+        data.intake_date,
+      );
+
+      const tmpSession = {
+        thrpy_req_id: data.thrpy_req_id,
+        service_id: data.service_id,
+        session_format: data.session_format,
+        intake_date: req_dte,
+        scheduled_time: req_time,
+        session_code: svc.service_code,
+        session_description: svc.service_code,
+        is_additional: svc.is_additional && svc.is_additional === 1 ? 1 : 0,
+        is_report: svc.is_report && svc.is_report === 1 ? 1 : 0,
+        tenant_id: tenantId[0].tenant_id, // Use actual tenant_id, not tenant_generated_id
+        session_price: total_invoice,
+        session_taxes: taxAmount,
+        session_counselor_amt: counselorAmount,
+        session_system_amt: systemAmount,
+      };
 
       const postSession = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('session')
-        .insert(data);
+        .insert(tmpSession);
 
       if (!postSession) {
         logger.error('Error creating session');
@@ -60,7 +99,6 @@ export default class Session {
       return { message: 'Session created successfully' };
     } catch (error) {
       logger.error(error);
-
       return { message: 'Error creating session', error: -1 };
     }
   }

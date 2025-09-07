@@ -14,14 +14,23 @@ import SignatureField from "../../../SignatureCanvas";
 import ApiConfig from "../../../../config/apiConfig";
 import FormHeader from "../../../FormsHeader";
 
-const ConsentForm = ({ tenant_ID = "", initialData, loader, client_name }) => {
+const ConsentForm = ({
+  tenant_ID = "",
+  initialData,
+  loader,
+  client_name,
+  consent_date,
+  consent_img,
+}) => {
   const signaturePadRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [consentBody, setConsentBody] = useState(null);
   const methods = useForm({
     defaultValues: {
       client_name: client_name || "",
-      date: moment().format("DD/MM/YYYY"),
+      date: consent_date 
+        ? moment(consent_date).format("DD/MM/YYYY")
+        : moment().format("DD/MM/YYYY"),
       imgBase64: null,
       acknowledged: false,
     },
@@ -60,7 +69,6 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader, client_name }) => {
         client_id: client_id,
         imgBase64,
         tenant_id,
-        //date: date,
         // submittedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
       };
       if (!client_id || !form_id || !tenant_id) {
@@ -88,18 +96,21 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader, client_name }) => {
   useEffect(() => {
     if (initialData) {
       reset({
-        client_name: client_name || "e",
-        date: moment().format("DD/MM/YYYY"),
+        client_name: client_name || "",
+        date:
+        consent_date ? 
+          moment(consent_date).format("DD/MM/YYYY") :
+          moment().format("DD/MM/YYYY"),
         imgBase64: initialData?.imgBase64 || null,
         acknowledged: false,
       });
     }
   }, [initialData, reset, client_name]);
-  useEffect(() => {
-    reset({
-      client_name: client_name,
-    });
-  }, [reset, client_name]);
+  // useEffect(() => {
+  //   reset({
+  //     client_name: client_name,
+  //   });
+  // }, [reset, client_name]);
 
   const getConsentBody = async () => {
     try {
@@ -273,7 +284,7 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader, client_name }) => {
                     <Controller
                       name="date"
                       control={control}
-                      rules={{ required: "Date is required" }}
+                      rules={{}}
                       render={({ field, fieldState }) => (
                         <>
                           <input type="text" {...field} disabled />
@@ -284,42 +295,49 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader, client_name }) => {
                       )}
                     />
                   </div>
-                  <SignatureField
-                    name="imgBase64"
-                    label="Client Signature"
-                    control={control}
-                    errors={errors}
-                    initialData={initialData}
-                  />
-                </div>
-                <Controller
-                  name="acknowledged"
-                  control={control}
-                  rules={{
-                    required: "You must acknowledge before submitting",
-                  }}
-                  render={({ field, fieldState }) => (
-                    <div>
-                      <label className="acknowledgement-container">
-                        <input
-                          type="checkbox"
-                          {...field}
-                          checked={field.value || false}
-                          className="acknowledgement-checkbox"
-                        />
-                        <span className="acknowledgement-label">
-                          I have read, understood, and agree to the terms
-                          outlined in this consent form.
-                        </span>
-                      </label>
-                      {fieldState.error && (
-                        <div className="acknowledgement-error">
-                          {fieldState.error.message}
-                        </div>
-                      )}
-                    </div>
+                  {router.pathname === "/dashboard" ? (
+                    <img src={consent_img}></img>
+                  ) : (
+                    <SignatureField
+                      name="imgBase64"
+                      label="Client Signature"
+                      control={control}
+                      errors={errors}
+                      initialData={initialData}
+                    />
                   )}
-                />
+                </div>
+                {router.pathname !== "/dashboard" && (
+                  <Controller
+                    name="acknowledged"
+                    control={control}
+                    rules={{
+                      required: "You must acknowledge before submitting",
+                    }}
+                    render={({ field, fieldState }) => (
+                      <div>
+                        <label className="acknowledgement-container">
+                          <input
+                            type="checkbox"
+                            {...field}
+                            checked={field.value || false}
+                            className="acknowledgement-checkbox"
+                          />
+                          <span className="acknowledgement-label">
+                            I have read, understood, and agree to the terms
+                            outlined in this consent form.
+                          </span>
+                        </label>
+                        {fieldState.error && (
+                          <div className="acknowledgement-error">
+                            {fieldState.error.message}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  />
+                )}
+
                 {initialData?.submittedAt && (
                   <p>
                     <strong>Submitted On:</strong>{" "}
@@ -335,6 +353,7 @@ const ConsentForm = ({ tenant_ID = "", initialData, loader, client_name }) => {
                   <Spinner color="#525252" />
                 </div>
               ) : (
+                router.pathname !== "/dashboard" &&
                 !initialData && (
                   <CustomButton
                     title="Submit"

@@ -121,6 +121,15 @@ export default class InvoiceService {
       data.end_dte = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
       
       console.log('Auto-setting dates - start_dte:', data.start_dte, 'end_dte:', data.end_dte);
+    } else {
+      // Convert Date objects back to string format for database queries
+      if (data.start_dte instanceof Date) {
+        data.start_dte = data.start_dte.toISOString().split('T')[0];
+      }
+      if (data.end_dte instanceof Date) {
+        data.end_dte = data.end_dte.toISOString().split('T')[0];
+      }
+      console.log('Using provided dates - start_dte:', data.start_dte, 'end_dte:', data.end_dte);
     }
 
     console.log(

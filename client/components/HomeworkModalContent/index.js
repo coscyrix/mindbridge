@@ -28,7 +28,10 @@ const HomeworkModal = ({ isOpen, id, onClose, session_id }) => {
       );
       if (response.status == 200) {
         console.log(response);
-        setSelectedFile(response?.data[0]?.homework_filename);
+        if (response?.data[0]?.homework_filename) {
+          setSelectedFile(response?.data[0]?.homework_filename);
+        }
+
         methods.setValue("homework_title", response?.data[0]?.homework_title);
       }
     } catch (error) {
@@ -45,6 +48,7 @@ const HomeworkModal = ({ isOpen, id, onClose, session_id }) => {
         homework_title: data.homework_title,
         tenant_id: userObj?.tenant_id,
         session_id: session_id,
+        email: "client@yopmail.com",
       };
       console.log(data);
       const response = await api.post(

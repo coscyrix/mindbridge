@@ -259,7 +259,11 @@ const Invoice = () => {
     },
     {
       name: "Amt. to Counselor",
-      selector: (row) => `$${Number(row.session_price * (row.fee_split_management.counselor_share_percentage / 100)).toFixed(4)}`,
+      selector: (row) =>
+        `$${Number(
+          row.session_price *
+            (row.fee_split_management.counselor_share_percentage / 100)
+        ).toFixed(4)}`,
       selectorId: "session_counselor_amt",
       minWidth: "150px",
     },
@@ -383,7 +387,7 @@ const Invoice = () => {
     try {
       setLoading("tableData");
       const params = new URLSearchParams();
-      params.append("role_id", Number(roleId));
+      params.append("role_id", Number(userObj?.role_id));
       if (startDate) params.append("start_dte", startDate);
       if (endDate) params.append("end_dte", endDate);
       if (tenant_id || tenant_id !== undefined) {
@@ -395,7 +399,12 @@ const Invoice = () => {
         }
       }
       // Only append counselor_id if it's not "allCounselors"
-      if (counselorId && counselorId !== "allCounselors") {
+      console.log(counselorId, "l");
+      if (
+        counselorId &&
+        counselorId !== "allCounselors" &&
+        counselorId !== "allManager"
+      ) {
         params.append("counselor_id", counselorId);
       } else if (roleId === 2) {
         // If role is counselor (2), always send their own ID
@@ -579,7 +588,6 @@ const Invoice = () => {
     return null;
   }
 
-  console.log(invoices , "invoices::::")
 
   return (
     <InvoiceContainer>
@@ -593,25 +601,29 @@ const Invoice = () => {
         </p>
 
         <div className="tab-and-search-container">
-          <div className="tab-container" style={{marginTop:"12px"}}>
+          <div className="tab-container" style={{ marginTop: "12px" }}>
             <CustomTab
               heading={"Total Amount For A Month"}
               value={
                 loading ? (
                   <Skeleton width={120} height={40} />
                 ) : userObj?.role_id === 2 ? (
-                 `$${Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}`
+                  `$${Number(
+                    invoices?.summary?.sum_session_total_amount
+                  ).toFixed(4)}`
                 ) : userObj?.role_id === 3 ? (
                   <>
                     Total Amount :{" $"}
-                    {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
-                  
+                    {Number(
+                      invoices?.summary?.sum_session_total_amount
+                    ).toFixed(4)}
                   </>
                 ) : userObj?.role_id === 4 ? (
                   <>
                     Total Amount :{" $"}
-                    {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
-                  
+                    {Number(
+                      invoices?.summary?.sum_session_total_amount
+                    ).toFixed(4)}
                   </>
                 ) : (
                   ""
@@ -629,7 +641,9 @@ const Invoice = () => {
                       invoices?.summary?.sum_session_counselor_tenant_amt
                     ).toFixed(4)}`
                   ) : userObj?.role_id === 3 ? (
-                    `$${Number(invoices?.summary?.sum_session_counselor_amt).toFixed(4)}`
+                    `$${Number(
+                      invoices?.summary?.sum_session_counselor_amt
+                    ).toFixed(4)}`
                   ) : (
                     ""
                   )
@@ -645,9 +659,9 @@ const Invoice = () => {
                   <>
                     <p>
                       Counsellor Share:{" $"}
-                      {Number(invoices?.summary?.sum_session_counselor_amt).toFixed(
-                        4
-                      )}{" "}
+                      {Number(
+                        invoices?.summary?.sum_session_counselor_amt
+                      ).toFixed(4)}{" "}
                       (
                       {
                         invoices?.summary?.fee_split_management
@@ -661,7 +675,10 @@ const Invoice = () => {
                       Number(invoices?.summary?.sum_session_system_amt)
                     ).toFixed(4)}{" "}
                     (
-                    {invoices?.summary?.fee_split_management?.tenant_share_percentage}
+                    {
+                      invoices?.summary?.fee_split_management
+                        ?.tenant_share_percentage
+                    }
                     %)
                   </>
                 ) : userObj?.role_id === 3 ? (
@@ -670,13 +687,17 @@ const Invoice = () => {
                     {Number(invoices?.summary?.sum_session_counselor_amt).toFixed(4)}
                     <br /> */}
                     Your Share:{" $"}
-                    {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(4)}
+                    {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(
+                      4
+                    )}
                   </>
                 ) : userObj?.role_id === 4 ? (
                   <>
                     <p>
                       All Practice Amount:{" $"}
-                      {Number(invoices?.summary?.sum_session_total_amount).toFixed(4)}
+                      {Number(
+                        invoices?.summary?.sum_session_total_amount
+                      ).toFixed(4)}
                     </p>
 
                     <>
@@ -686,7 +707,9 @@ const Invoice = () => {
                       ).toFixed(4)}{" "}
                       <br />
                       Tenant Amount:{" $"}
-                      {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(4)}
+                      {Number(
+                        invoices?.summary?.sum_session_tenant_amt
+                      ).toFixed(4)}
                     </>
                   </>
                 ) : (
@@ -702,7 +725,9 @@ const Invoice = () => {
                   loading ? (
                     <Skeleton width={120} height={40} />
                   ) : (
-                    `$${Number(invoices?.summary?.sum_session_taxes)?.toFixed(4)}`
+                    `$${Number(invoices?.summary?.sum_session_taxes)?.toFixed(
+                      4
+                    )}`
                   )
                 }
               />
@@ -715,7 +740,9 @@ const Invoice = () => {
                   loading ? (
                     <Skeleton width={120} height={40} />
                   ) : (
-                    `$${Number(invoices?.summary?.sum_session_system_amt)?.toFixed(4)}`
+                    `$${Number(
+                      invoices?.summary?.sum_session_system_amt
+                    )?.toFixed(4)}`
                   )
                 }
               />
@@ -727,7 +754,9 @@ const Invoice = () => {
                     loading ? (
                       <Skeleton width={120} height={40} />
                     ) : (
-                      `$${Number(invoices?.summary?.sum_session_system_amt)?.toFixed(4)}`
+                      `$${Number(
+                        invoices?.summary?.sum_session_system_amt
+                      )?.toFixed(4)}`
                     )
                   }
                 />

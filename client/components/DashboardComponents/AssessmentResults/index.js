@@ -18,7 +18,7 @@ function AssessmentResults({ assessmentResultsData }) {
   const [seriesData, setSeriesData] = useState([]);
   const [smartGoalsData, setSmartGoalsData] = useState([]);
   const [ipfData, setIpfData] = useState([]);
-  const [consentFormData, setConsentFormData] = useState([]);
+  const [consentFormData, setConsentFormData] = useState({});
   const [graphDataHeading, setGraphDataHeading] = useState("");
   const [attendanceData, setAttendanceData] = useState([]);
   const [tenant_id, setTenant_Id] = useState(null);
@@ -113,7 +113,6 @@ function AssessmentResults({ assessmentResultsData }) {
   ];
 
   const handleTreatmentTools = async (row) => {
-    console.log(row);
     if (row.form_cde === "CONSENT") {
       setTenant_Id(row.tenant_id);
     }
@@ -136,11 +135,17 @@ function AssessmentResults({ assessmentResultsData }) {
       setIpfData([]);
       setSeriesData([]);
       setGraphDataHeading("");
-      setConsentFormData("");
-      const response = await CommonServices.getFeedbackFormDetails({
-        form_id: row.form_id,
-        client_id: row.client_id,
-      });
+      // setConsentFormData("");
+      let payload;
+      if (row?.form_cde === "CONSENT") {
+        payload = { feedback_id: row.feedback_id };
+      } else {
+        payload = {
+          form_id: row.form_id,
+          client_id: row.client_id,
+        };
+      }
+      const response = await CommonServices.getFeedbackFormDetails(payload);
       if (response.status === 200) {
         const { data } = response;
         if (row.form_cde == "SMART-GOAL") {
@@ -150,17 +155,27 @@ function AssessmentResults({ assessmentResultsData }) {
           setIpfData(data);
           setGraphDataHeading("IPF Assessment Comparison");
         } else if (row.form_cde == "CONSENT") {
-          setConsentFormData({
+          const consentDetails =
+            response?.data?.rec?.feedback_consent?.[0] || {};
+
+          const newConsentData = {
             clientName: `${row.client_first_name} ${row.client_last_name}`,
-            ...data?.[0].feedback_consent[0],
-          });
+            date: consentDetails?.created_at || null,
+            img: consentDetails?.imgBase64 || null,
+          };
+          setConsentFormData(newConsentData);
+          setTenant_Id(row.tenant_id);
         } else if (row.form_cde == "ATTENDENCE") {
           setAttendanceData(data);
           setGraphDataHeading(
             `Attendence Details of ${row.client_first_name} ${row.client_last_name}`
           );
-        } else if (row.form_cde == "GAS") {
-          const gasEntries = data || [];
+        } else if (row.form_cde === "GAS") {
+          const gasEntries = Array.isArray(response?.data?.rec)
+            ? response.data.rec
+            : [response.data.rec];
+
+          if (!gasEntries.length) return;
           const gasLabels = {
             "-2": "Much Worse (-2)",
             "-1": "Worse (-1)",
@@ -168,17 +183,6 @@ function AssessmentResults({ assessmentResultsData }) {
             1: "Better (+1)",
             2: "Much Better (+2)",
           };
-
-          const yAxisConfig = {
-            type: "value",
-            min: -2,
-            max: 2,
-            interval: 1,
-            axisLabel: {
-              formatter: (value) => gasLabels[value] || value,
-            },
-          };
-
           setGraphDataHeading(
             `Goal Attainment Scaling (GAS) - ${gasEntries[0]?.feedback_json?.goal?.replace(
               /_/g,
@@ -186,64 +190,86 @@ function AssessmentResults({ assessmentResultsData }) {
             )}`
           );
           const lastWeeks = gasEntries.slice(-7);
+          const xLabels = lastWeeks.map((entry) =>
+            new Date(entry.session_dte).toLocaleDateString("en-UK", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
+          );
 
-          const xLabels = lastWeeks.map((_, i) => `Week ${i + 1}`);
-
+          // Weekly average calculation
           const weekAverages = lastWeeks.map((entry) => {
             const scores =
               entry.feedback_json?.responses?.map((r) => r.score ?? 0) || [];
-            return scores.length > 0
+            return scores.length
               ? scores.reduce((a, b) => a + b, 0) / scores.length
               : 0;
           });
 
-      const seriesWithTooltip = [
-        {
-          name: "Client Progress",
-          type: "line",
-          smooth: true,
-          data: weekAverages.map((avg, i) => ({
-            value: Number(avg.toFixed(2)),
-            tooltipLabel: `Week ${i + 1}`,
-          })),
-          lineStyle: { color: "#007bff", width: 2 },
-          itemStyle: { color: "#007bff" },
-          label: {
-            show: true,
-            position: "top",
-            fontSize: 12,
-            color: "#333",
-            formatter: (params) =>
-              gasLabels[Math.round(params.value)] || params.value,
-          },
-        },
-        {
-          name: "Expected Goal",
-          type: "line",
-          data: Array(lastWeeks.length).fill(0),
-          lineStyle: { color: "gray", type: "dashed" },
-          symbol: "none",
-        },
-      ];
+          // Chart series
+          const seriesWithTooltip = [
+            {
+              name: "Client Progress",
+              type: "line",
+              smooth: true,
+              data: weekAverages.map((avg, i) => ({
+                value: Number(avg.toFixed(2)),
+                tooltipLabel: xLabels[i],
+              })),
+              lineStyle: { color: "#007bff", width: 2 },
+              itemStyle: { color: "#007bff" },
+              label: {
+                show: true,
+                position: "top",
+                fontSize: 12,
+                color: "#333",
+                formatter: (params) =>
+                  gasLabels[Math.round(params.value)] || params.value,
+              },
+            },
+            {
+              name: "Expected Goal",
+              type: "line",
+              data: Array(lastWeeks.length).fill(0),
+              lineStyle: { color: "gray", type: "dashed" },
+              symbol: "none",
+            },
+          ];
+
+          // Set state for chart
           setXAxisLabels(xLabels);
           setSeriesData(seriesWithTooltip);
         } else {
-          setXAxisLabels(data.map((item) => item.session_dte));
+          // Normalize rec into an array
+          const records = Array.isArray(response?.data?.rec)
+            ? response.data.rec
+            : [response.data.rec];
+
+          // X-Axis labels
+          setXAxisLabels(records.map((item) => item.session_dte));
+
+          // Format form name
           const formattedFormName =
             row.form_cde === "GAD-7"
               ? "gad"
               : row.form_cde.replace(/-(\d+)/g, "$1").toLowerCase();
+
           const keyName = keyNameArr.find(
             (formObj) => formObj.formName == formattedFormName
           );
+
+          // Graph heading
           setGraphDataHeading(
             keyName?.formName == "pcl5" || keyName?.formName == "phq9"
               ? `${keyName?.heading} ${row.client_first_name} ${row.client_last_name}`
               : keyName?.heading
           );
+
+          // Main chart series
           const mainSeries = {
             name: "Scores",
-            data: data.map((item) => {
+            data: records.map((item) => {
               const feedbackKey = `feedback_${formattedFormName}`;
               const feedbackData = item[feedbackKey]?.at(0);
               const value =
@@ -267,8 +293,8 @@ function AssessmentResults({ assessmentResultsData }) {
             }),
             markLineSeries: {
               data: [
-                { type: "average", name: "Average" }, // Horizontal line at the average value
-                { yAxis: 100, name: "Threshold" }, // Custom threshold line at y = 100
+                { type: "average", name: "Average" }, // Horizontal line
+                { yAxis: 100, name: "Threshold" }, // Threshold line
               ],
               lineStyle: {
                 color: "red",
@@ -291,12 +317,12 @@ function AssessmentResults({ assessmentResultsData }) {
             },
           };
 
-          // Convert targetMarkLines into separate series
+          // Extra target lines if configured
           const markLineSeries = keyName?.targetMarkLines
             ? keyName.targetMarkLines.map((line) => ({
                 name: line.name,
                 type: "line",
-                data: [], // Empty array to prevent rendering as a line
+                data: [],
                 markLine: {
                   silent: true,
                   data: [{ yAxis: line.yAxis }],
@@ -305,6 +331,7 @@ function AssessmentResults({ assessmentResultsData }) {
               }))
             : [];
 
+          // Push to chart series
           setSeriesData([mainSeries, ...markLineSeries]);
         }
       }
@@ -318,7 +345,6 @@ function AssessmentResults({ assessmentResultsData }) {
   useEffect(() => {
     if (assessmentResultsData) setLoading(null);
   }, [assessmentResultsData]);
-
   return (
     <AssessmentResultsContainer>
       <CustomCard title="Homework And Assessment Tools Results">
@@ -330,6 +356,7 @@ function AssessmentResults({ assessmentResultsData }) {
           fixedHeaderScrollHeight="230px"
           loading={loading === "assessmentResultsData"}
           loaderBackground="transparent"
+          itemsPerPage={Infinity}
           tableCaption="Homework And Assessment Tools Results"
         />
       </CustomCard>
@@ -350,6 +377,9 @@ function AssessmentResults({ assessmentResultsData }) {
             <IpfGraph ipfData={ipfData} loading={loading == "ipfData"} />
           ) : formName == "CONSENT" ? (
             <ConsentForm
+              client_name={consentFormData?.clientName}
+              consent_date={consentFormData?.date}
+              consent_img={consentFormData?.img}
               tenant_ID={tenant_id}
               initialData={consentFormData}
               loader={loading == "consentData"}

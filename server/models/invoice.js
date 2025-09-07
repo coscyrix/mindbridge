@@ -169,31 +169,32 @@ export default class Invoice {
             'DISCHARGED',
           );
         });        
-      // if (!(data.role_id === 4)) {
-        if (data.counselor_id) {
-          query.andWhere('counselor_id', Number(data.counselor_id));
-        }
+      // Apply filters for all roles including role_id=4
+      if (data.counselor_id) {
+        query.andWhere('counselor_id', Number(data.counselor_id));
+      }
 
-        if (data.client_id) {
-          query.andWhere('client_id', data.client_id);
-        }
+      if (data.client_id) {
+        query.andWhere('client_id', data.client_id);
+      }
 
-        if (data.req_id) {
-          query.andWhere('req_id', data.req_id);
-        }
+      if (data.req_id) {
+        query.andWhere('req_id', data.req_id);
+      }
 
-        if (data.start_dte) {
-          query.andWhere('intake_date', '>=', data.start_dte);
-        }
+      if (data.start_dte) {
+        console.log(`Applying start_dte filter: ${data.start_dte} for role_id: ${data.role_id}`);
+        query.andWhere('intake_date', '>=', data.start_dte);
+      }
 
-        if (data.end_dte) {
-          query.andWhere('intake_date', '<=', data.end_dte);
-        }
+      if (data.end_dte) {
+        console.log(`Applying end_dte filter: ${data.end_dte} for role_id: ${data.role_id}`);
+        query.andWhere('intake_date', '<=', data.end_dte);
+      }
 
-        if (data.thrpy_status) {
-          query.andWhere('thrpy_status', data.thrpy_status);
-        }
-      // }
+      if (data.thrpy_status) {
+        query.andWhere('thrpy_status', data.thrpy_status);
+      }
 
       if (data.tenant_id) {
         query.andWhere('tenant_id', data.tenant_id);
