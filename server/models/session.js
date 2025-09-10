@@ -65,9 +65,27 @@ export default class Session {
       const counselorAmount = basePrice - systemAmount;
 
       // Function to split the date and time from the intake date
-      const { date: req_dte, time: req_time } = splitIsoDatetime(
-        data.intake_date,
-      );
+      const splitResult = splitIsoDatetime(data.intake_date);
+      
+      if (splitResult.error) {
+        logger.error('Error splitting intake_date:', splitResult.message);
+        return { message: 'Invalid intake_date format', error: -1 };
+      }
+      
+      const { date: req_dte, time: req_time } = splitResult;
+      
+      // Validate that we have valid date and time
+      if (!req_dte || !req_time) {
+        logger.error('Invalid date/time from splitIsoDatetime:', { req_dte, req_time, original_intake_date: data.intake_date });
+        return { message: 'Invalid date/time format in intake_date', error: -1 };
+      }
+      
+      // Debug logging
+      console.log('🔍 DEBUG: Session creation - parsed date/time:', {
+        original_intake_date: data.intake_date,
+        parsed_req_dte: req_dte,
+        parsed_req_time: req_time
+      });
 
       const tmpSession = {
         thrpy_req_id: data.thrpy_req_id,
@@ -115,9 +133,27 @@ export default class Session {
       data.tenant_id = Number(tenantId[0].tenant_id);
 
       // Function to split the date and time from the intake date
-      const { date: req_dte, time: req_time } = splitIsoDatetime(
-        data.intake_date,
-      );
+      const splitResult = splitIsoDatetime(data.intake_date);
+      
+      if (splitResult.error) {
+        logger.error('Error splitting intake_date in postAdditionalSession:', splitResult.message);
+        return { message: 'Invalid intake_date format', error: -1 };
+      }
+      
+      const { date: req_dte, time: req_time } = splitResult;
+      
+      // Validate that we have valid date and time
+      if (!req_dte || !req_time) {
+        logger.error('Invalid date/time from splitIsoDatetime in postAdditionalSession:', { req_dte, req_time, original_intake_date: data.intake_date });
+        return { message: 'Invalid date/time format in intake_date', error: -1 };
+      }
+      
+      // Debug logging
+      console.log('🔍 DEBUG: Additional session creation - parsed date/time:', {
+        original_intake_date: data.intake_date,
+        parsed_req_dte: req_dte,
+        parsed_req_time: req_time
+      });
 
       // Check if the ThrpyReq is discharged
       const checkThrpyReqDischarge = await this.common.checkThrpyReqDischarge({

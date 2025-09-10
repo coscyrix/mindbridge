@@ -66,9 +66,42 @@ export default class ThrpyReq {
       });
 
       // Parse the intake date and time from the ISO string
-      const req_dte = data.intake_dte.split('T')[0]; // 'YYYY-MM-DD'
-      const req_time = data.intake_dte.split('T')[1]; // 'HH:mm:ss.sssZ'
+      let req_dte, req_time;
+      
+      if (data.intake_dte && data.intake_dte.includes('T')) {
+        // Standard ISO format: "2024-01-15T14:30:00.000Z"
+        const parts = data.intake_dte.split('T');
+        req_dte = parts[0]; // 'YYYY-MM-DD'
+        req_time = parts[1]; // 'HH:mm:ss.sssZ'
+      } else if (data.intake_dte) {
+        // Only date provided, use default time
+        req_dte = data.intake_dte;
+        req_time = '09:00:00.000Z'; // Default to 9:00 AM UTC
+        console.log('⚠️ WARNING: No time provided in intake_dte, using default time 09:00:00.000Z');
+      } else {
+        // No date provided, use current date and default time
+        req_dte = new Date().toISOString().split('T')[0];
+        req_time = '09:00:00.000Z';
+        console.log('⚠️ WARNING: No intake_dte provided, using current date and default time');
+      }
+      
       const currentDte = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+      
+      // Debug logging
+      console.log('🔍 DEBUG: Parsed date/time from intake_dte:', {
+        original_intake_dte: data.intake_dte,
+        parsed_req_dte: req_dte,
+        parsed_req_time: req_time
+      });
+      
+      // Validate that we have valid date and time
+      if (!req_dte || !req_time) {
+        logger.error('Invalid date/time parsing result:', { req_dte, req_time });
+        return {
+          message: 'Invalid date/time format provided',
+          error: -1,
+        };
+      }
 
       // Check if counselor in data role is for a counselor
       const recCounselor = await this.userProfile.getUserProfileById({
@@ -327,6 +360,15 @@ export default class ThrpyReq {
             tenant_id: data.tenant_id,
             ...sessionAmounts
           };
+
+          // Debug logging for session creation
+          console.log(`🔍 DEBUG: Creating session ${i + 1}/${svc.nbr_of_sessions}:`, {
+            session_id: 'new',
+            intake_date: tmpSession.intake_date,
+            scheduled_time: tmpSession.scheduled_time,
+            service_name: svc.service_name,
+            is_report: 0
+          });
 
           console.log('session_system_amt--------->1', {
             total_invoice: Number(svc.total_invoice),
