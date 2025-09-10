@@ -28,8 +28,8 @@ const ConsentForm = ({
   const methods = useForm({
     defaultValues: {
       client_name: client_name || "",
-      date: consent_date 
-        ? moment(consent_date).format("DD/MM/YYYY")
+      date: moment(consent_date).format("DD/MM/YYYY")
+        ? consent_date
         : moment().format("DD/MM/YYYY"),
       imgBase64: null,
       acknowledged: false,
@@ -69,6 +69,7 @@ const ConsentForm = ({
         client_id: client_id,
         imgBase64,
         tenant_id,
+        //date: date,
         // submittedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
       };
       if (!client_id || !form_id || !tenant_id) {
@@ -284,7 +285,7 @@ const ConsentForm = ({
                     <Controller
                       name="date"
                       control={control}
-                      rules={{}}
+                      rules={{ required: "Date is required" }}
                       render={({ field, fieldState }) => (
                         <>
                           <input type="text" {...field} disabled />

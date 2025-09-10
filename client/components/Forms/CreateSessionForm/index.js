@@ -315,7 +315,7 @@ function CreateSessionForm({
     },
     {
       name: "Session Time",
-      selector: (row) => convertUTCToLocalTime(time).time,
+      selector: (row) => row?.scheduled_time,
       selectorId: "session_time",
       maxWidth: "120px",
     },
