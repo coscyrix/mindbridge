@@ -64,35 +64,14 @@ export default class Session {
       const systemAmount = basePrice * (ref_fees[0].system_pcnt / 100);
       const counselorAmount = basePrice - systemAmount;
 
-      // Function to split the date and time from the intake date
-      const splitResult = splitIsoDatetime(data.intake_date);
-      
-      if (splitResult.error) {
-        logger.error('Error splitting intake_date:', splitResult.message);
-        return { message: 'Invalid intake_date format', error: -1 };
-      }
-      
-      const { date: req_dte, time: req_time } = splitResult;
-      
-      // Validate that we have valid date and time
-      if (!req_dte || !req_time) {
-        logger.error('Invalid date/time from splitIsoDatetime:', { req_dte, req_time, original_intake_date: data.intake_date });
-        return { message: 'Invalid date/time format in intake_date', error: -1 };
-      }
-      
-      // Debug logging
-      console.log('🔍 DEBUG: Session creation - parsed date/time:', {
-        original_intake_date: data.intake_date,
-        parsed_req_dte: req_dte,
-        parsed_req_time: req_time
-      });
+      console.log('data.intake_date', data);
 
       const tmpSession = {
         thrpy_req_id: data.thrpy_req_id,
         service_id: data.service_id,
         session_format: data.session_format,
-        intake_date: req_dte,
-        scheduled_time: req_time,
+        intake_date: data.intake_date,
+        scheduled_time: data.scheduled_time,
         session_code: svc.service_code,
         session_description: svc.service_code,
         is_additional: svc.is_additional && svc.is_additional === 1 ? 1 : 0,
@@ -116,7 +95,7 @@ export default class Session {
 
       return { message: 'Session created successfully' };
     } catch (error) {
-      logger.error(error);
+      console.log("error", error);
       return { message: 'Error creating session', error: -1 };
     }
   }
