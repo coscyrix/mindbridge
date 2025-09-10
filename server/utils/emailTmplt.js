@@ -341,23 +341,70 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
     session_obj,
   } = therapyRequest;
 
+  // Debug logging to help identify the issue
+  console.log('🔍 DEBUG: therapyRequestDetailsEmail called with:', {
+    email,
+    service_name,
+    session_count: session_obj ? session_obj.length : 0,
+    sample_session: session_obj && session_obj.length > 0 ? {
+      session_id: session_obj[0].session_id,
+      intake_date: session_obj[0].intake_date,
+      scheduled_time: session_obj[0].scheduled_time,
+      service_name: session_obj[0].service_name
+    } : null
+  });
+
   const sessionDetails = session_obj
     ? session_obj.map((session, index) => {
-      // Combine intake_date and scheduled_time into one ISO datetime string
-      const localDateTime = new Date(
-        `${session.intake_date}T${session.scheduled_time}`,
-      );
+      // Debug logging for each session
+      console.log(`🔍 DEBUG: Processing session ${index + 1}:`, {
+        session_id: session.session_id,
+        intake_date: session.intake_date,
+        scheduled_time: session.scheduled_time,
+        service_name: session.service_name,
+        is_report: session.is_report
+      });
 
-      // Convert the full datetime to the desired timezone for both date and time
-      const localDate = localDateTime.toLocaleDateString('en-US', {
-        timeZone: timeZoneConfig,
-      });
-      const localTime = localDateTime.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: timeZoneConfig,
-      });
+      // Validate and format date and time
+      let localDate = 'N/A';
+      let localTime = 'N/A';
+      
+      // Check if both intake_date and scheduled_time are valid
+      if (session.intake_date && session.scheduled_time) {
+        try {
+          // Combine intake_date and scheduled_time into one ISO datetime string
+          const dateTimeString = `${session.intake_date}T${session.scheduled_time}`;
+          console.log(`🔍 DEBUG: Creating date from string: "${dateTimeString}"`);
+          
+          const localDateTime = new Date(dateTimeString);
+          console.log(`🔍 DEBUG: Created date object:`, localDateTime);
+
+          // Check if the date is valid
+          if (!isNaN(localDateTime.getTime())) {
+            // Convert the full datetime to the desired timezone for both date and time
+            localDate = localDateTime.toLocaleDateString('en-US', {
+              timeZone: timeZoneConfig,
+            });
+            localTime = localDateTime.toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+              timeZone: timeZoneConfig,
+            });
+            console.log(`🔍 DEBUG: Formatted date/time:`, { localDate, localTime });
+          } else {
+            console.log(`🔍 DEBUG: Invalid date created from: "${dateTimeString}"`);
+          }
+        } catch (error) {
+          console.error('Error parsing date/time for session:', session.session_id, error);
+          // Keep default 'N/A' values
+        }
+      } else {
+        console.log(`🔍 DEBUG: Missing date/time data for session ${session.session_id}:`, {
+          has_intake_date: !!session.intake_date,
+          has_scheduled_time: !!session.scheduled_time
+        });
+      }
 
       return `
         <tr style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px; ${
