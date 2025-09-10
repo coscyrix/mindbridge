@@ -285,7 +285,7 @@ const ConsentForm = ({
                     <Controller
                       name="date"
                       control={control}
-                      rules={{ required: "Date is required" }}
+                      
                       render={({ field, fieldState }) => (
                         <>
                           <input type="text" {...field} disabled />
