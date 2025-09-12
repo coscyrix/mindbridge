@@ -7,34 +7,37 @@ function IpfGraph({ ipfData, loading }) {
   const [axisX, setAxisX] = useState([]);
 
   useEffect(() => {
-    if (ipfData?.length > 0) {
-      const firstAssessment = ipfData[0]?.feedback_ipf?.[0] || {};
-      const secondAssessment = ipfData[1]?.feedback_ipf?.[0] || {}; // Handle cases where second assessment might not exist
+    if (!ipfData?.rec?.feedback_ipf?.length) return;
 
-      const scaleMapping = [
-        { key: "romantic_scale_score", label: "Romantic Scale" },
-        { key: "family_scale_score", label: "Family Scale" },
-        { key: "work_scale_score", label: "Work Scale" },
-        {
-          key: "friendships_socializing_scale_score",
-          label: "Friendships & Socializing Scale",
-        },
-        { key: "parenting_scale_score", label: "Parenting Scale" },
-        { key: "education_scale_score", label: "Education Scale" },
-        { key: "self_care_scale", label: "Self-Care Scale" },
-      ];
+    const assessments = ipfData.rec.feedback_ipf;
+    const firstAssessment = assessments[0];
+    const secondAssessment = assessments[1] || null;
 
-      const xLabels = scaleMapping.map((scale) => scale.label);
-      const firstData = scaleMapping.map((scale) => ({
-        value: firstAssessment[scale.key] || 0,
-      }));
-      const secondData = scaleMapping.map((scale) => ({
-        value: secondAssessment[scale.key] || 0,
-      }));
+    const scaleMapping = [
+      { key: "romantic_scale_score", label: "Romantic Scale" },
+      { key: "family_scale_score", label: "Family Scale" },
+      { key: "work_scale_score", label: "Work Scale" },
+      {
+        key: "friendships_socializing_scale_score",
+        label: "Friendships & Socializing Scale",
+      },
+      { key: "parenting_scale_score", label: "Parenting Scale" },
+      { key: "education_scale_score", label: "Education Scale" },
+      { key: "self_care_scale", label: "Self-Care Scale" },
+    ];
 
-      setAxisX(xLabels);
-      setFirstIpfAssessment(firstData);
-      setSecondIpfAssessment(secondData);
+    setAxisX(scaleMapping.map((scale) => scale.label));
+
+    setFirstIpfAssessment(
+      scaleMapping.map((scale) => ({ value: firstAssessment[scale.key] || 0 }))
+    );
+
+    if (secondAssessment) {
+      setSecondIpfAssessment(
+        scaleMapping.map((scale) => ({
+          value: secondAssessment[scale.key] || 0,
+        }))
+      );
     }
   }, [ipfData]);
 
@@ -45,7 +48,9 @@ function IpfGraph({ ipfData, loading }) {
       xAxisLabels={axisX}
       seriesData={[
         {
-          name: `1st IPF Assessment (${ipfData[0]?.session_dte || "N/A"})`,
+          name: `1st IPF Assessment (${
+            ipfData?.rec?.feedback_ipf[0]?.created_at?.split(" ")[0] || "N/A"
+          })`,
           type: "bar",
           data: firstIpfAssessment,
           itemStyle: { color: "#FFA500" },
@@ -57,11 +62,12 @@ function IpfGraph({ ipfData, loading }) {
             formatter: "{c}",
           },
         },
-        ...(ipfData.length > 1
+        ...(secondIpfAssessment.length
           ? [
               {
                 name: `2nd IPF Assessment (${
-                  ipfData[1]?.session_dte || "N/A"
+                  ipfData?.rec?.feedback_ipf[1]?.created_at?.split(" ")[0] ||
+                  "N/A"
                 })`,
                 type: "bar",
                 data: secondIpfAssessment,
