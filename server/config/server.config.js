@@ -1,15 +1,17 @@
 //config/server.config.js
 
-import Express from 'express';
-import fs from 'fs';
-import winston from 'winston';
-import bodyParser from 'body-parser';
-import DbConfig from './db.config.js';
-import http from 'http';
-import https from 'https';
-import path from 'path';
-import cors from 'cors';
-import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const Express = require('express');
+const fs = require('fs');
+const winston = require('winston');
+const bodyParser = require('body-parser');
+const DbConfig = require('./db.config.js').default;
+const http = require('http');
+const https = require('https');
+const path = require('path');
+const cors = require('cors');
+const { fileURLToPath } = require('url');
 
 export default class ServerConfig {
   constructor({ port, middlewares, routers }) {
