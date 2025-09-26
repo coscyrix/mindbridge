@@ -1,7 +1,9 @@
 // server.js
 
 import ServerConfig from './config/server.config.js';
-import cron from 'node-cron';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const cron = require('node-cron');
 import Session from './models/session.js';
 
 import {
