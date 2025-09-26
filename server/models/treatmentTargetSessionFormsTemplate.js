@@ -1,6 +1,8 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import DBconn from '../config/db.config.js';
 import logger from '../config/winston.js';
-import knex from 'knex';
+const knex = require('knex');;
 
 export default class TreatmentTargetSessionFormsTemplate {
   //////////////////////////////////////////

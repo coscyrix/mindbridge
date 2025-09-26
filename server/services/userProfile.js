@@ -1,7 +1,9 @@
 //services/userProfile.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import UserProfile from '../models/userProfile.js';
-import joi from 'joi';
+const joi = require('joi');;
 import Common from '../models/common.js';
 
 //////////////////////////////////////////

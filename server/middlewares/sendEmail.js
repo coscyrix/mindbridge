@@ -1,7 +1,9 @@
-import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const nodemailer = require('nodemailer');;
+const dotenv = require('dotenv');;
 import logger from '../config/winston.js';
-import e from 'express';
+const e = require('express');;
 
 dotenv.config();
 

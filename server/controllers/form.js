@@ -1,7 +1,9 @@
 //controllers/form.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import FormService from '../services/form.js';
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');;
 
 dotenv.config();
 

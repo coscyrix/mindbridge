@@ -1,4 +1,6 @@
-import joi from 'joi';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const joi = require('joi');;
 import TreatmentTargetSessionFormsTemplate from '../models/treatmentTargetSessionFormsTemplate.js';
 
 export default class TreatmentTargetSessionFormsTemplateService {

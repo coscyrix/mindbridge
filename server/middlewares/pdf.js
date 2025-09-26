@@ -1,8 +1,10 @@
-import PDFDocument from 'pdfkit';
-import fs from 'fs';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const PDFDocument = require('pdfkit');;
+const fs = require('fs');;
 import { PassThrough } from 'stream';
 import { fileURLToPath } from 'url';
-import path from 'path';
+const path = require('path');;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -1,7 +1,9 @@
 //models/userProfile.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import DBconn from '../config/db.config.js';
-import knex from 'knex';
+const knex = require('knex');;
 import logger from '../config/winston.js';
 import User from './auth/user.js';
 import Common from './common.js';

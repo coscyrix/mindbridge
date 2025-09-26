@@ -1,6 +1,8 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import UserTargetOutcomeService from '../services/userTargetOutcome.js';
 import Common from '../models/common.js';
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');;
 
 dotenv.config();
 

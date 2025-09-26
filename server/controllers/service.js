@@ -1,7 +1,9 @@
 //controllers/service.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import ServiceService from '../services/service.js';
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');;
 
 dotenv.config();
 

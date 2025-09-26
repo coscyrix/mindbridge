@@ -1,8 +1,10 @@
-import express from 'express';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const express = require('express');;
 import CounselorProfileController from '../controllers/counselorProfile.js';
 import { authenticate } from '../middlewares/token.js';
 import { AsyncWrapper } from '../utils/AsyncWrapper.js';
-import multer from 'multer';
+const multer = require('multer');;
 
 const router = express.Router();
 const counselorProfileController = new CounselorProfileController();

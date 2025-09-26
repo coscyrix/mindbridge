@@ -1,7 +1,9 @@
 //controller/session.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import SessionService from '../services/session.js';
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');;
 
 dotenv.config();
 

@@ -5,8 +5,10 @@
  * the treatment_target is not being stored in the therapy request.
  */
 
-import dotenv from 'dotenv';
-import knex from 'knex';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const dotenv = require('dotenv');;
+const knex = require('knex');;
 import DBconn from '../config/db.config.js';
 import UserTargetOutcome from '../models/userTargetOutcome.js';
 import Common from '../models/common.js';

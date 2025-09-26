@@ -1,7 +1,9 @@
 //controllers/invoice.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import InvoiceService from '../services/invoice.js';
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');;
 
 dotenv.config();
 

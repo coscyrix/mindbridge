@@ -1,7 +1,9 @@
 //controllers/thrpyReq.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import ThrpyReqService from '../services/thrpyReq.js';
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');;
 
 dotenv.config();
 

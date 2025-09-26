@@ -1,4 +1,6 @@
-import e from 'express';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const express = require('express');
 
 export { userRouter } from './user.js';
 export { userProfileRouter } from './userProfile.js';

@@ -1,5 +1,7 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import CounselorProfile from '../models/counselorProfile.js';
-import joi from 'joi';
+const joi = require('joi');;
 import { saveFile } from '../utils/fileUpload.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import logger from '../config/winston.js';

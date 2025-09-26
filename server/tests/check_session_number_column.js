@@ -2,8 +2,10 @@
  * Script to check and add session_number column to session table
  */
 
-import dotenv from 'dotenv';
-import knex from 'knex';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const dotenv = require('dotenv');;
+const knex = require('knex');;
 import DBconn from '../config/db.config.js';
 
 dotenv.config();

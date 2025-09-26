@@ -1,8 +1,10 @@
 //controllers/feedback.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import FeedbackService from '../services/feedback.js';
 import Common from '../models/common.js';
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');;
 
 dotenv.config();
 

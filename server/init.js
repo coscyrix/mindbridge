@@ -1,5 +1,7 @@
-import fs from 'fs';
-import path from 'path';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const fs = require('fs');;
+const path = require('path');;
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);

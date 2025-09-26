@@ -1,5 +1,7 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import CounselorDocuments from '../models/counselorDocuments.js';
-import joi from 'joi';
+const joi = require('joi');;
 import { saveFile } from '../utils/fileUpload.js';
 
 export default class CounselorDocumentsService {

@@ -1,7 +1,9 @@
 //services/invoice.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import Invoice from '../models/invoice.js';
-import joi from 'joi';
+const joi = require('joi');;
 import Common from '../models/common.js';
 
 export default class InvoiceService {

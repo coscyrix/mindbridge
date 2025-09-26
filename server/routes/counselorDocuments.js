@@ -1,10 +1,12 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import { Router } from 'express';
 import CounselorDocumentsController from '../controllers/counselorDocuments.js';
 import { AsyncWrapper } from '../utils/AsyncWrapper.js';
 import { authenticate } from '../middlewares/token.js';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+const multer = require('multer');;
+const path = require('path');;
+const fs = require('fs');;
 
 const router = Router();
 const counselorDocumentsController = new CounselorDocumentsController();

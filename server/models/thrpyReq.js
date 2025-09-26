@@ -1,7 +1,9 @@
 //models/thrpyReq
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import DBconn from '../config/db.config.js';
-import knex from 'knex';
+const knex = require('knex');;
 import logger from '../config/winston.js';
 import Session from './session.js';
 import Service from './service.js';
@@ -10,7 +12,7 @@ import UserForm from './userForm.js';
 import Form from './form.js';
 import EmailTmplt from './emailTmplt.js';
 import Common from './common.js';
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');;
 import { capitalizeFirstLetter } from '../utils/common.js';
 import { splitIsoDatetime } from '../utils/common.js';
 import {

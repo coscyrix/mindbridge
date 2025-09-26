@@ -1,6 +1,8 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import Homework from '../models/homework.js';
 import TenantConfigurationService from './tenantConfigurationService.js';
-import joi from 'joi';
+const joi = require('joi');;
 
 const homeworkModel = new Homework();
 const tenantConfigService = new TenantConfigurationService();

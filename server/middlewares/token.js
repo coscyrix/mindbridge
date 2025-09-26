@@ -1,5 +1,7 @@
-import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const dotenv = require('dotenv');;
+const jwt = require('jsonwebtoken');;
 
 dotenv.config();
 

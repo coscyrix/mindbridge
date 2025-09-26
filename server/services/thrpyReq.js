@@ -1,7 +1,9 @@
 //services/thrpyReq.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import ThrpyReq from '../models/thrpyReq.js';
-import joi from 'joi';
+const joi = require('joi');;
 import Common from '../models/common.js';
 import Session from '../models/session.js';
 

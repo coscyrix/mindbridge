@@ -1,7 +1,9 @@
 //models/invoice.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import DBconn from '../config/db.config.js';
-import knex from 'knex';
+const knex = require('knex');;
 import FeeSplitManagement from './feeSplitManagement.js';
 
 const db = knex(DBconn.dbConn.development);

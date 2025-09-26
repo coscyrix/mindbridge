@@ -1,9 +1,11 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import HomeworkService from '../services/homeworkService.js';
 import { homeworkEmailAttachment } from '../utils/emailTmplt.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import Common from '../models/common.js';
-import fs from 'fs';
-import path from 'path';
+const fs = require('fs');;
+const path = require('path');;
 
 export default class HomeworkController {
   //////////////////////////////////////////

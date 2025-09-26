@@ -5,8 +5,10 @@
  * copied when a new tenant is created
  */
 
-import dotenv from 'dotenv';
-import knex from 'knex';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const dotenv = require('dotenv');;
+const knex = require('knex');;
 import DBconn from '../config/db.config.js';
 import Common from '../models/common.js';
 
