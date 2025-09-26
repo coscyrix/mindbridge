@@ -2,7 +2,7 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import UserService from '../services/user.js';
+const UserService = require('../services/user.js').default;
 const dotenv = require('dotenv');;
 
 dotenv.config();

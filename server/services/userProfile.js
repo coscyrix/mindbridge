@@ -2,9 +2,9 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import UserProfile from '../models/userProfile.js';
+const UserProfile = require('../models/userProfile.js').default;
 const joi = require('joi');;
-import Common from '../models/common.js';
+const Common = require('../models/common.js').default;
 
 //////////////////////////////////////////
 

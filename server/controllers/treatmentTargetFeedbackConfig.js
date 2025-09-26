@@ -1,5 +1,7 @@
-import TreatmentTargetFeedbackConfig from '../models/treatmentTargetFeedbackConfig.js';
-import logger from '../config/winston.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const TreatmentTargetFeedbackConfig = require('../models/treatmentTargetFeedbackConfig.js').default;
+const logger = require('../config/winston.js').default;
 
 export default class TreatmentTargetFeedbackConfigController {
   //////////////////////////////////////////

@@ -2,7 +2,7 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import User from '../models/auth/user.js';
+const User = require('../models/auth/user.js').default;
 const joi = require('joi');;
 
 export default class UserService {

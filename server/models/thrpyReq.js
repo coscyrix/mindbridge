@@ -2,25 +2,25 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import DBconn from '../config/db.config.js';
+const DBconn = require('../config/db.config.js').default;
 const knex = require('knex');;
-import logger from '../config/winston.js';
-import Session from './session.js';
-import Service from './service.js';
-import UserProfile from './userProfile.js';
-import UserForm from './userForm.js';
-import Form from './form.js';
-import EmailTmplt from './emailTmplt.js';
-import Common from './common.js';
+const logger = require('../config/winston.js').default;
+const Session = require('./session.js').default;
+const Service = require('./service.js').default;
+const UserProfile = require('./userProfile.js').default;
+const UserForm = require('./userForm.js').default;
+const Form = require('./form.js').default;
+const EmailTmplt = require('./emailTmplt.js').default;
+const Common = require('./common.js').default;
 const dotenv = require('dotenv');;
-import { capitalizeFirstLetter } from '../utils/common.js';
-import { splitIsoDatetime } from '../utils/common.js';
-import {
+const { capitalizeFirstLetter } = require('../utils/common.js');
+const { splitIsoDatetime } = require('../utils/common.js');
+const {
   therapyRequestDetailsEmail,
   dischargeEmail,
-} from '../utils/emailTmplt.js';
-import SendEmail from '../middlewares/sendEmail.js';
-import UserTargetOutcome from './userTargetOutcome.js';
+} = require('../utils/emailTmplt.js');
+const SendEmail = require('../middlewares/sendEmail.js').default;
+const UserTargetOutcome = require('./userTargetOutcome.js').default;
 
 dotenv.config();
 const db = knex(DBconn.dbConn.development);

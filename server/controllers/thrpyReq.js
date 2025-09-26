@@ -2,7 +2,7 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import ThrpyReqService from '../services/thrpyReq.js';
+const ThrpyReqService = require('../services/thrpyReq.js').default;
 const dotenv = require('dotenv');;
 
 dotenv.config();

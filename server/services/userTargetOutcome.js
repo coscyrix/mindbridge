@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import UserTargetOutcome from '../models/userTargetOutcome.js';
+const UserTargetOutcome = require('../models/userTargetOutcome.js').default;
 const joi = require('joi');;
 
 export default class UserTargetOutcomeService {

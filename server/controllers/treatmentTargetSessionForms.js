@@ -1,7 +1,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import TreatmentTargetSessionFormsService from '../services/treatmentTargetSessionForms.js';
-import Common from '../models/common.js';
+const TreatmentTargetSessionFormsService = require('../services/treatmentTargetSessionForms.js').default;
+const Common = require('../models/common.js').default;
 const dotenv = require('dotenv');;
 
 dotenv.config();

@@ -1,4 +1,6 @@
-import TenantConfigurationService from '../services/tenantConfigurationService.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const TenantConfigurationService = require('../services/tenantConfigurationService.js').default;
 
 export default class TenantConfigurationController {
   constructor() {
