@@ -20,6 +20,9 @@ COPY package*.json ./
 # Install all dependencies (including dev dependencies for build)
 RUN npm ci && npm cache clean --force
 
+# Verify node-cron installation
+RUN npm list node-cron
+
 # Copy source code
 COPY . .
 
@@ -30,7 +33,7 @@ RUN addgroup -g 1001 -S nodejs && \
 # Create uploads directory and set permissions
 RUN mkdir -p /app/uploads && \
     chown -R nextjs:nodejs /app && \
-    chmod 755 /app/uploads && \
+    chmod -R 755 /app && \
     chmod +x /app/start.sh
 
 # Switch to non-root user

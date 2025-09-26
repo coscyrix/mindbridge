@@ -1,7 +1,8 @@
 // server.js
 
 import ServerConfig from './config/server.config.js';
-import cron from 'node-cron';
+// Import node-cron dynamically to avoid module resolution issues
+let cron;
 import Session from './models/session.js';
 
 import {
@@ -39,6 +40,16 @@ async function main() {
     console.log('  - NODE_ENV:', process.env.NODE_ENV);
     console.log('  - Process ID:', process.pid);
     
+    // Dynamically import node-cron
+    try {
+      const cronModule = await import('node-cron');
+      cron = cronModule.default;
+      console.log('✅ node-cron module loaded successfully');
+    } catch (cronError) {
+      console.warn('⚠️ Failed to load node-cron module:', cronError.message);
+      console.warn('⚠️ Cron jobs will be disabled');
+    }
+    
     const server = new ServerConfig({
       port: PORT,
       routers: [
@@ -69,11 +80,14 @@ async function main() {
       ],
     });
 
-    // Schedule the cron job to run daily at midnight
-    const session = new Session();
-    cron.schedule('0 0 * * *', async () => {
-      await session.dailyUpdateSessionStatus();
-    });
+    // Schedule the cron job to run daily at midnight (only if cron is available)
+    if (cron) {
+      const session = new Session();
+      cron.schedule('0 0 * * *', async () => {
+        await session.dailyUpdateSessionStatus();
+      });
+      console.log('✅ Cron job scheduled for daily session updates');
+    }
 
     await server.listen();
   } catch (error) {
