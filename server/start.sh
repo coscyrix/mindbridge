@@ -7,4 +7,4 @@ node init.js
 # Start the server with proper signal handling
 echo "🚀 Starting server..."
 trap 'echo "Received signal, shutting down gracefully..."; exit 0' TERM INT
-exec node app.js 
+exec node server.js 
