@@ -17,8 +17,11 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies
-RUN npm ci
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci && npm cache clean --force
+
+# Verify node-cron installation
+RUN npm list node-cron && node test-node-cron.js
 
 # Copy source code
 COPY . .
