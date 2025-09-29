@@ -1,25 +1,24 @@
-# Use Node.js 18 LTS as base image
-FROM node:18-alpine
+# Alternative Dockerfile for ES modules compatibility
+FROM node:18-slim
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     wget \
     curl \
     dumb-init \
-    netcat-openbsd \
-    && rm -rf /var/cache/apk/*
+    netcat \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create app user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+RUN groupadd -r nodejs && useradd -r -g nodejs nodejs
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies (including dev dependencies for better compatibility)
 RUN npm ci && npm cache clean --force
 
 # Copy application code
