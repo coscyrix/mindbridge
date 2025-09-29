@@ -1,0 +1,35 @@
+# Docker Compose override for development
+# This file is automatically loaded by docker-compose
+
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    volumes:
+      # Mount source code for hot reloading in development
+      - ./server:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DEBUG=*
+    command: ["npm", "run", "dev"]
+    
+  # Add development database if needed
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: mindbridge-mysql
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root1$
+  #     MYSQL_DATABASE: mind_bridge_db
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #   networks:
+  #     - mindbridge-network
+
+# volumes:
+#   mysql_data:

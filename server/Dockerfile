@@ -9,6 +9,7 @@ RUN apk add --no-cache \
     wget \
     curl \
     dumb-init \
+    netcat-openbsd \
     && rm -rf /var/cache/apk/*
 
 # Create app user for security
@@ -24,6 +25,10 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy application code
 COPY . .
 
+# Copy and set up entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Create necessary directories
 RUN mkdir -p uploads logs && \
     chown -R nodejs:nodejs /app
@@ -38,8 +43,8 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
 
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["dumb-init", "--"]
+# Use entrypoint script
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Start the application
 CMD ["node", "server.js"]
