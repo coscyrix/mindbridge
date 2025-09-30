@@ -14,8 +14,7 @@ export const ReferenceContextProvider = ({ children }) => {
   const [forms, setForms] = useState();
   const [allCounselors, setAllCounselors] = useState();
   const [tokenExpired, setTokenExpired] = useState(true);
-  const user = Cookies.get("user");
-  const userObj = user && JSON.parse(user);
+  const [userObj, setUserObj] = useState({});
   const router = useRouter();
 
   const fetchReferences = async () => {
@@ -53,6 +52,20 @@ export const ReferenceContextProvider = ({ children }) => {
       fetchReferences();
     }
   }, []);
+
+  useEffect(() => {
+    const data = localStorage.getItem("user");
+    console.log(data, "in use data");
+    if (data) {
+      const userDetails = JSON.parse(localStorage.getItem("user"));
+      console.log(userDetails, "in use userDetails");
+      if (userDetails) {
+        setUserObj(userDetails);
+      }
+    }
+  }, []);
+
+  console.log(userObj, "in use userObj::::");
 
   return (
     <ReferenceContext.Provider

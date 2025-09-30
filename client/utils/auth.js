@@ -22,6 +22,8 @@ export const login = async (credentials) => {
       loginToken = token;
       Cookies.set("user", JSON.stringify(usr));
       Cookies.set("email", credentials.email);
+      const data = JSON.stringify(usr);
+      localStorage.setItem("user", data);
       return response.data;
     } else {
       throw new Error("Login failed");
@@ -104,6 +106,7 @@ export const logout = () => {
   Cookies.remove("user");
   Cookies.remove("accountVerified");
   Cookies.remove("email");
+  localStorage.clear("user");
   // remove access to view notes
   Cookies.remove("note_verification_time");
   toast.info("You have been logged out.", { position: "top-right" });

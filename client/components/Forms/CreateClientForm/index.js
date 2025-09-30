@@ -28,9 +28,16 @@ function CreateClientForm({
   const { targetOutcomes, roles, servicesData } = useReferenceContext();
   const [loading, setLoading] = useState(false);
   const [serviceTemplates, setServiceTemplates] = useState([]);
+  const [user , setUser] = useState({})
 
-  const userData = Cookies.get("user");
-  const user = userData ? JSON.parse(userData) : null;
+  useEffect(()=>{
+    const data = localStorage.getItem("user")
+    if(data){
+      const userDetails = JSON.parse(localStorage.getItem("user"))
+      setUser(userDetails);
+    }
+  },[])
+
   const Counselor = user?.role_id == 2;
   const admin = user?.role_id == 4;
   const manager = user?.role_id == 3;

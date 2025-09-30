@@ -113,6 +113,7 @@ function CustomClientDetails({
         });
       }
     });
+
     const counselorOptions = Array.from(uniqueCounselorsMap.values());
     setCounselors([
       { label: "All Counselor", value: "allCounselor", tenant_id: 0 },
@@ -286,7 +287,7 @@ function CustomClientDetails({
   }, [filterText]);
 
   useEffect(() => {
-    const userData = Cookies.get("user");
+    const userData = localStorage.getItem("user");
     if (userData) {
       setUser(JSON.parse(userData));
     }

@@ -39,7 +39,7 @@ function Sidebar({ showSideBar, setShowSideBar }) {
 
   useEffect(() => {
     // to get cookie data -> only in case of client side
-    const user = Cookies.get("user");
+    const user = localStorage.getItem("user");
     if (user && user !== undefined) {
       setUserData(JSON.parse(user));
     }
@@ -219,12 +219,10 @@ function Sidebar({ showSideBar, setShowSideBar }) {
             <div className="profile-details">
               {userData?.role_id !== 2 && (
                 <h4>
-                  
                   {userData?.role_id === 4
                     ? "Mindbridge"
                     : userData?.tenant_name &&
                       userData?.tenant_name.slice(0, 20).toUpperCase()}
-                  
                 </h4>
               )}
 

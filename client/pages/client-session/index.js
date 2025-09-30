@@ -36,7 +36,7 @@ function ClientSession() {
   const { userObj } = useReferenceContext();
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState("");
-
+  console.log(userObj, "UserObj::::::::");
   const tabLabels = [
     { id: 0, label: "Current Session", value: "currentSession" },
     { id: 1, label: "All Sessions", value: "allSessions" },
@@ -287,6 +287,7 @@ function ClientSession() {
         if (counselorIdParam && counselorIdParam !== "allCounselors") {
           url += `&counselor_id=${counselorIdParam}`;
         }
+        console.log(url, "none::");
         response = await api.get(url);
       }
       if (response.status === 200) {

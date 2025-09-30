@@ -20,9 +20,10 @@ export default function CreateServiceForm({
   setIsOpen,
   loading,
 }) {
+  console.log(initialData);
   const methods = useForm({ mode: "onTouched" });
-  const userData = Cookies.get("user");
-  const userObj = userData && JSON.parse(userData);
+  // const userData = Cookies.get("user");
+  const [userData, setUserData] = useState(null);
   const [positionTags, setPositionTags] = useState([]);
   const [serviceIdTags, setServiceIdTags] = useState([]);
   const [optionValue, setOptionValue] = useState();
@@ -41,7 +42,6 @@ export default function CreateServiceForm({
     setOptionValue(value);
     methods.setValue("svc_formula_typ", value);
   };
-  console.log(userObj);
   const calculateTotalInvoiceTaxes = () => {
     // const totalInvoice = parseFloat(methods.getValues("total_invoice")) || 0;
     // const gst = parseFloat(methods.getValues("gst")) || 0;
@@ -55,13 +55,19 @@ export default function CreateServiceForm({
       totalInvoice + (totalInvoice * tax_percent) / 100
     );
   };
-
   useEffect(() => {
-    if (userData) {
-      const details = JSON.parse(userData);
-      setUserDetails(details);
+    const data = localStorage.getItem("user");
+    if (data) {
+      const userDetails = JSON.parse(data);
+      setUserData(userDetails);
     }
   }, []);
+  useEffect(() => {
+    if (userData) {
+      // const details = JSON.parse(userData);
+      setUserDetails(userData);
+    }
+  }, [userData]);
 
   const handleSaveService = async (data) => {
     const svcFormula = methods.getValues("svc_formula");

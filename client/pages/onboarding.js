@@ -333,8 +333,9 @@ const SignUp = () => {
   const [profilePictureError, setProfilePictureError] = useState("");
   const [onBoardingDetails, setOnBoardingDetails] = useState("");
   const profilePictureInputRef = useRef(null);
-  const userData = Cookies.get("user");
-  const userObj = userData && JSON.parse(userData);
+  // const userData = Cookies.get("user");
+  // const userObj = userData && JSON.parse(userData);
+  const [userObj, setUserObj] = useState(null);
   const methods = useForm({
     mode: "onTouched",
     shouldUnregister: false,
@@ -388,7 +389,13 @@ const SignUp = () => {
   const handleLicenseFileSelect = (file) => {
     setLicenseFile(file);
   };
-
+  useEffect(() => {
+    const data = localStorage.getItem("user");
+    if (data) {
+      const userDetails = JSON.parse(localStorage.getItem("user"));
+      setUserObj(userDetails);
+    }
+  }, []);
   const validateStep = async (step) => {
     let fieldsToValidate = [];
 
@@ -1258,7 +1265,7 @@ const SignUp = () => {
                       </div>
                       {file instanceof File && (
                         <CiCircleRemove
-                        size={30}
+                          size={30}
                           color="red"
                           onClick={() => {
                             const updatedFiles = [...documentFiles];

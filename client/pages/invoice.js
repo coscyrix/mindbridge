@@ -544,7 +544,7 @@ const Invoice = () => {
   }, [filterText]);
 
   useEffect(() => {
-    const userData = Cookies.get("user");
+    const userData = localStorage.getItem("user");
     if (userData) {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
@@ -587,7 +587,6 @@ const Invoice = () => {
   if (roleId === null) {
     return null;
   }
-
 
   return (
     <InvoiceContainer>
@@ -772,7 +771,6 @@ const Invoice = () => {
                 )
               }
             />
-            
           </div>
           <div className="search-container">
             <div className="search-and-select">

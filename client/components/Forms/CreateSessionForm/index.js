@@ -153,7 +153,7 @@ function CreateSessionForm({
     }
   };
   useEffect(() => {
-    if (userObj.role_id !== 4) {
+    if (userObj?.role_id !== 4) {
       fetchServices();
     }
   }, []);
@@ -996,7 +996,7 @@ function CreateSessionForm({
 
   useEffect(() => {
     fetchClients();
-    const userData = Cookies.get("user");
+    const userData = localStorage.getItem("user");
     setUser(JSON.parse(userData));
   }, []);
 

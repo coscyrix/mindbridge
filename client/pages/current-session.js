@@ -435,7 +435,7 @@ function CurrentSession() {
   }, [tomorrowSessionFilterText]);
 
   useEffect(() => {
-    const userData = Cookies.get("user");
+    const userData = localStorage.getItem("user");
     const userObj = JSON.parse(userData);
     setUserData(userObj);
     userObj?.role_id == 4 || userObj?.role_id == 3
