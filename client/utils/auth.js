@@ -24,6 +24,8 @@ export const login = async (credentials) => {
       Cookies.set("email", credentials.email);
       const data = JSON.stringify(usr);
       localStorage.setItem("user", data);
+       Cookies.set("accountVerified", true);
+       Cookies.set("token", loginToken);
       return response.data;
     } else {
       throw new Error("Login failed");

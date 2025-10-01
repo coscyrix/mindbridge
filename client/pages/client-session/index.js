@@ -309,11 +309,13 @@ function ClientSession() {
   }, []);
 
   useEffect(() => {
-    if ([3, 4].includes(userObj?.role_id) && userObj?.tenant_id) {
-      fetchCounsellor();
+    if (userObj && Object.keys(userObj).length > 0) {
+      if ([3, 4].includes(userObj?.role_id) && userObj?.tenant_id) {
+        fetchCounsellor();
+      }
+      fetchSessions(selectCounselor);
+      getInvoice(selectCounselor, selectedTenantId?.tenant_id);
     }
-    fetchSessions(selectCounselor);
-    getInvoice(selectCounselor, selectedTenantId?.tenant_id);
   }, [userObj]);
 
   const [isHomeworkUpload, setHomeWorkUpload] = useState(false);
@@ -339,8 +341,10 @@ function ClientSession() {
     }
   };
   useEffect(() => {
-    fetchHomeWorkUploadStatus();
-  }, []);
+    if (userObj && Object.keys(userObj).length > 0) {
+      fetchHomeWorkUploadStatus();
+    }
+  }, [userObj]);
   const fetchAllSplit = async () => {
     if (selectCounselor === "allCounselors" && userObj.role_id === 3) {
       return;

@@ -153,10 +153,12 @@ function CreateSessionForm({
     }
   };
   useEffect(() => {
-    if (userObj?.role_id !== 4) {
-      fetchServices();
+    if (userObj && Object.keys(userObj).length > 0) {
+      if (userObj?.role_id !== 4) {
+        fetchServices();
+      }
     }
-  }, []);
+  }, [userObj]);
   const infoTooltipContent =
     methods?.watch("client_first_name")?.user_target_outcome;
 
@@ -315,7 +317,21 @@ function CreateSessionForm({
     },
     {
       name: "Session Time",
-      selector: (row) => row?.scheduled_time,
+      selector: (row) => {
+        if (row?.scheduled_time) {
+          return row?.scheduled_time;
+        }
+        else{
+          const intakeTime = row?.intake_date
+            ? new Date(row.intake_date).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })
+            : "N/A";
+          return intakeTime;
+        }
+      },
       selectorId: "session_time",
       maxWidth: "120px",
     },
@@ -777,9 +793,9 @@ function CreateSessionForm({
           toast.success("Therapy request discarded!");
         }
       }
-      // if (isClose) {
-      //   setIsOpen(false);
-      // }
+      if (isClose) {
+        setIsOpen(false);
+      }
     } catch (error) {
       console.log("Error while discarding therapy request :", error);
       toast.error("Error while discarding therapy request.");
@@ -995,10 +1011,14 @@ function CreateSessionForm({
   }, [isOpen]);
 
   useEffect(() => {
-    fetchClients();
     const userData = localStorage.getItem("user");
     setUser(JSON.parse(userData));
   }, []);
+  useEffect(() => {
+    if (userObj && Object.keys(userObj).length > 0) {
+      fetchClients();
+    }
+  }, [userObj]);
 
   const handleIntakeDate = (e) => {
     methods.setValue("req_dte", e.target.value);

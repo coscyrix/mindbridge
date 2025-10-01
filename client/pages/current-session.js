@@ -418,11 +418,13 @@ function CurrentSession() {
   };
 
   useEffect(() => {
-    if (userData?.role_id == 4 || userData?.role_id == 3) {
-      fetchCounsellor();
-      getCurrentSessionData("allCounselors", userData?.role_id);
-    } else {
-      getCurrentSessionData(userData?.user_profile_id, userData?.role_id);
+    if (userData && Object.keys(userData).length > 0) {
+      if (userData?.role_id == 4 || userData?.role_id == 3) {
+        fetchCounsellor();
+        getCurrentSessionData("allCounselors", userData?.role_id);
+      } else {
+        getCurrentSessionData(userData?.user_profile_id, userData?.role_id);
+      }
     }
   }, [userData]);
 
@@ -438,10 +440,15 @@ function CurrentSession() {
     const userData = localStorage.getItem("user");
     const userObj = JSON.parse(userData);
     setUserData(userObj);
-    userObj?.role_id == 4 || userObj?.role_id == 3
-      ? fetchCounsellor()
-      : getCurrentSessionData(userObj?.user_profile_id, userObj?.role_id);
   }, []);
+
+  useEffect(() => {
+    if (userData && Object.keys(userData).length > 0) {
+      userData?.role_id == 4 || userObj?.role_id == 3
+        ? fetchCounsellor()
+        : getCurrentSessionData(userObj?.user_profile_id, userObj?.role_id);
+    }
+  }, [userData]);
 
   return (
     <>

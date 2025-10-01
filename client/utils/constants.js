@@ -580,8 +580,15 @@ export const SESSION_TABLE_COLUMNS = (args) => {
   return [
     {
       name: "Date",
-      selector: (row) =>
-        convertUTCToLocalTime(`${row.intake_date}T${row.scheduled_time}`).date,
+      selector: (row) => {
+        if (row.intake_date && row.scheduled_time) {
+          return convertUTCToLocalTime(
+            `${row.intake_date}T${row.scheduled_time}`
+          ).date;
+        } else {
+          return convertUTCToLocalTime(`${row.intake_date}`).date;
+        }
+      },
       sortable: true,
       selectorId: "intake_date",
     },
@@ -611,8 +618,22 @@ export const SESSION_TABLE_COLUMNS = (args) => {
     },
     {
       name: "Start Time",
-      selector: (row) =>
-        convertUTCToLocalTime(`${row.intake_date}T${row.scheduled_time}`).time,
+      selector: (row) => {
+        if (row.intake_date && row.scheduled_time) {
+          return convertUTCToLocalTime(
+            `${row.intake_date}T${row.scheduled_time}`
+          ).time;
+        } else {
+          const intakeTime = row?.intake_date
+            ? new Date(row.intake_date).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })
+            : "N/A";
+          return intakeTime;
+        }
+      },
       sortable: true,
       selectorId: "scheduled_time",
     },

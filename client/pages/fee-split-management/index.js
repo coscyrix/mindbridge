@@ -63,8 +63,10 @@ const FeeSplitManagement = () => {
     return;
   };
   useEffect(() => {
-    fetchAllSplit();
-  }, []);
+    if (userObj && Object.keys(userObj).length > 0) {
+      fetchAllSplit();
+    }
+  }, [userObj]);
   return (
     <FeeSplitManagementWrapper>
       <Box className="consent-box">
@@ -75,11 +77,11 @@ const FeeSplitManagement = () => {
         <div className="description-text">
           Enable Fee Split Management allows organizations to define, manage,
           and automate how service fees are divided between multiple parties
-          (e.g., counselors, tenant). When enabled,
-          administrators can configure percentage-based or fixed-amount splits,
-          track payouts, and generate reports for transparent revenue sharing.
-          This feature ensures accuracy, compliance, and fairness in financial
-          distribution while reducing manual calculations and errors.
+          (e.g., counselors, tenant). When enabled, administrators can configure
+          percentage-based or fixed-amount splits, track payouts, and generate
+          reports for transparent revenue sharing. This feature ensures
+          accuracy, compliance, and fairness in financial distribution while
+          reducing manual calculations and errors.
         </div>
 
         <div className="toggle-section">

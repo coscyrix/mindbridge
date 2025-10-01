@@ -148,9 +148,11 @@ function Services() {
     }
   }, [allManagers, servicesData]);
   useEffect(() => {
-    fetchManager();
-    fetchServices();
-  }, []);
+    if (userObj && Object.keys(userObj).length > 0) {
+      fetchManager();
+      fetchServices();
+    }
+  }, [userObj]);
 
   const handleCreateService = async (payload) => {
     try {

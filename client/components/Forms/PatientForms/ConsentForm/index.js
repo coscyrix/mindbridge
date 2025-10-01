@@ -95,13 +95,12 @@ const ConsentForm = ({
   };
 
   useEffect(() => {
-    if (initialData) {
+    if (client_name || initialData) {
       reset({
         client_name: client_name || "",
-        date:
-        consent_date ? 
-          moment(consent_date).format("DD/MM/YYYY") :
-          moment().format("DD/MM/YYYY"),
+        date: consent_date
+          ? moment(consent_date).format("DD/MM/YYYY")
+          : moment().format("DD/MM/YYYY"),
         imgBase64: initialData?.imgBase64 || null,
         acknowledged: false,
       });

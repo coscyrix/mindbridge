@@ -49,7 +49,10 @@ function IpfGraph({ ipfData, loading }) {
       seriesData={[
         {
           name: `1st IPF Assessment (${
-            ipfData?.rec?.feedback_ipf[0]?.created_at?.split(" ")[0] || "N/A"
+            Array.isArray(ipfData?.rec?.feedback_ipf) &&
+            ipfData.rec.feedback_ipf.length > 0
+              ? ipfData.rec.feedback_ipf[0].created_at?.split(" ")[0]
+              : "N/A"
           })`,
           type: "bar",
           data: firstIpfAssessment,
