@@ -1,9 +1,11 @@
 //routes/thrpyReq.js
 
-import { Router } from 'express';
-import ThrpyReqController from '../controllers/thrpyReq.js';
-import { AsyncWrapper } from '../utils/AsyncWrapper.js';
-import { authenticate } from '../middlewares/token.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { Router } = require('express');
+const ThrpyReqController = require('../controllers/thrpyReq.js').default;
+const { AsyncWrapper } = require('../utils/AsyncWrapper.js');
+const { authenticate } = require('../middlewares/token.js');
 
 const router = Router();
 const thrpyReqController = new ThrpyReqController();

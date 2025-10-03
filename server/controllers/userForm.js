@@ -1,5 +1,7 @@
-import UserFormService from '../services/userForm.js';
-import dotenv from 'dotenv';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const UserFormService = require('../services/userForm.js').default;
+const dotenv = require('dotenv');;
 
 export default class UserFormController {
   //////////////////////////////////////////

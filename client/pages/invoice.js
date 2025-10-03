@@ -131,32 +131,34 @@ const Invoice = () => {
   }, []);
 
   useEffect(() => {
-    const now = new Date();
-    const nextMonth = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      1,
-      0,
-      0,
-      0
-    );
-    const timeUntilNextMonth = nextMonth.getTime() - now.getTime();
+    if (userObj && Object.keys(userObj).length > 0) {
+      const now = new Date();
+      const nextMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        1,
+        0,
+        0,
+        0
+      );
+      const timeUntilNextMonth = nextMonth.getTime() - now.getTime();
 
-    const timeout = setTimeout(() => {
-      setDefaultDates();
-      fetchFilteredInvoices({
-        counselorId: selectCounselor,
-        startDate: formatDate(
-          new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1)
-        ),
-        endDate: formatDate(
-          new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0)
-        ),
-      });
-    }, timeUntilNextMonth);
+      const timeout = setTimeout(() => {
+        setDefaultDates();
+        fetchFilteredInvoices({
+          counselorId: selectCounselor,
+          startDate: formatDate(
+            new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1)
+          ),
+          endDate: formatDate(
+            new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0)
+          ),
+        });
+      }, timeUntilNextMonth);
 
-    return () => clearTimeout(timeout);
-  }, [selectCounselor, user, roleId]);
+      return () => clearTimeout(timeout);
+    }
+  }, [selectCounselor, user, roleId, userObj]);
 
   const handleAddInvoiceNumber = (row) => {
     setOpen(true);
@@ -544,7 +546,7 @@ const Invoice = () => {
   }, [filterText]);
 
   useEffect(() => {
-    const userData = Cookies.get("user");
+    const userData = localStorage.getItem("user");
     if (userData) {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
@@ -553,18 +555,20 @@ const Invoice = () => {
   }, []);
 
   useEffect(() => {
-    if (roleId !== null && user) {
-      if ([3, 4].includes(roleId)) {
-        fetchFilteredInvoices({
-          counselorId: "allCounselors",
-          startDate,
-          endDate,
-          ...(userObj?.role_id === 3 && { tenant_id: userObj?.tenant_id }),
-        });
-      } else {
-        getInvoice();
+    if (userObj && Object.keys(userObj).length > 0) {
+      if (roleId !== null && user) {
+        if ([3, 4].includes(roleId)) {
+          fetchFilteredInvoices({
+            counselorId: "allCounselors",
+            startDate,
+            endDate,
+            ...(userObj?.role_id === 3 && { tenant_id: userObj?.tenant_id }),
+          });
+        } else {
+          getInvoice();
+        }
+        fetchCounsellor();
       }
-      fetchCounsellor();
     }
   }, [roleId, user]);
 
@@ -582,12 +586,13 @@ const Invoice = () => {
     });
   }
   useEffect(() => {
-    fetchAllSplit();
-  }, [selectCounselorEmail]);
+    if (userObj && Object.keys(userObj).length > 0) {
+      fetchAllSplit();
+    }
+  }, [selectCounselorEmail, userObj]);
   if (roleId === null) {
     return null;
   }
-
 
   return (
     <InvoiceContainer>
@@ -772,7 +777,6 @@ const Invoice = () => {
                 )
               }
             />
-            
           </div>
           <div className="search-container">
             <div className="search-and-select">

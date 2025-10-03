@@ -1,7 +1,9 @@
 //utils/common.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import logger from '../config/winston.js';
-import moment from 'moment-timezone';
+const moment = require('moment-timezone');;
 
 export const capitalizeFirstLetter = (sentence) => {
   return sentence

@@ -1,7 +1,9 @@
 //models/user.js
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import DBconn from '../../config/db.config.js';
-import knex from 'knex';
+const knex = require('knex');;
 import Common from '../common.js';
 import logger from '../../config/winston.js';
 import AuthCommon from './authCommon.js';
@@ -14,7 +16,7 @@ import {
   accountRestoredEmail,
 } from '../../utils/emailTmplt.js';
 import UserProfile from '../userProfile.js';
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');;
 import CounselorProfile from '../counselorProfile.js';
 import Service from '../service.js';
 

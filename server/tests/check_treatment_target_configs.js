@@ -2,8 +2,10 @@
  * Script to check treatment target feedback configurations
  */
 
-import dotenv from 'dotenv';
-import knex from 'knex';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const dotenv = require('dotenv');;
+const knex = require('knex');;
 import DBconn from '../config/db.config.js';
 
 dotenv.config();

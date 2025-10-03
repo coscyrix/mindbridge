@@ -1,5 +1,7 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import DBconn from '../config/db.config.js';
-import knex from 'knex';
+const knex = require('knex');;
 import logger from '../config/winston.js';
 import Common from './common.js';
 import Feedback from '../services/feedback.js';
@@ -22,7 +24,7 @@ import {
   capitalizeFirstLetter,
   convertTimeToReadableFormat,
 } from '../utils/common.js';
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');;
 
 dotenv.config();
 const db = knex(DBconn.dbConn.development);

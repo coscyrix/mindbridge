@@ -1,6 +1,8 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import Feedback from '../models/feedback.js';
 import Common from '../models/common.js';
-import joi from 'joi';
+const joi = require('joi');;
 
 export default class FeedbackService {
   ///////////////////////////////////////////

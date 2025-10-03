@@ -1,6 +1,8 @@
-import DBconn from '../config/db.config.js';
-import knex from 'knex';
-import logger from '../config/winston.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const DBconn = require('../config/db.config.js').default;
+const knex = require('knex');;
+const logger = require('../config/winston.js').default;
 
 const db = knex(DBconn.dbConn.development);
 

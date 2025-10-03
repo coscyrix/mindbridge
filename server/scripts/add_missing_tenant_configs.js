@@ -5,9 +5,11 @@
  * Run this script after running the migration to ensure all existing tenants have the required configurations
  */
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import DBconn from '../config/db.config.js';
-import knex from 'knex';
-import dotenv from 'dotenv';
+const knex = require('knex');;
+const dotenv = require('dotenv');;
 
 dotenv.config();
 

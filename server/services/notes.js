@@ -1,5 +1,7 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import Notes from '../models/notes.js';
-import joi from 'joi';
+const joi = require('joi');;
 import Common from '../models/common.js';
 
 export default class NotesService {

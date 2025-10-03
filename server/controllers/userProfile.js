@@ -1,7 +1,9 @@
 //controllers/userProfile.js
 
-import UserProfileService from '../services/userProfile.js';
-import dotenv from 'dotenv';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const UserProfileService = require('../services/userProfile.js').default;
+const dotenv = require('dotenv');;
 
 dotenv.config();
 

@@ -2,16 +2,15 @@ import React, { useState, useEffect } from "react";
 import BarGraph from "../../CustomGraphs/BarGraph";
 
 function IpfGraph({ ipfData, loading }) {
-  const [firstIpfAssessment, setFirstIpfAssessment] = useState([]);
-  const [secondIpfAssessment, setSecondIpfAssessment] = useState([]);
+  const [series, setSeries] = useState([]);
   const [axisX, setAxisX] = useState([]);
 
   useEffect(() => {
-    if (!ipfData?.rec?.feedback_ipf?.length) return;
-
-    const assessments = ipfData.rec.feedback_ipf;
-    const firstAssessment = assessments[0];
-    const secondAssessment = assessments[1] || null;
+    if (!ipfData?.length) {
+      setSeries([]);
+      setAxisX([]);
+      return;
+    }
 
     const scaleMapping = [
       { key: "romantic_scale_score", label: "Romantic Scale" },
@@ -26,19 +25,53 @@ function IpfGraph({ ipfData, loading }) {
       { key: "self_care_scale", label: "Self-Care Scale" },
     ];
 
-    setAxisX(scaleMapping.map((scale) => scale.label));
+    setAxisX(scaleMapping.map((s) => s.label));
 
-    setFirstIpfAssessment(
-      scaleMapping.map((scale) => ({ value: firstAssessment[scale.key] || 0 }))
-    );
+    const palette = [
+      "#FFA500",
+      "#FF4500",
+      "#1E90FF",
+      "#32CD32",
+      "#800080",
+      "#00CED1",
+      "#FFD700",
+      "#8B4513",
+    ];
 
-    if (secondAssessment) {
-      setSecondIpfAssessment(
-        scaleMapping.map((scale) => ({
-          value: secondAssessment[scale.key] || 0,
-        }))
-      );
-    }
+    const newSeries = ipfData.map((rec, idx) => {
+      const assessment =
+        Array.isArray(rec.feedback_ipf) && rec.feedback_ipf.length > 0
+          ? rec.feedback_ipf[0]
+          : rec;
+
+      const dataPoints = scaleMapping.map((scale) => {
+        const raw = assessment?.[scale.key];
+        const v = raw === undefined || raw === null ? 0 : Number(raw);
+        return { value: Number.isNaN(v) ? 0 : v };
+      });
+
+      const labelDate =
+        (assessment?.created_at ||
+          rec?.created_at ||
+          rec?.session_dte ||
+          "")?.toString().split(" ")[0] || `#${idx + 1}`;
+
+      return {
+        name: `IPF Assessment ${idx + 1} (${labelDate})`,
+        type: "bar",
+        data: dataPoints,
+        itemStyle: { color: palette[idx % palette.length] },
+        label: {
+          show: true,
+          position: "top",
+          fontSize: 12,
+          color: "#333",
+          formatter: "{c}",
+        },
+      };
+    });
+
+    setSeries(newSeries);
   }, [ipfData]);
 
   return (
@@ -46,43 +79,7 @@ function IpfGraph({ ipfData, loading }) {
       xAxisTitle="Scale"
       yAxisTitle="Score"
       xAxisLabels={axisX}
-      seriesData={[
-        {
-          name: `1st IPF Assessment (${
-            ipfData?.rec?.feedback_ipf[0]?.created_at?.split(" ")[0] || "N/A"
-          })`,
-          type: "bar",
-          data: firstIpfAssessment,
-          itemStyle: { color: "#FFA500" },
-          label: {
-            show: true,
-            position: "top",
-            fontSize: 12,
-            color: "#333",
-            formatter: "{c}",
-          },
-        },
-        ...(secondIpfAssessment.length
-          ? [
-              {
-                name: `2nd IPF Assessment (${
-                  ipfData?.rec?.feedback_ipf[1]?.created_at?.split(" ")[0] ||
-                  "N/A"
-                })`,
-                type: "bar",
-                data: secondIpfAssessment,
-                itemStyle: { color: "#FF4500" },
-                label: {
-                  show: true,
-                  position: "top",
-                  fontSize: 12,
-                  color: "#333",
-                  formatter: "{c}",
-                },
-              },
-            ]
-          : []),
-      ]}
+      seriesData={series}
       loading={loading}
     />
   );

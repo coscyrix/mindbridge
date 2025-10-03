@@ -1,9 +1,11 @@
 // Debug script to test homework email flow step by step
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import Common from './models/common.js';
 import SendEmail from './middlewares/sendEmail.js';
 import { homeworkEmailAttachment } from './utils/emailTmplt.js';
-import fs from 'fs';
-import path from 'path';
+const fs = require('fs');;
+const path = require('path');;
 
 async function debugHomeworkEmail() {
   try {

@@ -1,5 +1,7 @@
-import fs from 'fs';
-import path from 'path';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const fs = require('fs');;
+const path = require('path');;
 import { fileURLToPath } from 'url';
 import logger from '../config/winston.js';
 

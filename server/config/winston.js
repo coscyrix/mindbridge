@@ -1,8 +1,10 @@
 //config/winston.js
 
-import winston from 'winston';
-import fs from 'fs';
-import path from 'path';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const winston = require('winston');
+const fs = require('fs');
+const path = require('path');
 
 // Ensure log directory exists
 const logDir = 'logs';

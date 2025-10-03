@@ -1,8 +1,10 @@
 //services/session.js
 
-import Session from '../models/session.js';
-import Common from '../models/common.js';
-import joi from 'joi';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const Session = require('../models/session.js').default;
+const Common = require('../models/common.js').default;
+const joi = require('joi');;
 
 export default class SessionService {
   constructor() {

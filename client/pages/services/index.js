@@ -22,8 +22,7 @@ function Services() {
   const [servicesDataLoading, setServicesDataLoading] = useState(false);
   const { userObj } = useReferenceContext();
   const isManager = userObj?.role_id === 3;
-  const userData = Cookies.get("user");
-  const user = userData ? JSON.parse(userData) : null;
+  const [user, setUser] = useState(null);
   const tenant_id = user?.tenant?.tenant_generated_id;
   const [allManagers, setAllManagers] = useState([]);
   const [allServices, setAllServices] = useState([]);
@@ -31,6 +30,8 @@ function Services() {
   const fetchServices = async () => {
     try {
       setServicesDataLoading(true);
+      const tenant_id = userObj?.tenant?.tenant_generated_id;
+      console.log(tenant_id, "new");
       const response = await CommonServices.getServices(tenant_id);
 
       if (response.status === 200) {
@@ -48,9 +49,11 @@ function Services() {
       setServicesDataLoading(false);
     }
   };
+
   const handleSelectService = async (data) => {
     try {
       const tenant_id = data?.value;
+      console.log(tenant_id, "service");
       setServicesDataLoading(true);
       let response;
       if (tenant_id == "allManager") {
@@ -78,6 +81,7 @@ function Services() {
         const filteredManagers = data?.rec?.filter(
           (manager) => manager.role_id === 3
         );
+        console.log(filteredManagers, "service");
         setAllManagers(filteredManagers);
         if (Array.isArray(servicesData) && servicesData.length > 0) {
           combineManagersWithServices(servicesData, filteredManagers);
@@ -89,13 +93,12 @@ function Services() {
     }
   };
   const combineManagersWithServices = (services, managers) => {
-
     const mergedOptions =
       managers
         ?.filter((m) => m?.user_first_name)
         .map((m) => ({
           label: `${m.user_first_name} ${m.user_last_name}`,
-          value: m.tenant_generated_id,
+          value: m?.tenant.tenant_generated_id,
         })) || [];
     mergedOptions.push({
       label: "All Manager",
@@ -103,7 +106,7 @@ function Services() {
     });
     setTenantManagerOptions(mergedOptions);
   };
-
+  console.log(tenantManagerOptions, "service");
   const handleClickOutside = (e) => {
     if (
       actionDropdownRef.current &&
@@ -127,7 +130,13 @@ function Services() {
       window.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
+  useEffect(() => {
+    const data = localStorage.getItem("user");
+    if (data) {
+      const userDetails = JSON.parse(data);
+      setUser(userDetails);
+    }
+  }, []);
   useEffect(() => {
     if (
       Array.isArray(servicesData) &&
@@ -139,9 +148,11 @@ function Services() {
     }
   }, [allManagers, servicesData]);
   useEffect(() => {
-    fetchManager();
-    fetchServices();
-  }, []);
+    if (userObj && Object.keys(userObj).length > 0) {
+      fetchManager();
+      fetchServices();
+    }
+  }, [userObj]);
 
   const handleCreateService = async (payload) => {
     try {

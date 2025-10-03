@@ -1,7 +1,9 @@
-import { Router } from 'express';
-import UserFormController from '../controllers/userForm.js';
-import { AsyncWrapper } from '../utils/AsyncWrapper.js';
-import { authenticate } from '../middlewares/token.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { Router } = require('express');
+const UserFormController = require('../controllers/userForm.js').default;
+const { AsyncWrapper } = require('../utils/AsyncWrapper.js');
+const { authenticate } = require('../middlewares/token.js');
 
 const router = Router();
 const userFormController = new UserFormController();

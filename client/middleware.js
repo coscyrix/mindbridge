@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
@@ -8,7 +9,7 @@ export function middleware(request) {
   const accountVerified = request.cookies.get("accountVerified")?.value;
   const userObj = user && JSON.parse(user);
   const admin = [3, 4].includes(userObj?.role_id);
-  
+
   const protectedRoutes = [
     "/dashboard",
     "/current-session",
@@ -21,10 +22,7 @@ export function middleware(request) {
     "/fee-split-management",
   ];
 
-  const authRoutes = [
-    "/login",
-    "/reset-password",
-  ];
+  const authRoutes = ["/login", "/reset-password"];
 
   const isAuthRoute = authRoutes.includes(pathname);
   const isProtectedRoute = protectedRoutes.some((route) =>

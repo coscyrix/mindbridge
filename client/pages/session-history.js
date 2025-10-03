@@ -153,11 +153,12 @@ function SessionHistory() {
   };
 
   useEffect(() => {
-    // Ensure the initial value is set correctly
-    const initialCounselor = "allCounselors";
-    setSelectCounselor(initialCounselor);
-    fetchSessions(initialCounselor);
-  }, []);
+   if (userObj && Object.keys(userObj).length > 0) {
+     const initialCounselor = "allCounselors";
+     setSelectCounselor(initialCounselor);
+     fetchSessions(initialCounselor);
+   }
+  }, [userObj]);
 
   useEffect(() => {
     updateUserDataToDisplay();

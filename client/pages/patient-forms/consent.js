@@ -49,6 +49,7 @@ const ConsentPage = () => {
   //     </div>
   //   );
   // }
+  
   return formAlreadySubmitted ? (
     <FormSubmission alreadySubmitted />
   ) : (

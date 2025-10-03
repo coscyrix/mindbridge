@@ -1,9 +1,11 @@
 //routes/session.js
 
-import { Router } from 'express';
-import SessionController from '../controllers/session.js';
-import { AsyncWrapper } from '../utils/AsyncWrapper.js';
-import { authenticate } from '../middlewares/token.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { Router } = require('express');
+const SessionController = require('../controllers/session.js').default;
+const { AsyncWrapper } = require('../utils/AsyncWrapper.js');
+const { authenticate } = require('../middlewares/token.js');
 
 const router = Router();
 const sessionController = new SessionController();

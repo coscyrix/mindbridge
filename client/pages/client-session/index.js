@@ -36,7 +36,7 @@ function ClientSession() {
   const { userObj } = useReferenceContext();
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState("");
-
+  console.log(userObj, "UserObj::::::::");
   const tabLabels = [
     { id: 0, label: "Current Session", value: "currentSession" },
     { id: 1, label: "All Sessions", value: "allSessions" },
@@ -287,6 +287,7 @@ function ClientSession() {
         if (counselorIdParam && counselorIdParam !== "allCounselors") {
           url += `&counselor_id=${counselorIdParam}`;
         }
+        console.log(url, "none::");
         response = await api.get(url);
       }
       if (response.status === 200) {
@@ -308,11 +309,13 @@ function ClientSession() {
   }, []);
 
   useEffect(() => {
-    if ([3, 4].includes(userObj?.role_id) && userObj?.tenant_id) {
-      fetchCounsellor();
+    if (userObj && Object.keys(userObj).length > 0) {
+      if ([3, 4].includes(userObj?.role_id) && userObj?.tenant_id) {
+        fetchCounsellor();
+      }
+      fetchSessions(selectCounselor);
+      getInvoice(selectCounselor, selectedTenantId?.tenant_id);
     }
-    fetchSessions(selectCounselor);
-    getInvoice(selectCounselor, selectedTenantId?.tenant_id);
   }, [userObj]);
 
   const [isHomeworkUpload, setHomeWorkUpload] = useState(false);
@@ -338,8 +341,10 @@ function ClientSession() {
     }
   };
   useEffect(() => {
-    fetchHomeWorkUploadStatus();
-  }, []);
+    if (userObj && Object.keys(userObj).length > 0) {
+      fetchHomeWorkUploadStatus();
+    }
+  }, [userObj]);
   const fetchAllSplit = async () => {
     if (selectCounselor === "allCounselors" && userObj.role_id === 3) {
       return;

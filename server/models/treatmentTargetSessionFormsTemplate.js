@@ -1,6 +1,8 @@
-import DBconn from '../config/db.config.js';
-import logger from '../config/winston.js';
-import knex from 'knex';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const DBconn = require('../config/db.config.js').default;
+const logger = require('../config/winston.js').default;
+const knex = require('knex');;
 
 export default class TreatmentTargetSessionFormsTemplate {
   //////////////////////////////////////////

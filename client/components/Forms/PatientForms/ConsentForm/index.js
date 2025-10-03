@@ -95,13 +95,12 @@ const ConsentForm = ({
   };
 
   useEffect(() => {
-    if (initialData) {
+    if (client_name || initialData) {
       reset({
         client_name: client_name || "",
-        date:
-        consent_date ? 
-          moment(consent_date).format("DD/MM/YYYY") :
-          moment().format("DD/MM/YYYY"),
+        date: consent_date
+          ? moment(consent_date).format("DD/MM/YYYY")
+          : moment().format("DD/MM/YYYY"),
         imgBase64: initialData?.imgBase64 || null,
         acknowledged: false,
       });
@@ -160,12 +159,7 @@ const ConsentForm = ({
             }
           />
           <div>
-            <img
-              src="/assets/images/consent_form_img.png"
-              alt="vapendama image"
-              width={100}
-              height={120}
-            />
+           
             <h4>VAPENDAMA Counseling Services</h4>
           </div>
 
@@ -285,7 +279,7 @@ const ConsentForm = ({
                     <Controller
                       name="date"
                       control={control}
-                      
+                      rules={{ required: "Date is required" }}
                       render={({ field, fieldState }) => (
                         <>
                           <input type="text" {...field} disabled />

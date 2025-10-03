@@ -1,11 +1,13 @@
 //models/auth/authCommon.js
 
-import bcrypt from 'bcrypt';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const bcrypt = require('bcrypt');;
 import dotenv, { parse } from 'dotenv';
-import jwt from 'jsonwebtoken';
-import speakeasy from 'speakeasy';
+const jwt = require('jsonwebtoken');;
+const speakeasy = require('speakeasy');;
 import DBconn from '../../config/db.config.js';
-import knex from 'knex';
+const knex = require('knex');;
 import logger from '../../config/winston.js';
 import SendEmail from '../../middlewares/sendEmail.js';
 import { otpEmail } from '../../utils/emailTmplt.js';

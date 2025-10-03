@@ -1,5 +1,7 @@
 // utils/emailTmplt.js
-import dotenv from 'dotenv';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const dotenv = require('dotenv');;
 import {
   capitalizeFirstLetter,
   capitalizeFirstLetterOfEachWord,
