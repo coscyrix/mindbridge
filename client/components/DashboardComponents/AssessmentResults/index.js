@@ -152,7 +152,11 @@ function AssessmentResults({ assessmentResultsData }) {
           setSmartGoalsData(data);
           setGraphDataHeading("Smart Goal Assessment Results");
         } else if (row.form_cde == "IPF") {
-          setIpfData(data);
+          const ipfEntries = Array.isArray(response?.data?.rec)
+            ? response.data.rec
+            : [response.data.rec];
+
+          setIpfData(ipfEntries);
           setGraphDataHeading("IPF Assessment Comparison");
         } else if (row.form_cde == "CONSENT") {
           const consentDetails =

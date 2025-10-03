@@ -159,12 +159,7 @@ const ConsentForm = ({
             }
           />
           <div>
-            <img
-              src="/assets/images/consent_form_img.png"
-              alt="vapendama image"
-              width={100}
-              height={120}
-            />
+           
             <h4>VAPENDAMA Counseling Services</h4>
           </div>
 
