@@ -6,7 +6,7 @@ const Express = require('express');
 const fs = require('fs');
 const winston = require('winston');
 const bodyParser = require('body-parser');
-const DbConfig = require('./db.config.js').default;
+// DbConfig will be imported dynamically in the listen method
 const http = require('http');
 const https = require('https');
 const path = require('path');
@@ -308,6 +308,7 @@ export default class ServerConfig {
       }
 
       const { default: knex } = await import('knex');
+      const { default: DbConfig } = await import('./db.config.js');
       const db = knex(DbConfig.dbConn.development);
       
       // Test database connection

@@ -1,7 +1,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { Router } = require('express');
-const OnboardingController = require('../controllers/onboardingController.js').default;
+import OnboardingController from '../controllers/onboardingController.js';
 
 const router = Router();
 const onboardingController = new OnboardingController();

@@ -2,24 +2,26 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const DBconn = require('../config/db.config.js').default;
-const knex = require('knex');;
-const logger = require('../config/winston.js').default;
-const Common = require('./common.js').default;
-const AuthCommon = require('./auth/authCommon.js').default;
-const SendEmail = require('../middlewares/sendEmail.js').default;
-const EmailTmplt = require('./emailTmplt.js').default;
-const UserForm = require('./userForm.js').default;
-const {
+const knex = require('knex');
+import logger from '../config/winston.js';
+import DBconn from '../config/db.config.js';
+
+const db = knex(DBconn.dbConn.development);
+import Common from './common.js';
+import AuthCommon from './auth/authCommon.js';
+import SendEmail from '../middlewares/sendEmail.js';
+import EmailTmplt from './emailTmplt.js';
+import UserForm from './userForm.js';
+import {
   clientWelcomeEmail,
   consentFormEmail,
   emailUpdateEmail,
   accountRestoredEmail,
   welcomeAccountDetailsEmail,
-} = require('../utils/emailTmplt.js');
-const UserTargetOutcome = require('./userTargetOutcome.js').default;
+} from '../utils/emailTmplt.js';
+import UserTargetOutcome from './userTargetOutcome.js';
 
-const db = knex(DBconn.dbConn.development);
+// Database connection is handled by getDb() function above
 
 export default class UserProfile {
   //////////////////////////////////////////

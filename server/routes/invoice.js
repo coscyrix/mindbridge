@@ -3,9 +3,9 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { Router } = require('express');
-const InvoiceController = require('../controllers/invoice.js').default;
-const { AsyncWrapper } = require('../utils/AsyncWrapper.js');
-const { authenticate } = require('../middlewares/token.js');
+import InvoiceController from '../controllers/invoice.js';
+import { AsyncWrapper  } from '../utils/AsyncWrapper.js';
+import { authenticate  } from '../middlewares/token.js';
 
 const router = Router();
 const invoiceController = new InvoiceController();

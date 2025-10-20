@@ -2,28 +2,29 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const DBconn = require('../config/db.config.js').default;
-const knex = require('knex');;
-const logger = require('../config/winston.js').default;
-const Session = require('./session.js').default;
-const Service = require('./service.js').default;
-const UserProfile = require('./userProfile.js').default;
-const UserForm = require('./userForm.js').default;
-const Form = require('./form.js').default;
-const EmailTmplt = require('./emailTmplt.js').default;
-const Common = require('./common.js').default;
-const dotenv = require('dotenv');;
-const { capitalizeFirstLetter } = require('../utils/common.js');
-const { splitIsoDatetime } = require('../utils/common.js');
-const {
+const knex = require('knex');
+import dotenv from 'dotenv';
+import logger from '../config/winston.js';
+import DBconn from '../config/db.config.js';
+
+const db = knex(DBconn.dbConn.development);
+import Session from './session.js';
+import Service from './service.js';
+import UserProfile from './userProfile.js';
+import UserForm from './userForm.js';
+import Form from './form.js';
+import EmailTmplt from './emailTmplt.js';
+import Common from './common.js';
+import { capitalizeFirstLetter, splitIsoDatetime } from '../utils/common.js';
+import {
   therapyRequestDetailsEmail,
   dischargeEmail,
-} = require('../utils/emailTmplt.js');
-const SendEmail = require('../middlewares/sendEmail.js').default;
-const UserTargetOutcome = require('./userTargetOutcome.js').default;
+} from '../utils/emailTmplt.js';
+import SendEmail from '../middlewares/sendEmail.js';
+import UserTargetOutcome from './userTargetOutcome.js';
 
 dotenv.config();
-const db = knex(DBconn.dbConn.development);
+// Database connection is handled by getDb() function above
 
 export default class ThrpyReq {
   //////////////////////////////////////////

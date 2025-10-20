@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const ServiceTemplateService = require('../services/serviceTemplate.js').default;
+import ServiceTemplateService from '../services/serviceTemplate.js';
 
 const serviceTemplateService = new ServiceTemplateService();
 

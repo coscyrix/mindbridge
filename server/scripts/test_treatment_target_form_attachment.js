@@ -1,25 +1,33 @@
 const knex = require('knex');
-const DBconn = require('../config/db.config.js');
 
-const db = knex(DBconn.dbConn.development);
+// Database connection will be initialized dynamically
+let db = null;
+
+async function getDb() {
+  if (!db) {
+    const DBconn = await import('../config/db.config.js');
+    db = knex(DBconn.default.dbConn.development);
+  }
+  return db;
+}
 
 async function testTreatmentTargetFormAttachment() {
   try {
     console.log('Testing Treatment Target Form Attachment Functionality...\n');
 
-    // Test 1: Check if treatment_target_feedback_config table exists
-    console.log('1. Checking treatment_target_feedback_config table...');
-    const configTableExists = await db.schema.hasTable('treatment_target_feedback_config');
+    // Test 1: Check if treatment_target_feeawait getDb()ack_config table exists
+    console.log('1. Checking treatment_target_feeawait getDb()ack_config table...');
+    const configTableExists = await await getDb().schema.hasTable('treatment_target_feeawait getDb()ack_config');
     if (configTableExists) {
-      console.log('✅ treatment_target_feedback_config table exists');
+      console.log('✅ treatment_target_feeawait getDb()ack_config table exists');
     } else {
-      console.log('❌ treatment_target_feedback_config table does not exist');
+      console.log('❌ treatment_target_feeawait getDb()ack_config table does not exist');
       return;
     }
 
     // Test 1.1: Check if treatment_target_session_forms table exists
     console.log('1.1. Checking treatment_target_session_forms table...');
-    const sessionFormsTableExists = await db.schema.hasTable('treatment_target_session_forms');
+    const sessionFormsTableExists = await await getDb().schema.hasTable('treatment_target_session_forms');
     if (sessionFormsTableExists) {
       console.log('✅ treatment_target_session_forms table exists');
     } else {
@@ -30,9 +38,9 @@ async function testTreatmentTargetFormAttachment() {
 
     // Test 2: Check existing configurations
     console.log('\n2. Checking existing configurations...');
-    const configs = await db
+    const configs = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
-      .from('treatment_target_feedback_config')
+      .from('treatment_target_feeawait getDb()ack_config')
       .select('*');
 
     console.log(`Found ${configs.length} existing configurations:`);
@@ -46,7 +54,7 @@ async function testTreatmentTargetFormAttachment() {
     const uniqueFormNames = [...new Set(formNames)];
 
     for (const formName of uniqueFormNames) {
-      const form = await db
+      const form = await await getDb()
         .withSchema(process.env.MYSQL_DATABASE)
         .from('forms')
         .where('form_cde', formName)
@@ -61,7 +69,7 @@ async function testTreatmentTargetFormAttachment() {
 
     // Test 4: Check therapy requests
     console.log('\n4. Checking therapy requests...');
-    const therapyRequests = await db
+    const therapyRequests = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('v_thrpy_req')
       .select('req_id', 'client_id', 'counselor_id', 'service_id')
@@ -77,7 +85,7 @@ async function testTreatmentTargetFormAttachment() {
       console.log('\n5. Checking sessions for first therapy request...');
       const firstReq = therapyRequests[0];
       
-      const sessions = await db
+      const sessions = await await getDb()
         .withSchema(process.env.MYSQL_DATABASE)
         .from('session')
         .where('req_id', firstReq.req_id)
@@ -91,7 +99,7 @@ async function testTreatmentTargetFormAttachment() {
 
     // Test 6: Check treatment_target_session_forms table structure
     console.log('\n6. Checking treatment_target_session_forms table structure...');
-    const sessionFormsColumns = await db
+    const sessionFormsColumns = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('treatment_target_session_forms')
       .columnInfo();
@@ -112,7 +120,7 @@ async function testTreatmentTargetFormAttachment() {
 
     // Test 6.1: Check user_forms table structure (for service-based forms)
     console.log('\n6.1. Checking user_forms table structure...');
-    const userFormsColumns = await db
+    const userFormsColumns = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('user_forms')
       .columnInfo();
@@ -152,14 +160,14 @@ async function testTreatmentTargetFormAttachment() {
     console.log('\nNext steps:');
     console.log('1. Use the API endpoints to test form attachment:');
     console.log('   - POST /api/thrpyReq/load-session-forms');
-    console.log('   - POST /api/treatment-target-feedback-config/load-session-forms');
+    console.log('   - POST /api/treatment-target-feeawait getDb()ack-config/load-session-forms');
     console.log('2. Verify that forms are properly attached to sessions');
     console.log('3. Check that user_forms records are created correctly');
 
   } catch (error) {
     console.error('❌ Error during testing:', error);
   } finally {
-    await db.destroy();
+    await await getDb().destroy();
   }
 }
 

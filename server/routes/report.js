@@ -1,8 +1,8 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { authenticate } = require('../middlewares/token.js');
-const { AsyncWrapper } = require('../utils/AsyncWrapper.js');
-const ReportController = require('../controllers/report.js').default;
+import { authenticate  } from '../middlewares/token.js';
+import { AsyncWrapper  } from '../utils/AsyncWrapper.js';
+import ReportController from '../controllers/report.js';
 const { Router } = require('express');
 
 const reportController = new ReportController();

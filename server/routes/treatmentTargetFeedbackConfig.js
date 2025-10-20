@@ -1,8 +1,8 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { Router } = require('express');
-const TreatmentTargetFeedbackConfigController = require('../controllers/treatmentTargetFeedbackConfig.js').default;
-const { AsyncWrapper } = require('../utils/AsyncWrapper.js');
+import TreatmentTargetFeedbackConfigController from '../controllers/treatmentTargetFeedbackConfig.js';
+import { AsyncWrapper  } from '../utils/AsyncWrapper.js';
 
 const router = Router();
 const treatmentTargetFeedbackConfigController = new TreatmentTargetFeedbackConfigController();
