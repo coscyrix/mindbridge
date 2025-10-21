@@ -36,7 +36,12 @@ export const getSessionTableColumns = ({
       name: "Session Date",
       selector: (row) => {
         if (!row.intake_date) return "";
-        return convertUTCToLocalTime(row.intake_date).date;
+        return convertUTCToLocalTime(
+                              `${
+                                row.req_dte_not_formatted ||
+                                row?.intake_date
+                              }T${row.req_time || row?.scheduled_time}`
+                            ).date;
       },
       selectorId: "intake_date",
       maxWidth: "120px",
