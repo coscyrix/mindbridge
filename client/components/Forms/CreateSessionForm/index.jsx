@@ -371,7 +371,7 @@ function CreateSessionForm({
     <CreateSessionFormWrapper>
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(onSubmit)}>
-          <div className="form_fields_wrapper">
+          <div className="form_fields_wrapper"> 
             <div className="user-info-selects">
               <SessionScheduleHeader
                 initialData={initialData}
