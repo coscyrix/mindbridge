@@ -310,7 +310,7 @@ export default class Session {
           .from('session')
           .where('thrpy_req_id', checkDischarge[0].thrpy_req_id)
           .whereRaw('LOWER(session_code) LIKE LOWER(?)', [
-            `%_${process.env.DISCHARGE_SERVICE_CODE}%`,
+            `%${process.env.DISCHARGE_SERVICE_CODE}%`,
           ])
           .update({ session_status: 'DISCHARGED' });
 

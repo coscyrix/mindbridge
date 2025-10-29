@@ -41,6 +41,14 @@ export const useSessionActions = (
     try {
       setLoader("generateSessionSchedule");
       if (formData) {
+        // Validate required fields before creating payload
+        if (!formData?.client_first_name?.value || 
+            !formData?.service_id?.value || 
+            !formData?.session_format_id?.value) {
+          toast.error("Please fill in all required fields (Client, Service, Session Format)");
+          return;
+        }
+
         const payloadDate = convertLocalToUTCTime(
           formData?.req_dte,
           formData?.req_time
