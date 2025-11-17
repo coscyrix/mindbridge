@@ -1,30 +1,29 @@
-import React, { useEffect, useState } from "react";
-import { CreateSessionFormWrapper, HomeworkButtonWrapper } from "./style";
-import { useForm, FormProvider } from "react-hook-form";
-import CustomTable from "../../CustomTable";
-import CustomButton from "../../CustomButton";
 import moment from "moment";
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import { FormProvider, useForm } from "react-hook-form";
 import { useReferenceContext } from "../../../context/ReferenceContext";
 import { AddIcon, SettingsIcon } from "../../../public/assets/icons";
 import {
   CONDITIONAL_ROW_STYLES,
 } from "../../../utils/constants";
-import Spinner from "../../common/Spinner";
 import {
-  convertLocalToUTCTime,
-  convertUTCToLocalTime,
+  convertUTCToLocalTime
 } from "../../../utils/helper";
-import { useRouter } from "next/router";
+import Spinner from "../../common/Spinner";
+import CustomButton from "../../CustomButton";
+import CustomTable from "../../CustomTable";
+import { CreateSessionFormWrapper, HomeworkButtonWrapper } from "./style";
 
 // Custom Hooks
-import { useSessionData } from "./hooks/useSessionData";
 import { useSessionActions } from "./hooks/useSessionActions";
+import { useSessionData } from "./hooks/useSessionData";
 import { useSessionNotes } from "./hooks/useSessionNotes";
 
 // Components
-import SessionScheduleHeader from "./SessionScheduleHeader";
 import SessionFormFields from "./SessionFormFields";
 import SessionModals from "./SessionModals";
+import SessionScheduleHeader from "./SessionScheduleHeader";
 import { getSessionTableColumns } from "./SessionTableColumns";
 
 function CreateSessionForm({
@@ -185,6 +184,12 @@ function CreateSessionForm({
 
   const counselor = userObj?.role_id == 2;
   const manager = userObj?.role_id == 3;
+
+  const combinedSessions = initialData
+    ? [...(scheduledSession ?? []), ...(additionalSessions ?? [])]
+    : sessionTableData ?? [];
+
+  const existingSessionsForEdit = (combinedSessions || []).filter(Boolean);
 
   // Helper Functions
   const formatDate = (date) => {
@@ -552,6 +557,7 @@ function CreateSessionForm({
         clientId={clientId}
         setSessionTableData={setSessionTableData}
         sessionRange={sessionRange}
+        existingSessions={existingSessionsForEdit}
         confirmationModal={confirmationModal}
         setConfirmationModal={setConfirmationModal}
         handleAffirmativeAction={() =>

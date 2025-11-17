@@ -18,14 +18,14 @@ const dbConn = {
       dateStrings: true,
       connectTimeout: 120000, // 2 minutes connection timeout
     },
-    pool: {
+    pool: { 
       max: 50,
       min: 0,
       idleTimeoutMillis: 30000, // Increased from 10000
       acquireTimeoutMillis: 60000, // Increased from 20000
     },
     acquireConnectionTimeout: 120000, // Increased from 50000 to 2 minutes
-    debug: true,
+    debug: false,
   },
   production: {
     client: 'mysql2',

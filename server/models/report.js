@@ -60,6 +60,7 @@ export default class Report {
           )
           .where('tt.is_sent', 1)
           .andWhere('client.status_yn', 'y')
+          .andWhere('tr.thrpy_status', '!=', 2) // Exclude discharged therapy requests
           .groupBy([
             'client.user_first_name',
             'client.user_last_name',
@@ -77,6 +78,7 @@ export default class Report {
         consentFormsQuery = db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('v_user_form as vuf')
+          .leftJoin('thrpy_req as tr', 'vuf.thrpy_req_id', 'tr.req_id')
           .leftJoin('feedback as fb', function() {
             this.on('fb.form_id', '=', 'vuf.form_id')
                 .andOn(function() {
@@ -108,6 +110,9 @@ export default class Report {
           .where('vuf.is_sent', 1)
           .andWhere('vuf.client_status_yn', 'y')
           .andWhere('vuf.form_cde', 'CONSENT') // Only get consent forms
+          .andWhere(function() {
+            this.where('tr.thrpy_status', '!=', 2).orWhereNull('tr.thrpy_status'); // Exclude discharged therapy requests
+          })
           .groupBy([
             'vuf.client_first_name',
             'vuf.client_last_name',
@@ -126,6 +131,7 @@ export default class Report {
         query = db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('v_user_form as vuf')
+          .leftJoin('thrpy_req as tr', 'vuf.thrpy_req_id', 'tr.req_id')
           .leftJoin('feedback as fb', function() {
             this.on('fb.form_id', '=', 'vuf.form_id')
                 .andOn(function() {
@@ -160,6 +166,9 @@ export default class Report {
           )
           .where('vuf.is_sent', 1)
           .andWhere('vuf.client_status_yn', 'y')
+          .andWhere(function() {
+            this.where('tr.thrpy_status', '!=', 2).orWhereNull('tr.thrpy_status'); // Exclude discharged therapy requests
+          })
           .groupBy([
             'vuf.client_first_name',
             'vuf.client_last_name',
@@ -287,6 +296,14 @@ export default class Report {
         if (data.role_id == 2 && data.counselor_id) {
           // For role_id=2 (counselor), filter by counselor_id
           consentFormsQuery.where('vuf.counselor_id', Number(data.counselor_id));
+          
+          // Get tenant_id for the counselor and filter by it
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            consentFormsQuery.where('vuf.tenant_id', Number(tenantId[0].tenant_id));
+          }
         } else if (data.role_id == 3 && data.tenant_id) {
           // For role_id=3 (manager), filter by tenant_id
           consentFormsQuery.where('vuf.tenant_id', Number(data.tenant_id));

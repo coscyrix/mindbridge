@@ -1,12 +1,11 @@
-import React from "react";
-import CustomModal from "../../CustomModal";
-import ConfirmationModal from "../../ConfirmationModal";
-import AdditionalServicesForm from "../../SessionFormComponents/AdditionalServices";
-import NoShowReasonForm from "../../SessionFormComponents/NoShowReason";
-import EditSessionScheduleForm from "../../SessionFormComponents/EditSessionSchedule";
-import NotesModalContent from "../../NotesModalContent";
 import AllNotesModalContent from "../../AllNotesModalContent";
+import ConfirmationModal from "../../ConfirmationModal";
+import CustomModal from "../../CustomModal";
 import HomeworkModal from "../../HomeworkModalContent";
+import NotesModalContent from "../../NotesModalContent";
+import AdditionalServicesForm from "../../SessionFormComponents/AdditionalServices";
+import EditSessionScheduleForm from "../../SessionFormComponents/EditSessionSchedule";
+import NoShowReasonForm from "../../SessionFormComponents/NoShowReason";
 
 const SessionModals = ({
   // Additional Service Modal
@@ -28,6 +27,7 @@ const SessionModals = ({
   setEditSessionModal,
   clientId,
   setSessionTableData,
+  existingSessions,
   sessionRange,
   
   // Confirmation Modals
@@ -124,6 +124,7 @@ const SessionModals = ({
           }
           setEditSessionModal={setEditSessionModal}
           sessionRange={sessionRange}
+          existingSessions={existingSessions}
         />
       </CustomModal>
 

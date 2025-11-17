@@ -182,35 +182,41 @@ export default class ThrpyReq {
       }
 
       const svc = servc.rec[0];
+      const dischargeReportCodeMap = {
+        OTR_ST: 'OTR_SUM_REP',
+        OTR_TS: 'OTR_Trns_REP',
+      };
+      const dischargeReportCode =
+        dischargeReportCodeMap[svc.service_code] || 'DR';
       
 
       // Get tenant-specific discharge service
-      // First try to find by service_code 'DR' in the current tenant
+      // First try to find by the resolved discharge report code in the current tenant
       let drService = await this.service.getServiceById({
-        service_code: 'DR',
+        service_code: dischargeReportCode,
         tenant_id: tenantId[0].tenant_generated_id,
         is_report: 1,
       });
 
-      console.log('🔍 DEBUG: First DR service lookup result:', {
+      console.log('🔍 DEBUG: First discharge service lookup result:', {
         tenant_id: tenantId[0].tenant_generated_id,
-        service_code: 'DR',
+        service_code: dischargeReportCode,
         is_report: 1,
         result: drService
       });
 
-      // If not found, try to find by service_code 'DR' in the tenant_generated_id
+      // If not found, try to find by the same code using tenant_generated_id
       if (!drService || !drService.rec || !drService.rec[0]) {
         console.log('🔍 DEBUG: First lookup failed, trying tenant_generated_id lookup');
         drService = await this.service.getServiceById({
-          service_code: 'DR',
+          service_code: dischargeReportCode,
           tenant_id: tenantId[0].tenant_generated_id,
           is_report: 1,
         });
         
-        console.log('🔍 DEBUG: Second DR service lookup result:', {
+        console.log('🔍 DEBUG: Second discharge service lookup result:', {
           tenant_id: tenantId[0].tenant_generated_id,
-          service_code: 'DR',
+          service_code: dischargeReportCode,
           is_report: 1,
           result: drService
         });
@@ -221,8 +227,8 @@ export default class ThrpyReq {
       console.log('🔍 DEBUG: data.tenant_id:', data.tenant_id);
 
       if (!drService || !drService.rec || !drService.rec[0]) {
-        logger.error(`Discharge report service not found for tenant_id: ${tenantId[0].tenant_generated_id}`);
-        return { message: `Discharge report service not found for tenant_id: ${tenantId[0].tenant_generated_id}`, error: -1 };
+        logger.error(`Discharge report service not found for tenant_id: ${tenantId[0].tenant_generated_id} with code ${dischargeReportCode}`);
+        return { message: `Discharge report service not found for tenant_id: ${tenantId[0].tenant_generated_id} with code ${dischargeReportCode}`, error: -1 };
       }
 
       const drSvc = drService.rec[0];
@@ -774,7 +780,9 @@ export default class ThrpyReq {
       // Load forms using the new mode-based system
       const loadForms = await this.loadSessionFormsWithMode({
         req_id: postThrpyReq[0],
-        tenant_id: data.tenant_id
+        tenant_id: data.tenant_id,
+        mode: "treatment_target",
+        treatment_target: treatmentTarget,
       });
 
       if (loadForms.error) {
@@ -1345,7 +1353,8 @@ export default class ThrpyReq {
                 // Force service mode
                 sessionFormMode = 'service';
                 // Get original service-based forms for this session
-                const originalServiceForms = await this.getOriginalServiceForms(session.session_id, thrpyReq.service_id);
+                const serviceIdForSession = session.service_id || thrpyReq.service_id;
+                const originalServiceForms = await this.getOriginalServiceForms(session.session_id, serviceIdForSession);
                 sessionFormsArray = originalServiceForms.length > 0 ? originalServiceForms : session.forms_array || [];
               }
               
@@ -1898,7 +1907,7 @@ export default class ThrpyReq {
         // Get therapy request to check sessions
         const query = db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
-          .from('thrpy_req')
+          .from('v_thrpy_req')
           .where('req_id', req_id);
 
         const [rec] = await query;

@@ -91,7 +91,7 @@ export default class Common {
     try {
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select('v_user_profile.*', 't.tenant_generated_id')
+        .select('v_user_profile.*', 't.tenant_generated_id', 't.timezone as tenant_timezone')
         .from('v_user_profile')
         .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id')
         .where('user_id', id);
@@ -111,10 +111,32 @@ export default class Common {
         .select('v_user_profile.*', 't.tenant_generated_id')
         .from('v_user_profile')
         .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id')
-        .where('user_profile_id', id);
+        .where('v_user_profile.user_profile_id', id);
+
+
+        // TODO: Maybe we dont need this extra check anymore
+      if (rec && rec.length > 0) {
+        const profile = rec[0];
+        
+        // Check if country_code exists in the result (either from view or as undefined)
+        if (!('country_code' in profile) || profile.country_code === null || profile.country_code === undefined) {
+          // Fetch country_code directly from user_profile table
+          const countryCodeResult = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .select('country_code')
+            .from('user_profile')
+            .where('user_profile_id', id)
+            .first();
+
+          if (countryCodeResult) {
+            profile.country_code = countryCodeResult.country_code;
+          }
+        }
+      }
 
       return rec;
     } catch (error) {
+      console.error('Error in getUserProfileByUserProfileId:', error);
       return error;
     }
   }
@@ -644,7 +666,8 @@ export default class Common {
         tenant_name: data.tenant_name,
         tenant_generated_id: generated_id,
         ...(data.admin_fee !== undefined && { admin_fee: data.admin_fee }),
-        ...(data.tax_percent !== undefined && { tax_percent: data.tax_percent })
+        ...(data.tax_percent !== undefined && { tax_percent: data.tax_percent }),
+        ...(data.timezone && { timezone: data.timezone })
       };
 
       const postTenant = await db

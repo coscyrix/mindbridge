@@ -41,7 +41,7 @@ export default class Feedback {
 
       // Update form submission status based on environment variable
       const formMode = process.env.FORM_MODE || 'auto';
-      
+
       // Only update treatment target session forms if session_id is provided
       if (data.session_id && formMode === 'treatment_target') {
         // Treatment target mode: update treatment target session forms
@@ -50,14 +50,14 @@ export default class Feedback {
         console.log('TreatmentTargetSessionForms imported:', typeof TreatmentTargetSessionForms);
         const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
         console.log('treatmentTargetSessionForms instance created:', typeof treatmentTargetSessionForms);
-        
+
         try {
           console.log('Calling updateTreatmentTargetSessionFormBySessionIdAndFormId with data:', {
             session_id: data.session_id,
             form_id: data.form_id,
             form_submit: true,
           });
-          
+
           const updateTreatmentTargetForm = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormBySessionIdAndFormId({
             session_id: data.session_id,
             form_id: data.form_id,
@@ -75,7 +75,7 @@ export default class Feedback {
           logger.error('Exception updating treatment target session form:', updateError);
           return { message: 'Error updating treatment target session forms', error: -1 };
         }
-      } else {
+      } else if (data.session_id && formMode === 'service') {
         // Service mode or auto mode: update user forms (service-based forms)
         const updateUserForm =
           await this.userForm.putUserFormBySessionIdAndFormID({
@@ -89,13 +89,13 @@ export default class Feedback {
           logger.error('Error updating user form');
           return { message: 'Error updating user form', error: -1 };
         }
-        
+
         // In auto mode, also try to update treatment target forms if they exist
-        if (data.session_id && formMode === 'auto') {
+        else if (data.session_id && formMode === 'auto') {
           try {
             const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
             const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
-            
+
             const updateTreatmentTargetForm = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormBySessionIdAndFormId({
               session_id: data.session_id,
               form_id: data.form_id,
@@ -157,11 +157,11 @@ export default class Feedback {
     try {
       // Get form mode from environment variable
       const formMode = process.env.FORM_MODE || 'auto';
-      
+
       let query;
 
       console.log('formMode', formMode);
-      
+
 
       if (formMode === 'treatment_target') {
         // Treatment target mode: query treatment target session forms
@@ -170,12 +170,12 @@ export default class Feedback {
           .from('treatment_target_session_forms as tt')
           .join('user_profile as client', 'tt.client_id', 'client.user_profile_id')
           .join('forms as fm', 'tt.form_id', 'fm.form_id')
-          .join('feedback as f', function() {
+          .join('feedback as f', function () {
             this.on('f.form_id', '=', 'tt.form_id')
-                .andOn(function() {
-                  this.on('f.session_id', '=', 'tt.session_id')
-                      .orOnNull('f.session_id');
-                });
+              .andOn(function () {
+                this.on('f.session_id', '=', 'tt.session_id')
+                  .orOnNull('f.session_id');
+              });
           })
           .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
           .select(
@@ -282,9 +282,9 @@ export default class Feedback {
 
         // Filter out null/empty consent results and only include when feedback_id is not specified
         // or when consent forms actually exist
-        const validConsentResults = consentResults.filter(result => 
-          result.feedback_id !== null && 
-          result.form_id !== null && 
+        const validConsentResults = consentResults.filter(result =>
+          result.feedback_id !== null &&
+          result.form_id !== null &&
           result.client_id !== null
         );
 
@@ -320,21 +320,21 @@ export default class Feedback {
             )
             .where('f.feedback_id', data.feedback_id)
             .andWhere('f.status_yn', 'y');
-          
+
           standaloneFeedbackResults = await standaloneQuery;
         }
 
         // Only include consent results if they're valid or if we're not filtering by specific feedback_id
-        const combinedResults = data.feedback_id 
+        const combinedResults = data.feedback_id
           ? [...treatmentTargetResults, ...standaloneFeedbackResults] // Include both treatment target and standalone results when filtering by feedback_id
           : [...treatmentTargetResults, ...validConsentResults]; // Include both when not filtering
 
         // Check if feedback already exists for this session
         if (data.is_submitted) {
           if (data.client_id && data.form_id && data.session_id) {
-            const existingFeedback = combinedResults.filter(feedback => 
-              feedback.client_id === data.client_id && 
-              feedback.form_id === data.form_id && 
+            const existingFeedback = combinedResults.filter(feedback =>
+              feedback.client_id === data.client_id &&
+              feedback.form_id === data.form_id &&
               feedback.session_id === data.session_id
             );
 
@@ -348,8 +348,8 @@ export default class Feedback {
         }
 
         // Return single object if only one result, otherwise return array
-        return { 
-          rec: combinedResults.length === 1 ? combinedResults[0] : combinedResults 
+        return {
+          rec: combinedResults.length === 1 ? combinedResults[0] : combinedResults
         };
 
       } else {
@@ -417,10 +417,10 @@ export default class Feedback {
         }
 
         const results = await query;
-        
+
         // Return single object if only one result, otherwise return array
-        return { 
-          rec: results.length === 1 ? results[0] : results 
+        return {
+          rec: results.length === 1 ? results[0] : results
         };
       }
     } catch (error) {
@@ -1234,7 +1234,7 @@ export default class Feedback {
       return { message: 'Feedback created successfully' };
     } catch (error) {
       console.log('error', error);
-      
+
       return { message: 'Error creating feedbacks', error: -1 };
     }
   }
@@ -1275,7 +1275,7 @@ export default class Feedback {
         const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
           user_profile_id: data.client_id,
         });
-        
+
         if (clientTargetOutcome && clientTargetOutcome.length > 0) {
           clientTargetOutcomeId = clientTargetOutcome[0].target_outcome_id;
         }
@@ -1347,14 +1347,25 @@ export default class Feedback {
 
       // Get the session at the specified count
       const targetSession = sessions[session_count - 1];
-      
+
       // Check if attendance feedback exists for this session
       const existingFeedback = await this.getFeedbackById({
         session_id: targetSession.session_id,
         form_id: 24, // Attendance form ID
       });
 
-      return existingFeedback && existingFeedback.length > 0;
+      if (existingFeedback?.error) {
+        logger.warn('Error checking attendance feedback existence', existingFeedback.message);
+        return false;
+      }
+
+      const feedbackRecords = existingFeedback?.rec;
+
+      if (Array.isArray(feedbackRecords)) {
+        return feedbackRecords.length > 0;
+      }
+
+      return Boolean(feedbackRecords);
     } catch (error) {
       console.log(error);
       logger.error(error);

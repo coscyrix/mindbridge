@@ -18,6 +18,7 @@ const EditSessionScheduleForm = ({
   setScheduledSessions,
   setEditSessionModal,
   sessionRange = { min: false, max: false },
+  existingSessions = [],
 }) => {
   const methods = useForm();
   const {
@@ -27,6 +28,92 @@ const EditSessionScheduleForm = ({
   } = methods;
 
   const [loading, setLoading] = useState(false);
+
+  const getPossibleIdentifiers = (session) => {
+    if (!session) return [];
+    const directIds = [
+      session?.session_id,
+      session?.sessionId,
+      session?.scheduled_session_id,
+      session?.session_obj_id,
+      session?.sessionNumber,
+      session?.session_number,
+      session?.id,
+    ]
+      .filter((value) => value !== undefined && value !== null)
+      .map((value) => String(value));
+
+    const nestedSessionId = session?.session_obj?.session_id;
+    if (nestedSessionId !== undefined && nestedSessionId !== null) {
+      directIds.push(String(nestedSessionId));
+    }
+
+    return directIds;
+  };
+
+  const hasSharedIdentifier = (firstSession, secondSession) => {
+    const firstIdentifiers = getPossibleIdentifiers(firstSession);
+    const secondIdentifiers = getPossibleIdentifiers(secondSession);
+    return (
+      firstIdentifiers.length > 0 &&
+      secondIdentifiers.length > 0 &&
+      firstIdentifiers.some((id) => secondIdentifiers.includes(id))
+    );
+  };
+
+  const getSessionMoment = (session) => {
+    if (!session) return null;
+
+    const sessionDate =
+      session?.intake_date || session?.req_dte_not_formatted || session?.req_dte;
+    const sessionTime =
+      session?.scheduled_time || session?.req_time || session?.scheduledTime;
+
+    if (!sessionDate || !sessionTime) return null;
+
+    const ensureTrailingZ = (value) => {
+      if (typeof value !== "string") return value;
+      if (/Z$/i.test(value) || /[+-]\d{2}:?\d{2}$/.test(value)) {
+        return value;
+      }
+      return `${value}Z`;
+    };
+
+    let combinedDateTime = "";
+
+    if (typeof sessionTime === "string") {
+      if (sessionTime.includes("T")) {
+        combinedDateTime = sessionTime;
+      } else if (sessionTime.includes(" ")) {
+        combinedDateTime = sessionTime.includes("Z")
+          ? sessionTime
+          : ensureTrailingZ(sessionTime);
+      } else {
+        combinedDateTime = `${sessionDate}T${sessionTime}`;
+      }
+    }
+
+    if (!combinedDateTime) {
+      combinedDateTime = `${sessionDate}T${sessionTime}`;
+    }
+
+    let parsedMoment = moment.utc(combinedDateTime, moment.ISO_8601, true);
+
+    if (!parsedMoment.isValid()) {
+      parsedMoment = moment.utc(`${sessionDate} ${sessionTime}`, [
+        "YYYY-MM-DD HH:mm:ss",
+        "YYYY-MM-DD HH:mm:ss.SSS",
+        "YYYY-MM-DD HH:mm:ss.SSSZ",
+        "YYYY-MM-DD HH:mm",
+        "YYYY-MM-DDTHH:mm:ss",
+        "YYYY-MM-DDTHH:mm:ss.SSS",
+        "YYYY-MM-DDTHH:mm:ss[Z]",
+        moment.ISO_8601,
+      ]);
+    }
+
+    return parsedMoment.isValid() ? parsedMoment : null;
+  };
 
   useEffect(() => {
     if (activeData) {
@@ -59,6 +146,38 @@ const EditSessionScheduleForm = ({
       formData?.intake_date,
       formData?.scheduled_time
     );
+
+    const updatedSessionMoment = moment.utc(utcDateTime);
+    if (!updatedSessionMoment.isValid()) {
+      toast.error("Invalid session date or time selected. Please try again.");
+      return;
+    }
+    const currentSessionMoment = getSessionMoment(activeData);
+
+    const overlapsWithExistingSession = existingSessions?.some((session) => {
+      if (!session) return false;
+
+      const sessionMoment = getSessionMoment(session);
+      if (!sessionMoment) return false;
+
+      const isSameSession =
+        hasSharedIdentifier(session, activeData) ||
+        (currentSessionMoment && sessionMoment.isSame(currentSessionMoment));
+
+      if (isSameSession) {
+        return false;
+      }
+
+      return sessionMoment.isSame(updatedSessionMoment);
+    });
+
+    if (overlapsWithExistingSession) {
+      toast.error(
+        "Selected date and time overlap with an existing session. Please choose a different slot."
+      );
+      return;
+    }
+
     try {
       setLoading(true);
       const intakeDate = moment.utc(utcDateTime).format("YYYY-MM-DD");

@@ -255,11 +255,11 @@ export default class Service {
         ...(data.svc_formula !== undefined && {
           svc_formula: JSON.stringify(data.svc_formula),
         }),
-        ...(data.position !== undefined &&
-          data.service_id !== undefined && {
+        ...(data.svc_report_formula?.position !== undefined &&
+          data.svc_report_formula?.service_id !== undefined && {
             svc_report_formula: JSON.stringify({
-              position: data.position,
-              service_id: data.service_id,
+              position: data.svc_report_formula.position,
+              service_id: data.svc_report_formula.service_id,
             }),
           }),
         ...(data.gst !== undefined && {

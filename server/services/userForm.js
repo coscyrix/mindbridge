@@ -84,6 +84,6 @@ export default class UserFormService {
     }
 
     const userForm = new UserForm();
-    return userForm.getUserFormById(data);
+    return userForm.getUserFormByFormIdAndClientId(data.form_id, data.client_id);
   }
 }

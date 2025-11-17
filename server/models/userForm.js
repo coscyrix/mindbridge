@@ -110,6 +110,36 @@ export default class UserForm {
 
   //////////////////////////////////////////
 
+  async putUserFormBySessionId(data) {
+    try {
+      const updateUserForm = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('user_forms')
+        .where('session_id', data.session_id)
+        .update({
+          is_sent: data.is_sent,
+          updated_at: new Date(),
+        });
+
+      if (typeof updateUserForm !== 'number') {
+        logger.error('Error updating user form by session id');
+        return { message: 'Error updating user form', error: -1 };
+      }
+
+      if (updateUserForm === 0) {
+        return { message: 'No user forms found for session', warn: -1 };
+      }
+
+      return { message: 'User forms updated successfully' };
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error updating user form', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
   async deleteUserForm(client_id, counselor_id, form_id, session_id) {
     try {
       const deleteUserForm = await db
@@ -392,6 +422,40 @@ export default class UserForm {
       console.log(error);
       logger.error(error);
       return { message: 'Error getting user forms by form id and session id', error: -1 };
+    }
+  }
+  async getUserFormByFormIdAndSessionId(form_id, session_id) {
+    try {
+      const userForm = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('user_forms')
+        .where('form_id', form_id)
+        .andWhere('session_id', session_id);
+  
+      return userForm;
+    }
+    catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error getting user form by id', error: -1 };
+    }
+  }
+
+  async getUserFormByFormIdAndClientId(form_id, client_id) {
+    try {
+      const userForm = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('user_forms')
+        .where('form_id', form_id)
+        .andWhere('client_id', client_id);
+
+      return userForm;
+    }
+    
+    catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error getting user form by form id and client id', error: -1 };
     }
   }
 }

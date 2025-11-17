@@ -474,4 +474,22 @@ export default class FeedbackService {
     const feedback = new Feedback();
     return feedback.postATTENDANCEFeedback(data);
   }
+
+  //////////////////////////////////////////
+
+  async checkAttendanceFeedbackExists(thrpy_req_id, session_count) {
+    const schema = joi.object({
+      thrpy_req_id: joi.number().required(),
+      session_count: joi.number().required(),
+    });
+
+    const { error } = schema.validate({ thrpy_req_id, session_count });
+
+    if (error) {
+      return false;
+    }
+
+    const feedback = new Feedback();
+    return feedback.checkAttendanceFeedbackExists(thrpy_req_id, session_count);
+  }
 }

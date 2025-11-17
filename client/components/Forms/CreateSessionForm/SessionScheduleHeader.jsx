@@ -51,7 +51,7 @@ const SessionScheduleHeader = ({
               </span>
             </label>
 
-            {([3, 4].includes(userObj?.role_id) ||
+            {([2, 3, 4].includes(userObj?.role_id) ||
               (!loader && !allSessionsStatusScheduled)) && (
               <>
                 <label>

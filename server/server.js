@@ -71,11 +71,11 @@ async function main() {
       ],
     });
 
-    // Schedule the cron job to run daily at midnight
+    // Schedule the cron job to run daily at midnight (Pacific Time)
     const session = new Session();
     cron.schedule('0 0 * * *', async () => {
       await session.dailyUpdateSessionStatus();
-    });
+    }, { timezone: 'America/Los_Angeles' });
 
     await server.listen();
   } catch (error) {

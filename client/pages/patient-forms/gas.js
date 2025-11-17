@@ -23,6 +23,7 @@ const AnxietyDisorderFormPage = () => {
         const response = await CommonServices.getFormSubmissionDetails({
           form_id,
           session_id,
+          client_id,
         });
         if (response.status === 200) {
           const { data } = response;

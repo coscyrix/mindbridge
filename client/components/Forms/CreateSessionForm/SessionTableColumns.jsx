@@ -1,9 +1,7 @@
-import React from "react";
-import CustomButton from "../../CustomButton";
 import { AddIcon } from "../../../public/assets/icons";
-import { convertUTCToLocalTime } from "../../../utils/helper";
 import { isWithin24Hours } from "../../../utils/constants";
-import moment from "moment";
+import { convertUTCToLocalTime } from "../../../utils/helper";
+import CustomButton from "../../CustomButton";
 
 export const getSessionTableColumns = ({
   userObj,
@@ -49,8 +47,13 @@ export const getSessionTableColumns = ({
     {
       name: "Session Time",
       selector: (row) => {
-        if (row?.scheduled_time) {
-          return row?.scheduled_time;
+        if (row?.scheduled_time && row?.intake_date) {
+          return convertUTCToLocalTime(
+            `${row.intake_date}T${row.scheduled_time}`
+          ).time;
+        } else if (row?.scheduled_time) {
+          // If only scheduled_time is available without date, convert it directly
+          return convertUTCToLocalTime(row.scheduled_time).time;
         } else {
           const intakeTime = row?.intake_date
             ? new Date(row.intake_date).toLocaleTimeString([], {
@@ -124,21 +127,28 @@ export const getSessionTableColumns = ({
                         })
                       : [];
 
-                    if (rowIndex < tempData.length - 1) {
-                      let minDate = new Date(row.intake_date);
-                      let maxDate = new Date(tempData[rowIndex + 1].intake_date);
-                      setSessionRange((prev) => ({
-                        ...prev,
-                        min: formatDate(minDate),
-                        max: formatDate(maxDate),
-                      }));
-                    } else {
-                      setSessionRange((prev) => ({
-                        ...prev,
-                        min: false,
-                        max: false,
-                      }));
+                    // Calculate minimum date: either today or previous session date (whichever is later)
+                    const today = new Date();
+                    const currentSessionDate = new Date(row.intake_date);
+                    const previousSessionDate = rowIndex > 0 ? new Date(tempData[rowIndex - 1].intake_date) : null;
+                    
+                    // Min date should be the later of: today or previous session date
+                    let minDate = today;
+                    if (previousSessionDate && previousSessionDate > today) {
+                      minDate = previousSessionDate;
                     }
+                    
+                    // Calculate maximum date: next session date (if exists)
+                    let maxDate = null;
+                    if (rowIndex < tempData.length - 1) {
+                      maxDate = new Date(tempData[rowIndex + 1].intake_date);
+                    }
+                    
+                    setSessionRange((prev) => ({
+                      ...prev,
+                      min: formatDate(minDate),
+                      max: maxDate ? formatDate(maxDate) : false,
+                    }));
                   }}
                 />
               </div>
@@ -180,16 +190,28 @@ export const getSessionTableColumns = ({
                       })
                     : [];
 
-                  if (rowIndex < tempData.length - 1) {
-                    let minDate = new Date(row.intake_date);
-                    let maxDate = new Date(tempData[rowIndex + 1].intake_date);
-                    maxDate.setDate(maxDate.getDate() - 1);
-                    setSessionRange((prev) => ({
-                      ...prev,
-                      min: formatDate(minDate),
-                      max: formatDate(maxDate),
-                    }));
+                  // Calculate minimum date: either today or previous session date (whichever is later)
+                  const today = new Date();
+                  const currentSessionDate = new Date(row.intake_date);
+                  const previousSessionDate = rowIndex > 0 ? new Date(tempData[rowIndex - 1].intake_date) : null;
+                  
+                  // Min date should be the later of: today or previous session date
+                  let minDate = today;
+                  if (previousSessionDate && previousSessionDate > today) {
+                    minDate = previousSessionDate;
                   }
+                  
+                  // Calculate maximum date: next session date (if exists)
+                  let maxDate = null;
+                  if (rowIndex < tempData.length - 1) {
+                    maxDate = new Date(tempData[rowIndex + 1].intake_date);
+                  }
+                  
+                  setSessionRange((prev) => ({
+                    ...prev,
+                    min: formatDate(minDate),
+                    max: maxDate ? formatDate(maxDate) : false,
+                  }));
                 }}
               />
             )}

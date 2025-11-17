@@ -6,6 +6,10 @@ import {
   capitalizeFirstLetter,
   capitalizeFirstLetterOfEachWord,
 } from './common.js';
+import {
+  getFriendlyTimezoneName,
+  formatDateTimeInTimezone,
+} from './timezone.js';
 
 dotenv.config();
 
@@ -327,86 +331,36 @@ export const welcomeAccountDetailsEmail = (
   };
 };
 
-const timeZoneConfig =
-  process.env.TIMEZONE === process.env.TIMEZONE
-    ? process.env.TIMEZONE
-    : 'America/Los_Angeles';
 
 export const therapyRequestDetailsEmail = (email, therapyRequest) => {
   const {
     counselor_first_name,
     counselor_last_name,
     client_first_name,
-    client_last_name,
+    client_last_name, 
+    // Prefer timezones provided from v_user_profile
+    client_timezone,
+    counselor_timezone,
     service_name,
     session_format_id,
     session_obj,
   } = therapyRequest;
 
-  // Debug logging to help identify the issue
-  console.log('🔍 DEBUG: therapyRequestDetailsEmail called with:', {
-    email,
-    service_name,
-    session_count: session_obj ? session_obj.length : 0,
-    sample_session: session_obj && session_obj.length > 0 ? {
-      session_id: session_obj[0].session_id,
-      intake_date: session_obj[0].intake_date,
-      scheduled_time: session_obj[0].scheduled_time,
-      service_name: session_obj[0].service_name
-    } : null
-  });
+  // Determine timezone preference: client -> counselor -> env default
+  const derivedTimezone =
+    client_timezone ||
+    counselor_timezone ||
+    process.env.TIMEZONE ||
+    'UTC';
+  const derivedTimezoneDisplayName = getFriendlyTimezoneName(derivedTimezone);
 
   const sessionDetails = session_obj
     ? session_obj.map((session, index) => {
-      // Debug logging for each session
-      console.log(`🔍 DEBUG: Processing session ${index + 1}:`, {
-        session_id: session.session_id,
-        intake_date: session.intake_date,
-        scheduled_time: session.scheduled_time,
-        service_name: session.service_name,
-        is_report: session.is_report
-      });
-
-      // Validate and format date and time
-      let localDate = 'N/A';
-      let localTime = 'N/A';
-      
-      // Check if both intake_date and scheduled_time are valid
-      if (session.intake_date && session.scheduled_time) {
-        try {
-          // Combine intake_date and scheduled_time into one ISO datetime string
-          const dateTimeString = `${session.intake_date}T${session.scheduled_time}`;
-          console.log(`🔍 DEBUG: Creating date from string: "${dateTimeString}"`);
-          
-          const localDateTime = new Date(dateTimeString);
-          console.log(`🔍 DEBUG: Created date object:`, localDateTime);
-
-          // Check if the date is valid
-          if (!isNaN(localDateTime.getTime())) {
-            // Convert the full datetime to the desired timezone for both date and time
-            localDate = localDateTime.toLocaleDateString('en-US', {
-              timeZone: timeZoneConfig,
-            });
-            localTime = localDateTime.toLocaleTimeString('en-US', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true,
-              timeZone: timeZoneConfig,
-            });
-            console.log(`🔍 DEBUG: Formatted date/time:`, { localDate, localTime });
-          } else {
-            console.log(`🔍 DEBUG: Invalid date created from: "${dateTimeString}"`);
-          }
-        } catch (error) {
-          console.error('Error parsing date/time for session:', session.session_id, error);
-          // Keep default 'N/A' values
-        }
-      } else {
-        console.log(`🔍 DEBUG: Missing date/time data for session ${session.session_id}:`, {
-          has_intake_date: !!session.intake_date,
-          has_scheduled_time: !!session.scheduled_time
-        });
-      }
+      const { localDate, localTime } = formatDateTimeInTimezone(
+        session.intake_date,
+        session.scheduled_time,
+        derivedTimezone,
+      );
 
       return `
         <tr style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px; ${
@@ -453,6 +407,9 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
             <td style="padding: 4px;">${session_format_id}</td>
           </tr>
         </table>
+        <p style="text-align: left; font-size: 14px; font-weight: bold; color: #333; margin: 20px 0;">
+          <strong>All session dates and times are listed in the ${derivedTimezoneDisplayName} time zone.</strong>
+        </p>
         
         <h4 style="color: #007bff; text-align: left; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Session Details</h4>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd; border-radius: 8px;">
@@ -489,7 +446,7 @@ export const dischargeEmail = (email, clientName) => {
         <p>It has been a privilege to work alongside you and witness your growth, resilience, and commitment to your well-being. I am confident that the tools and insights you've developed during our sessions will continue to support you in navigating life's challenges.</p>
         <p>Thank you for trusting me to be part of your journey. I wish you continued strength, growth, and fulfillment in the path ahead.</p>
         <p style="text-align: left;">Thank you,</p>
-        <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>
+        <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>     
         ${EMAIL_DISCLAIMER}
       </div>
     `,

@@ -30,6 +30,7 @@ export default class UserProfileService {
       tax_percent: joi.number().precision(2).optional(),
       clam_num: joi.number().optional(),
       tenant_id: joi.number().required(),
+      timezone: joi.string().optional(),
     });
 
     // Validate the entire data object against the schema
@@ -73,7 +74,8 @@ export default class UserProfileService {
       const postTenantResult = await this.common.postTenant({
         tenant_name: data.tenant_name,
         admin_fee: data.admin_fee,
-        tax_percent: data.tax_percent
+        tax_percent: data.tax_percent,
+        timezone: data.timezone,
       });
       if (postTenantResult.error) {
         return { message: postTenantResult.message, error: -1 };
@@ -88,6 +90,11 @@ export default class UserProfileService {
       user_first_name: joi.string().min(2).required(),
       user_last_name: joi.string().min(2).required(),
       email: joi.string().email().required(),
+      country_code: joi
+        .string()
+        .trim()
+        .pattern(/^\+\d{1,5}$/)
+        .optional(),
       user_phone_nbr: joi
         .number()
         .integer()
@@ -100,6 +107,7 @@ export default class UserProfileService {
       tenant_id: joi.number().required(),
       admin_fee: joi.number().precision(2).optional(),
       tax_percent: joi.number().precision(2).optional(),
+      timezone: joi.string().optional(),
     });
 
     console.log('//////////////////////////////////////////');
@@ -173,6 +181,11 @@ export default class UserProfileService {
       user_last_name: joi.string().min(2).optional(),
       email: joi.string().email().optional(),
       role_id: joi.number().optional(),
+      country_code: joi
+        .string()
+        .trim()
+        .pattern(/^\+\d{1,5}$/)
+        .optional(),
       user_phone_nbr: joi.number().optional(),
       user_typ_id: joi.number().optional(),
       clam_num: joi.number().optional(),
@@ -182,6 +195,7 @@ export default class UserProfileService {
       counselor_id: joi.number().optional(),
       admin_fee: joi.number().precision(2).optional(),
       tax_percent: joi.number().precision(2).optional(),
+      timezone: joi.string().optional(),
     });
 
     // Validate the entire data object against the schema

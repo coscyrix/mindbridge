@@ -47,21 +47,20 @@ export const ClientValidationSchema = z
       .string()
       .min(2, { message: "At least 2 characters required" }),
 
-    user_phone_nbr: z.preprocess(
-      (val) => (typeof val === "number" ? String(val) : val),
-      z
-        .string({
-          required_error: "Number is required",
-          invalid_type_error: "Please enter phone number",
-        })
-        .min(10, { message: "Phone must be equal to 10 dizit" })
-        .max(10,{message:"Phone must be equal to 10 dizit"})
-        .regex(/^[\d\s\(\)\-\+]+$/, { message: "Invalid phone number format" })
-        .transform((value) => value.replace(/[\D]/g, ""))
-        // .refine((value) => value.length!==10, {
-        //   message: "Phone number must be 10 digit",
-        // })
-    ),
+    user_phone_nbr: z
+      .string({
+        required_error: "Phone number is required",
+        invalid_type_error: "Please enter a valid phone number",
+      })
+      .min(1, { message: "Phone number is required" })
+      .refine(
+        (value) => {
+          if (!value) return false;
+          // Basic validation for E.164 format (react-phone-number-input format)
+          return /^\+[1-9]\d{1,14}$/.test(value.replace(/\s/g, ""));
+        },
+        { message: "Please enter a valid phone number" }
+      ),
     email: z
       .string()
       .nonempty("Email is required")
@@ -97,6 +96,7 @@ export const ClientValidationSchema = z
       return isNaN(num) ? undefined : num;
     }, z.number().nullable().optional()),
     description: z.string().nullable().optional(),
+    timezone: z.string().nullable().optional(),
   })
   .refine(
     (data) => {

@@ -13,12 +13,17 @@ import { ClientValidationSchema } from "../../../utils/validationSchema/validati
 import { useReferenceContext } from "../../../context/ReferenceContext";
 import Spinner from "../../common/Spinner";
 import CustomMultiSelect from "../../CustomMultiSelect";
+import PhoneInput, { parsePhoneNumber, isValidPhoneNumber } from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
+import TimezoneSelect from "react-timezone-select";
+
+
 import CustomEditableInputModal from "../../CustomEditableInputModal";
 
 function CreateClientForm({
   isOpen,
   setIsOpen,
-  initialData,
+  initialData,  
   setInitialData,
   setTableData,
   fetchClients,
@@ -106,6 +111,7 @@ function CreateClientForm({
     tax: "",
     service: [],
     description: "",
+    timezone: "",
     // service: serviceTemplates,
   };
   const methods = useForm({
@@ -133,8 +139,69 @@ function CreateClientForm({
     },
   ];
 
+  const parsePhoneData = (phoneValue) => {
+    if (phoneValue === null || phoneValue === undefined) {
+      return { country_code: "+1", user_phone_nbr: "" };
+    }
+
+    const normalizedValue = `${phoneValue}`.trim();
+    if (!normalizedValue) {
+      return { country_code: "+1", user_phone_nbr: "" };
+    }
+
+    try {
+      const phoneNumber = parsePhoneNumber(normalizedValue);
+      if (phoneNumber) {
+        return {
+          country_code: `+${phoneNumber.countryCallingCode}`,
+          user_phone_nbr: phoneNumber.nationalNumber,
+        };
+      }
+    } catch (error) {
+      // If parsing fails, try to extract manually
+      const cleaned = normalizedValue.replace(/\s+/g, "");
+      if (cleaned.startsWith("+")) {
+        const match = cleaned.match(/^\+(\d{1,5})(\d+)$/);
+        if (match) {
+          return {
+            country_code: `+${match[1]}`,
+            user_phone_nbr: match[2].slice(-10), // Take last 10 digits
+          };
+        }
+      }
+    }
+    
+    return { country_code: "+1", user_phone_nbr: phoneValue.replace(/\D/g, "").slice(-10) };
+  };
+
+  const formatPhoneForInput = (countryCode, phoneNumber) => {
+    if (phoneNumber === null || phoneNumber === undefined) {
+      return "";
+    }
+
+    const digitsOnly = `${phoneNumber}`.replace(/\D/g, "");
+    if (!digitsOnly) {
+      return "";
+    }
+
+    if (countryCode && countryCode.startsWith("+")) {
+      return `${countryCode}${digitsOnly}`;
+    }
+
+    if (countryCode) {
+      const sanitizedCode = countryCode.replace(/[^\d]/g, "");
+      if (sanitizedCode) {
+        return `+${sanitizedCode}${digitsOnly}`;
+      }
+    }
+
+    // Default to US country code when unavailable so the PhoneInput receives a valid E.164 value
+    return `+1${digitsOnly}`;
+  };
+
   const handleCreateClient = async (data) => {
     const role = methods.watch("role_id");
+    const { country_code, user_phone_nbr } = parsePhoneData(data?.user_phone_nbr);
     let processedData;
     if (role == 1) {
       processedData = {
@@ -145,7 +212,8 @@ function CreateClientForm({
         email: data?.email,
         target_outcome_id: data?.target_outcome_id?.value,
         role_id: data?.role_id,
-        user_phone_nbr: data?.user_phone_nbr,
+        country_code: country_code,
+        user_phone_nbr: user_phone_nbr,
         tenant_name: data?.tenant_name,
       };
     } else if (role === 2) {
@@ -155,7 +223,8 @@ function CreateClientForm({
         user_last_name: data?.user_last_name,
         email: data?.email,
         role_id: data?.role_id,
-        user_phone_nbr: data?.user_phone_nbr,
+        country_code: country_code,
+        user_phone_nbr: user_phone_nbr,
         tenant_name: data?.tenant_name,
         // description: data.description,
       };
@@ -166,10 +235,12 @@ function CreateClientForm({
         user_last_name: data?.user_last_name,
         email: data?.email,
         role_id: data?.role_id,
-        user_phone_nbr: data?.user_phone_nbr,
+        country_code: country_code,
+        user_phone_nbr: user_phone_nbr,
         tenant_name: data?.tenant_name,
         admin_fee: data.admin_fee,
         tax_percent: data.tax,
+        ...(data?.timezone && { timezone: data.timezone }),
       };
     } else {
       processedData = {
@@ -178,7 +249,8 @@ function CreateClientForm({
         user_last_name: data?.user_last_name,
         email: data?.email,
         role_id: data?.role_id,
-        user_phone_nbr: data?.user_phone_nbr,
+        country_code: country_code,
+        user_phone_nbr: user_phone_nbr,
         tenant_name: data?.tenant_name,
       };
     }
@@ -227,12 +299,14 @@ function CreateClientForm({
       admin_fee,
       clam_num,
     } = data;
+    const { country_code, user_phone_nbr: phoneNumber } = parsePhoneData(user_phone_nbr);
     const processedData = {
       user_first_name,
       user_last_name,
       email,
       role_id,
-      user_phone_nbr,
+      country_code: country_code,
+      user_phone_nbr: phoneNumber,
       ...(role_id === 1 && {
         target_outcome_id: target_outcome_id?.value,
       }),
@@ -299,7 +373,15 @@ function CreateClientForm({
       methods.reset(defaultValues);
     } else if (initialData) {
       setFormButton("Update");
-      methods.reset(initialData);
+      // Format phone number for react-phone-number-input (E.164 format)
+      const phoneValue = formatPhoneForInput(
+        initialData?.country_code,
+        initialData?.user_phone_nbr
+      );
+      methods.reset({
+        ...initialData,
+        user_phone_nbr: phoneValue,
+      });
       methods.setValue("tenant_name", initialData?.tenant?.tenant_name);
       methods.setValue("admin_fee", initialData?.tenant?.admin_fee);
       methods.setValue("tax", initialData?.tenant?.tax_percent);
@@ -317,6 +399,7 @@ function CreateClientForm({
   };
 
   const role = methods.watch("role_id");
+  const showTimezoneSelect = admin && !initialData && role === 3;
 
   useEffect(() => {
     if (role === 1) {
@@ -329,6 +412,12 @@ function CreateClientForm({
       methods.unregister("target_outcome_id");
     }
   }, [role]);
+
+  useEffect(() => {
+    if (!showTimezoneSelect) {
+      methods.setValue("timezone", "");
+    }
+  }, [showTimezoneSelect, methods]);
 
   // Auto-fill service field for manager (role 3) as soon as both role and templates are ready, even on first open
   // useEffect(() => {
@@ -402,7 +491,7 @@ function CreateClientForm({
                   type="number"
                 />
               </div>
-            )}
+            )}                                                                        
             {/* {role == 2 && user?.role_id == 4 && (
               <div className="fields">
                 <CustomInputField
@@ -431,12 +520,30 @@ function CreateClientForm({
               </div>
             </div>
             <div className="fields">
-              <CustomInputField
-                name="user_phone_nbr"
-                label="Phone Number*"
-                placeholder="Enter Phone Number"
-                type="number"
-              />
+              <div className="phone-input-wrapper">
+                <label>Phone Number*</label>
+                <Controller
+                  name="user_phone_nbr"
+                  control={methods.control}
+                  render={({ field, fieldState }) => (
+                    <>
+                      <PhoneInput
+                        international
+                        defaultCountry="US"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        className={fieldState.error ? "phone-input-error" : ""}
+                      />
+                      {fieldState.error && (
+                        <p className="custom-error-massage">
+                          {fieldState.error.message}
+                        </p>
+                      )}
+                    </>
+                  )}
+                />
+              </div>
             </div>
             <div className="fields">
               <CustomInputField
@@ -447,6 +554,34 @@ function CreateClientForm({
                 type="email"
               />
             </div>
+            {showTimezoneSelect && (
+                  <div className="select-field-wrapper">
+                    <label>Timezone*</label>
+                    <Controller
+                      name="timezone"
+                      control={methods.control}
+                      rules={{
+                        required: "Timezone is required",
+                      }}
+                      render={({ field, fieldState }) => (
+                        <>
+                          <TimezoneSelect
+                            value={field.value || ""}
+                            onChange={(timezone) =>
+                              field.onChange(timezone?.value || "")
+                            }
+                            onBlur={field.onBlur}
+                          />
+                          {fieldState.error && (
+                            <p className="custom-error-massage">
+                              {fieldState.error.message}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    />
+                  </div>
+                )}
             {/* {role == 1 && (
               <div className="select-field-wrapper">
                 <label>Service Type*</label>
@@ -524,6 +659,7 @@ function CreateClientForm({
                     type="number"
                   />
                 </div>
+
                 {/* <div className="select-field-wrapper">
                   <label>Services*</label>
                   {serviceTemplates.length === 0 ? (

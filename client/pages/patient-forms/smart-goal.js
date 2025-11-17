@@ -11,7 +11,7 @@ import CommonServices from "../../services/CommonServices";
 
 const SMARTGoals = () => {
   const router = useRouter();
-  const { form_id, session_id } = router.query;
+  const { form_id, session_id, client_id } = router.query;
 
   const [formAlreadySubmitted, setFormAlreadySubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -25,6 +25,7 @@ const SMARTGoals = () => {
         const response = await CommonServices.getFormSubmissionDetails({
           form_id,
           session_id,
+          client_id,
         });
         if (response.status === 200) {
           const { data } = response;
