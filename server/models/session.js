@@ -28,6 +28,23 @@ export default class Session {
   }
   //////////////////////////////////////////
 
+  // Helper: get today's date string in a specific timezone as YYYY-MM-DD
+  getTodayInTimezone(tz) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(new Date());
+      const year = parts.find(p => p.type === 'year')?.value;
+      const month = parts.find(p => p.type === 'month')?.value;
+      const day = parts.find(p => p.type === 'day')?.value;
+      if (year && month && day) return `${year}-${month}-${day}`;
+    } catch (e) {}
+    return new Date().toISOString().slice(0, 10);
+  }
+
   async postSession(data) {
     try {
       // Get the therapy request to find the counselor and tenant
@@ -84,6 +101,22 @@ export default class Session {
         session_counselor_amt: counselorAmount,
         session_system_amt: systemAmount,
       };
+
+      // If intake_date is in the past, mark as NO-SHOW (3). Compare using Pacific time date.
+      try {
+        const todayPacific = this.getTodayInTimezone('America/Los_Angeles');
+        const intakeDatePart =
+          typeof data.intake_date === 'string'
+            ? (data.intake_date.includes('T')
+                ? data.intake_date.split('T')[0]
+                : data.intake_date)
+            : '';
+        if (intakeDatePart && intakeDatePart < todayPacific && tmpSession.is_report !== 1) {
+          tmpSession.session_status = 3; // NO-SHOW
+        }
+      } catch (e) {
+        // Fallback: ignore and let DB default handle
+      }
 
       const postSession = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -211,6 +244,17 @@ export default class Session {
         session_system_amt,
       };
 
+      // If intake_date is in the past, mark as NO-SHOW (3). Compare using Pacific time date.
+      try {
+        const todayPacific = this.getTodayInTimezone('America/Los_Angeles');
+        const intakeDatePart = req_dte; // already 'YYYY-MM-DD'
+        if (intakeDatePart && intakeDatePart < todayPacific && tmpSession.is_report !== 1) {
+          tmpSession.session_status = 3; // NO-SHOW
+        }
+      } catch (e) {
+        // Fallback: ignore and let DB default handle
+      }
+
       const postSession = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('session')
@@ -281,21 +325,43 @@ export default class Session {
         }
       }
 
-      // Check if session is a discharge session
-      const checkDischarge = await this.getSessionById({
-        session_id: data.session_id,
-        service_code: process.env.DISCHARGE_SERVICE_CODE,
-      });
+      const dischargeCodeEnv = process.env.DISCHARGE_SERVICE_CODE;
+      const dischargeCodes = [
+        dischargeCodeEnv?.toUpperCase(),
+        'OTR_SUM_REP',
+        'OTR_TRNS_REP',
+      ].filter(Boolean);
+      const sessionCodeUpper = (recSession[0]?.session_code || '').toUpperCase();
+      const isDischargeSession = dischargeCodes.some((code) =>
+        sessionCodeUpper.includes(code),
+      );
 
-      if (checkDischarge && checkDischarge.length > 0) {
+      // Check if session is a discharge session
+      if (isDischargeSession && recSession[0]) {
         // Update all sessions with the same therapy request id to No Show if status is scheduled
-        const putSessions = await db
+        let putSessionsQuery = db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('session')
-          .where('thrpy_req_id', checkDischarge[0].thrpy_req_id)
-          .andWhere('session_status', 1)
-          .whereNot('session_description', process.env.DISCHARGE_SERVICE_CODE)
-          .update({ session_status: 3 });
+          .where('thrpy_req_id', recSession[0].thrpy_req_id)
+          .andWhere('session_status', 1);
+
+        if (dischargeCodeEnv) {
+          putSessionsQuery = putSessionsQuery.whereRaw(
+            'LOWER(session_code) NOT LIKE LOWER(?)',
+            [`%${dischargeCodeEnv}%`],
+          );
+        }
+
+        ['OTR_SUM_REP', 'OTR_TRNS_REP'].forEach((code) => {
+          putSessionsQuery = putSessionsQuery.whereRaw(
+            'LOWER(session_code) NOT LIKE LOWER(?)',
+            [`%${code}%`],
+          );
+        });
+
+        const putSessions = await putSessionsQuery.update({
+          session_status: 3,
+        });
 
         if (putSessions === 0) {
           logger.warn('No sessions were updated as their status was not 1.');
@@ -305,14 +371,31 @@ export default class Session {
         }
 
         // Update the discharge session to discharged
-        const putDischargeSession = await db
+        let dischargeSessionQuery = db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('session')
-          .where('thrpy_req_id', checkDischarge[0].thrpy_req_id)
-          .whereRaw('LOWER(session_code) LIKE LOWER(?)', [
-            `%_${process.env.DISCHARGE_SERVICE_CODE}%`,
-          ])
-          .update({ session_status: 'DISCHARGED' });
+          .where('thrpy_req_id', recSession[0].thrpy_req_id);
+
+        dischargeSessionQuery = dischargeSessionQuery.where(function () {
+          if (dischargeCodeEnv) {
+            this.whereRaw('LOWER(session_code) LIKE LOWER(?)', [
+              `%${dischargeCodeEnv}%`,
+            ])
+              .orWhereRaw('LOWER(session_code) LIKE LOWER(?)', ['%OTR_SUM_REP%'])
+              .orWhereRaw('LOWER(session_code) LIKE LOWER(?)', [
+                '%OTR_TRNS_REP%',
+              ]);
+          } else {
+            this.whereRaw('LOWER(session_code) LIKE LOWER(?)', ['%OTR_SUM_REP%'])
+              .orWhereRaw('LOWER(session_code) LIKE LOWER(?)', [
+                '%OTR_TRNS_REP%',
+              ]);
+          }
+        });
+
+        const putDischargeSession = await dischargeSessionQuery.update({
+          session_status: 'DISCHARGED',
+        });
 
         if (!putDischargeSession) {
           logger.error('Error updating discharge session');
@@ -326,7 +409,7 @@ export default class Session {
         const putThrpyReq = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('thrpy_req')
-          .where('req_id', checkDischarge[0].thrpy_req_id)
+          .where('req_id', recSession[0].thrpy_req_id)
           .update(tmpThrpyReq);
 
         if (!putThrpyReq) {
@@ -339,7 +422,7 @@ export default class Session {
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('v_thrpy_req')
           .where('status_yn', 1)
-          .andWhere('req_id', checkDischarge[0].thrpy_req_id);
+          .andWhere('req_id', recSession[0].thrpy_req_id);
 
         const dischargeEmlTmplt = this.emailTmplt.sendDischargeEmail({
           client_id: checkThrpyReq[0].client_id,
@@ -437,9 +520,12 @@ export default class Session {
           recSession[0].is_additional === 1) ||
         (tmpSession &&
           Object.keys(tmpSession).length > 0 &&
-          !recSession[0].session_code.includes(
-            `_${process.env.DISCHARGE_SERVICE_CODE}`,
+          !(
+            dischargeCodeEnv &&
+            sessionCodeUpper.includes(`_${dischargeCodeEnv?.toUpperCase()}`)
           ))
+        && !sessionCodeUpper.includes('_OTR_SUM_REP')
+        && !sessionCodeUpper.includes('_OTR_TRNS_REP')
       ) {
         const putSession = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -783,11 +869,12 @@ export default class Session {
 
   async dailyUpdateSessionStatus() {
     try {
-      const currentDate = new Date().toISOString().slice(0, 10); // Only get the date part
+      // Use Pacific time for determining "today"
+      const currentDate = this.getTodayInTimezone('America/Los_Angeles');
       const rec = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('session')
-        .where('intake_date', '<=', currentDate)
+        .where('intake_date', '<', currentDate) // fix for 4 defect
         .andWhere('session_status', 1)
         .andWhereNot('is_report', 1)
         .update({ session_status: 3 });

@@ -1,9 +1,9 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { Router } = require('express');
-const CounselorDocumentsController = require('../controllers/counselorDocuments.js').default;
-const { AsyncWrapper } = require('../utils/AsyncWrapper.js');
-const { authenticate } = require('../middlewares/token.js');
+import CounselorDocumentsController from '../controllers/counselorDocuments.js';
+import { AsyncWrapper  } from '../utils/AsyncWrapper.js';
+import { authenticate  } from '../middlewares/token.js';
 const multer = require('multer');;
 const path = require('path');;
 const fs = require('fs');;

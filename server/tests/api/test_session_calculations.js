@@ -1,18 +1,26 @@
 const request = require('supertest');
 const app = require('../../app.js');
 const knex = require('knex');
-const DBconn = require('../../config/db.config.js');
 
-const db = knex(DBconn.dbConn.development);
+// Database connection will be initialized dynamically
+let db = null;
+
+async function getDb() {
+  if (!db) {
+    const DBconn = await import('../../config/db.config.js');
+    db = knex(DBconn.default.dbConn.development);
+  }
+  return db;
+}
 
 describe('Session Calculations', () => {
   before(async () => {
     // Clean up any test data
-    await db.withSchema(process.env.MYSQL_DATABASE).from('session').where('session_id', '>', 0).del();
+    await await getDb().withSchema(process.env.MYSQL_DATABASE).from('session').where('session_id', '>', 0).del();
   });
 
   after(async () => {
-    await db.destroy();
+    await await getDb().destroy();
   });
 
   describe('Session Amount Calculations', () => {

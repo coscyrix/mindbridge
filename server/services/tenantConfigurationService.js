@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const TenantConfiguration = require('../models/tenantConfiguration.js').default;
+import TenantConfiguration from '../models/tenantConfiguration.js';
 const joi = require('joi');;
 
 export default class TenantConfigurationService {

@@ -1,14 +1,22 @@
 const knex = require('knex');
-const DBconn = require('../config/db.config.js');
 
-const db = knex(DBconn.dbConn.development);
+// Database connection will be initialized dynamically
+let db = null;
+
+async function getDb() {
+  if (!db) {
+    const DBconn = await import('../config/db.config.js');
+    db = knex(DBconn.default.dbConn.development);
+  }
+  return db;
+}
 
 async function fixSessionCalculations() {
   try {
     console.log('🔧 Fixing session calculations...\n');
 
     // Get all sessions that need to be fixed
-    const sessionsToFix = await db
+    const sessionsToFix = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('session as s')
       .join('service as svc', 's.service_id', 'svc.service_id')
@@ -58,7 +66,7 @@ async function fixSessionCalculations() {
         console.log(`  New Counselor Amount: $${expectedCounselorAmt.toFixed(4)}`);
 
         // Update the session with correct values
-        await db
+        await await getDb()
           .withSchema(process.env.MYSQL_DATABASE)
           .from('session')
           .where('session_id', session.session_id)
@@ -89,7 +97,7 @@ async function fixSessionCalculations() {
   } catch (error) {
     console.error('❌ Error fixing session calculations:', error);
   } finally {
-    await db.destroy();
+    await await getDb().destroy();
   }
 }
 

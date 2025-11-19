@@ -1,8 +1,8 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const UserForm = require('../models/userForm.js').default;
+import UserForm from '../models/userForm.js';
 const joi = require('joi');;
-const Common = require('../models/common.js').default;
+import Common from '../models/common.js';
 
 export default class UserFormService {
   //////////////////////////////////////////
@@ -84,6 +84,6 @@ export default class UserFormService {
     }
 
     const userForm = new UserForm();
-    return userForm.getUserFormById(data);
+    return userForm.getUserFormByFormIdAndClientId(data.form_id, data.client_id);
   }
 }

@@ -1,14 +1,22 @@
 const knex = require('knex');
-const DBconn = require('../config/db.config.js');
 
-const db = knex(DBconn.dbConn.development);
+// Database connection will be initialized dynamically
+let db = null;
+
+async function getDb() {
+  if (!db) {
+    const DBconn = await import('../config/db.config.js');
+    db = knex(DBconn.default.dbConn.development);
+  }
+  return db;
+}
 
 async function testGASEmailIntegration() {
   try {
     console.log('Testing GAS form email integration with target outcome ID...');
 
     // Check if there are clients with target outcomes
-    const clientsWithTargetOutcomes = await db
+    const clientsWithTargetOutcomes = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('user_target_outcome')
       .where('status_enum', 'y')
@@ -23,7 +31,7 @@ async function testGASEmailIntegration() {
     }
 
     // Check if there are sessions with GAS forms
-    const sessionsWithGASForms = await db
+    const sessionsWithGASForms = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('session')
       .whereRaw('JSON_CONTAINS(forms_array, ?)', ['25'])
@@ -43,7 +51,7 @@ async function testGASEmailIntegration() {
       console.log(`Target Outcome ID: ${client.target_outcome_id}`);
       
       // Generate sample email URL
-      const baseUrl = process.env.BASE_URL || 'https://mindapp.mindbridge.solutions/';
+      const baseUrl = process.env.BASE_URL || 'https://mindapp.minawait getDb()ridge.solutions/';
       const formsPath = process.env.FORMS || 'patient-forms/';
       const formId = 25; // GAS form ID
       const sessionId = sessionsWithGASForms[0]?.session_id || 1;
@@ -72,22 +80,22 @@ async function testGASEmailIntegration() {
     // Test database integration
     console.log('\nTesting database integration...');
     
-    // Check if feedback_gas table has the new column
-    const tableInfo = await db
+    // Check if feeawait getDb()ack_gas table has the new column
+    const tableInfo = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('information_schema.columns')
       .where({
         table_schema: process.env.MYSQL_DATABASE,
-        table_name: 'feedback_gas',
+        table_name: 'feeawait getDb()ack_gas',
         column_name: 'client_target_outcome_id'
       })
       .first();
 
     if (tableInfo) {
-      console.log('✅ client_target_outcome_id column exists in feedback_gas table');
+      console.log('✅ client_target_outcome_id column exists in feeawait getDb()ack_gas table');
     } else {
-      console.log('❌ client_target_outcome_id column not found in feedback_gas table');
-      console.log('Please run the migration: mysql -u root -p mindbridge < server/migrations/add_client_target_outcome_to_gas.sql');
+      console.log('❌ client_target_outcome_id column not found in feeawait getDb()ack_gas table');
+      console.log('Please run the migration: mysql -u root -p minawait getDb()ridge < server/migrations/add_client_target_outcome_to_gas.sql');
     }
 
     console.log('\n✅ GAS form email integration test completed successfully');
@@ -95,7 +103,7 @@ async function testGASEmailIntegration() {
   } catch (error) {
     console.error('❌ Error testing GAS form email integration:', error);
   } finally {
-    await db.destroy();
+    await await getDb().destroy();
   }
 }
 

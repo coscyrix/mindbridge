@@ -2,24 +2,26 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const DBconn = require('../config/db.config.js').default;
-const knex = require('knex');;
-const logger = require('../config/winston.js').default;
-const Common = require('./common.js').default;
-const AuthCommon = require('./auth/authCommon.js').default;
-const SendEmail = require('../middlewares/sendEmail.js').default;
-const EmailTmplt = require('./emailTmplt.js').default;
-const UserForm = require('./userForm.js').default;
-const {
+const knex = require('knex');
+import logger from '../config/winston.js';
+import DBconn from '../config/db.config.js';
+
+const db = knex(DBconn.dbConn.development);
+import Common from './common.js';
+import AuthCommon from './auth/authCommon.js';
+import SendEmail from '../middlewares/sendEmail.js';
+import EmailTmplt from './emailTmplt.js';
+import UserForm from './userForm.js';
+import {
   clientWelcomeEmail,
   consentFormEmail,
   emailUpdateEmail,
   accountRestoredEmail,
   welcomeAccountDetailsEmail,
-} = require('../utils/emailTmplt.js');
-const UserTargetOutcome = require('./userTargetOutcome.js').default;
+} from '../utils/emailTmplt.js';
+import UserTargetOutcome from './userTargetOutcome.js';
 
-const db = knex(DBconn.dbConn.development);
+// Database connection is handled by getDb() function above
 
 export default class UserProfile {
   //////////////////////////////////////////
@@ -42,6 +44,8 @@ export default class UserProfile {
         user_first_name: data.user_first_name.toLowerCase(),
         user_last_name: data.user_last_name.toLowerCase(),
         user_typ_id: data.user_typ_id || 2,
+        ...(data.country_code && { country_code: data.country_code }),
+        ...(data.timezone && { timezone: data.timezone }),
         user_phone_nbr: data.user_phone_nbr,
         clam_num: data.clam_num,
         tenant_id: data.tenant_id,
@@ -179,14 +183,34 @@ export default class UserProfile {
         return { message: 'Error creating user', error: -1 };
       }
 
+      const tenantTimezone =
+        tenantId && tenantId[0]
+          ? tenantId[0].tenant_timezone || tenantId[0].timezone || null
+          : null;
+      const defaultTimezone = process.env.TIMEZONE || null;
+      const timezoneForProfile =
+        data.role_id === 2
+          ? tenantTimezone || defaultTimezone
+          : data.timezone || tenantTimezone || defaultTimezone;
+      console.log('User profile timezone resolution:', {
+        tenant_id: tenantId ? tenantId[0]?.tenant_id : data.tenant_id,
+        role_id: data.role_id,
+        tenantTimezone,
+        providedTimezone: data.timezone,
+        defaultTimezone,
+        timezoneForProfile,
+      });
+
       const tmpUsrProfile = {
         user_id: postUser,
         user_first_name: data.user_first_name.toLowerCase(),
         user_last_name: data.user_last_name.toLowerCase(),
         user_typ_id: data.user_typ_id || 1,
+        ...(data.country_code && { country_code: data.country_code }),
         user_phone_nbr: data.user_phone_nbr,
         clam_num: data.clam_num,
         tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id,
+        ...(timezoneForProfile && { timezone: timezoneForProfile }),
       };
 
       const postUsrProfile = await db
@@ -302,7 +326,9 @@ export default class UserProfile {
       const tmpUsrProfile = {
         ...(data.user_first_name && { user_first_name: data.user_first_name }),
         ...(data.user_last_name && { user_last_name: data.user_last_name }),
+        ...(data.country_code && { country_code: data.country_code }),
         ...(data.user_phone_nbr && { user_phone_nbr: data.user_phone_nbr }),
+        ...(data.timezone && { timezone: data.timezone }),
         ...(data.user_typ_id && { user_typ_id: data.user_typ_id }),
         ...(data.clam_num && { clam_num: data.clam_num }),
         ...(data.status_yn && { status_yn: data.status_yn }),
@@ -443,6 +469,7 @@ export default class UserProfile {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select(
           'v_user_profile.*',
+          'up.country_code as user_profile_country_code',
           't.tenant_id as tenant_tenant_id',
           't.tenant_generated_id',
           't.tenant_name',
@@ -450,11 +477,12 @@ export default class UserProfile {
           't.tax_percent'
         )
         .from('v_user_profile')
+        .leftJoin('user_profile as up', 'v_user_profile.user_profile_id', 'up.user_profile_id')
         .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id');
 
       if (!(data.role_id === 4) || !data.role_id) {
         if (data.user_profile_id) {
-          query.where('user_profile_id', data.user_profile_id);
+          query.where('v_user_profile.user_profile_id', data.user_profile_id);
         }
 
         if (data.email) {
@@ -499,7 +527,7 @@ export default class UserProfile {
 
           const clientIds = clientList.map((client) => client.client_id);
 
-          query.whereIn('user_profile_id', clientIds);
+          query.whereIn('v_user_profile.user_profile_id', clientIds);
         }
       }
       console.log('query', query.toQuery());
@@ -520,8 +548,14 @@ export default class UserProfile {
           tenant_name,
           admin_fee,
           tax_percent,
+          user_profile_country_code,
           ...userProfileData
         } = profile;
+
+        const country_code =
+          userProfileData.country_code ??
+          user_profile_country_code ??
+          null;
 
         // Create tenant object
         const tenant = {
@@ -535,6 +569,7 @@ export default class UserProfile {
         // Return user profile with tenant object
         return {
           ...userProfileData,
+          country_code,
           tenant
         };
       });

@@ -1,8 +1,8 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const DBconn = require('../config/db.config.js').default;
-const knex = require('knex');;
-const logger = require('../config/winston.js').default;
+const knex = require('knex');
+import logger from '../config/winston.js';
+import DBconn from '../config/db.config.js';
 
 const db = knex(DBconn.dbConn.development);
 

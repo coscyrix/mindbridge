@@ -85,14 +85,21 @@ export default function CreateServiceForm({
       }
     }
 
+    const totalInvoiceWithTaxes =
+      parseFloat(methods.getValues("totalInvoiceTaxes")) ||
+      parseFloat(data.totalInvoiceTaxes) ||
+      0;
+    const gstAmount =
+      parseFloat(methods.getValues("gst")) || parseFloat(data.gst) || 0;
+
     const createPayload = {
       service_name: data.service_name,
       service_code: data.service_code,
       svc_formula_typ: "d",
       nbr_of_sessions: Number(data.nbr_of_sessions),
       svc_formula: svcFormulaArray || [],
-      total_invoice: parseFloat(data.total_invoice),
-      gst: data.tax_percent,
+      total_invoice: totalInvoiceWithTaxes,
+      gst: gstAmount,
       tenant_id: userDetails?.tenant_id,
       // user_profile_id: userDetails?.user_profile_id,
     };
@@ -103,12 +110,11 @@ export default function CreateServiceForm({
       // svc_formula_typ: "d",
       // nbr_of_sessions: Number(data.nbr_of_sessions),
       // svc_formula: svcFormulaArray || [],
-      total_invoice: parseFloat(data.total_invoice),
-      gst: data.gst,
+      total_invoice: totalInvoiceWithTaxes,
+      gst: gstAmount,
       // tenant_id: userDetails?.tenant_id,
       // user_profile_id:userDetails?.user_profile_id,
       discount_pcnt: data.discount_pcnt,
-      // total_invoice_and_taxes: data.totalInvoiceTaxes,
     };
 
     if (initialData) {

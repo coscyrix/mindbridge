@@ -1,35 +1,43 @@
 const knex = require('knex');
-const DBconn = require('../config/db.config.js');
 
-const db = knex(DBconn.dbConn.development);
+// Database connection will be initialized dynamically
+let db = null;
+
+async function getDb() {
+  if (!db) {
+    const DBconn = await import('../config/db.config.js');
+    db = knex(DBconn.default.dbConn.development);
+  }
+  return db;
+}
 
 async function testGASFormTargetOutcome() {
   try {
     console.log('Testing GAS form client target outcome integration...');
 
     // Check if the client_target_outcome_id column exists
-    const tableInfo = await db
+    const tableInfo = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('information_schema.columns')
       .where({
         table_schema: process.env.MYSQL_DATABASE,
-        table_name: 'feedback_gas',
+        table_name: 'feeawait getDb()ack_gas',
         column_name: 'client_target_outcome_id'
       })
       .first();
 
     if (tableInfo) {
-      console.log('✅ client_target_outcome_id column exists in feedback_gas table');
+      console.log('✅ client_target_outcome_id column exists in feeawait getDb()ack_gas table');
     } else {
-      console.log('❌ client_target_outcome_id column not found in feedback_gas table');
-      console.log('Please run the migration: mysql -u root -p mindbridge < migrations/add_client_target_outcome_to_gas.sql');
+      console.log('❌ client_target_outcome_id column not found in feeawait getDb()ack_gas table');
+      console.log('Please run the migration: mysql -u root -p minawait getDb()ridge < migrations/add_client_target_outcome_to_gas.sql');
       return;
     }
 
     // Check if there are any existing GAS form submissions
-    const existingSubmissions = await db
+    const existingSubmissions = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
-      .from('feedback_gas')
+      .from('feeawait getDb()ack_gas')
       .select('*')
       .limit(5);
 
@@ -43,7 +51,7 @@ async function testGASFormTargetOutcome() {
     }
 
     // Check if there are clients with target outcomes
-    const clientsWithTargetOutcomes = await db
+    const clientsWithTargetOutcomes = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('user_target_outcome')
       .where('status_enum', 'y')
@@ -64,7 +72,7 @@ async function testGASFormTargetOutcome() {
   } catch (error) {
     console.error('❌ Error testing GAS form target outcome integration:', error);
   } finally {
-    await db.destroy();
+    await await getDb().destroy();
   }
 }
 

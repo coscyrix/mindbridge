@@ -1,21 +1,19 @@
-import React, { useState } from "react";
-import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import CustomButton from "../../CustomButton";
-import { getStartedSchema } from "../../../utils/validationSchema/validationSchema";
-import CustomInputField from "../../CustomInputField";
-import SignatureField from "../../SignatureCanvas";
-import CommonServices from "../../../services/CommonServices";
-import CustomLoader from "../../Loader/CustomLoader";
-import GetStartedFormWrapper from "../../GetStartedForm/style";
 import CloseIcon from "@mui/icons-material/Close";
-import CustomMultiSelect from "../../CustomMultiSelect";
-import { toast } from "react-toastify";
-import GetStartedFormTemplateWrapper from "./style";
 import { useRouter } from "next/router";
+import { useState } from "react";
+import { Controller, FormProvider, useForm } from "react-hook-form";
 import { GoArrowLeft } from "react-icons/go";
-import PhoneInput from "react-phone-input-2";
-import "react-phone-input-2/lib/style.css";
+import PhoneInput from "react-phone-number-input";
+import { toast } from "react-toastify";
+import CommonServices from "../../../services/CommonServices";
+import { getStartedSchema } from "../../../utils/validationSchema/validationSchema";
+import CustomButton from "../../CustomButton";
+import CustomInputField from "../../CustomInputField";
+import CustomMultiSelect from "../../CustomMultiSelect";
+import CustomLoader from "../../Loader/CustomLoader";
+import SignatureField from "../../SignatureCanvas";
+import GetStartedFormTemplateWrapper from "./style";
 export const featureOptions = [
   { value: "Session Scheduling", label: "Session Scheduling" },
   { value: "Billing & Invoicing", label: "Billing & Invoicing" },

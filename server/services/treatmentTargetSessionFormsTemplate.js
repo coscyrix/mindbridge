@@ -1,7 +1,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const joi = require('joi');;
-const TreatmentTargetSessionFormsTemplate = require('../models/treatmentTargetSessionFormsTemplate.js').default;
+import TreatmentTargetSessionFormsTemplate from '../models/treatmentTargetSessionFormsTemplate.js';
 
 export default class TreatmentTargetSessionFormsTemplateService {
   //////////////////////////////////////////

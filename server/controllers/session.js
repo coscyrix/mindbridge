@@ -2,7 +2,7 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const SessionService = require('../services/session.js').default;
+import SessionService from '../services/session.js';
 const dotenv = require('dotenv');;
 
 dotenv.config();

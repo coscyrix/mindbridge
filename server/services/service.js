@@ -3,7 +3,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 import Service from '../models/service.js';
-const joi = require('joi');;
+const joi = require('joi');
 import Common from '../models/common.js';
 
 export default class ServiceService {
@@ -40,7 +40,7 @@ export default class ServiceService {
       const basePrice = Number(data.base_price) || 0; // base_price should be provided in data
       const adminFee = Number(tenant.admin_fee) || 0;
       const taxPercent = Number(tenant.tax_percent) || 0;
-      const finalPrice = basePrice + adminFee + (basePrice * taxPercent / 100);
+      const finalPrice = basePrice + adminFee + (basePrice * taxPercent) / 100;
       if (!data.total_invoice) data.total_invoice = finalPrice;
       if (!data.gst) data.gst = taxPercent;
     }
@@ -57,10 +57,17 @@ export default class ServiceService {
       service_name: joi.string().min(2).optional(),
       service_code: joi.string().min(2).optional(),
       total_invoice: joi.number().precision(4).optional(),
-      // nbr_of_sessions: joi.number().integer().optional(),
+      nbr_of_sessions: joi.number().integer().optional(),
       gst: joi.number().precision(4).optional(),
       discount_pcnt: joi.number().precision(4).optional(),
       //   role_id: joi.number().required(),
+      svc_formula: joi.array().items(joi.number()).optional(),
+      svc_report_formula: joi
+        .object({
+          position: joi.array().items(joi.number()).optional(),
+          service_id: joi.array().items(joi.number()).optional(),
+        })
+        .optional(),
     });
 
     const { error } = schema.validate(data);

@@ -1,14 +1,22 @@
 const knex = require('knex');
-const DBconn = require('../config/db.config.js');
 
-const db = knex(DBconn.dbConn.development);
+// Database connection will be initialized dynamically
+let db = null;
+
+async function getDb() {
+  if (!db) {
+    const DBconn = await import('../config/db.config.js');
+    db = knex(DBconn.default.dbConn.development);
+  }
+  return db;
+}
 
 async function setupGASForm() {
   try {
     console.log('Setting up GAS form for automatic sending...');
 
     // Check if GAS form already exists
-    const existingForm = await db
+    const existingForm = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('forms')
       .where('form_id', 25)
@@ -20,7 +28,7 @@ async function setupGASForm() {
     }
 
     // Insert GAS form
-    const result = await db
+    const result = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('forms')
       .insert({
@@ -41,7 +49,7 @@ async function setupGASForm() {
   } catch (error) {
     console.error('Error setting up GAS form:', error);
   } finally {
-    await db.destroy();
+    await await getDb().destroy();
   }
 }
 

@@ -50,6 +50,47 @@ export default class EmailTmplt {
       const tenantId = await this.common.getUserTenantId({
         user_profile_id: recSession[0].counselor_id,
       });
+      const tenantIdValue = tenantId?.[0]?.tenant_id;
+
+      const resolveFormRecord = async (formIdentifier) => {
+        if (formIdentifier === undefined || formIdentifier === null) {
+          return null;
+        }
+
+        let lookup;
+
+        if (typeof formIdentifier === 'number') {
+          lookup = await this.form.getFormByFormId({
+            form_id: formIdentifier,
+            tenant_id: tenantIdValue,
+          });
+        } else if (typeof formIdentifier === 'string') {
+          const numericId = Number(formIdentifier);
+
+          if (!Number.isNaN(numericId)) {
+            lookup = await this.form.getFormByFormId({
+              form_id: numericId,
+              tenant_id: tenantIdValue,
+            });
+          } else {
+            lookup = await this.form.getFormByCode({
+              form_cde: formIdentifier,
+              tenant_id: tenantIdValue,
+            });
+          }
+        }
+
+        if (lookup?.error) {
+          logger.error('Error resolving form record', lookup.message);
+          return null;
+        }
+
+        if (Array.isArray(lookup) && lookup.length > 0) {
+          return lookup[0];
+        }
+
+        return null;
+      };
 
       if (!recSession || !Array.isArray(recSession)) {
         logger.error('Session not found');
@@ -117,7 +158,7 @@ export default class EmailTmplt {
           
           const treatmentTargetForms = await treatmentTargetSessionForms.getFormsToSendForSession({
             session_id: session.session_id,
-            tenant_id: tenantId?.[0]?.tenant_id
+            tenant_id: tenantIdValue
           });
 
           if (!treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0) {
@@ -253,11 +294,15 @@ export default class EmailTmplt {
             
             // Send forms based on the determined form type
             for (const formId of formsToSend) {
-              const [form] = await this.form.getFormByFormId({
-                form_id: formId,
-              });
-              const form_name = form.form_cde;
-              const form_id = form.form_id;
+              const formRecord = await resolveFormRecord(formId);
+
+              if (!formRecord) {
+                logger.warn(`Form not found for identifier: ${formId}`);
+                continue;
+              }
+
+              const form_name = formRecord.form_cde;
+              const form_id = formRecord.form_id;
               const client_full_name =
                 recUser[0].user_first_name + ' ' + recUser[0].user_last_name;
               const client_id = recUser[0].user_profile_id;
@@ -457,9 +502,103 @@ export default class EmailTmplt {
 
   async sendThrpyReqDetailsEmail(data) {
     try {
+      // Fetch counselor and client profiles to get country codes
+      let counselorProfile = null;
+      let clientProfile = null;
+
+      if (data.big_thrpy_req_obj?.counselor_id) {
+        try {
+          const counselorProfiles = await this.common.getUserProfileByUserProfileId(
+            data.big_thrpy_req_obj.counselor_id,
+          );
+          if (counselorProfiles && counselorProfiles.length > 0) {
+            counselorProfile = counselorProfiles[0];
+          }
+        } catch (error) {
+          console.warn('Error fetching counselor profile:', error);
+        }
+      }
+
+      if (data.big_thrpy_req_obj?.client_id) {
+        try {
+          const clientProfiles = await this.common.getUserProfileByUserProfileId(
+            data.big_thrpy_req_obj.client_id,
+          );
+          if (clientProfiles && clientProfiles.length > 0) {
+            clientProfile = clientProfiles[0];
+            console.log('🔍 DEBUG: Client profile fetched:', {
+              client_id: data.big_thrpy_req_obj.client_id,
+              has_country_code: 'country_code' in clientProfile,
+              country_code: clientProfile.country_code,
+              country_code_value: clientProfile.country_code,
+              profile_keys: Object.keys(clientProfile),
+            });
+          } else {
+            console.warn('🔍 DEBUG: Client profile not found for client_id:', data.big_thrpy_req_obj.client_id);
+          }
+        } catch (error) {
+          console.warn('Error fetching client profile:', error);
+        }
+      } else {
+        console.warn('🔍 DEBUG: No client_id in big_thrpy_req_obj:', data.big_thrpy_req_obj);
+      }
+
+      if (data.big_thrpy_req_obj?.counselor_id) {
+        console.log('🔍 DEBUG: Counselor profile fetched:', {
+          counselor_id: data.big_thrpy_req_obj.counselor_id,
+          has_country_code: counselorProfile ? 'country_code' in counselorProfile : false,
+          country_code: counselorProfile?.country_code,
+          country_code_value: counselorProfile?.country_code,
+          profile_keys: counselorProfile ? Object.keys(counselorProfile) : [],
+        });
+      } else {
+        console.warn('🔍 DEBUG: No counselor_id in big_thrpy_req_obj:', data.big_thrpy_req_obj);
+      }
+
+      // Add country codes to therapy request object
+      // Resolve timezones from user profile, fallback to tenant timezone
+      const tenantIdForRequest = data.big_thrpy_req_obj?.tenant_id || null;
+      let resolvedCounselorTimezone = counselorProfile?.timezone ?? null;
+      let resolvedClientTimezone = clientProfile?.timezone ?? null;
+
+      try {
+        if (!resolvedCounselorTimezone && tenantIdForRequest) {
+          const tenant = await this.common.getTenantByTenantId(tenantIdForRequest);
+          if (!tenant.error && Array.isArray(tenant) && tenant[0]?.timezone) {
+            resolvedCounselorTimezone = tenant[0].timezone;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to resolve counselor timezone from tenant:', e?.message || e);
+      }
+
+      try {
+        if (!resolvedClientTimezone && tenantIdForRequest) {
+          const tenant = await this.common.getTenantByTenantId(tenantIdForRequest);
+          if (!tenant.error && Array.isArray(tenant) && tenant[0]?.timezone) {
+            resolvedClientTimezone = tenant[0].timezone;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to resolve client timezone from tenant:', e?.message || e);
+      }
+
+      const therapyRequestWithContact = {
+        ...data.big_thrpy_req_obj,
+        // Include timezones directly from v_user_profile
+        counselor_timezone: resolvedCounselorTimezone ?? null,
+        client_timezone: resolvedClientTimezone ?? null,
+      };
+
+      console.log('🔍 DEBUG: Therapy request with timezone info:', {
+        counselor_timezone: therapyRequestWithContact.counselor_timezone || '(none)',
+        client_timezone: therapyRequestWithContact.client_timezone || '(none)',
+        tenant_fallback_used: (!counselorProfile?.timezone || !clientProfile?.timezone) ? 'yes' : 'no',
+      });
+
       const thrpyReqEmlTmplt = therapyRequestDetailsEmail(
         data.email,
-        data.big_thrpy_req_obj,
+        therapyRequestWithContact,
       );
       const sendThrpyReqEmlTmpltEmail =
         this.sendEmail.sendMail(thrpyReqEmlTmplt);

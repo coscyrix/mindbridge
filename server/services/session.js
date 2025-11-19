@@ -2,8 +2,8 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const Session = require('../models/session.js').default;
-const Common = require('../models/common.js').default;
+import Session from '../models/session.js';
+import Common from '../models/common.js';
 const joi = require('joi');;
 
 export default class SessionService {

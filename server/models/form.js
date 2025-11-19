@@ -253,6 +253,35 @@ export default class Form {
 
   //////////////////////////////////////////
 
+  async getFormByCode(data) {
+    try {
+      let query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('forms')
+        .where('status_yn', 1);
+
+      if (data.form_cde) {
+        query = query.andWhere('form_cde', data.form_cde.toUpperCase());
+      }
+
+      if (data.tenant_id) {
+        query = query.andWhere('tenant_id', data.tenant_id);
+      }
+
+      const rec = await query;
+      if (!rec) {
+        logger.error('Error getting form by code');
+        return { message: 'Error getting form', error: -1 };
+      }
+      return rec;
+    } catch (error) {
+      logger.error(error);
+      return { message: 'Error getting form', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
   async getFormForSessionById(data) {
     try {
       let query = db

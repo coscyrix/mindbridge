@@ -1,14 +1,22 @@
 const knex = require('knex');
-const DBconn = require('../config/db.config.js');
 
-const db = knex(DBconn.dbConn.development);
+// Database connection will be initialized dynamically
+let db = null;
+
+async function getDb() {
+  if (!db) {
+    const DBconn = await import('../config/db.config.js');
+    db = knex(DBconn.default.dbConn.development);
+  }
+  return db;
+}
 
 async function verifySessionCalculations() {
   try {
     console.log('🔍 Verifying session calculations...\n');
 
     // Get all sessions with their service and ref_fees data
-    const sessions = await db
+    const sessions = await await getDb()
       .withSchema(process.env.MYSQL_DATABASE)
       .from('session as s')
       .join('service as svc', 's.service_id', 'svc.service_id')
@@ -116,7 +124,7 @@ async function verifySessionCalculations() {
   } catch (error) {
     console.error('❌ Error verifying session calculations:', error);
   } finally {
-    await db.destroy();
+    await await getDb().destroy();
   }
 }
 
