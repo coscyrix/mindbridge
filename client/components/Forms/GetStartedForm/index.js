@@ -22,6 +22,8 @@ export const featureOptions = [
   { value: "E-Signature", label: "E-Signature" },
   { value: "Other", label: "Other" },
 ];
+import 'react-phone-number-input/style.css'
+
 
 const GetStartedFormTemplate = ({ onClose, open }) => {
   const getFieldsByStep = (step) => {
