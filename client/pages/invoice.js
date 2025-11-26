@@ -637,7 +637,7 @@ const Invoice = () => {
             />
             {userObj?.role_id !== 4 && (
               <CustomTab
-                heading="Total Amount to Associate for a Month:"
+                heading="Monthly Associate Total:"
                 value={
                   loading ? (
                     <Skeleton width={120} height={40} />
@@ -740,7 +740,7 @@ const Invoice = () => {
 
             {userObj?.role_id == 4 ? (
               <CustomTab
-                heading={"Total Amount to Vapendama for a Month:"}
+                heading={"Monthly Vapendama Total:"}
                 value={
                   loading ? (
                     <Skeleton width={120} height={40} />

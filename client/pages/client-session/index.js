@@ -475,7 +475,7 @@ function ClientSession() {
 
             {userObj?.role_id !== 4 && (
               <CustomTab
-                heading="Total Amount to Associate for a Month:"
+                heading="Monthly Associate Total:"
                 value={
                   summaryLoading ? (
                     <Skeleton width={120} height={40} />
