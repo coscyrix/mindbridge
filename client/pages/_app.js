@@ -5,6 +5,9 @@ import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import { ReferenceContextProvider } from "../context/ReferenceContext";
 import LandingPageLayout from "../components/LandingPageComponents/LandingPageLayout";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { queryClient } from "../config/queryClient";
 
 const ROUTES = {
   LANDING_PAGES: [
@@ -54,7 +57,7 @@ function MyApp({ Component, pageProps }) {
   const shouldUseDefaultLayout = isAuthPage || isPatientFormsPage || is404Page;
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       {shouldUseDefaultLayout ? (
         <Component {...pageProps} />
       ) : (
@@ -67,7 +70,8 @@ function MyApp({ Component, pageProps }) {
         </AppLayout>
       )}
       <ToastContainer />
-    </>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }
 

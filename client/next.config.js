@@ -6,3 +6,5 @@ const nextConfig = {
     optimizeCss: false,
   },
 };
+
+module.exports = nextConfig;
