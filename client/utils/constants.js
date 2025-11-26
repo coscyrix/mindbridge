@@ -1237,12 +1237,24 @@ export const DOWNLOAD_OPTIONS = (columns, data, tableCaption) => [
   },
 ];
 
-export const REPORTS_TABLE_DATA_COLUMNS = [
+export const REPORTS_TABLE_DATA_COLUMNS = (handleClientClick) => [
   {
     name: "Client Name",
     selector: (row) => `${row.client_first_name} ${row.client_last_name}`,
     sortable: true,
     selectorId: "client_first_name",
+    cell: handleClientClick ? (row) => (
+      <div
+        style={{ 
+          color: "var(--link-color)", 
+          cursor: "pointer",
+          textTransform: "capitalize"
+        }}
+        onClick={() => handleClientClick(row)}
+      >
+        {`${row.client_first_name} ${row.client_last_name}`}
+      </div>
+    ) : undefined,
     style: {
       textTransform: "capitalize",
     },
@@ -1285,12 +1297,24 @@ export const REPORTS_TABLE_DATA_COLUMNS = [
   },
 ];
 
-export const ASSESSMENT_DATA_COLUMNS = (handleTreatmentTools) => [
+export const ASSESSMENT_DATA_COLUMNS = (handleTreatmentTools, handleClientClick) => [
   {
     name: "Client Name",
     selector: (row) => `${row.client_first_name} ${row.client_last_name}`,
     sortable: true,
     selectorId: "client_first_name",
+    cell: handleClientClick ? (row) => (
+      <div
+        style={{ 
+          color: "var(--link-color)", 
+          cursor: "pointer",
+          textTransform: "capitalize"
+        }}
+        onClick={() => handleClientClick(row)}
+      >
+        {`${row.client_first_name} ${row.client_last_name}`}
+      </div>
+    ) : undefined,
     style: {
       textTransform: "capitalize",
     },

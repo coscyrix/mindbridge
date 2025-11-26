@@ -10,7 +10,7 @@ import SmartGoals from "./SmartGoals";
 import IpfGraph from "./IpfGraph";
 import ConsentForm from "../../Forms/PatientForms/ConsentForm";
 import AttendanceGraph from "./AttendanceGraph";
-function AssessmentResults({ assessmentResultsData }) {
+function AssessmentResults({ assessmentResultsData, onClientClick }) {
   const [loading, setLoading] = useState("assessmentResultsData");
   const [showReportDetails, setShowReportDetails] = useState(false);
   const [formName, setFormName] = useState("");
@@ -354,7 +354,7 @@ function AssessmentResults({ assessmentResultsData }) {
       <CustomCard title="Homework And Assessment Tools Results">
         <CustomClientDetails
           tableData={{
-            columns: ASSESSMENT_DATA_COLUMNS(handleTreatmentTools),
+            columns: ASSESSMENT_DATA_COLUMNS(handleTreatmentTools, onClientClick),
             data: assessmentResultsData,
           }}
           fixedHeaderScrollHeight="230px"

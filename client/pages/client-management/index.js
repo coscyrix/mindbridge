@@ -5,7 +5,6 @@ import {
   CONDITIONAL_ROW_STYLES,
 } from "../../utils/constants";
 import { ClientManagementContainer } from "../../styles/client-management";
-import { api } from "../../utils/auth";
 import dynamic from "next/dynamic";
 import { toast } from "react-toastify";
 import CommonServices from "../../services/CommonServices";
@@ -14,7 +13,8 @@ import Spinner from "../../components/common/Spinner";
 import { useReferenceContext } from "../../context/ReferenceContext";
 import SmartTab from "../../components/SmartTab";
 import { useRouter } from "next/router";
-import ApiConfig from "../../config/apiConfig";
+import { useSessionModal, useFeeSplit } from "../../utils/hooks";
+
 const CreateClientForm = dynamic(
   () => import("../../components/Forms/CreateClientForm"),
   { ssr: false }
@@ -26,20 +26,16 @@ const CreateSessionLayout = dynamic(
     ),
   { ssr: false }
 );
+
 function ClientManagement() {
-  const [counselorId, setCounselorId] = useState(null);
-  const [selectTenantId, setSelectTenantId] = useState(null);
-  const [counselorConfiguration, setCounselorConfiguration] = useState(null);
-  const [managerSplitDetails, setManagerSplitDetails] = useState(null);
   const router = useRouter();
+  const { userObj } = useReferenceContext();
+  
   const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState();
   const [showCreateSessionLayout, setShowCreateSessionLayout] = useState(false);
-  const [activeData, setActiveData] = useState();
   const [clientFormData, setClientFormData] = useState();
   const [clientData, setClientData] = useState([]);
-  const [showFlyout, setShowFlyout] = useState(false);
-  const [initialDataLoading, setInitialDataLoading] = useState(false);
   const [confirmationModal, setConfirmationModal] = useState(false);
   const [userProfileId, setUserProfileId] = useState(null);
   const [counselors, setCounselors] = useState([
@@ -47,9 +43,24 @@ function ClientManagement() {
   ]);
   const [selectCounselor, setSelectCounselor] = useState("allCounselors");
   const [activeTab, setActiveTab] = useState(0);
+  const [counselorId, setCounselorId] = useState(null);
 
   const actionDropdownRef = useRef(null);
-  const { userObj } = useReferenceContext();
+
+  // Custom hooks - they get userObj internally from context
+  const {
+    showModal: showFlyout,
+    sessionData: activeData,
+    openSessionModal,
+    closeSessionModal,
+    setSessionData: setActiveData,
+  } = useSessionModal();
+
+  const {
+    counselorConfiguration,
+    managerSplitDetails,
+    fetchFeeSplit,
+  } = useFeeSplit();
 
   const tabLabels = [
     { id: 0, label: "Clients", value: "clients" },
@@ -138,40 +149,24 @@ function ClientManagement() {
       ([3, 4, 2].includes(userObj?.role_id) && row.has_schedule)
     ) {
       if (row?.tenant_id) {
-        console.log(row);
-        setSelectTenantId(row?.tenant_id);
         setCounselorId(row?.user_target_outcome?.at(0).counselor_id);
-        await fetchAllSplit(row?.tenant_id);
+        await fetchFeeSplit(row?.tenant_id);
       }
-      try {
-        setInitialDataLoading(true);
-        setUserProfileId({
-          label: row?.user_first_name + " " + row?.user_last_name,
-          serialNumber: row?.clam_num,
-          value: row?.user_profile_id,
-          has_schedule: row?.has_schedule,
-          user_target_outcome: row?.user_target_outcome,
-        });
-        setShowFlyout(true);
-        if (row?.has_schedule) {
-          const { req_id } = row?.has_schedule;
-          const response = await api.get(
-            `/thrpyReq/?req_id=${req_id}&role_id=${
-              userObj?.role_id == 3 ? 2 : userObj?.role_id
-            }&user_profile_id=${row?.user_target_outcome?.at(0).counselor_id}` // Adjusted to use user_target_outcome
-          );
-          if (response?.status === 200) {
-            const { data } = response;
-            Array.isArray(data) && data.length > 0
-              ? setActiveData(data[0])
-              : setActiveData({ req_id });
-          }
-        }
-      } catch (error) {
-        console.log("Error while fetching the current user data", error);
-        toast.error(`Error while fetching current user data. ${error}`);
-      } finally {
-        setInitialDataLoading(false);
+
+      setUserProfileId({
+        label: row?.user_first_name + " " + row?.user_last_name,
+        serialNumber: row?.clam_num,
+        value: row?.user_profile_id,
+        has_schedule: row?.has_schedule,
+        user_target_outcome: row?.user_target_outcome,
+      });
+
+      if (row?.has_schedule) {
+        const { req_id } = row?.has_schedule;
+        await openSessionModal(
+          req_id,
+          row?.user_target_outcome?.at(0).counselor_id
+        );
       }
     } else {
       if (userObj?.role_id === 2) {
@@ -201,26 +196,6 @@ function ClientManagement() {
   const handleEdit = (row) => {
     setClientFormData(row);
     setShowCreateSessionLayout(true);
-  };
-  const fetchAllSplit = async (tenant_id) => {
-    if (userObj.role_id === 3) {
-      return;
-    }
-
-    try {
-      console.log("logging selected", selectTenantId);
-      const response = await api.get(
-        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}`
-      );
-      if (response.status == 200) {
-        setCounselorConfiguration(
-          response?.data?.data?.counselor_specific_configurations
-        );
-        setManagerSplitDetails(response?.data?.data?.default_configuration);
-      }
-    } catch (error) {
-      toast.error(error?.response?.data?.message);
-    }
   };
 
   const handleDelete = async (row) => {
@@ -329,11 +304,11 @@ function ClientManagement() {
           setActiveTab={setActiveTab}
         />
       </CreateSessionLayout>
-      <CreateSessionLayout isOpen={showFlyout} setIsOpen={setShowFlyout}>
+      <CreateSessionLayout isOpen={showFlyout} setIsOpen={closeSessionModal}>
         {activeData ? (
           <CreateSessionForm
             isOpen={showFlyout}
-            setIsOpen={setShowFlyout}
+            setIsOpen={closeSessionModal}
             initialData={activeData}
             setInitialData={setActiveData}
             confirmationModal={confirmationModal}

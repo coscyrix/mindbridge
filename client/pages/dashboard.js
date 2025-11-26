@@ -1,4 +1,4 @@
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { DashboardContainer } from "../styles/dashboard";
 import OverallSession from "../components/DashboardComponents/OverallSession";
 import Reports from "../components/DashboardComponents/Reports";
@@ -9,6 +9,22 @@ import CommonServices from "../services/CommonServices";
 import { toast } from "react-toastify";
 import { useReferenceContext } from "../context/ReferenceContext";
 import CustomMultiSelect from "../components/CustomMultiSelect";
+import dynamic from "next/dynamic";
+import Spinner from "../components/common/Spinner";
+import { useSessionModal, useFeeSplit, useCounselorFilter } from "../utils/hooks";
+
+const CreateSessionForm = dynamic(
+  () => import("../components/Forms/CreateSessionForm"),
+  { ssr: false }
+);
+const CreateSessionLayout = dynamic(
+  () =>
+    import(
+      "../components/FormLayouts/CreateSessionLayout/CreateSessionLayout"
+    ),
+  { ssr: false }
+);
+
 function Dashboard() {
   const { userObj, tokenExpired } = useReferenceContext();
   const { role_id, user_profile_id, tenant_id } = userObj || {};
@@ -16,10 +32,29 @@ function Dashboard() {
   const [overallSessionsData, setOverallSessionsData] = useState();
   const [reports, setReports] = useState();
   const [assessmentResults, setAssessmentResults] = useState();
-  const { allCounselors } = useReferenceContext();
-  const [counselorOptions, setCounselorOptions] = useState([]);
-  const [selectedCounselor, setSelectedCounselor] = useState(null);
-  console.log(allCounselors);
+  
+  // Custom hooks - they get userObj internally from context
+  const {
+    showModal: showSessionModal,
+    sessionData: activeSessionData,
+    openSessionModal,
+    closeSessionModal,
+    setSessionData: setActiveSessionData,
+  } = useSessionModal();
+
+  const {
+    counselorConfiguration,
+    managerSplitDetails,
+    fetchFeeSplit,
+  } = useFeeSplit();
+
+  const {
+    counselorOptions,
+    selectedCounselor,
+    setSelectedCounselor,
+  } = useCounselorFilter();
+
+  const [counselorId, setCounselorId] = useState(null);
   const handleSelectCounselor = async () => {
     if (!selectedCounselor) return;
 
@@ -108,6 +143,20 @@ function Dashboard() {
     }
   };
 
+  const handleClientClick = async (row) => {
+    if (!row?.thrpy_req_id) {
+      toast.info("This client is not associated with a session");
+      return;
+    }
+
+    if (row?.tenant_id && userObj?.role_id !== 3) {
+      setCounselorId(row?.counselor_id);
+      await fetchFeeSplit(row?.tenant_id);
+    }
+
+    await openSessionModal(row.thrpy_req_id, row?.counselor_id);
+  };
+
   useEffect(() => {
     if (!tokenExpired) {
       fetchOverallSessionData();
@@ -115,20 +164,7 @@ function Dashboard() {
       fetchAssessmentResults();
     }
   }, [tokenExpired]);
-  useEffect(() => {
-    if (allCounselors?.length && tenant_id) {
-      const filtered = allCounselors
-        .filter((c) => c.tenant_id === tenant_id)
-        .map((c) => ({
-          label: `${c.user_first_name} ${c.user_last_name}`,
-          value: c.user_profile_id,
-        }));
-      setCounselorOptions([
-        { label: "All Counselors", value: "ALL" },
-        ...filtered,
-      ]);
-    }
-  }, [allCounselors, tenant_id]);
+
   useEffect(() => {
     if (selectedCounselor) {
       handleSelectCounselor();
@@ -145,6 +181,29 @@ function Dashboard() {
         The MindBridge app provides an intuitive and real-time overview of key
         metrics and insights for counselors and administrators.
       </p>
+      
+      {/* Session Modal */}
+      <CreateSessionLayout isOpen={showSessionModal} setIsOpen={closeSessionModal}>
+        {activeSessionData ? (
+          <CreateSessionForm
+            isOpen={showSessionModal}
+            setIsOpen={closeSessionModal}
+            initialData={activeSessionData}
+            setInitialData={setActiveSessionData}
+            confirmationModal={false}
+            setConfirmationModal={() => {}}
+            setSessions={() => {}}
+            session={activeSessionData}
+            fetchSessions={() => {}}
+            counselorConfiguration={counselorConfiguration}
+            managerSplitDetails={managerSplitDetails}
+            counselor_id={counselorId}
+          />
+        ) : (
+          <Spinner color="blue" />
+        )}
+      </CreateSessionLayout>
+      
       <DashboardTableContainer>
         <div className="dashboardTableContainer">
           {userObj?.role_id === 3 && (
@@ -158,8 +217,14 @@ function Dashboard() {
           )}
 
           {/* <CustomTab lines={SERVICE_FEE_INFO}/> */}
-          <AssessmentResults assessmentResultsData={assessmentResults} />
-          <Reports reportsData={reports} />
+          <AssessmentResults 
+            assessmentResultsData={assessmentResults} 
+            onClientClick={handleClientClick} 
+          />
+          <Reports 
+            reportsData={reports} 
+            onClientClick={handleClientClick} 
+          />
         </div>
       </DashboardTableContainer>
       <DashboardContainer>
