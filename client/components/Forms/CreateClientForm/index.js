@@ -312,10 +312,8 @@ function CreateClientForm({
       }),
       ...(role_id === 3 && {
         tenant_name: tenant_name || "",
-        // admin_fee,
-        // tax_percent: tax,
-
-        tenant_name,
+        admin_fee,
+        tax_percent: tax,
       }),
       ...(role_id === 2 &&
         {
@@ -647,14 +645,14 @@ function CreateClientForm({
                     label="Admin Fees*"
                     placeholder="Enter admin fees"
                     type="number"
-                    disabled={formButton === "Create" ? false : true}
+                    disabled={false}
                   />
                 </div>
                 <div className="fields">
                   <CustomInputField
                     name="tax"
                     label="Tax*"
-                    disabled={formButton === "Create" ? false : true}
+                    disabled={false}
                     placeholder="Enter Tax"
                     type="number"
                   />

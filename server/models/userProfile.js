@@ -406,6 +406,41 @@ export default class UserProfile {
         }
       }
 
+      // Update tenant table for admin_fee and tax_percent if role is manager (role_id = 3)
+      if (data.role_id === 3 && (data.admin_fee !== undefined || data.tax_percent !== undefined)) {
+        // Get user profile to find tenant_id
+        const userProfileData = await this.getUserProfileById({
+          user_profile_id: user_profile_id,
+        });
+
+        if (userProfileData.error || !userProfileData.rec || userProfileData.rec.length === 0) {
+          logger.error('Error getting user profile for tenant update');
+          return { message: 'Error getting user profile for tenant update', error: -1 };
+        }
+
+        const tenant_id = userProfileData.rec[0].tenant_id;
+
+        if (tenant_id) {
+          const tmpTenant = {
+            ...(data.admin_fee !== undefined && { admin_fee: data.admin_fee }),
+            ...(data.tax_percent !== undefined && { tax_percent: data.tax_percent }),
+          };
+
+          if (Object.keys(tmpTenant).length > 0) {
+            const putTenant = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('tenant')
+              .where('tenant_id', tenant_id)
+              .update(tmpTenant);
+
+            if (!putTenant) {
+              logger.error('Error updating tenant admin_fee and tax_percent');
+              return { message: 'Error updating tenant information', error: -1 };
+            }
+          }
+        }
+      }
+
       if (data.email || data.role_id) {
         // If email is being updated, check if it already exists for a different user
         if (data.email) {
