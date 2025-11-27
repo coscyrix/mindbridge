@@ -874,16 +874,39 @@ export const FeatureAndReportSectionWrapper = styled.div`
   .logo-container {
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 30px;
     height: 60px;
     padding-bottom: 100px;
+    margin-top: 40px;
+    flex-wrap: wrap;
+    
     svg {
       color: black;
     }
+    
+    img {
+      height: 60px;
+      width: auto;
+      object-fit: contain;
+      filter: grayscale(0%);
+      transition: transform 0.3s ease;
+      
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+    
     @media screen and (max-width: 540px) {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 20px;
+      height: auto;
+      
+      img {
+        height: 50px;
+        margin: 0 auto;
+      }
     }
   }
 
@@ -1009,6 +1032,18 @@ export const FeatureCardWrapper = styled.div`
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    
+    img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      margin-bottom: 8px;
+      
+      @media screen and (max-width: 425px) {
+        width: 40px;
+        height: 40px;
+      }
+    }
   }
 
   .feature-card-icon {
