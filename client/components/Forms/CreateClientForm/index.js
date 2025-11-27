@@ -392,7 +392,22 @@ function CreateClientForm({
 
   const handleDiscard = (e) => {
     e.preventDefault();
-    methods.reset(initialData || defaultValues);
+    if (initialData) {
+      const phoneValue = formatPhoneForInput(
+        initialData?.country_code,
+        initialData?.user_phone_nbr
+      );
+      methods.reset({
+        ...initialData,
+        user_phone_nbr: phoneValue,
+      });
+      methods.setValue("tenant_name", initialData?.tenant?.tenant_name);
+      methods.setValue("admin_fee", initialData?.tenant?.admin_fee);
+      methods.setValue("tax", initialData?.tenant?.tax_percent);
+      methods.setValue("target_outcome_id", defaultValues?.target_outcome_id);
+    } else {
+      methods.reset(defaultValues);
+    }
     setIsOpen(false);
   };
 
