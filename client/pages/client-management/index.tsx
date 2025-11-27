@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import CustomClientDetails from "../../components/CustomClientDetails";
 import {
   CLIENT_MANAGEMENT_DATA,
@@ -14,6 +14,10 @@ import { useReferenceContext } from "../../context/ReferenceContext";
 import SmartTab from "../../components/SmartTab";
 import { useRouter } from "next/router";
 import { useSessionModal, useFeeSplit } from "../../utils/hooks";
+import { useQueryData } from "../../utils/hooks/useQueryData";
+import { useMutationData } from "../../utils/hooks/useMutationData";
+import { api } from "../../utils/auth";
+import { useQueryClient } from "@tanstack/react-query";
 
 const CreateClientForm = dynamic(
   () => import("../../components/Forms/CreateClientForm"),
@@ -30,20 +34,16 @@ const CreateSessionLayout = dynamic(
 function ClientManagement() {
   const router = useRouter();
   const { userObj } = useReferenceContext();
+  const queryClient = useQueryClient();
   
-  const [clients, setClients] = useState([]);
-  const [clientsLoading, setClientsLoading] = useState();
   const [showCreateSessionLayout, setShowCreateSessionLayout] = useState(false);
   const [clientFormData, setClientFormData] = useState();
-  const [clientData, setClientData] = useState([]);
   const [confirmationModal, setConfirmationModal] = useState(false);
   const [userProfileId, setUserProfileId] = useState(null);
-  const [counselors, setCounselors] = useState([
-    { label: "All counselors", value: "allCounselors" },
-  ]);
   const [selectCounselor, setSelectCounselor] = useState("allCounselors");
   const [activeTab, setActiveTab] = useState(0);
   const [counselorId, setCounselorId] = useState(null);
+  const [activeRowId, setActiveRowId] = useState(null); // Track active dropdown row
 
   const actionDropdownRef = useRef(null);
 
@@ -69,78 +69,131 @@ function ClientManagement() {
     { id: 3, label: "Admins", value: "admins" },
   ];
 
-  const handleFilterData = (tab) => {
-    if (!clients || clients.length === 0) return; // Ensure clients exist
+  // Build query params for fetching clients
+  const buildClientParams = () => {
+    const isAdminOrManager = [3, 4].includes(userObj?.role_id);
+    
+    if (!isAdminOrManager) {
+      return {
+        role_id: userObj?.role_id,
+        counselor_id: userObj?.user_profile_id,
+      };
+    }
+    
+    // For admin/manager with counselor filter
+    if (selectCounselor && selectCounselor !== "allCounselors") {
+      return {
+        role_id: 2,
+        counselor_id: selectCounselor,
+      };
+    }
+    
+    // For admin/manager without filter (all clients)
+    return {
+      role_id: userObj?.role_id,
+      counselor_id: userObj?.user_profile_id,
+    };
+  };
 
-    const filteredData = clients.filter((client) => {
-      return client.role_id === tab.id + 1 && client.status_yn === "y"; // Adjusted logic
+  // Fetch clients using TanStack Query
+  const {
+    data: clientsResponse,
+    isPending: clientsLoading,
+    refetch: refetchClients,
+    error: clientsError,
+  } = useQueryData(
+    ["clients", userObj?.role_id, userObj?.user_profile_id, selectCounselor],
+    async () => {
+      const params = buildClientParams();
+      const isAdminOrManager = [3, 4].includes(userObj?.role_id);
+      const isCounselorFiltered = selectCounselor && selectCounselor !== "allCounselors";
+      
+      let response;
+      if (!isAdminOrManager || isCounselorFiltered) {
+        response = await CommonServices.getClientsByCounselor(params);
+      } else {
+        response = await CommonServices.getClients(params);
+      }
+      
+      return response?.data?.rec || [];
+    },
+    !!userObj?.role_id && !!userObj?.user_profile_id
+  );
+
+  // Fetch counselors for dropdown (only for admin/manager)
+  const {
+    data: counselorsResponse,
+    error: counselorsError,
+  } = useQueryData(
+    ["counselors-dropdown", userObj?.tenant_id],
+    async () => {
+      const response = await CommonServices.getClients();
+      const allCounselors = response?.data?.rec?.filter(
+        (client) =>
+          client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
+      );
+      return allCounselors || [];
+    },
+    [3, 4].includes(userObj?.role_id) && !!userObj?.tenant_id
+  );
+
+  // Transform counselors data for dropdown
+  const counselors = useMemo(() => {
+    const counselorOptions = counselorsResponse?.map((item) => ({
+      label: `${item?.user_first_name} ${item?.user_last_name}`,
+      value: item?.user_profile_id,
+    })) || [];
+    
+    return [{ label: "All counselors", value: "allCounselors" }, ...counselorOptions];
+  }, [counselorsResponse]);
+
+  // Delete client mutation
+  const { mutate: deleteClient, isPending: isDeleting } = useMutationData(
+    ["delete-client"],
+    async (userId) => {
+      return await api.put(`user-profile/del/?user_profile_id=${userId}`);
+    },
+    ["clients", "sessions"] // This will auto-invalidate all "clients" and "sessions" queries after delete
+  );
+
+  // Handle errors
+  useEffect(() => {
+    if (clientsError) {
+      console.log("Error fetching clients", clientsError);
+      toast.error("Error fetching clients");
+    }
+  }, [clientsError]);
+
+  useEffect(() => {
+    if (counselorsError) {
+      console.log("Error fetching counselors", counselorsError);
+    }
+  }, [counselorsError]);
+
+  // Filter and prepare client data based on active tab
+  const clientData = useMemo(() => {
+    const clients = clientsResponse || [];
+    if (!clients || clients.length === 0) return [];
+
+    const filtered = clients.filter((client) => {
+      return client.role_id === activeTab + 1 && client.status_yn === "y";
     });
 
-    setClientData(filteredData);
-  };
+    return filtered.map((client) => ({
+      ...client,
+      active: client.user_profile_id === activeRowId,
+    }));
+  }, [clientsResponse, activeTab, activeRowId]);
 
-  const fetchClients = async (counselorId) => {
-    try {
-      setClientsLoading(true);
-      let response;
-      if (![3, 4].includes(userObj?.role_id)) {
-        response = await CommonServices.getClientsByCounselor({
-          role_id: userObj?.role_id,
-          counselor_id: userObj?.user_profile_id,
-        });
-      } else {
-        // in case of admin
-        if (counselorId && counselorId !== "allCounselors") {
-          response = await CommonServices.getClientsByCounselor({
-            role_id: 2,
-            counselor_id: counselorId,
-          });
-        } else {
-          response = await CommonServices.getClients({
-            role_id: userObj?.role_id,
-            counselor_id: userObj?.user_profile_id,
-          });
-        }
-      }
-      if (response.status === 200) {
-        const { data } = response;
-
-        setClients(data?.rec?.length > 0 ? data?.rec : []);
-      }
-    } catch (error) {
-      console.log("Error fetching clients", error);
-    } finally {
-      setClientsLoading(false);
-    }
-  };
-
-  const fetchCounsellor = async () => {
-    try {
-      const response = await CommonServices.getClients();
-      if (response.status === 200) {
-        const { data } = response;
-        const allCounselors = data?.rec?.filter(
-          (client) =>
-            client?.role_id === 2 && client?.tenant_id === userObj?.tenant_id
-        );
-        const counselorOptions = allCounselors?.map((item) => {
-          return {
-            label: item?.user_first_name + " " + item?.user_last_name,
-            value: item?.user_profile_id,
-          };
-        });
-        setCounselors([...counselors, ...counselorOptions]);
-      }
-    } catch (error) {
-      console.log("Error fetching clients", error);
-    }
+  const handleFilterData = (tab) => {
+    setActiveTab(tab.id);
   };
 
   const handleSelectCounselor = (data) => {
     const counselorId = data?.value;
     setSelectCounselor(counselorId);
     setActiveTab(0);
-    fetchClients(counselorId);
+    // Query will automatically refetch due to key change
   };
 
   const handleEditSessionInfo = async (row) => {
@@ -176,21 +229,9 @@ function ClientManagement() {
   };
 
   const handleCellClick = (row) => {
-    setClientData((prev) => {
-      return prev?.map((data) => {
-        if (data.user_profile_id === row.user_profile_id) {
-          return {
-            ...data,
-            active: !row.active,
-          };
-        } else {
-          return {
-            ...data,
-            active: false,
-          };
-        }
-      });
-    });
+    setActiveRowId((prevId) =>
+      prevId === row.user_profile_id ? null : row.user_profile_id
+    );
   };
 
   const handleEdit = (row) => {
@@ -198,30 +239,9 @@ function ClientManagement() {
     setShowCreateSessionLayout(true);
   };
 
-  const handleDelete = async (row) => {
-    try {
-      const res = await api.put(
-        `user-profile/del/?user_profile_id=${row?.user_profile_id}`
-      );
-      if (res.status === 200) {
-        setClientData((prev) => {
-          const updatedData = prev?.filter(
-            (data) => data.user_profile_id !== row?.user_profile_id
-          );
-
-          return updatedData;
-        });
-      }
-      toast.success("Client deleted Successfully", {
-        position: "top-right",
-      });
-      handleCellClick(row);
-    } catch (err) {
-      console.error(err);
-      toast.success("Error while deleting the Client", {
-        position: "top-right",
-      });
-    }
+  const handleDelete = (row) => {
+    deleteClient(row?.user_profile_id);
+    setActiveRowId(null);
   };
 
   const handleClickOutside = (e) => {
@@ -229,14 +249,7 @@ function ClientManagement() {
       actionDropdownRef.current &&
       !actionDropdownRef.current.contains(e.target)
     ) {
-      setClientData((prev) => {
-        return prev?.map((data) => {
-          return {
-            ...data,
-            active: false,
-          };
-        });
-      });
+      setActiveRowId(null);
     }
   };
 
@@ -260,20 +273,13 @@ function ClientManagement() {
     setShowCreateSessionLayout(true);
   };
 
-  useEffect(() => {
-    if (clients?.length > 0) {
-      handleFilterData({ id: 0 });
-    } else {
-      setClientData([]);
-    }
-  }, [clients]);
-
-  useEffect(() => {
-    fetchClients();
-    if ([3, 4].includes(userObj?.role_id)) {
-      fetchCounsellor();
-    }
-  }, [userObj]);
+  // Function to invalidate sessions and clients queries when session is created/updated
+  const handleSessionChange = async () => {
+    // Invalidate sessions queries so they refetch on the client-session page
+    await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    // Also invalidate clients because client's has_schedule status might change
+    await queryClient.invalidateQueries({ queryKey: ["clients"] });
+  };
 
   return (
     <ClientManagementContainer role={userObj?.role_id}>
@@ -298,8 +304,8 @@ function ClientManagement() {
           initialData={clientFormData}
           setInitialData={setClientFormData}
           tableData={clientData}
-          setTableData={setClientData}
-          fetchClients={fetchClients}
+          setTableData={() => {}} // No longer needed with TanStack Query
+          fetchClients={refetchClients} // Refetch clients after create/update
           activeTab={activeTab}
           setActiveTab={setActiveTab}
         />
@@ -315,7 +321,7 @@ function ClientManagement() {
             setConfirmationModal={setConfirmationModal}
             setSessions={() => {}}
             session={activeData}
-            fetchSessions={() => {}}
+            fetchSessions={handleSessionChange} // Invalidate sessions query when session is created/updated
             counselorConfiguration={counselorConfiguration}
             managerSplitDetails={managerSplitDetails}
             counselor_id={counselorId}

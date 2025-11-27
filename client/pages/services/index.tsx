@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { api } from "../../utils/auth";
 import {
   ClientManagementTableActionButton,
@@ -13,67 +13,57 @@ import CommonServices from "../../services/CommonServices";
 import { useReferenceContext } from "../../context/ReferenceContext";
 import Cookies from "js-cookie";
 import ApiConfig from "../../config/apiConfig";
+import { useQueryData } from "../../utils/hooks/useQueryData";
+import { useMutationData } from "../../utils/hooks/useMutationData";
 function Services() {
   const [showCreateFlyout, setShowCreateFlyout] = useState(false);
   const [activeData, setActiveData] = useState();
   const [formButtonLoading, setFormButtonLoading] = useState(false);
   const actionDropdownRef = useRef(null);
-  const [servicesData, setServicesData] = useState(null);
-  const [servicesDataLoading, setServicesDataLoading] = useState(false);
   const { userObj } = useReferenceContext();
   const isManager = userObj?.role_id === 3;
   const [user, setUser] = useState(null);
-  const tenant_id = user?.tenant?.tenant_generated_id;
+  const tenant_id = userObj?.tenant?.tenant_generated_id;
   const [allManagers, setAllManagers] = useState([]);
   const [allServices, setAllServices] = useState([]);
   const [tenantManagerOptions, setTenantManagerOptions] = useState([]);
-  const fetchServices = async () => {
-    try {
-      setServicesDataLoading(true);
-      const tenant_id = userObj?.tenant?.tenant_generated_id;
-      console.log(tenant_id, "new");
-      const response = await CommonServices.getServices(tenant_id);
+  const [activeRowId, setActiveRowId] = useState(null); // Track which row's dropdown is open
+  const [selectedTenantId, setSelectedTenantId] = useState(null); // Track selected tenant from dropdown
 
-      if (response.status === 200) {
-        const { data } = response;
-        const serviceList = data?.rec || [];
-        setServicesData(serviceList);
-        if (Array.isArray(allManagers) && allManagers.length > 0) {
-          combineManagersWithServices(serviceList, allManagers);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching services:", err);
-      setServicesData([]);
-    } finally {
-      setServicesDataLoading(false);
-    }
-  };
+  // Use the selected tenant ID if available, otherwise use the user's tenant ID
+  const queryTenantId = selectedTenantId || tenant_id;
 
-  const handleSelectService = async (data) => {
-    try {
-      const tenant_id = data?.value;
-      console.log(tenant_id, "service");
-      setServicesDataLoading(true);
-      let response;
-      if (tenant_id == "allManager") {
-        response = await CommonServices.getServices();
-      } else {
-        response = await CommonServices.getServices(tenant_id);
-      }
-      if (response.status === 200) {
-        const { data } = response;
-        setServicesData(data?.rec || []);
-      }
-    } catch (error) {
-      toast.error(error?.response?.data?.message);
-      console.error("Error fetching references:", error);
-      setServicesData([]);
-    } finally {
-      setServicesDataLoading(false);
-    }
+  const {
+    data: servicesResponse,
+    isPending: servicesDataLoading,
+    refetch: refetchServices,
+  } = useQueryData(
+    ["services", queryTenantId],
+    async () => {
+      const response = await CommonServices.getServices(
+        queryTenantId === "allManager" ? undefined : queryTenantId
+      );
+      console.log(response, "response services 💀");
+      return response;
+    },
+    !!queryTenantId // Only fetch when tenant_id exists
+  );
+
+
+  const servicesData = useMemo(() => {
+    return (servicesResponse?.data?.rec || []).map((service) => ({
+      ...service,
+      active: service.service_id === activeRowId,
+    }));
+  }, [servicesResponse?.data?.rec, activeRowId]);
+
+  const handleSelectService = (data) => {
+    // Update selected tenant ID - TanStack Query will automatically refetch
+    const tenant_id = data?.value;
+    console.log(tenant_id, "service");
+    setSelectedTenantId(tenant_id);
   };
-  const fetchManager = async () => {
+  const fetchManager = useCallback(async () => {
     try {
       const response = await api.get(`${ApiConfig.clients.getClients}`);
       if (response.status === 200) {
@@ -83,16 +73,14 @@ function Services() {
         );
         console.log(filteredManagers, "service");
         setAllManagers(filteredManagers);
-        if (Array.isArray(servicesData) && servicesData.length > 0) {
-          combineManagersWithServices(servicesData, filteredManagers);
-        }
+        // Don't call combineManagersWithServices here - let the useEffect handle it
       }
     } catch (error) {
       toast.error(error?.response?.data?.message);
       console.log("Error fetching clients", error);
     }
-  };
-  const combineManagersWithServices = (services, managers) => {
+  }, []); 
+  const combineManagersWithServices = useCallback((services, managers) => {
     const mergedOptions =
       managers
         ?.filter((m) => m?.user_first_name)
@@ -105,21 +93,14 @@ function Services() {
       value: "allManager",
     });
     setTenantManagerOptions(mergedOptions);
-  };
+  }, []); // No external dependencies
   console.log(tenantManagerOptions, "service");
   const handleClickOutside = (e) => {
     if (
       actionDropdownRef.current &&
       !actionDropdownRef.current.contains(e.target)
     ) {
-      setServicesData((prev) => {
-        return prev?.map((data) => {
-          return {
-            ...data,
-            active: false,
-          };
-        });
-      });
+      setActiveRowId(null); // Close all dropdowns
     }
   };
 
@@ -137,6 +118,7 @@ function Services() {
       setUser(userDetails);
     }
   }, []);
+  // Combine managers with services when data changes
   useEffect(() => {
     if (
       Array.isArray(servicesData) &&
@@ -146,67 +128,28 @@ function Services() {
     ) {
       combineManagersWithServices(servicesData, allManagers);
     }
-  }, [allManagers, servicesData]);
+  }, [allManagers, servicesData, combineManagersWithServices]);
+
+  // Fetch managers when userObj is available (services are fetched automatically by useQueryData)
   useEffect(() => {
     if (userObj && Object.keys(userObj).length > 0) {
       fetchManager();
-      fetchServices();
     }
-  }, [userObj]);
+  }, [userObj, fetchManager]);
 
-  const handleCreateService = async (payload) => {
-    try {
-      const response = await api.post("/service", payload);
-
-      if (response.status === 200) {
-        toast.success("Service created successfully", {
-          position: "top-right",
-        });
-        setShowCreateFlyout(false);
-      }
-    } catch (error) {
-      console.error("Error while creating service:", error);
-      toast.error(error.response.data.message, {
-        position: "top-right",
-      });
-    }
-  };
-  const handleUpdateService = async (payload, serviceId) => {
-    try {
-      const response = await api.put(
-        `/service/?service_id=${serviceId}`,
-        payload
-      );
-
-      if (response.status === 200) {
-        toast.success("Service updated successfully", {
-          position: "top-right",
-        });
-        setShowCreateFlyout(false);
-      }
-    } catch (error) {
-      console.error("Error while updating service:", error);
-      toast.error("Failed to update service. Please try again.", {
-        position: "top-right",
-      });
-    }
-  };
+  // Mutation for deleting service
+  const { mutate: deleteService, isPending: isDeleting } = useMutationData(
+    ["delete-service"],
+    async (serviceId) => {
+      return await api.put(`/service/del/?service_id=${serviceId}`);
+    },
+    "services"
+  );
 
   const handleCellClick = (row) => {
-    setServicesData((prev) =>
-      prev?.map((data) => {
-        if (data.service_id === row.service_id) {
-          return {
-            ...data,
-            active: !row.active,
-          };
-        } else {
-          return {
-            ...data,
-            active: false,
-          };
-        }
-      })
+    // Toggle dropdown for this row
+    setActiveRowId((prevId) => 
+      prevId === row.service_id ? null : row.service_id
     );
   };
 
@@ -215,28 +158,9 @@ function Services() {
     setActiveData(row);
   };
 
-  const handleDelete = async (row) => {
-    try {
-      const res = await api.put(`/service/del/?service_id=${row?.service_id}`);
-      if (res.status === 200) {
-        setServicesData((prev) => {
-          const updatedData = prev?.filter(
-            (data) => data.service_id !== row?.service_id
-          );
-
-          return updatedData;
-        });
-      }
-      toast.success("Client deleted Successfully", {
-        position: "top-right",
-      });
-      handleCellClick(row);
-    } catch (err) {
-      console.error(err);
-      toast.error("Error, While deleting the Client", {
-        position: "top-right",
-      });
-    }
+  const handleDelete = (row) => {
+    deleteService(row?.service_id);
+    handleCellClick(row);
   };
 
   return (
@@ -251,8 +175,6 @@ function Services() {
           setIsOpen={setShowCreateFlyout}
           initialData={activeData}
           setInitialData={setActiveData}
-          handleCreateService={handleCreateService}
-          handleUpdateService={handleUpdateService}
         />
       </CreateSessionLayout>
       <ServicesContainer>

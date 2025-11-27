@@ -12,6 +12,7 @@ import CustomMultiSelect from "../components/CustomMultiSelect";
 import dynamic from "next/dynamic";
 import Spinner from "../components/common/Spinner";
 import { useSessionModal, useFeeSplit, useCounselorFilter } from "../utils/hooks";
+import { useQueryData } from "../utils/hooks/useQueryData";
 
 const CreateSessionForm = dynamic(
   () => import("../components/Forms/CreateSessionForm"),
@@ -29,10 +30,6 @@ function Dashboard() {
   const { userObj, tokenExpired } = useReferenceContext();
   const { role_id, user_profile_id, tenant_id } = userObj || {};
 
-  const [overallSessionsData, setOverallSessionsData] = useState();
-  const [reports, setReports] = useState();
-  const [assessmentResults, setAssessmentResults] = useState();
-  
   // Custom hooks - they get userObj internally from context
   const {
     showModal: showSessionModal,
@@ -55,93 +52,93 @@ function Dashboard() {
   } = useCounselorFilter();
 
   const [counselorId, setCounselorId] = useState(null);
-  const handleSelectCounselor = async () => {
-    if (!selectedCounselor) return;
 
-    if (selectedCounselor.value === "ALL") {
-      fetchOverallSessionData();
-      fetchReportsTableData();
-      fetchAssessmentResults();
+  // Determine the counselor filter value
+  const filterCounselorId = 
+    selectedCounselor?.value === "ALL" ? null : selectedCounselor?.value;
+
+  // Build query parameters based on role and selected counselor
+  const buildQueryParams = (counselorIdOverride) => {
+    const counselor_id = counselorIdOverride ?? filterCounselorId;
+    
+    if ([3, 4].includes(role_id)) {
+      return {
+        role_id,
+        ...(role_id === 3 && { tenant_id }),
+        ...(counselor_id && { counselor_id }),
+      };
     } else {
-      fetchOverallSessionData({ counselor_id: selectedCounselor.value });
-      fetchReportsTableData({ counselor_id: selectedCounselor.value });
-      fetchAssessmentResults({ counselor_id: selectedCounselor.value });
+      return {
+        role_id,
+        counselor_id: user_profile_id,
+      };
     }
   };
 
+  // Use TanStack Query for data fetching
+  const { 
+    data: overallSessionsResponse, 
+    isPending: overallSessionsLoading,
+    error: overallSessionsError
+  } = useQueryData(
+    ["overall-sessions", role_id, tenant_id, filterCounselorId],
+    async () => {
+      const params = buildQueryParams();
+      const response = await CommonServices.getOverallSessionsData(params);
+      return response.data;
+    },
+    !tokenExpired && !!role_id // Only fetch when not expired and role exists
+  );
 
-  const fetchOverallSessionData = async ({ counselor_id } = {}) => {
-    try {
-      let response;
-      if ([3, 4].includes(role_id))
-        response = await CommonServices.getOverallSessionsData({
-          role_id,
-          // counselor_id: user_profile_id,
-          ...(userObj?.role_id === 3 && { tenant_id: userObj?.tenant_id }),
-          ...(counselor_id ? { counselor_id } : {}),
-        });
-      else
-        response = await CommonServices.getOverallSessionsData({
-          role_id,
-          counselor_id: user_profile_id,
-        });
-      if (response.status === 200) {
-        setOverallSessionsData(response.data);
-      }
-    } catch (error) {
-      console.log("Error while fetching overall sessions", error);
-      toast.error(error?.message || "Error fetching overall sessions!");
-    }
-  };
+  const { 
+    data: reportsResponse, 
+    isPending: reportsLoading,
+    error: reportsError
+  } = useQueryData(
+    ["reports-table", role_id, tenant_id, filterCounselorId],
+    async () => {
+      const params = buildQueryParams();
+      const response = await CommonServices.getReportsTableData(params);
+      return response.data;
+    },
+    !tokenExpired && !!role_id
+  );
 
-  const fetchReportsTableData = async ({ counselor_id } = {}) => {
-    try {
-      let response;
-      if ([3, 4].includes(role_id))
-        response = await CommonServices.getReportsTableData({
-          role_id,
-          ...(userObj?.role_id === 3 && { tenant_id: userObj?.tenant_id }),
-          // counselor_id: user_profile_id,
-          ...(counselor_id ? { counselor_id } : {}),
-        });
-      else
-        response = await CommonServices.getReportsTableData({
-          role_id,
-          ...(userObj?.role_id === 3 && { tenant_id: userObj?.tenant_id }),
-          counselor_id: user_profile_id,
-        });
-      if (response.status == 200) {
-        setReports(response.data);
-      }
-    } catch (error) {
-      console.log("Error fetching reports table data", error);
-      toast.error(error?.message || "Error fetching overall sessions!");
-    }
-  };
+  const { 
+    data: assessmentResultsResponse, 
+    isPending: assessmentResultsLoading,
+    error: assessmentResultsError
+  } = useQueryData(
+    ["assessment-results", role_id, tenant_id, filterCounselorId],
+    async () => {
+      const params = buildQueryParams();
+      const response = await CommonServices.getAssessmentResults(params);
+      return response.data;
+    },
+    !tokenExpired && !!role_id
+  );
 
-  const fetchAssessmentResults = async ({ counselor_id } = {}) => {
-    try {
-      let response;
-      if ([3, 4].includes(role_id))
-        response = await CommonServices.getAssessmentResults({
-          role_id,
-          ...(userObj?.role_id === 3 && { tenant_id: userObj?.tenant_id }),
-          ...(counselor_id ? { counselor_id } : {}),
-          // counselor_id: user_profile_id,
-        });
-      else
-        response = await CommonServices.getAssessmentResults({
-          role_id,
-          counselor_id: user_profile_id,
-        });
-      if (response.status == 200) {
-        setAssessmentResults(response.data);
-      }
-    } catch (error) {
-      console.log("Error fetching assessment results", error);
-      toast.error(error?.message || "Error fetching assessment results");
+  // Handle errors - show toast notifications like original code
+  useEffect(() => {
+    if (overallSessionsError) {
+      console.log("Error while fetching overall sessions", overallSessionsError);
+      toast.error(overallSessionsError?.message || "Error fetching overall sessions!");
     }
-  };
+  }, [overallSessionsError]);
+
+  useEffect(() => {
+    if (reportsError) {
+      console.log("Error fetching reports table data", reportsError);
+      toast.error(reportsError?.message || "Error fetching reports data!");
+    }
+  }, [reportsError]);
+
+  useEffect(() => {
+    if (assessmentResultsError) {
+      console.log("Error fetching assessment results", assessmentResultsError);
+      toast.error(assessmentResultsError?.message || "Error fetching assessment results!");
+    }
+  }, [assessmentResultsError]);
 
   const handleClientClick = async (row) => {
     if (!row?.thrpy_req_id) {
@@ -156,20 +153,6 @@ function Dashboard() {
 
     await openSessionModal(row.thrpy_req_id, row?.counselor_id);
   };
-
-  useEffect(() => {
-    if (!tokenExpired) {
-      fetchOverallSessionData();
-      fetchReportsTableData();
-      fetchAssessmentResults();
-    }
-  }, [tokenExpired]);
-
-  useEffect(() => {
-    if (selectedCounselor) {
-      handleSelectCounselor();
-    }
-  }, [selectedCounselor]);
 
 
   return (
@@ -218,17 +201,17 @@ function Dashboard() {
 
           {/* <CustomTab lines={SERVICE_FEE_INFO}/> */}
           <AssessmentResults 
-            assessmentResultsData={assessmentResults} 
+            assessmentResultsData={assessmentResultsResponse} 
             onClientClick={handleClientClick} 
           />
           <Reports 
-            reportsData={reports} 
+            reportsData={reportsResponse} 
             onClientClick={handleClientClick} 
           />
         </div>
       </DashboardTableContainer>
       <DashboardContainer>
-        <OverallSession overallSessionsData={overallSessionsData} />
+        <OverallSession overallSessionsData={overallSessionsResponse} />
         <OverallScore />
       </DashboardContainer>
     </>
