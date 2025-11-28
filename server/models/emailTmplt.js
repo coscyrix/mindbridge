@@ -135,7 +135,22 @@ export default class EmailTmplt {
         return { message: 'User profile not found', error: -1 };
       }
 
-
+      // Get counselor email for Reply-To functionality
+      let counselorEmail = null;
+      if (recThrpy[0].counselor_id) {
+        try {
+          const counselorProfile = await this.common.getUserProfileByUserProfileId(recThrpy[0].counselor_id);
+          if (counselorProfile && counselorProfile.length > 0 && counselorProfile[0].user_id) {
+            const counselorUser = await this.common.getUserById(counselorProfile[0].user_id);
+            if (counselorUser && counselorUser.length > 0) {
+              counselorEmail = counselorUser[0].email;
+              logger.info('✅ Counselor email found for Reply-To:', counselorEmail);
+            }
+          }
+        } catch (error) {
+          logger.warn('Error fetching counselor email for Reply-To:', error);
+        }
+      }
 
       // Check if we should send automatic attendance report after every 4 sessions
       await this.checkAndSendAutomaticAttendanceReport(
@@ -192,6 +207,7 @@ export default class EmailTmplt {
                 client_id,
                 data.session_id,
                 clientTargetOutcomeId, // Add target outcome ID parameter
+                counselorEmail, // Add counselor email for Reply-To
               );
 
               let attendanceEmail;
@@ -330,6 +346,7 @@ export default class EmailTmplt {
                 client_id,
                 data.session_id,
                 clientTargetOutcomeId, // Add target outcome ID parameter
+                counselorEmail, // Add counselor email for Reply-To
               );
 
               let attendanceEmail;
@@ -596,9 +613,24 @@ export default class EmailTmplt {
         tenant_fallback_used: (!counselorProfile?.timezone || !clientProfile?.timezone) ? 'yes' : 'no',
       });
 
+      // Get counselor email for Reply-To
+      let counselorEmail = null;
+      if (counselorProfile && counselorProfile.user_id) {
+        try {
+          const counselorUser = await this.common.getUserById(counselorProfile.user_id);
+          if (counselorUser && counselorUser.length > 0) {
+            counselorEmail = counselorUser[0].email;
+            console.log('✅ Counselor email found for Reply-To:', counselorEmail);
+          }
+        } catch (error) {
+          console.warn('Error fetching counselor email:', error);
+        }
+      }
+
       const thrpyReqEmlTmplt = therapyRequestDetailsEmail(
         data.email,
         therapyRequestWithContact,
+        counselorEmail
       );
       const sendThrpyReqEmlTmpltEmail =
         this.sendEmail.sendMail(thrpyReqEmlTmplt);

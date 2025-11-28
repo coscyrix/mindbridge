@@ -167,11 +167,12 @@ export const treatmentToolsEmail = (
   client_id,
   session_id,
   target_outcome_id = null,
+  counselorEmail = null,
 ) => {
   // Encode client name for URL parameter
   const encodedClientName = encodeURIComponent(client_full_name);
   
-  return {
+  const emailObj = {
     to: email,
     subject: `${tools_name} Assessment`,
     html: `
@@ -187,6 +188,13 @@ export const treatmentToolsEmail = (
       ${EMAIL_DISCLAIMER}
     `,
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 //This function sends an email to the client with a summary of their attendance record.
@@ -194,8 +202,9 @@ export const attendanceSummaryEmail = (
   email,
   client_full_name,
   pdfAttachment, // pdfAttachment is expected to be a Buffer
+  counselorEmail = null,
 ) => {
-  return {
+  const emailObj = {
     to: email,
     subject: 'Attendance Summary',
     html: `
@@ -210,11 +219,18 @@ export const attendanceSummaryEmail = (
       { filename: 'attendance-record.pdf', content: pdfAttachment },
     ],
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 // This function sends an email to the client with the consent form for their review and submission.
-export const consentFormEmail = (email, clientName, consentFormLink, counselor_id, tenant_id) => {
-  return {
+export const consentFormEmail = (email, clientName, consentFormLink, counselor_id, tenant_id, counselorEmail = null) => {
+  const emailObj = {
     to: email,
     subject: 'Consent Form for Your Review and Submission',
     html: `
@@ -229,6 +245,13 @@ export const consentFormEmail = (email, clientName, consentFormLink, counselor_i
       ${EMAIL_DISCLAIMER}
     `,
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 export const welcomeAccountDetailsEmail = (
@@ -240,8 +263,9 @@ export const welcomeAccountDetailsEmail = (
   counselorEmail,
   counselorPhoneNumber,
 ) => {
-  return {
+  const emailObj = {
     to: email,
+    replyTo: counselorEmail, // Replies go directly to the counselor
     subject:
       'Welcome to MindBridge - Account Details for Your Therapy Sessions',
     html: `
@@ -324,15 +348,17 @@ export const welcomeAccountDetailsEmail = (
     <p>Together, we'll work collaboratively to achieve these goals, using these tools to facilitate a transformative healing process.</p>
     <p>If you have any questions or need assistance accessing your account, please do not hesitate to contact us at ${counselorEmail} or ${counselorPhoneNumber}.</p>
     <p>We're here to support you every step of the way.</p>
-    <p>Thank you,</p>
-    <p>The Counselling Team Member</p>
-    ${EMAIL_DISCLAIMER}
+      <p>Thank you,</p>
+      <p>The Counselling Team Member</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
+
+  return emailObj;
 };
 
 
-export const therapyRequestDetailsEmail = (email, therapyRequest) => {
+export const therapyRequestDetailsEmail = (email, therapyRequest, counselorEmail = null) => {
   const {
     counselor_first_name,
     counselor_last_name,
@@ -383,7 +409,7 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
     .join('')
     : '<tr><td colspan="5" style="padding: 8px; text-align: center; color: #666;">No session details available</td></tr>';
 
-  return {
+  const emailObj = {
     to: email,
     subject: `${service_name} Session Schedule`,
     html: `
@@ -433,10 +459,17 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
       </div>
     `,
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
-export const dischargeEmail = (email, clientName) => {
-  return {
+export const dischargeEmail = (email, clientName, counselorEmail = null) => {
+  const emailObj = {
     to: email,
     subject: 'Congratulations on Completing Your Therapy Journey!',
     html: `
@@ -451,6 +484,13 @@ export const dischargeEmail = (email, clientName) => {
       </div>
     `,
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 export const additionalServiceEmail = (
@@ -459,8 +499,9 @@ export const additionalServiceEmail = (
   service_name,
   date,
   time,
+  counselorEmail = null,
 ) => {
-  return {
+  const emailObj = {
     to: email,
     subject: 'Additional Service Scheduled',
     html: `
@@ -490,6 +531,13 @@ export const additionalServiceEmail = (
       </div>
     `,
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 export const homeworkEmailAttachment = (
@@ -498,10 +546,11 @@ export const homeworkEmailAttachment = (
   fileBuffer,
   fileName,
   clientName = null,
+  counselorEmail = null,
 ) => {
   const greeting = clientName ? `Hello ${capitalizeFirstLetter(clientName)},` : 'Hello,';
   
-  return {
+  const emailObj = {
     to: email,
     subject: `Homework Assignment: ${homework_title}`,
     html: `
@@ -557,6 +606,13 @@ export const homeworkEmailAttachment = (
     `,
     attachments: [{ filename: fileName, content: fileBuffer }],
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 export const onboardingAdminEmail = (data) => {

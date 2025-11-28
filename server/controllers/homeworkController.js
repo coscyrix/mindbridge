@@ -94,6 +94,21 @@ export default class HomeworkController {
           console.log('❌ Session not found for session_id:', data.session_id);
         }
 
+        // Get counselor email for Reply-To
+        let counselorEmail = null;
+        if (therapyRequest && therapyRequest.length > 0 && therapyRequest[0].counselor_id) {
+          console.log('🔍 Getting counselor profile...');
+          const counselorInfo = await common.getUserProfileByUserProfileId(therapyRequest[0].counselor_id);
+          if (counselorInfo && counselorInfo.length > 0) {
+            console.log('✅ Counselor profile found, user_id:', counselorInfo[0].user_id);
+            const counselorUserInfo = await common.getUserById(counselorInfo[0].user_id);
+            if (counselorUserInfo && counselorUserInfo.length > 0) {
+              counselorEmail = counselorUserInfo[0].email;
+              console.log('✅ Counselor email found:', counselorEmail);
+            }
+          }
+        }
+
         // Send email if client email is found
         if (clientEmail) {
           console.log('📤 Preparing to send email to:', clientEmail);
@@ -108,7 +123,8 @@ export default class HomeworkController {
             data.homework_title,
             fileBuffer,
             req.file.originalname,
-            clientName
+            clientName,
+            counselorEmail
           );
           
           console.log('📧 Email template created successfully');
