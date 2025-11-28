@@ -153,13 +153,14 @@ export default class EmailTmplt {
       }
 
       // Check if we should send automatic attendance report after every 4 sessions
-      await this.checkAndSendAutomaticAttendanceReport(
-        recSession[0].thrpy_req_id,
-        data.session_id,
-        recThrpy[0],
-        recUser[0],
-        tenantId
-      );
+      // WE no longer need this
+      // await this.checkAndSendAutomaticAttendanceReport(
+      //   recSession[0].thrpy_req_id,
+      //   data.session_id,
+      //   recThrpy[0],
+      //   recUser[0],
+      //   tenantId
+      // );
 
       for (const session of recSession) {
         // Get form mode from environment variable
@@ -212,8 +213,7 @@ export default class EmailTmplt {
 
               let attendanceEmail;
               let isAttendanceForm = false;
-              
-              if (form_id === 24 && form_name === 'ATTENDANCE') {
+              if (form_id === 24 && form_name === 'Attendance') {
                 // 24 is the form_id for attendance
                 isAttendanceForm = true;
                 const sessions = recThrpy[0].session_obj;
@@ -250,10 +250,15 @@ export default class EmailTmplt {
 
                 const attendancePDF = await PDFGenerator(attendancePDFTemplt);
 
+                const counselorFullName = `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`;
+                
                 attendanceEmail = attendanceSummaryEmail(
                   recUser[0].email,
                   client_full_name,
                   attendancePDF,
+                  counselorEmail,
+                  counselorFullName,
+                  process.env.BASE_URL || null,
                 );
 
                 const postATTENDANCEFeedback =
@@ -388,11 +393,14 @@ export default class EmailTmplt {
                 );
 
                 const attendancePDF = await PDFGenerator(attendancePDFTemplt);
-
+                const counselorFullName = `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`;         
                 attendanceEmail = attendanceSummaryEmail(
                   recUser[0].email,
                   client_full_name,
                   attendancePDF,
+                  counselorEmail,
+                  counselorFullName,
+                  process.env.BASE_URL || null,
                 );
 
                 const postATTENDANCEFeedback =
@@ -820,6 +828,22 @@ export default class EmailTmplt {
       const client_full_name = `${userProfile.user_first_name} ${userProfile.user_last_name}`;
       const counselor_full_name = `${thrpyReq.counselor_first_name} ${thrpyReq.counselor_last_name}`;
 
+      // Get counselor email for Reply-To functionality
+      let counselorEmail = null;
+      if (thrpyReq.counselor_id) {
+        try {
+          const counselorProfile = await this.common.getUserProfileByUserProfileId(thrpyReq.counselor_id);
+          if (counselorProfile && counselorProfile.length > 0 && counselorProfile[0].user_id) {
+            const counselorUser = await this.common.getUserById(counselorProfile[0].user_id);
+            if (counselorUser && counselorUser.length > 0) {
+              counselorEmail = counselorUser[0].email;
+            }
+          }
+        } catch (error) {
+          logger.warn('Error fetching counselor email for Reply-To:', error);
+        }
+      }
+
       // Generate attendance PDF
       const attendancePDFTemplt = AttendancePDF(
         counselor_full_name,
@@ -836,7 +860,10 @@ export default class EmailTmplt {
       const attendanceEmail = attendanceSummaryEmail(
         userProfile.email,
         client_full_name,
-        attendancePDF
+        attendancePDF,
+        counselorEmail,
+        counselor_full_name,
+        process.env.BASE_URL || null
       );
 
       // Send email

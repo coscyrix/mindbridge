@@ -456,52 +456,95 @@ export default class TreatmentTargetFeedbackConfig {
         (a, b) => a.session_id - b.session_id,
       );
 
-      // Process each configuration
-      for (const config of configs) {
-        const sessions = config.sessions;
-        
-        // Get form ID from form name
-        const form = await db
-          .withSchema(`${process.env.MYSQL_DATABASE}`)
-          .from('forms')
-          .where('form_cde', config.form_name)
-          .first();
+//  Attendance form lookup
+const attendanceForm = await db
+  .withSchema(`${process.env.MYSQL_DATABASE}`)
+  .from("forms")
+  .where("form_cde", "ATTENDENCE")
+  .first();
 
-        if (!form) {
-          logger.warn(`Form not found for form_name: ${config.form_name}`);
-          continue;
-        }
-        
+if (!attendanceForm) {
+  logger.warn("Attendance form not found");
+}
+
+// Existing loop for configs
+for (const config of configs) {
+  const sessions = config.sessions;
+
+  // Get dynamic form ID from form name
+  const form = await db
+    .withSchema(`${process.env.MYSQL_DATABASE}`)
+    .from("forms")
+    .where("form_cde", config.form_name)
+    .first();
+
+  if (!form) {
+    logger.warn(`Form not found for form_name: ${config.form_name}`);
+    continue;
+  }
         // Process each session number in the configuration
-        for (let sessionNumber = 1; sessionNumber <= rec.session_obj.length; sessionNumber++) {
-          if (sessions.includes(sessionNumber)) {
-            const sessionIndex = sessionNumber - 1;
-            if (rec.session_obj[sessionIndex]) {
-              const tmpFormSession = {
-                session_id: rec.session_obj[sessionIndex].session_id,
-                form_array: [config.form_name], // Use form_name instead of form_id
-              };
+  for (let sessionNumber = 1; sessionNumber <= rec.session_obj.length; sessionNumber++) {
 
-              const tmpTreatmentTargetForm = {
-                req_id: rec.req_id,
-                session_id: rec.session_obj[sessionIndex].session_id,
-                client_id: rec.client_id,
-                counselor_id: rec.counselor_id,
-                treatment_target: data.treatment_target,
-                form_name: config.form_name,
-                form_id: form.form_id,
-                config_id: config.id,
-                purpose: config.purpose,
-                session_number: sessionNumber,
-                tenant_id: data.tenant_id || null,
-              };
+    if (sessions.includes(sessionNumber)) {
+      const sessionIndex = sessionNumber - 1;
+      if (rec.session_obj[sessionIndex]) {
+        const tmpFormSession = {
+          session_id: rec.session_obj[sessionIndex].session_id,
+          form_array: [config.form_name],
+        };
 
-              tmpSession.push(tmpFormSession);
-              tmpForm.push(tmpTreatmentTargetForm);
-            }
-          }
-        }
+        const tmpTreatmentTargetForm = {
+          req_id: rec.req_id,
+          session_id: rec.session_obj[sessionIndex].session_id,
+          client_id: rec.client_id,
+          counselor_id: rec.counselor_id,
+          treatment_target: data.treatment_target,
+          form_name: config.form_name,
+          form_id: form.form_id,
+          config_id: config.id,
+          purpose: config.purpose,
+          session_number: sessionNumber,
+          tenant_id: data.tenant_id || null,
+        };
+
+        tmpSession.push(tmpFormSession);
+        tmpForm.push(tmpTreatmentTargetForm);
       }
+    }
+
+    // ***********************
+    // ADD Attendance every 4th session
+    // ***********************
+
+
+    if (attendanceForm && sessionNumber % 4 === 0) {
+      const sessionIndex = sessionNumber - 1;
+      if (rec.session_obj[sessionIndex]) {
+        const tmpFormSessionAttendance = {
+          session_id: rec.session_obj[sessionIndex].session_id,
+          form_array: ["Attendance"],
+        };
+
+        const tmpAttendanceFormEntry = {
+          req_id: rec.req_id,
+          session_id: rec.session_obj[sessionIndex].session_id,
+          client_id: rec.client_id,
+          counselor_id: rec.counselor_id,
+          treatment_target: data.treatment_target,
+          form_name: "Attendance",
+          form_id: attendanceForm.form_id,
+          config_id: config.id,
+          purpose: "attendance",
+          session_number: sessionNumber,
+          tenant_id: data.tenant_id || null,
+        };
+
+        tmpSession.push(tmpFormSessionAttendance);
+        tmpForm.push(tmpAttendanceFormEntry);
+      }
+    }
+  }
+}
 
       // Update session forms
       const updateResult = await this.updateSessionForms(tmpSession);

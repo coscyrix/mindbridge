@@ -203,16 +203,32 @@ export const attendanceSummaryEmail = (
   client_full_name,
   pdfAttachment, // pdfAttachment is expected to be a Buffer
   counselorEmail = null,
+  counselorName = 'Your Clinician',
+  counselorWebsite = null,
 ) => {
   const emailObj = {
     to: email,
-    subject: 'Attendance Summary',
+    subject: 'Your Recent Sessions Update',
     html: `
       <p>Hi ${capitalizeFirstLetterOfEachWord(client_full_name)},</p>
-      <p>Please find attached your attendance record summary.</p>
-      <p>Let us know if you have any questions.</p>
-      <p>Thank you,</p>
-      <p>The Counselling Team Member</p>
+      
+      <p>I hope this message finds you well. As part of our commitment to supporting your wellness journey, please find a summary of your recent sessions update, below. This summary can help you track your progress and stay informed of your session history.</p>
+      
+      <ul style="margin: 20px 0;">
+        <li><strong>Attendance Record</strong></li>
+        <li><strong>Assessment Questionnaire taken</strong></li>
+        <li><strong>Homework Sent</strong></li>
+      </ul>
+      
+      <p>Please let me know if you have any questions or if there's anything specific you'd like to discuss in our upcoming sessions.</p>
+      
+      <p>Warm regards,</p>
+      <p><strong>${counselorName}</strong></p>
+      <p><em>Clinician</em></p>
+      
+      ${counselorEmail ? `<p>Email: <a href="mailto:${counselorEmail}">${counselorEmail}</a></p>` : ''}
+      ${counselorWebsite ? `<p>Website: <a href="${counselorWebsite}">${counselorWebsite}</a></p>` : ''}
+      
       ${EMAIL_DISCLAIMER}
     `,
     attachments: [
