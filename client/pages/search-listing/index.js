@@ -14,7 +14,7 @@ import { FiSearch } from "react-icons/fi";
 const SearchListing = () => {
   const [isloading, setIsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false); // ✅ toggle for mobile filters
-  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
+  const imageBaseUrl = process.env.IMAGES_BASE_URL;
 
   const router = useRouter();
   const { query } = router;

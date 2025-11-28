@@ -54,7 +54,7 @@ import { bookAppointmentSchema } from "../../utils/validationSchema/validationSc
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TREATMENT_TARGET } from "../../utils/constants";
 const SearchDetails = () => {
-  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
+  const imageBaseUrl = process.env.IMAGES_BASE_URL;
 
   const [selectedTab, setSelectedTab] = useState("Overview");
   const [selectedDate, setSelectedDate] = useState(null);

@@ -322,7 +322,7 @@ const raceOptions = [
 ];
 
 const SignUp = () => {
-  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
+  const imageBaseUrl = process.env.IMAGES_BASE_URL;
   const router = useRouter();
   const { type } = router.query;
   const { userId } = router.query;
