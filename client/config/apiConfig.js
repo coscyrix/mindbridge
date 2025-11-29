@@ -15,6 +15,7 @@ const ApiConfig = {
     getSessions: "/thrpyReq",
     updateSessions: "/",
     deleteSessions: "/",
+    getHomeworkStats: "/session/homework-stats",
   },
   currentSessions: {
     getTodayAndTomorrowSessions: "/session/today",

@@ -325,6 +325,7 @@ function ClientManagement() {
             counselorConfiguration={counselorConfiguration}
             managerSplitDetails={managerSplitDetails}
             counselor_id={counselorId}
+            isHomeworkUpload={true}
           />
         ) : (
           <Spinner color="blue" />

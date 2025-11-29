@@ -44,6 +44,7 @@ export default class HomeworkController {
         const common = new Common();
         let clientEmail = null;
         let clientName = null;
+        let therapyRequest = null; // Declare at the correct scope
 
         // Get session information
         console.log('🔍 Getting session information...');
@@ -56,7 +57,7 @@ export default class HomeworkController {
           console.log('✅ Session found, thrpy_req_id:', sessionInfo[0].thrpy_req_id);
           // Get therapy request to find client_id
           console.log('🔍 Getting therapy request...');
-          const therapyRequest = await common.getThrpyReqById(sessionInfo[0].thrpy_req_id);
+          therapyRequest = await common.getThrpyReqById(sessionInfo[0].thrpy_req_id);
           console.log('Therapy request---------->:', therapyRequest);
           console.log('Therapy request found:', therapyRequest ? therapyRequest.length : 0, 'records');
           

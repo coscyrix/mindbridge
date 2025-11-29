@@ -918,4 +918,116 @@ export default class Session {
       return { message: 'Error getting session', error: -1 };
     }
   }
+
+  ////////////////////////////////////////// READ HOMEWORK STATS API
+
+  async getSessionsWithHomeworkStats(data) {
+    try {
+      let query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_session as s')
+        .leftJoin('homework as h', 's.session_id', 'h.session_id')
+        .select(
+          's.thrpy_req_id',
+          's.client_id',
+          's.client_first_name',
+          's.client_last_name',
+          's.counselor_id',
+          's.tenant_id',
+          db.raw('COUNT(DISTINCT s.session_id) as total_sessions'),
+          db.raw('COUNT(h.homework_id) as total_homework_sent'),
+          db.raw('MIN(s.intake_date) as first_session_date'),
+          db.raw('MAX(s.intake_date) as last_session_date')
+        )
+        .where('s.status_yn', 'y')
+        .andWhere('s.thrpy_status', 'ONGOING')
+        .groupBy(
+          's.thrpy_req_id',
+          's.client_id',
+          's.client_first_name',
+          's.client_last_name',
+          's.counselor_id',
+          's.tenant_id'
+        )
+        .orderBy('last_session_date', 'desc');
+
+      // Apply filters based on role
+      if (data.role_id === 2) {
+        // Counselor role
+        if (data.counselor_id) {
+          query.andWhere('s.counselor_id', data.counselor_id);
+          
+          // Get tenant_id for the counselor and filter by it
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        }
+
+        if (data.client_id) {
+          query.andWhere('s.client_id', data.client_id);
+        }
+      }
+
+      if (data.role_id === 3) {
+        // Manager role
+        if (data.tenant_id) {
+          query.andWhere('s.tenant_id', Number(data.tenant_id));
+        } else if (data.counselor_id) {
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        }
+        
+        if (data.counselor_id) {
+          query.andWhere('s.counselor_id', data.counselor_id);
+        }
+
+        if (data.start_date) {
+          query.andWhere('s.intake_date', '>=', data.start_date);
+        }
+
+        if (data.end_date) {
+          query.andWhere('s.intake_date', '<=', data.end_date);
+        }
+      }
+
+      // Handle other role_ids (like role_id === 4 - admin)
+      if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        if (tenantId && !tenantId.error && tenantId.length > 0) {
+          query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
+        }
+        query.andWhere('s.counselor_id', data.counselor_id);
+        
+        if (data.start_date) {
+          query.andWhere('s.intake_date', '>=', data.start_date);
+        }
+
+        if (data.end_date) {
+          query.andWhere('s.intake_date', '<=', data.end_date);
+        }
+      }
+
+      const rec = await query;
+
+      if (!rec) {
+        logger.error('Error getting sessions with homework stats');
+        return { message: 'Error getting sessions with homework stats', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error getting sessions with homework stats', error: -1 };
+    }
+  }
 }

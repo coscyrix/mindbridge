@@ -7,6 +7,7 @@ export const CustomCardContainer = styled.div`
   background: #fff;
   box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.14);
   padding: 0 30px 20px;
+  margin-bottom: 20px;
 
   .heading {
     background: white;
@@ -15,7 +16,10 @@ export const CustomCardContainer = styled.div`
     display: grid;
     grid-template-columns: 1fr 1fr;
     align-items: center;
-    margin-bottom: 20px;
+
+    span {
+      margin-bottom: 20px;
+    }
   }
 
   .select-container {

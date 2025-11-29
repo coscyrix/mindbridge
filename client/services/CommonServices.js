@@ -49,6 +49,9 @@ const CommonServices = {
   getAssessmentResults(params) {
     return api.get(ApiConfig.dashboard.assessmentResultsData, { params });
   },
+  getHomeworkStats(params) {
+    return api.get(ApiConfig.sessions.getHomeworkStats, { params });
+  },
   getFeedbackFormDetails(params) {
     return api.get(ApiConfig.feedback.getFeedbackFormDetails, { params });
   },

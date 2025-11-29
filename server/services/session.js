@@ -144,4 +144,26 @@ export default class SessionService {
     const session = new Session();
     return session.getSessionTodayAndTomorrow(data);
   }
+
+  //////////////////////////////////////////
+
+  async getSessionsWithHomeworkStats(data) {
+    const schema = joi.object({
+      counselor_id: joi.number().optional(),
+      client_id: joi.number().optional(),
+      role_id: joi.number().required(),
+      tenant_id: joi.number().optional(),
+      start_date: joi.date().optional(),
+      end_date: joi.date().optional(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const session = new Session();
+    return session.getSessionsWithHomeworkStats(data);
+  }
 }
