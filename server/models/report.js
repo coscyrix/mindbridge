@@ -61,7 +61,7 @@ export default class Report {
           .where('tt.is_sent', 1)
           .andWhere('client.status_yn', 'y')
           .andWhere('tr.thrpy_status', '!=', 2) // Exclude discharged therapy requests
-          .andWhere('f.form_cde', '!=', 'ATTENDENCE') // Exclude attendance forms
+          .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT') // Exclude attendance forms
           .groupBy([
             'client.user_first_name',
             'client.user_last_name',
@@ -188,7 +188,7 @@ export default class Report {
           )
           .where('vuf.is_sent', 1)
           .andWhere('vuf.client_status_yn', 'y')
-          .andWhere('vuf.form_cde', '!=', 'ATTENDENCE') // Exclude attendance forms
+          .andWhere('vuf.form_cde', '!=', 'SESSION SUM REPORT') // Exclude attendance forms
           .andWhere(function() {
             // Exclude discharged therapy requests
             this.where(function() {

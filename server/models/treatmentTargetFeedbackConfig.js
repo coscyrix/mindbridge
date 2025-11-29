@@ -460,7 +460,7 @@ export default class TreatmentTargetFeedbackConfig {
 const attendanceForm = await db
   .withSchema(`${process.env.MYSQL_DATABASE}`)
   .from("forms")
-  .where("form_cde", "ATTENDENCE")
+  .where("form_cde", "SESSION SUM REPORT")
   .first();
 
 if (!attendanceForm) {
@@ -522,7 +522,7 @@ for (const config of configs) {
       if (rec.session_obj[sessionIndex]) {
         const tmpFormSessionAttendance = {
           session_id: rec.session_obj[sessionIndex].session_id,
-          form_array: ["Attendance"],
+          form_array: ["SESSION SUM REPORT"],
         };
 
         const tmpAttendanceFormEntry = {
@@ -531,10 +531,10 @@ for (const config of configs) {
           client_id: rec.client_id,
           counselor_id: rec.counselor_id,
           treatment_target: data.treatment_target,
-          form_name: "Attendance",
+          form_name: "SESSION SUM REPORT",
           form_id: attendanceForm.form_id,
           config_id: config.id,
-          purpose: "attendance",
+          purpose: "SESSION SUM REPORT",
           session_number: sessionNumber,
           tenant_id: data.tenant_id || null,
         };

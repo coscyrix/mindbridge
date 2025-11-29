@@ -124,7 +124,7 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
         ? setLoading("ipfData")
         : row?.form_cde == "CONSENT"
         ? setLoading("consentData")
-        : row?.form_cde == "ATTENDENCE"
+        : row?.form_cde == "SESSION SUM REPORT"
         ? setLoading("attendanceData")
         : row?.form_cde == "GAS"
         ? setLoading("graphData")
@@ -169,7 +169,7 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
           };
           setConsentFormData(newConsentData);
           setTenant_Id(row.tenant_id);
-        } else if (row.form_cde == "ATTENDENCE") {
+        } else if (row.form_cde == "SESSION SUM REPORT") {
           setAttendanceData(data);
           setGraphDataHeading(
             `Attendence Details of ${row.client_first_name} ${row.client_last_name}`
@@ -388,7 +388,7 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
               initialData={consentFormData}
               loader={loading == "consentData"}
             />
-          ) : formName == "ATTENDENCE" ? (
+          ) : formName == "SESSION SUM REPORT" ? (
             <AttendanceGraph
               attendanceData={attendanceData}
               loading={loading == "attendanceData"}
