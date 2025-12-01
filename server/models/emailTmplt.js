@@ -881,15 +881,17 @@ export default class EmailTmplt {
       // Encode client name for URL parameter
       const encodedClientName = encodeURIComponent(data.client_name);
       
-      console.log('bigData', data);
       const sendClientConsentForm = consentFormEmail(
         data.email,
         data.client_name,
         `${process.env.BASE_URL}${process.env.FORMS}consent?client_id=${data.client_id}&form_id=23&tenant_id=${data.tenant_id}&counselor_id=${data.counselor_id}&client_name=${encodedClientName}`,
         data.counselor_id,
         data.tenant_id,
+        data.counselor_email, // Pass counselor email for replyTo
+        data.counselor_name, // Pass counselor name for personalization
+        data.counselor_phone, // Pass counselor phone for contact info
       );
-      const sendConsentForm = await this.sendEmail.sendMail(sendClientConsentForm);
+      const sendConsentForm =  this.sendEmail.sendMail(sendClientConsentForm);
       
       if (sendConsentForm.error) {
         logger.error('Error sending consent form email:', sendConsentForm.message);

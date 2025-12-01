@@ -245,19 +245,87 @@ export const attendanceSummaryEmail = (
 };
 
 // This function sends an email to the client with the consent form for their review and submission.
-export const consentFormEmail = (email, clientName, consentFormLink, counselor_id, tenant_id, counselorEmail = null) => {
+export const consentFormEmail = (email, clientName, consentFormLink, counselor_id, tenant_id, counselorEmail = null, counselorName = null, counselorPhone = null) => {
   const emailObj = {
     to: email,
-    subject: 'Consent Form for Your Review and Submission',
+    subject: 'Important: Consent Form Required for Your Therapy Sessions',
     html: `
+    <style>
+      .consent-container {
+        font-family: Arial, sans-serif;
+        color: #333;
+        line-height: 1.6;
+      }
+      .consent-button {
+        display: inline-block;
+        padding: 15px 30px;
+        margin: 20px 0;
+        background: linear-gradient(90deg, #4CAF50, #2A9D8F);
+        color: white !important;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        text-align: center;
+      }
+      .consent-button:hover {
+        background: linear-gradient(90deg, #45a049, #258f82);
+      }
+      .info-box {
+        background-color: #f0f8ff;
+        border-left: 4px solid #4CAF50;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .contact-info {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+    </style>
+    <div class="consent-container">
       <p>Dear ${capitalizeFirstLetter(clientName)},</p>
+      
       <p>I hope this message finds you well.</p>
-      <p>Attached, you will find the Consent Form document, which is an important step in our process. This document requires careful review and your consent to proceed.</p>
-      <p>Please take some time to review the form at your earliest convenience. Once completed, kindly submit it. If you have any questions or would like further clarification, we can review and finalize it together during our next session.</p>
-      <p><a href="${consentFormLink}">Click here to access the Consent Form</a></p>
-      <p>If you have any concerns or need assistance, don't hesitate to reach out.</p>
-      <p>Thank you,</p>
-      <p>The Counselling Team Member</p>
+      
+      <div class="info-box">
+        <p><strong>Important Step Required:</strong></p>
+        <p>As part of our therapy process, we need you to review and complete a Consent Form. This form is essential for us to proceed with your treatment plan and ensure we have your informed consent.</p>
+      </div>
+      
+      <p>The consent form covers important information about:</p>
+      <ul>
+        <li>Your rights as a client</li>
+        <li>Confidentiality and privacy policies</li>
+        <li>Treatment procedures and expectations</li>
+        <li>Terms of service</li>
+      </ul>
+      
+      <p><strong>Please click the button below to access and complete your consent form:</strong></p>
+      
+      <div style="text-align: center;">
+        <a href="${consentFormLink}" class="consent-button">Access Consent Form</a>
+      </div>
+      
+      <p>The form will only take a few minutes to complete. Once you've reviewed and submitted it, you're all set! If you have any questions or would like to discuss any aspect of the form, we can review it together during our next session.</p>
+      
+      ${counselorName ? `
+      <div class="contact-info">
+        <p><strong>Your Counselor:</strong> ${capitalizeFirstLetter(counselorName)}</p>
+        ${counselorEmail ? `<p><strong>Email:</strong> ${counselorEmail}</p>` : ''}
+        ${counselorPhone ? `<p><strong>Phone:</strong> ${counselorPhone}</p>` : ''}
+        <p>Feel free to reach out if you have any concerns or need assistance.</p>
+      </div>
+      ` : `
+      <p>If you have any concerns or need assistance, please don't hesitate to reach out to your counselor.</p>
+      `}
+      
+      <p>We look forward to working with you on your therapeutic journey.</p>
+      
+      <p>Warm regards,<br/>
+      ${counselorName ? capitalizeFirstLetter(counselorName) + '<br/>' : ''}
+      <strong>MindBridge Therapy Team</strong></p>
+    </div>
       ${EMAIL_DISCLAIMER}
     `,
   };

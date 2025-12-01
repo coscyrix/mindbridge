@@ -56,11 +56,8 @@ function ClientManagement() {
     setSessionData: setActiveData,
   } = useSessionModal();
 
-  const {
-    counselorConfiguration,
-    managerSplitDetails,
-    fetchFeeSplit,
-  } = useFeeSplit();
+  const { counselorConfiguration, managerSplitDetails, fetchFeeSplit } =
+    useFeeSplit();
 
   const tabLabels = [
     { id: 0, label: "Clients", value: "clients" },
@@ -72,14 +69,14 @@ function ClientManagement() {
   // Build query params for fetching clients
   const buildClientParams = () => {
     const isAdminOrManager = [3, 4].includes(userObj?.role_id);
-    
+
     if (!isAdminOrManager) {
       return {
         role_id: userObj?.role_id,
         counselor_id: userObj?.user_profile_id,
       };
     }
-    
+
     // For admin/manager with counselor filter
     if (selectCounselor && selectCounselor !== "allCounselors") {
       return {
@@ -87,7 +84,7 @@ function ClientManagement() {
         counselor_id: selectCounselor,
       };
     }
-    
+
     // For admin/manager without filter (all clients)
     return {
       role_id: userObj?.role_id,
@@ -106,25 +103,23 @@ function ClientManagement() {
     async () => {
       const params = buildClientParams();
       const isAdminOrManager = [3, 4].includes(userObj?.role_id);
-      const isCounselorFiltered = selectCounselor && selectCounselor !== "allCounselors";
-      
+      const isCounselorFiltered =
+        selectCounselor && selectCounselor !== "allCounselors";
+
       let response;
       if (!isAdminOrManager || isCounselorFiltered) {
         response = await CommonServices.getClientsByCounselor(params);
       } else {
         response = await CommonServices.getClients(params);
       }
-      
+
       return response?.data?.rec || [];
     },
     !!userObj?.role_id && !!userObj?.user_profile_id
   );
 
   // Fetch counselors for dropdown (only for admin/manager)
-  const {
-    data: counselorsResponse,
-    error: counselorsError,
-  } = useQueryData(
+  const { data: counselorsResponse, error: counselorsError } = useQueryData(
     ["counselors-dropdown", userObj?.tenant_id],
     async () => {
       const response = await CommonServices.getClients();
@@ -139,12 +134,16 @@ function ClientManagement() {
 
   // Transform counselors data for dropdown
   const counselors = useMemo(() => {
-    const counselorOptions = counselorsResponse?.map((item) => ({
-      label: `${item?.user_first_name} ${item?.user_last_name}`,
-      value: item?.user_profile_id,
-    })) || [];
-    
-    return [{ label: "All counselors", value: "allCounselors" }, ...counselorOptions];
+    const counselorOptions =
+      counselorsResponse?.map((item) => ({
+        label: `${item?.user_first_name} ${item?.user_last_name}`,
+        value: item?.user_profile_id,
+      })) || [];
+
+    return [
+      { label: "All counselors", value: "allCounselors" },
+      ...counselorOptions,
+    ];
   }, [counselorsResponse]);
 
   // Delete client mutation

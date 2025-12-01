@@ -264,7 +264,7 @@ export default class UserProfile {
           return recTargetOutcome;
         }
 
-        const welcomeClientEmail = this.emailTmplt.sendWelcomeClientEmail({
+        const welcomeClientEmail = await this.emailTmplt.sendWelcomeClientEmail({
           email: data.email,
           client_name: `${data.user_first_name} ${data.user_last_name}`,
           user_phone_nbr: data.user_phone_nbr,
@@ -273,14 +273,27 @@ export default class UserProfile {
           counselor_email: recConselor.rec[0].email,
           counselor_phone_nbr: recConselor.rec[0].user_phone_nbr,
         });
+        
+        if (welcomeClientEmail?.error) {
+          logger.error('Error sending welcome email:', welcomeClientEmail.message);
+          // Continue with client creation even if email fails, but log the error
+        }
+        
+        // Add a small delay (1 second) between emails to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       if (data.role_id !== 1) {
         const emailSentWithPassword =
-          this.emailTmplt.sendClientWelcomeWithPasswordEmail({
+          await this.emailTmplt.sendClientWelcomeWithPasswordEmail({
             email: data.email,
             password: clientPassword,
           });
+        
+        if (emailSentWithPassword?.error) {
+          logger.error('Error sending welcome email with password:', emailSentWithPassword.message);
+          // Continue even if email fails, but log the error
+        }
       }
 
       if (data.role_id === 1) {
@@ -290,6 +303,9 @@ export default class UserProfile {
           client_id: postUsrProfile[0],
           tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id,
           counselor_id: data.user_profile_id,
+          counselor_email: recConselor.rec[0].email, // Add counselor email for replyTo
+          counselor_name: `${recConselor.rec[0].user_first_name} ${recConselor.rec[0].user_last_name}`, // Add counselor name
+          counselor_phone: recConselor.rec[0].user_phone_nbr, // Add counselor phone
         });
         
         if (sendClientConsentForm?.error) {
