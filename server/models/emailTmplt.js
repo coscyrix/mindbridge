@@ -257,21 +257,43 @@ export default class EmailTmplt {
                 }
 
                 // Query assessment names for the therapy request
+                // assessmentDoneNames = completed assessments (with feedback)
+                // assessmentNotDoneNames = not completed or not even sent
                 let assessmentDoneNames = [];
                 let assessmentNotDoneNames = [];
                 try {
-                  // Get form mode from environment variable
                   const formMode = process.env.FORM_MODE || 'auto';
+                  const schemaName = process.env.MYSQL_DATABASE;
                   
-                  let assessmentQuery;
-                  
+                  // Step 1: Fetch ALL assessments for this therapy request
+                  let allAssessmentsQuery;
                   if (formMode === 'treatment_target') {
-                    // Get distinct assessments and check if any have feedback
-                    assessmentQuery = db
-                      .withSchema(`${process.env.MYSQL_DATABASE}`)
+                    allAssessmentsQuery = db
+                      .withSchema(schemaName)
                       .from('treatment_target_session_forms as tt')
                       .join('forms as f', 'tt.form_id', 'f.form_id')
-                      .leftJoin('feedback as fb', function() {
+                      .where('tt.req_id', recThrpy[0].req_id)
+                      .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+                      .select('tt.id as instance_id', 'tt.form_id', 'f.form_cde', 'tt.session_id');
+                  } else {
+                    allAssessmentsQuery = db
+                      .withSchema(schemaName)
+                      .from('user_forms as uf')
+                      .where('uf.thrpy_req_id', recThrpy[0].req_id)
+                      .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
+                      .select('uf.user_form_id as instance_id', 'uf.form_id', 'uf.form_cde', 'uf.session_id', 'uf.client_id');
+                  }
+                  
+                  const allAssessments = await allAssessmentsQuery;
+                  
+                  // Step 2: Fetch ALL completed assessments (those with feedback)
+                  let completedAssessmentsQuery;
+                  if (formMode === 'treatment_target') {
+                    completedAssessmentsQuery = db
+                      .withSchema(schemaName)
+                      .from('treatment_target_session_forms as tt')
+                      .join('forms as f', 'tt.form_id', 'f.form_id')
+                      .join('feedback as fb', function() {
                         this.on('fb.form_id', '=', 'tt.form_id')
                             .andOn(function() {
                               this.on('fb.session_id', '=', 'tt.session_id')
@@ -280,15 +302,12 @@ export default class EmailTmplt {
                       })
                       .where('tt.req_id', recThrpy[0].req_id)
                       .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
-                      .select('f.form_cde', 'f.form_id')
-                      .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
-                      .groupBy('f.form_id', 'f.form_cde');
+                      .select('tt.id as instance_id', 'f.form_cde');
                   } else {
-                    // Get distinct assessments and check if any have feedback
-                    assessmentQuery = db
-                      .withSchema(`${process.env.MYSQL_DATABASE}`)
+                    completedAssessmentsQuery = db
+                      .withSchema(schemaName)
                       .from('user_forms as uf')
-                      .leftJoin('feedback as fb', function() {
+                      .join('feedback as fb', function() {
                         this.on('fb.form_id', '=', 'uf.form_id')
                             .andOn(function() {
                               this.on('fb.session_id', '=', 'uf.session_id')
@@ -300,27 +319,26 @@ export default class EmailTmplt {
                       })
                       .where('uf.thrpy_req_id', recThrpy[0].req_id)
                       .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
-                      .select('uf.form_cde', 'uf.form_id')
-                      .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
-                      .groupBy('uf.form_id', 'uf.form_cde');
+                      .select('uf.user_form_id as instance_id', 'uf.form_cde');
                   }
-
-                  const assessmentResult = await assessmentQuery;
                   
-                  if (assessmentResult && assessmentResult.length > 0) {
-                    assessmentResult.forEach((row) => {
-                      const formName = row.form_cde;
-                      if (row.has_feedback === 1) {
-                        if (!assessmentDoneNames.includes(formName)) {
-                          assessmentDoneNames.push(formName);
-                        }
-                      } else {
-                        if (!assessmentNotDoneNames.includes(formName)) {
-                          assessmentNotDoneNames.push(formName);
-                        }
-                      }
-                    });
-                  }
+                  const completedAssessments = await completedAssessmentsQuery;
+                  
+                  // Step 3: Create a Set of completed instance IDs for quick lookup
+                  const completedInstanceIds = new Set(
+                    completedAssessments.map(a => a.instance_id)
+                  );
+                  
+                  // Step 4: Categorize each assessment instance
+                  // assessmentDoneNames = completed (each instance adds its form_cde)
+                  // assessmentNotDoneNames = not completed or not sent (each instance adds its form_cde)
+                  allAssessments.forEach((assessment) => {
+                    if (completedInstanceIds.has(assessment.instance_id)) {
+                      assessmentDoneNames.push(assessment.form_cde);
+                    } else {
+                      assessmentNotDoneNames.push(assessment.form_cde);
+                    }
+                  });
                 } catch (error) {
                   logger.error('Error querying assessment stats:', error);
                   assessmentDoneNames = [];
@@ -492,6 +510,8 @@ export default class EmailTmplt {
               }
 
               // Query assessment names for the therapy request
+              // assessmentDoneNames = ALL instances of a form are completed (all have feedback)
+              // assessmentNotDoneNames = at least one instance is not completed OR form not sent yet
               let assessmentDoneNames = [];
               let assessmentNotDoneNames = [];
               try {
@@ -501,11 +521,12 @@ export default class EmailTmplt {
                 let assessmentQuery;
                 
                 if (formMode === 'treatment_target') {
-                  // Get distinct assessments and check if any have feedback
+                  // Get assessments and check if ALL instances have feedback (not just ANY)
                   assessmentQuery = db
                     .withSchema(`${process.env.MYSQL_DATABASE}`)
                     .from('treatment_target_session_forms as tt')
                     .join('forms as f', 'tt.form_id', 'f.form_id')
+                    .join('session as s', 'tt.session_id', 's.session_id')
                     .leftJoin('feedback as fb', function() {
                       this.on('fb.form_id', '=', 'tt.form_id')
                           .andOn(function() {
@@ -516,13 +537,16 @@ export default class EmailTmplt {
                     .where('tt.req_id', recThrpy[0].req_id)
                     .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
                     .select('f.form_cde', 'f.form_id')
-                    .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
+                    .select(db.raw('COUNT(DISTINCT tt.id) as total_instances'))
+                    .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN tt.id END) as completed_instances'))
+                    .select(db.raw('MAX(CASE WHEN tt.is_sent = 1 THEN 1 ELSE 0 END) as is_sent'))
                     .groupBy('f.form_id', 'f.form_cde');
                 } else {
-                  // Get distinct assessments and check if any have feedback
+                  // Get assessments and check if ALL instances have feedback (not just ANY)
                   assessmentQuery = db
                     .withSchema(`${process.env.MYSQL_DATABASE}`)
                     .from('user_forms as uf')
+                    .join('session as s', 'uf.session_id', 's.session_id')
                     .leftJoin('feedback as fb', function() {
                       this.on('fb.form_id', '=', 'uf.form_id')
                           .andOn(function() {
@@ -536,7 +560,9 @@ export default class EmailTmplt {
                     .where('uf.thrpy_req_id', recThrpy[0].req_id)
                     .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
                     .select('uf.form_cde', 'uf.form_id')
-                    .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
+                    .select(db.raw('COUNT(DISTINCT uf.user_form_id) as total_instances'))
+                    .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN uf.user_form_id END) as completed_instances'))
+                    .select(db.raw('MAX(CASE WHEN uf.is_sent = 1 THEN 1 ELSE 0 END) as is_sent'))
                     .groupBy('uf.form_id', 'uf.form_cde');
                 }
 
@@ -545,11 +571,16 @@ export default class EmailTmplt {
                 if (assessmentResult && assessmentResult.length > 0) {
                   assessmentResult.forEach((row) => {
                     const formName = row.form_cde;
-                    if (row.has_feedback === 1) {
+                    const totalInstances = parseInt(row.total_instances) || 0;
+                    const completedInstances = parseInt(row.completed_instances) || 0;
+                    
+                    // A form is "done" only if ALL instances are completed
+                    if (totalInstances > 0 && completedInstances === totalInstances) {
                       if (!assessmentDoneNames.includes(formName)) {
                         assessmentDoneNames.push(formName);
                       }
                     } else {
+                      // Not done: at least one instance incomplete or not sent yet
                       if (!assessmentNotDoneNames.includes(formName)) {
                         assessmentNotDoneNames.push(formName);
                       }
@@ -1054,6 +1085,8 @@ export default class EmailTmplt {
       }
 
       // Query assessment names for the therapy request
+      // assessmentDoneNames = ALL instances of a form are completed (all have feedback)
+      // assessmentNotDoneNames = at least one instance is not completed OR form not sent yet
       let assessmentDoneNames = [];
       let assessmentNotDoneNames = [];
       try {
@@ -1063,11 +1096,12 @@ export default class EmailTmplt {
         let assessmentQuery;
         
         if (formMode === 'treatment_target') {
-          // Get distinct assessments and check if any have feedback
+          // Get assessments and check if ALL instances have feedback (not just ANY)
           assessmentQuery = db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
             .from('treatment_target_session_forms as tt')
             .join('forms as f', 'tt.form_id', 'f.form_id')
+            .join('session as s', 'tt.session_id', 's.session_id')
             .leftJoin('feedback as fb', function() {
               this.on('fb.form_id', '=', 'tt.form_id')
                   .andOn(function() {
@@ -1078,13 +1112,16 @@ export default class EmailTmplt {
             .where('tt.req_id', thrpy_req_id)
             .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
             .select('f.form_cde', 'f.form_id')
-            .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
+            .select(db.raw('COUNT(DISTINCT tt.id) as total_instances'))
+            .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN tt.id END) as completed_instances'))
+            .select(db.raw('MAX(CASE WHEN tt.is_sent = 1 THEN 1 ELSE 0 END) as is_sent'))
             .groupBy('f.form_id', 'f.form_cde');
         } else {
-          // Get distinct assessments and check if any have feedback
+          // Get assessments and check if ALL instances have feedback (not just ANY)
           assessmentQuery = db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
             .from('user_forms as uf')
+            .join('session as s', 'uf.session_id', 's.session_id')
             .leftJoin('feedback as fb', function() {
               this.on('fb.form_id', '=', 'uf.form_id')
                   .andOn(function() {
@@ -1098,7 +1135,9 @@ export default class EmailTmplt {
             .where('uf.thrpy_req_id', thrpy_req_id)
             .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
             .select('uf.form_cde', 'uf.form_id')
-            .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
+            .select(db.raw('COUNT(DISTINCT uf.user_form_id) as total_instances'))
+            .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN uf.user_form_id END) as completed_instances'))
+            .select(db.raw('MAX(CASE WHEN uf.is_sent = 1 THEN 1 ELSE 0 END) as is_sent'))
             .groupBy('uf.form_id', 'uf.form_cde');
         }
 
@@ -1107,11 +1146,16 @@ export default class EmailTmplt {
         if (assessmentResult && assessmentResult.length > 0) {
           assessmentResult.forEach((row) => {
             const formName = row.form_cde;
-            if (row.has_feedback === 1) {
+            const totalInstances = parseInt(row.total_instances) || 0;
+            const completedInstances = parseInt(row.completed_instances) || 0;
+            
+            // A form is "done" only if ALL instances are completed
+            if (totalInstances > 0 && completedInstances === totalInstances) {
               if (!assessmentDoneNames.includes(formName)) {
                 assessmentDoneNames.push(formName);
               }
             } else {
+              // Not done: at least one instance incomplete or not sent yet
               if (!assessmentNotDoneNames.includes(formName)) {
                 assessmentNotDoneNames.push(formName);
               }

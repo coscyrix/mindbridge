@@ -513,13 +513,13 @@ export default class TreatmentTargetFeedbackConfig {
       );
 
       // Check if service type is OTR_TS (Occupational Therapy - Transition Service)
-      // Exception: Only OTR_TS service code should skip form distribution
+      // OTR_TS service has custom form distribution logic
       const isOTR_TS = rec.service_code && 
         rec.service_code.toUpperCase() === 'OTR_TS';
 
       logger.info(`Service type check - service_code: ${rec.service_code}, service_name: ${rec.service_name}, isOTR_TS: ${isOTR_TS}`);
 
-      //  Attendance form lookup
+      //  Attendance form lookup (required for attendance reports)
       const attendanceForm = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('forms')
@@ -527,7 +527,9 @@ export default class TreatmentTargetFeedbackConfig {
         .first();
 
       if (!attendanceForm) {
-        logger.warn('Attendance form not found');
+        logger.error('⚠️ CRITICAL: Attendance form (SESSION SUM REPORT) not found in database! Attendance reports will not be generated.');
+      } else {
+        logger.info(`✓ Attendance form loaded (form_id: ${attendanceForm.form_id})`);
       }
 
       // Existing loop for configs
@@ -553,6 +555,7 @@ export default class TreatmentTargetFeedbackConfig {
         ) {
           // OTR_TS Service Exception: Custom form distribution
           // Session 1: IPF + WHODAS | Session 5: WHODAS | Session 9: IPF
+          // Attendance: Sessions 4, 8, 12, 16, 19, 23, 27, 31... (pattern: 4,4,4,4,3,4,4...)
           if (isOTR_TS) {
             const sessionIndex = sessionNumber - 1;
             if (!rec.session_obj[sessionIndex]) continue;
@@ -565,47 +568,103 @@ export default class TreatmentTargetFeedbackConfig {
             };
 
             const formCodes = otrTSFormMap[sessionNumber];
-            if (!formCodes) {
+            
+            // Check if attendance form should be added (same pattern as regular sessions)
+            // Sessions 4, 8, 12, 16: every 4 sessions up to 16
+            // Sessions 19, 23, 27, 31...: every 4 sessions starting from 19 (gap of 3 after session 16)
+            const shouldAddAttendance = attendanceForm && (
+              (sessionNumber <= 16 && sessionNumber % 4 === 0) || 
+              (sessionNumber >= 19 && (sessionNumber - 19) % 4 === 0)
+            );
+            
+            logger.info(`OTR_TS Session ${sessionNumber}: hasAssessmentForms=${!!formCodes}, shouldAddAttendance=${shouldAddAttendance}`);
+            
+            // Skip this session if it has no assessment forms AND no attendance form
+            if (!formCodes && !shouldAddAttendance) {
+              logger.info(`OTR_TS Session ${sessionNumber}: Skipping - no forms to add`);
               continue; // No forms for this session
             }
 
-            // Fetch required forms in one query
-            const forms = await db
-              .withSchema(`${process.env.MYSQL_DATABASE}`)
-              .from('forms')
-              .whereIn('form_cde', formCodes)
-              .andWhere('status_yn', 1);
+            let tmpFormSession = null;
+            let formNames = [];
 
-            if (forms.length === 0) {
-              logger.warn(`OTR_TS: Forms not found for session ${sessionNumber}`);
-              continue;
+            // Process assessment forms if they exist for this session
+            if (formCodes) {
+              // Fetch required forms in one query
+              const forms = await db
+                .withSchema(`${process.env.MYSQL_DATABASE}`)
+                .from('forms')
+                .whereIn('form_cde', formCodes)
+                .andWhere('status_yn', 1);
+
+              if (forms.length > 0) {
+                // Create form entries
+                formNames = forms.map(f => f.form_cde);
+                tmpFormSession = {
+                  session_id: rec.session_obj[sessionIndex].session_id,
+                  form_array: formNames,
+                };
+
+                forms.forEach((form) => {
+                  tmpForm.push({
+                    req_id: rec.req_id,
+                    session_id: rec.session_obj[sessionIndex].session_id,
+                    client_id: rec.client_id,
+                    counselor_id: rec.counselor_id,
+                    treatment_target: data.treatment_target,
+                    form_name: form.form_cde,
+                    form_id: form.form_id,
+                    config_id: config.id,
+                    purpose: `${form.form_cde} assessment for OTR_TS service`,
+                    session_number: sessionNumber,
+                    tenant_id: data.tenant_id || null,
+                  });
+                });
+              } else {
+                logger.warn(`OTR_TS: Forms not found for session ${sessionNumber}`);
+              }
             }
+            
+            // Add attendance form if needed
+            if (shouldAddAttendance) {
+              // Initialize tmpFormSession if it wasn't created above
+              if (!tmpFormSession) {
+                tmpFormSession = {
+                  session_id: rec.session_obj[sessionIndex].session_id,
+                  form_array: [],
+                };
+              }
+              
+              // Add attendance form to the session's form array
+              tmpFormSession.form_array.push('SESSION SUM REPORT');
 
-            // Create form entries
-            const formNames = forms.map(f => f.form_cde);
-            const tmpFormSession = {
-              session_id: rec.session_obj[sessionIndex].session_id,
-              form_array: formNames,
-            };
-
-            forms.forEach((form) => {
-              tmpForm.push({
+              const tmpAttendanceFormEntry = {
                 req_id: rec.req_id,
                 session_id: rec.session_obj[sessionIndex].session_id,
                 client_id: rec.client_id,
                 counselor_id: rec.counselor_id,
                 treatment_target: data.treatment_target,
-                form_name: form.form_cde,
-                form_id: form.form_id,
+                form_name: 'SESSION SUM REPORT',
+                form_id: attendanceForm.form_id,
                 config_id: config.id,
-                purpose: `${form.form_cde} assessment for OTR_TS service`,
+                purpose: 'SESSION SUM REPORT',
                 session_number: sessionNumber,
                 tenant_id: data.tenant_id || null,
-              });
-            });
+              };
 
-            tmpSession.push(tmpFormSession);
-            logger.info(`OTR_TS: Added forms for session ${sessionNumber}: ${formNames.join(', ')}`);
+              tmpForm.push(tmpAttendanceFormEntry);
+              logger.info(`OTR_TS: Added attendance form for session ${sessionNumber}`);
+            }
+            
+            // Only add to tmpSession if we have forms to add
+            if (tmpFormSession && tmpFormSession.form_array.length > 0) {
+              tmpSession.push(tmpFormSession);
+              const hasAttendance = tmpFormSession.form_array.includes('SESSION SUM REPORT');
+              logger.info(`OTR_TS Session ${sessionNumber}: Forms added [${tmpFormSession.form_array.join(', ')}] ${hasAttendance ? '✓ Includes Attendance' : ''}`);
+            } else {
+              logger.warn(`OTR_TS Session ${sessionNumber}: No forms to add (this should not happen)`);
+            }
+            
             continue;
           }
 
@@ -637,13 +696,15 @@ export default class TreatmentTargetFeedbackConfig {
           }
 
           // ***********************
-          // ADD Attendance every 4th session
-          // OTR Exception: Skip attendance forms for OTR services
+          // ADD Attendance with pattern: 4,4,4,4,3,4,4...
+          // Sessions: 4, 8, 12, 16, 19, 23, 27, 31...
           // ***********************
-
-          // OTR_TS service: Skip attendance form distribution
-          // OTR_TS service handles its own form distribution separately
-          if (!isOTR_TS && attendanceForm && sessionNumber % 4 === 0) {
+          const shouldAddAttendance = attendanceForm && (
+            (sessionNumber <= 16 && sessionNumber % 4 === 0) || 
+            (sessionNumber >= 19 && (sessionNumber - 19) % 4 === 0)
+          );
+          
+          if (shouldAddAttendance) {
             const sessionIndex = sessionNumber - 1;
             if (rec.session_obj[sessionIndex]) {
               const tmpFormSessionAttendance = {
