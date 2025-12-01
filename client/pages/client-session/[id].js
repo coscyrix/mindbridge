@@ -397,6 +397,7 @@ function ClientDetails() {
           isOpen={isWorkModalOpen}
           onClose={handleCloseWorkModal}
           session_id={activeData ? activeData[0]?.session_id : null}
+          id={clientDetails}
         />
       )}
 
