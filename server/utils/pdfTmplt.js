@@ -9,8 +9,8 @@ export const AttendancePDF =
     total_attended_sessions,
     total_cancellation_total,
     total_homework_sent = 0,
-    assessment_done = 0,
-    assessment_not_done = 0,
+    assessment_done = [],
+    assessment_not_done = [],
   ) =>
   (doc) => {
     // Title
@@ -43,6 +43,15 @@ export const AttendancePDF =
       .text(`Client Session Summary`, { bold: true })
       .moveDown();
     doc.fontSize(12);
+    
+    // Format assessment names
+    const assessmentDoneText = Array.isArray(assessment_done) && assessment_done.length > 0 
+      ? assessment_done.join(', ') 
+      : (typeof assessment_done === 'number' ? assessment_done.toString() : 'None');
+    const assessmentNotDoneText = Array.isArray(assessment_not_done) && assessment_not_done.length > 0 
+      ? assessment_not_done.join(', ') 
+      : (typeof assessment_not_done === 'number' ? assessment_not_done.toString() : 'None');
+    
     const table = [
       [`Client Name`, `${capitalizeFirstLetterOfEachWord(client_full_name)}`],
       [`Serial Number`, `${client_clam_nbr}`],
@@ -50,8 +59,8 @@ export const AttendancePDF =
       [`Total Attendance`, `${total_attended_sessions}`],
       [`Total Cancellations`, `${total_cancellation_total}`],
       [`Total Homework Sent`, `${total_homework_sent}`],
-      [`Assessment Done`, `${assessment_done}`],
-      [`Assessment Not Done`, `${assessment_not_done}`],
+      [`Assessment Done`, assessmentDoneText],
+      [`Assessment Not Done`, assessmentNotDoneText],
     ];
 
     // Draw table

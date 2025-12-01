@@ -78,15 +78,19 @@ export default class TreatmentTargetFeedbackConfig {
         treatment_target: data.treatment_target,
         form_name: data.form_name,
         service_name: data.service_name || null,
-        tenant_id: data.tenant_id || null
+        tenant_id: data.tenant_id || null,
       });
 
       if (existingCombination) {
-        const tenantInfo = data.tenant_id ? ` for tenant ${data.tenant_id}` : ' globally';
-        const serviceInfo = data.service_name ? ` and service "${data.service_name}"` : '';
-        return { 
-          message: `Configuration with treatment_target "${data.treatment_target}", form_name "${data.form_name}"${serviceInfo} already exists${tenantInfo}`, 
-          error: -1 
+        const tenantInfo = data.tenant_id
+          ? ` for tenant ${data.tenant_id}`
+          : ' globally';
+        const serviceInfo = data.service_name
+          ? ` and service "${data.service_name}"`
+          : '';
+        return {
+          message: `Configuration with treatment_target "${data.treatment_target}", form_name "${data.form_name}"${serviceInfo} already exists${tenantInfo}`,
+          error: -1,
         };
       }
 
@@ -106,14 +110,23 @@ export default class TreatmentTargetFeedbackConfig {
 
       if (!postConfig) {
         logger.error('Error creating treatment target feedback config');
-        return { message: 'Error creating treatment target feedback config', error: -1 };
+        return {
+          message: 'Error creating treatment target feedback config',
+          error: -1,
+        };
       }
 
-      return { message: 'Treatment target feedback config created successfully', rec: postConfig };
+      return {
+        message: 'Treatment target feedback config created successfully',
+        rec: postConfig,
+      };
     } catch (error) {
       console.log(error);
       logger.error(error);
-      return { message: 'Error creating treatment target feedback config', error: -1 };
+      return {
+        message: 'Error creating treatment target feedback config',
+        error: -1,
+      };
     }
   }
 
@@ -138,15 +151,19 @@ export default class TreatmentTargetFeedbackConfig {
         form_name: data.form_name,
         service_name: data.service_name || null,
         tenant_id: data.tenant_id || null,
-        exclude_id: data.id
+        exclude_id: data.id,
       });
 
       if (existingCombination) {
-        const tenantInfo = data.tenant_id ? ` for tenant ${data.tenant_id}` : ' globally';
-        const serviceInfo = data.service_name ? ` and service "${data.service_name}"` : '';
-        return { 
-          message: `Configuration with treatment_target "${data.treatment_target}", form_name "${data.form_name}"${serviceInfo} already exists${tenantInfo}`, 
-          error: -1 
+        const tenantInfo = data.tenant_id
+          ? ` for tenant ${data.tenant_id}`
+          : ' globally';
+        const serviceInfo = data.service_name
+          ? ` and service "${data.service_name}"`
+          : '';
+        return {
+          message: `Configuration with treatment_target "${data.treatment_target}", form_name "${data.form_name}"${serviceInfo} already exists${tenantInfo}`,
+          error: -1,
         };
       }
 
@@ -167,13 +184,21 @@ export default class TreatmentTargetFeedbackConfig {
 
       if (!putConfig) {
         logger.error('Error updating treatment target feedback config');
-        return { message: 'Error updating treatment target feedback config', error: -1 };
+        return {
+          message: 'Error updating treatment target feedback config',
+          error: -1,
+        };
       }
 
-      return { message: 'Treatment target feedback config updated successfully' };
+      return {
+        message: 'Treatment target feedback config updated successfully',
+      };
     } catch (error) {
       logger.error(error);
-      return { message: 'Error updating treatment target feedback config', error: -1 };
+      return {
+        message: 'Error updating treatment target feedback config',
+        error: -1,
+      };
     }
   }
 
@@ -193,15 +218,24 @@ export default class TreatmentTargetFeedbackConfig {
         .first();
 
       if (!config) {
-        return { message: 'Treatment target feedback config not found', error: -1 };
+        return {
+          message: 'Treatment target feedback config not found',
+          error: -1,
+        };
       }
 
       // sessions is already a JSON object from the database, no parsing needed
 
-      return { message: 'Treatment target feedback config retrieved successfully', rec: config };
+      return {
+        message: 'Treatment target feedback config retrieved successfully',
+        rec: config,
+      };
     } catch (error) {
       logger.error(error);
-      return { message: 'Error retrieving treatment target feedback config', error: -1 };
+      return {
+        message: 'Error retrieving treatment target feedback config',
+        error: -1,
+      };
     }
   }
 
@@ -241,16 +275,25 @@ export default class TreatmentTargetFeedbackConfig {
         query = query.where('tenant_id', data.tenant_id);
       }
 
-      const configs = await query.orderBy('treatment_target', 'asc').orderBy('form_name', 'asc').orderBy('service_name', 'asc');
+      const configs = await query
+        .orderBy('treatment_target', 'asc')
+        .orderBy('form_name', 'asc')
+        .orderBy('service_name', 'asc');
 
       // sessions is already a JSON object from the database, no parsing needed
 
-      return { message: 'Treatment target feedback configs retrieved successfully', rec: configs };
+      return {
+        message: 'Treatment target feedback configs retrieved successfully',
+        rec: configs,
+      };
     } catch (error) {
       console.log('error-------->', error);
-      
+
       logger.error(error);
-      return { message: 'Error retrieving treatment target feedback configs', error: -1 };
+      return {
+        message: 'Error retrieving treatment target feedback configs',
+        error: -1,
+      };
     }
   }
 
@@ -282,22 +325,22 @@ export default class TreatmentTargetFeedbackConfig {
       for (const config of configs) {
         // sessions is already a JSON object from the database, no parsing needed
         const sessions = config.sessions;
-        
+
         // Check if current session number is in the sessions array
         if (sessions.includes(data.session_number)) {
           formsToSend.push({
             form_name: config.form_name,
             purpose: config.purpose,
-            config_id: config.id
+            config_id: config.id,
           });
         }
       }
 
-      return { 
-        message: 'Session feedback forms check completed', 
+      return {
+        message: 'Session feedback forms check completed',
         rec: formsToSend,
         session_number: data.session_number,
-        treatment_target: data.treatment_target
+        treatment_target: data.treatment_target,
       };
     } catch (error) {
       logger.error(error);
@@ -322,13 +365,21 @@ export default class TreatmentTargetFeedbackConfig {
 
       if (!deleteConfig) {
         logger.error('Error deleting treatment target feedback config');
-        return { message: 'Error deleting treatment target feedback config', error: -1 };
+        return {
+          message: 'Error deleting treatment target feedback config',
+          error: -1,
+        };
       }
 
-      return { message: 'Treatment target feedback config deleted successfully' };
+      return {
+        message: 'Treatment target feedback config deleted successfully',
+      };
     } catch (error) {
       logger.error(error);
-      return { message: 'Error deleting treatment target feedback config', error: -1 };
+      return {
+        message: 'Error deleting treatment target feedback config',
+        error: -1,
+      };
     }
   }
 
@@ -345,9 +396,9 @@ export default class TreatmentTargetFeedbackConfig {
         .distinct('treatment_target')
         .orderBy('treatment_target', 'asc');
 
-      return { 
-        message: 'Treatment targets retrieved successfully', 
-        rec: targets.map(t => t.treatment_target)
+      return {
+        message: 'Treatment targets retrieved successfully',
+        rec: targets.map((t) => t.treatment_target),
       };
     } catch (error) {
       logger.error(error);
@@ -368,9 +419,9 @@ export default class TreatmentTargetFeedbackConfig {
         .distinct('form_name')
         .orderBy('form_name', 'asc');
 
-      return { 
-        message: 'Form names retrieved successfully', 
-        rec: forms.map(f => f.form_name)
+      return {
+        message: 'Form names retrieved successfully',
+        rec: forms.map((f) => f.form_name),
       };
     } catch (error) {
       logger.error(error);
@@ -392,9 +443,9 @@ export default class TreatmentTargetFeedbackConfig {
         .whereNotNull('service_name')
         .orderBy('service_name', 'asc');
 
-      return { 
-        message: 'Service names retrieved successfully', 
-        rec: services.map(s => s.service_name)
+      return {
+        message: 'Service names retrieved successfully',
+        rec: services.map((s) => s.service_name),
       };
     } catch (error) {
       logger.error(error);
@@ -422,7 +473,9 @@ export default class TreatmentTargetFeedbackConfig {
       const [rec] = await query;
 
       if (!rec) {
-        logger.error('Error getting therapy request for treatment target form loading');
+        logger.error(
+          'Error getting therapy request for treatment target form loading',
+        );
         return { message: 'Error getting therapy request', error: -1 };
       }
 
@@ -440,7 +493,10 @@ export default class TreatmentTargetFeedbackConfig {
 
       if (!configs || configs.length === 0) {
         logger.error('No treatment target feedback configurations found');
-        return { message: 'No treatment target feedback configurations found', error: -1 };
+        return {
+          message: 'No treatment target feedback configurations found',
+          error: -1,
+        };
       }
 
       const tmpSession = [];
@@ -456,95 +512,165 @@ export default class TreatmentTargetFeedbackConfig {
         (a, b) => a.session_id - b.session_id,
       );
 
-//  Attendance form lookup
-const attendanceForm = await db
-  .withSchema(`${process.env.MYSQL_DATABASE}`)
-  .from("forms")
-  .where("form_cde", "SESSION SUM REPORT")
-  .first();
+      // Check if service type is OTR_TS (Occupational Therapy - Transition Service)
+      // Exception: Only OTR_TS service code should skip form distribution
+      const isOTR_TS = rec.service_code && 
+        rec.service_code.toUpperCase() === 'OTR_TS';
 
-if (!attendanceForm) {
-  logger.warn("Attendance form not found");
-}
+      logger.info(`Service type check - service_code: ${rec.service_code}, service_name: ${rec.service_name}, isOTR_TS: ${isOTR_TS}`);
 
-// Existing loop for configs
-for (const config of configs) {
-  const sessions = config.sessions;
+      //  Attendance form lookup
+      const attendanceForm = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('forms')
+        .where('form_cde', 'SESSION SUM REPORT')
+        .first();
 
-  // Get dynamic form ID from form name
-  const form = await db
-    .withSchema(`${process.env.MYSQL_DATABASE}`)
-    .from("forms")
-    .where("form_cde", config.form_name)
-    .first();
+      if (!attendanceForm) {
+        logger.warn('Attendance form not found');
+      }
 
-  if (!form) {
-    logger.warn(`Form not found for form_name: ${config.form_name}`);
-    continue;
-  }
+      // Existing loop for configs
+      for (const config of configs) {
+        const sessions = config.sessions;
+
+        // Get dynamic form ID from form name
+        const form = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('forms')
+          .where('form_cde', config.form_name)
+          .first();
+
+        if (!form) {
+          logger.warn(`Form not found for form_name: ${config.form_name}`);
+          continue;
+        }
         // Process each session number in the configuration
-  for (let sessionNumber = 1; sessionNumber <= rec.session_obj.length; sessionNumber++) {
+        for (
+          let sessionNumber = 1;
+          sessionNumber <= rec.session_obj.length;
+          sessionNumber++
+        ) {
+          // OTR_TS Service Exception: Custom form distribution
+          // Session 1: IPF + WHODAS | Session 5: WHODAS | Session 9: IPF
+          if (isOTR_TS) {
+            const sessionIndex = sessionNumber - 1;
+            if (!rec.session_obj[sessionIndex]) continue;
 
-    if (sessions.includes(sessionNumber)) {
-      const sessionIndex = sessionNumber - 1;
-      if (rec.session_obj[sessionIndex]) {
-        const tmpFormSession = {
-          session_id: rec.session_obj[sessionIndex].session_id,
-          form_array: [config.form_name],
-        };
+            // Define OTR_TS form distribution mapping
+            const otrTSFormMap = {
+              1: ['IPF', 'WHODAS'],
+              5: ['WHODAS'],
+              9: ['IPF'],
+            };
 
-        const tmpTreatmentTargetForm = {
-          req_id: rec.req_id,
-          session_id: rec.session_obj[sessionIndex].session_id,
-          client_id: rec.client_id,
-          counselor_id: rec.counselor_id,
-          treatment_target: data.treatment_target,
-          form_name: config.form_name,
-          form_id: form.form_id,
-          config_id: config.id,
-          purpose: config.purpose,
-          session_number: sessionNumber,
-          tenant_id: data.tenant_id || null,
-        };
+            const formCodes = otrTSFormMap[sessionNumber];
+            if (!formCodes) {
+              continue; // No forms for this session
+            }
 
-        tmpSession.push(tmpFormSession);
-        tmpForm.push(tmpTreatmentTargetForm);
+            // Fetch required forms in one query
+            const forms = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('forms')
+              .whereIn('form_cde', formCodes)
+              .andWhere('status_yn', 1);
+
+            if (forms.length === 0) {
+              logger.warn(`OTR_TS: Forms not found for session ${sessionNumber}`);
+              continue;
+            }
+
+            // Create form entries
+            const formNames = forms.map(f => f.form_cde);
+            const tmpFormSession = {
+              session_id: rec.session_obj[sessionIndex].session_id,
+              form_array: formNames,
+            };
+
+            forms.forEach((form) => {
+              tmpForm.push({
+                req_id: rec.req_id,
+                session_id: rec.session_obj[sessionIndex].session_id,
+                client_id: rec.client_id,
+                counselor_id: rec.counselor_id,
+                treatment_target: data.treatment_target,
+                form_name: form.form_cde,
+                form_id: form.form_id,
+                config_id: config.id,
+                purpose: `${form.form_cde} assessment for OTR_TS service`,
+                session_number: sessionNumber,
+                tenant_id: data.tenant_id || null,
+              });
+            });
+
+            tmpSession.push(tmpFormSession);
+            logger.info(`OTR_TS: Added forms for session ${sessionNumber}: ${formNames.join(', ')}`);
+            continue;
+          }
+
+          if (sessions.includes(sessionNumber)) {
+            const sessionIndex = sessionNumber - 1;
+            if (rec.session_obj[sessionIndex]) {
+              const tmpFormSession = {
+                session_id: rec.session_obj[sessionIndex].session_id,
+                form_array: [config.form_name],
+              };
+
+              const tmpTreatmentTargetForm = {
+                req_id: rec.req_id,
+                session_id: rec.session_obj[sessionIndex].session_id,
+                client_id: rec.client_id,
+                counselor_id: rec.counselor_id,
+                treatment_target: data.treatment_target,
+                form_name: config.form_name,
+                form_id: form.form_id,
+                config_id: config.id,
+                purpose: config.purpose,
+                session_number: sessionNumber,
+                tenant_id: data.tenant_id || null,
+              };
+
+              tmpSession.push(tmpFormSession);
+              tmpForm.push(tmpTreatmentTargetForm);
+            }
+          }
+
+          // ***********************
+          // ADD Attendance every 4th session
+          // OTR Exception: Skip attendance forms for OTR services
+          // ***********************
+
+          // OTR_TS service: Skip attendance form distribution
+          // OTR_TS service handles its own form distribution separately
+          if (!isOTR_TS && attendanceForm && sessionNumber % 4 === 0) {
+            const sessionIndex = sessionNumber - 1;
+            if (rec.session_obj[sessionIndex]) {
+              const tmpFormSessionAttendance = {
+                session_id: rec.session_obj[sessionIndex].session_id,
+                form_array: ['SESSION SUM REPORT'],
+              };
+
+              const tmpAttendanceFormEntry = {
+                req_id: rec.req_id,
+                session_id: rec.session_obj[sessionIndex].session_id,
+                client_id: rec.client_id,
+                counselor_id: rec.counselor_id,
+                treatment_target: data.treatment_target,
+                form_name: 'SESSION SUM REPORT',
+                form_id: attendanceForm.form_id,
+                config_id: config.id,
+                purpose: 'SESSION SUM REPORT',
+                session_number: sessionNumber,
+                tenant_id: data.tenant_id || null,
+              };
+
+              tmpSession.push(tmpFormSessionAttendance);
+              tmpForm.push(tmpAttendanceFormEntry);
+            }
+          }
+        }
       }
-    }
-
-    // ***********************
-    // ADD Attendance every 4th session
-    // ***********************
-
-
-    if (attendanceForm && sessionNumber % 4 === 0) {
-      const sessionIndex = sessionNumber - 1;
-      if (rec.session_obj[sessionIndex]) {
-        const tmpFormSessionAttendance = {
-          session_id: rec.session_obj[sessionIndex].session_id,
-          form_array: ["SESSION SUM REPORT"],
-        };
-
-        const tmpAttendanceFormEntry = {
-          req_id: rec.req_id,
-          session_id: rec.session_obj[sessionIndex].session_id,
-          client_id: rec.client_id,
-          counselor_id: rec.counselor_id,
-          treatment_target: data.treatment_target,
-          form_name: "SESSION SUM REPORT",
-          form_id: attendanceForm.form_id,
-          config_id: config.id,
-          purpose: "SESSION SUM REPORT",
-          session_number: sessionNumber,
-          tenant_id: data.tenant_id || null,
-        };
-
-        tmpSession.push(tmpFormSessionAttendance);
-        tmpForm.push(tmpAttendanceFormEntry);
-      }
-    }
-  }
-}
 
       // Update session forms
       const updateResult = await this.updateSessionForms(tmpSession);
@@ -553,7 +679,8 @@ for (const config of configs) {
       }
 
       // Create treatment target session forms
-      const treatmentTargetFormResult = await this.createTreatmentTargetSessionForms(tmpForm);
+      const treatmentTargetFormResult =
+        await this.createTreatmentTargetSessionForms(tmpForm);
       if (treatmentTargetFormResult.error) {
         return treatmentTargetFormResult;
       }
@@ -562,7 +689,10 @@ for (const config of configs) {
     } catch (error) {
       console.error(error);
       logger.error(error);
-      return { message: 'Error loading treatment target session forms', error: -1 };
+      return {
+        message: 'Error loading treatment target session forms',
+        error: -1,
+      };
     }
   }
 
@@ -623,16 +753,23 @@ for (const config of configs) {
    */
   async createTreatmentTargetSessionForms(data) {
     try {
-      const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+      const TreatmentTargetSessionForms = (
+        await import('./treatmentTargetSessionForms.js')
+      ).default;
       const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
-      
-      return await treatmentTargetSessionForms.createTreatmentTargetSessionForms(data);
+
+      return await treatmentTargetSessionForms.createTreatmentTargetSessionForms(
+        data,
+      );
     } catch (error) {
       console.error(error);
       logger.error(error);
-      return { message: 'Error creating treatment target session forms', error: -1 };
+      return {
+        message: 'Error creating treatment target session forms',
+        error: -1,
+      };
     }
   }
 
   //////////////////////////////////////////
-} 
+}

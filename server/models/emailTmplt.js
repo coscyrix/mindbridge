@@ -256,9 +256,9 @@ export default class EmailTmplt {
                   homeworkCount = 0;
                 }
 
-                // Query assessment stats for the therapy request
-                let assessmentDone = 0;
-                let assessmentNotDone = 0;
+                // Query assessment names for the therapy request
+                let assessmentDoneNames = [];
+                let assessmentNotDoneNames = [];
                 try {
                   // Get form mode from environment variable
                   const formMode = process.env.FORM_MODE || 'auto';
@@ -266,6 +266,7 @@ export default class EmailTmplt {
                   let assessmentQuery;
                   
                   if (formMode === 'treatment_target') {
+                    // Get distinct assessments and check if any have feedback
                     assessmentQuery = db
                       .withSchema(`${process.env.MYSQL_DATABASE}`)
                       .from('treatment_target_session_forms as tt')
@@ -279,11 +280,11 @@ export default class EmailTmplt {
                       })
                       .where('tt.req_id', recThrpy[0].req_id)
                       .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
-                      .select(
-                        db.raw('COUNT(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 END) as done'),
-                        db.raw('COUNT(CASE WHEN fb.feedback_id IS NULL THEN 1 END) as not_done')
-                      );
+                      .select('f.form_cde', 'f.form_id')
+                      .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
+                      .groupBy('f.form_id', 'f.form_cde');
                   } else {
+                    // Get distinct assessments and check if any have feedback
                     assessmentQuery = db
                       .withSchema(`${process.env.MYSQL_DATABASE}`)
                       .from('user_forms as uf')
@@ -299,19 +300,31 @@ export default class EmailTmplt {
                       })
                       .where('uf.thrpy_req_id', recThrpy[0].req_id)
                       .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
-                      .select(
-                        db.raw('COUNT(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 END) as done'),
-                        db.raw('COUNT(CASE WHEN fb.feedback_id IS NULL THEN 1 END) as not_done')
-                      );
+                      .select('uf.form_cde', 'uf.form_id')
+                      .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
+                      .groupBy('uf.form_id', 'uf.form_cde');
                   }
 
                   const assessmentResult = await assessmentQuery;
-                  assessmentDone = parseInt(assessmentResult[0]?.done || 0);
-                  assessmentNotDone = parseInt(assessmentResult[0]?.not_done || 0);
+                  
+                  if (assessmentResult && assessmentResult.length > 0) {
+                    assessmentResult.forEach((row) => {
+                      const formName = row.form_cde;
+                      if (row.has_feedback === 1) {
+                        if (!assessmentDoneNames.includes(formName)) {
+                          assessmentDoneNames.push(formName);
+                        }
+                      } else {
+                        if (!assessmentNotDoneNames.includes(formName)) {
+                          assessmentNotDoneNames.push(formName);
+                        }
+                      }
+                    });
+                  }
                 } catch (error) {
                   logger.error('Error querying assessment stats:', error);
-                  assessmentDone = 0;
-                  assessmentNotDone = 0;
+                  assessmentDoneNames = [];
+                  assessmentNotDoneNames = [];
                 }
 
                 const attendancePDFTemplt = AttendancePDF(
@@ -322,8 +335,8 @@ export default class EmailTmplt {
                   attendedSessions,
                   cancelledSessions,
                   homeworkCount,
-                  assessmentDone,
-                  assessmentNotDone,
+                  assessmentDoneNames,
+                  assessmentNotDoneNames,
                 );
 
                 const attendancePDF = await PDFGenerator(attendancePDFTemplt);
@@ -478,9 +491,9 @@ export default class EmailTmplt {
                 homeworkCount = 0;
               }
 
-              // Query assessment stats for the therapy request
-              let assessmentDone = 0;
-              let assessmentNotDone = 0;
+              // Query assessment names for the therapy request
+              let assessmentDoneNames = [];
+              let assessmentNotDoneNames = [];
               try {
                 // Get form mode from environment variable
                 const formMode = process.env.FORM_MODE || 'auto';
@@ -488,6 +501,7 @@ export default class EmailTmplt {
                 let assessmentQuery;
                 
                 if (formMode === 'treatment_target') {
+                  // Get distinct assessments and check if any have feedback
                   assessmentQuery = db
                     .withSchema(`${process.env.MYSQL_DATABASE}`)
                     .from('treatment_target_session_forms as tt')
@@ -501,11 +515,11 @@ export default class EmailTmplt {
                     })
                     .where('tt.req_id', recThrpy[0].req_id)
                     .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
-                    .select(
-                      db.raw('COUNT(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 END) as done'),
-                      db.raw('COUNT(CASE WHEN fb.feedback_id IS NULL THEN 1 END) as not_done')
-                    );
+                    .select('f.form_cde', 'f.form_id')
+                    .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
+                    .groupBy('f.form_id', 'f.form_cde');
                 } else {
+                  // Get distinct assessments and check if any have feedback
                   assessmentQuery = db
                     .withSchema(`${process.env.MYSQL_DATABASE}`)
                     .from('user_forms as uf')
@@ -521,19 +535,31 @@ export default class EmailTmplt {
                     })
                     .where('uf.thrpy_req_id', recThrpy[0].req_id)
                     .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
-                    .select(
-                      db.raw('COUNT(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 END) as done'),
-                      db.raw('COUNT(CASE WHEN fb.feedback_id IS NULL THEN 1 END) as not_done')
-                    );
+                    .select('uf.form_cde', 'uf.form_id')
+                    .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
+                    .groupBy('uf.form_id', 'uf.form_cde');
                 }
 
                 const assessmentResult = await assessmentQuery;
-                assessmentDone = parseInt(assessmentResult[0]?.done || 0);
-                assessmentNotDone = parseInt(assessmentResult[0]?.not_done || 0);
+                
+                if (assessmentResult && assessmentResult.length > 0) {
+                  assessmentResult.forEach((row) => {
+                    const formName = row.form_cde;
+                    if (row.has_feedback === 1) {
+                      if (!assessmentDoneNames.includes(formName)) {
+                        assessmentDoneNames.push(formName);
+                      }
+                    } else {
+                      if (!assessmentNotDoneNames.includes(formName)) {
+                        assessmentNotDoneNames.push(formName);
+                      }
+                    }
+                  });
+                }
               } catch (error) {
                 logger.error('Error querying assessment stats:', error);
-                assessmentDone = 0;
-                assessmentNotDone = 0;
+                assessmentDoneNames = [];
+                assessmentNotDoneNames = [];
               }
 
               const attendancePDFTemplt = AttendancePDF(
@@ -544,8 +570,8 @@ export default class EmailTmplt {
                 attendedSessions,
                 cancelledSessions,
                 homeworkCount,
-                assessmentDone,
-                assessmentNotDone,
+                assessmentDoneNames,
+                assessmentNotDoneNames,
               );
 
                 const attendancePDF = await PDFGenerator(attendancePDFTemplt);
@@ -855,6 +881,7 @@ export default class EmailTmplt {
       // Encode client name for URL parameter
       const encodedClientName = encodeURIComponent(data.client_name);
       
+      console.log('bigData', data);
       const sendClientConsentForm = consentFormEmail(
         data.email,
         data.client_name,
@@ -1024,9 +1051,9 @@ export default class EmailTmplt {
         homeworkCount = 0;
       }
 
-      // Query assessment stats for the therapy request
-      let assessmentDone = 0;
-      let assessmentNotDone = 0;
+      // Query assessment names for the therapy request
+      let assessmentDoneNames = [];
+      let assessmentNotDoneNames = [];
       try {
         // Get form mode from environment variable
         const formMode = process.env.FORM_MODE || 'auto';
@@ -1034,6 +1061,7 @@ export default class EmailTmplt {
         let assessmentQuery;
         
         if (formMode === 'treatment_target') {
+          // Get distinct assessments and check if any have feedback
           assessmentQuery = db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
             .from('treatment_target_session_forms as tt')
@@ -1047,11 +1075,11 @@ export default class EmailTmplt {
             })
             .where('tt.req_id', thrpy_req_id)
             .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
-            .select(
-              db.raw('COUNT(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 END) as done'),
-              db.raw('COUNT(CASE WHEN fb.feedback_id IS NULL THEN 1 END) as not_done')
-            );
+            .select('f.form_cde', 'f.form_id')
+            .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
+            .groupBy('f.form_id', 'f.form_cde');
         } else {
+          // Get distinct assessments and check if any have feedback
           assessmentQuery = db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
             .from('user_forms as uf')
@@ -1067,19 +1095,31 @@ export default class EmailTmplt {
             })
             .where('uf.thrpy_req_id', thrpy_req_id)
             .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
-            .select(
-              db.raw('COUNT(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 END) as done'),
-              db.raw('COUNT(CASE WHEN fb.feedback_id IS NULL THEN 1 END) as not_done')
-            );
+            .select('uf.form_cde', 'uf.form_id')
+            .select(db.raw('MAX(CASE WHEN fb.feedback_id IS NOT NULL THEN 1 ELSE 0 END) as has_feedback'))
+            .groupBy('uf.form_id', 'uf.form_cde');
         }
 
         const assessmentResult = await assessmentQuery;
-        assessmentDone = parseInt(assessmentResult[0]?.done || 0);
-        assessmentNotDone = parseInt(assessmentResult[0]?.not_done || 0);
+        
+        if (assessmentResult && assessmentResult.length > 0) {
+          assessmentResult.forEach((row) => {
+            const formName = row.form_cde;
+            if (row.has_feedback === 1) {
+              if (!assessmentDoneNames.includes(formName)) {
+                assessmentDoneNames.push(formName);
+              }
+            } else {
+              if (!assessmentNotDoneNames.includes(formName)) {
+                assessmentNotDoneNames.push(formName);
+              }
+            }
+          });
+        }
       } catch (error) {
         logger.error('Error querying assessment stats:', error);
-        assessmentDone = 0;
-        assessmentNotDone = 0;
+        assessmentDoneNames = [];
+        assessmentNotDoneNames = [];
       }
 
       // Generate attendance PDF
@@ -1091,8 +1131,8 @@ export default class EmailTmplt {
         attendedSessions,
         cancelledSessions,
         homeworkCount,
-        assessmentDone,
-        assessmentNotDone
+        assessmentDoneNames,
+        assessmentNotDoneNames
       );
 
       const attendancePDF = await PDFGenerator(attendancePDFTemplt);
