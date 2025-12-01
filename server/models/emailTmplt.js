@@ -862,12 +862,19 @@ export default class EmailTmplt {
         data.counselor_id,
         data.tenant_id,
       );
-
-      const sendConsentForm = this.sendEmail.sendMail(sendClientConsentForm);
+      const sendConsentForm = await this.sendEmail.sendMail(sendClientConsentForm);
+      
+      if (sendConsentForm.error) {
+        logger.error('Error sending consent form email:', sendConsentForm.message);
+        return { message: sendConsentForm.message, error: -1 };
+      }
+      
+      logger.info('Consent form email sent successfully to:', data.email);
+      return { message: 'Consent form email sent successfully' };
     } catch (error) {
       console.log(error);
       logger.error(error);
-      return { message: 'Something went wrong' };
+      return { message: 'Something went wrong', error: -1 };
     }
   }
 

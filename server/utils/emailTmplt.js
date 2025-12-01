@@ -327,7 +327,7 @@ export const welcomeAccountDetailsEmail = (
       }
     </style>
     <p>Dear ${capitalizeFirstLetter(clientName)},</p>
-    <p>Welcome to ${process.env.PROJECT_NAME}! We are pleased to inform you that your account has been successfully created. Below are the details for your reference:</p>
+    <p>Welcome to MindBridge! We are pleased to inform you that your account has been successfully created. Below are the details for your reference:</p>
     <table class="branded-table">
       <thead>
         <tr>

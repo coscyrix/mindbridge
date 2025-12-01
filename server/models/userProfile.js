@@ -1,25 +1,22 @@
 //models/userProfile.js
 
 import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const knex = require('knex');
-import logger from '../config/winston.js';
 import DBconn from '../config/db.config.js';
-
-const db = knex(DBconn.dbConn.development);
-import Common from './common.js';
-import AuthCommon from './auth/authCommon.js';
+import logger from '../config/winston.js';
 import SendEmail from '../middlewares/sendEmail.js';
+import {
+  accountRestoredEmail,
+  emailUpdateEmail
+} from '../utils/emailTmplt.js';
+import AuthCommon from './auth/authCommon.js';
+import Common from './common.js';
 import EmailTmplt from './emailTmplt.js';
 import UserForm from './userForm.js';
-import {
-  clientWelcomeEmail,
-  consentFormEmail,
-  emailUpdateEmail,
-  accountRestoredEmail,
-  welcomeAccountDetailsEmail,
-} from '../utils/emailTmplt.js';
 import UserTargetOutcome from './userTargetOutcome.js';
+const require = createRequire(import.meta.url);
+const knex = require('knex');
+
+const db = knex(DBconn.dbConn.development);
 
 // Database connection is handled by getDb() function above
 
@@ -287,13 +284,18 @@ export default class UserProfile {
       }
 
       if (data.role_id === 1) {
-        const sendClientConsentForm = this.emailTmplt.sendClientConsentEmail({
+        const sendClientConsentForm = await this.emailTmplt.sendClientConsentEmail({
           email: data.email,
           client_name: `${data.user_first_name} ${data.user_last_name}`,
           client_id: postUsrProfile[0],
           tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id,
           counselor_id: data.user_profile_id,
         });
+        
+        if (sendClientConsentForm?.error) {
+          logger.error('Error sending consent form email:', sendClientConsentForm.message);
+          // Continue with client creation even if email fails, but log the error
+        }
       }
 
       // Post consent form in user_form table

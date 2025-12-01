@@ -4,6 +4,5 @@ export { useSessionModal } from "./useSessionModal";
 export { useFeeSplit } from "./useFeeSplit";
 export { useCounselorFilter } from "./useCounselorFilter";
 
-// TanStack Query hooks
-export * from "./useQueryHooks";
 
+    
