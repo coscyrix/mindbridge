@@ -340,7 +340,7 @@ const SearchDetails = () => {
               <DoctorDetails>
                 <DetailItem>
                   <span className="icon">
-                    <img src="/assets/icons/gynecology.svg" />
+                    <img src="/assets/images/specialist.png" alt="Specialties" className="detail-icon" />
                   </span>
                   <div>
                     <h3>Specialties</h3>
@@ -357,7 +357,7 @@ const SearchDetails = () => {
                 </DetailItem>
                 <DetailItem>
                   <span className="icon">
-                    <img src="/assets/icons/fontisto_person.svg" />
+                    <img src={counselor.service_modalities == 'online' ? '/assets/images/online.png' : '/assets/images/offline.png'} alt="Service Modalities" className="detail-icon" />
                   </span>
                   <div>
                     <h3>Service Modalities</h3>
@@ -366,7 +366,7 @@ const SearchDetails = () => {
                 </DetailItem>
                 <DetailItem>
                   <span className="icon">
-                    <img src="/assets/icons/date-today.svg" />
+                    <img src="/assets/images/availability.png" alt="Availability" className="detail-icon" />
                   </span>
                   <div>
                     <h3>Availability</h3>
@@ -379,7 +379,7 @@ const SearchDetails = () => {
                 </DetailItem>
                 <DetailItem>
                   <span className="icon">
-                    <img src="/assets/icons/lineicons_eye.svg" />
+                    <img src="/assets/images/crowd.png" alt="Seen by Patient" className="detail-icon" />
                   </span>
                   <div>
                     <h3>Seen by Patient</h3>

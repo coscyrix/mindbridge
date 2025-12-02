@@ -82,6 +82,14 @@ export const CardWrapper = styled.div`
       gap: 8px;
       font-size: 0.9rem;
       color: #333;
+
+      .info-icon {
+        width: 18px;
+        height: 18px;
+        object-fit: contain;
+        opacity: 0.7;
+        flex-shrink: 0;
+      }
     }
 
     .servicesDetails {
