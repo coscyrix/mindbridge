@@ -65,7 +65,7 @@ export const AttendancePDF =
 
     // Draw table
     const tableStartY = doc.y;
-    const columnWidths = [200, 200];
+    const columnWidths = [200, 350];
     const rowHeight = 25;
 
     // Draw table headers

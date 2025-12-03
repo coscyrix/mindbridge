@@ -28,6 +28,12 @@ const CreateSessionLayout = dynamic(
   { ssr: false }
 );
 
+// Modal for creating a new schedule
+const CreateScheduleForm = dynamic(
+  () => import("../components/Forms/CreateSessionForm"),
+  { ssr: false }
+);
+
 function Dashboard() {
   const { userObj, tokenExpired } = useReferenceContext();
   const { role_id, user_profile_id, tenant_id } = userObj || {};
@@ -48,6 +54,11 @@ function Dashboard() {
     useCounselorFilter();
 
   const [counselorId, setCounselorId] = useState(null);
+
+  // State for creating a new schedule for clients without sessions
+  const [showCreateScheduleModal, setShowCreateScheduleModal] = useState(false);
+  const [selectedClientForSchedule, setSelectedClientForSchedule] =
+    useState(null);
 
   // Determine the counselor filter value
   const filterCounselorId =
@@ -145,7 +156,9 @@ function Dashboard() {
 
   const handleClientClick = async (row) => {
     if (!row?.thrpy_req_id) {
-      toast.info("This client is not associated with a session");
+      // Open modal to create a new schedule for this client
+      setSelectedClientForSchedule(row);
+      setShowCreateScheduleModal(true);
       return;
     }
 
@@ -155,6 +168,11 @@ function Dashboard() {
     }
 
     await openSessionModal(row.thrpy_req_id, row?.counselor_id);
+  };
+
+  const closeCreateScheduleModal = () => {
+    setShowCreateScheduleModal(false);
+    setSelectedClientForSchedule(null);
   };
 
   return (
@@ -171,26 +189,60 @@ function Dashboard() {
       <CreateSessionLayout
         isOpen={showSessionModal}
         setIsOpen={closeSessionModal}
+        initialData={activeSessionData}
+        setConfirmationModal={() => {}}
       >
         {activeSessionData ? (
           <CreateSessionForm
+            time={null}
+            fetchHomeWorkUploadStatus={() => {}}
             isOpen={showSessionModal}
             setIsOpen={closeSessionModal}
             initialData={activeSessionData}
             setInitialData={setActiveSessionData}
             confirmationModal={false}
             setConfirmationModal={() => {}}
-            setSessions={() => {}}
+            userProfileId={user_profile_id}
+            fetchCounselorClient={() => {}}
             session={activeSessionData}
             fetchSessions={() => {}}
             counselorConfiguration={counselorConfiguration}
             managerSplitDetails={managerSplitDetails}
             counselor_id={counselorId}
             isHomeworkUpload={true}
+            setHomeWorkUpload={() => {}}
           />
         ) : (
           <Spinner color="blue" />
         )}
+      </CreateSessionLayout>
+
+      {/* Create Schedule Modal for clients without sessions */}
+      <CreateSessionLayout
+        isOpen={showCreateScheduleModal}
+        setIsOpen={closeCreateScheduleModal}
+        initialData={null}
+        setConfirmationModal={() => {}}
+      >
+        <CreateScheduleForm
+          time={null}
+          fetchHomeWorkUploadStatus={() => {}}
+          isOpen={showCreateScheduleModal}
+          setIsOpen={closeCreateScheduleModal}
+          initialData={null}
+          setInitialData={() => {}}
+          confirmationModal={false}
+          setConfirmationModal={() => {}}
+          userProfileId={user_profile_id}
+          fetchCounselorClient={() => {}}
+          session={null}
+          fetchSessions={() => {}}
+          counselorConfiguration={counselorConfiguration}
+          managerSplitDetails={managerSplitDetails}
+          counselor_id={selectedClientForSchedule?.counselor_id}
+          isHomeworkUpload={false}
+          setHomeWorkUpload={() => {}}
+        />
       </CreateSessionLayout>
 
       <DashboardTableContainer>
