@@ -14,6 +14,7 @@ import Select from "react-select";
 import { selectStyles } from "./selectStyles";
 import { useMutationData } from "../../utils/hooks/useMutationData";
 import { useQueryData } from "../../utils/hooks/useQueryData";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 
 interface HomeworkModalProps {
@@ -59,6 +60,7 @@ const HomeworkModal: React.FC<HomeworkModalProps> = ({
   };
 
   const treatmentTarget = id?.treatment_target || null;
+  const queryClient = useQueryClient();
 
   // Get all homework assignments for the treatment target
   const allHomeworkAssignments = getHomeworkAssignments(treatmentTarget);
@@ -123,9 +125,12 @@ const HomeworkModal: React.FC<HomeworkModalProps> = ({
   }, [allHomeworkDetails]);
 
   // Submit homework using React Query mutation
-  const { mutate: submitHomework, isPending: isSubmitting } = useMutationData(
-    ["submit-homework"],
-    async (payload: { data: HomeworkFormData; finalTitle: string }) => {
+  const { mutate: submitHomework, isPending: isSubmitting } = useMutation({
+    mutationKey: ["submit-homework"],
+    mutationFn: async (payload: {
+      data: HomeworkFormData;
+      finalTitle: string;
+    }) => {
       const formData = new FormData();
       if (payload.data.homework) {
         formData.append("homework_file", payload.data.homework);
@@ -141,16 +146,37 @@ const HomeworkModal: React.FC<HomeworkModalProps> = ({
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
+      // Throw error if response is not successful
+      if (response.status !== 200 && response.status !== 201) {
+        throw new Error(response.data?.message || "Failed to submit homework");
+      }
+
       return response;
     },
-    ["homework-details"],
-    () => {
-      // Reset form but keep modal open for multiple submissions
+    onSuccess: (data) => {
+      // Show success toast
+      toast.success(data?.data?.message || "Homework uploaded successfully");
+
+      // Invalidate homework details query
+      queryClient.invalidateQueries({ queryKey: ["homework-details"] });
+
+      // Reset form
       methods.reset();
       setSelectedFile("Upload file");
-      // Don't close modal - allow counselor to send more homeworks
-    }
-  );
+      setShowAllHomework(false);
+
+      // Close modal after successful submission
+      onClose();
+    },
+    onError: (error: any) => {
+      // Handle error responses
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "An error occurred while uploading homework";
+      toast.error(errorMessage);
+    },
+  }); 
 
   const handleUploadHomeWork = (data: HomeworkFormData) => {
     const finalTitle =
