@@ -157,8 +157,16 @@ const HomeworkModal: React.FC<HomeworkModalProps> = ({
       // Show success toast
       toast.success(data?.data?.message || "Homework uploaded successfully");
 
-      // Invalidate homework details query
-      queryClient.invalidateQueries({ queryKey: ["homework-details"] });
+      // Invalidate homework details and homework stats queries
+      // refetchType: 'all' ensures queries are refetched even if inactive
+      queryClient.invalidateQueries({
+        queryKey: ["homework-details"],
+        refetchType: "all",
+      });
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === "homework-stats",
+        refetchType: "all",
+      });
 
       // Reset form
       methods.reset();
@@ -176,7 +184,7 @@ const HomeworkModal: React.FC<HomeworkModalProps> = ({
         "An error occurred while uploading homework";
       toast.error(errorMessage);
     },
-  }); 
+  });
 
   const handleUploadHomeWork = (data: HomeworkFormData) => {
     const finalTitle =
