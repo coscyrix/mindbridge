@@ -43,7 +43,6 @@ function Services() {
       const response = await CommonServices.getServices(
         queryTenantId === "allManager" ? undefined : queryTenantId
       );
-      console.log(response, "response services 💀");
       return response;
     },
     !!queryTenantId // Only fetch when tenant_id exists
@@ -60,7 +59,6 @@ function Services() {
   const handleSelectService = (data) => {
     // Update selected tenant ID - TanStack Query will automatically refetch
     const tenant_id = data?.value;
-    console.log(tenant_id, "service");
     setSelectedTenantId(tenant_id);
   };
   const fetchManager = useCallback(async () => {

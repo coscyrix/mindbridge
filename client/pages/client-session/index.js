@@ -160,7 +160,6 @@ function ClientSession() {
   // };
 
   const handleSelectCounselor = (data) => {
-    console.log(data, "getting data::::::");
     const counselorId = data?.value;
 
     if (counselorId !== "allCounselor") {
@@ -220,7 +219,6 @@ function ClientSession() {
   const handleEdit = (row) => {
     setShowFlyout(true);
     setActiveData(row);
-    console.log(row);
     if (row?.tenant_id) {
       setSelectTenantId(row.tenant_id);
     }
@@ -263,12 +261,10 @@ function ClientSession() {
   );
 
   const handleShowAddClientSession = (row) => {
-    console.log(row);
     setShowFlyout(true);
   };
 
   const getInvoice = async (counselorIdParam, tenantId) => {
-    console.log(tenantId, "tenantid::::");
     setSummaryLoading(true);
     try {
       let response;
@@ -299,7 +295,6 @@ function ClientSession() {
         if (counselorIdParam && counselorIdParam !== "allCounselors") {
           url += `&counselor_id=${counselorIdParam}`;
         }
-        console.log(url, "none::");
         response = await api.get(url);
       }
       if (response.status === 200) {

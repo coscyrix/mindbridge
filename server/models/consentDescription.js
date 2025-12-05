@@ -23,8 +23,6 @@ export default class ConsentDescription {
         return tenant; // Return the error if tenant not found
       }
 
-      console.log(tenant, 'tenant');
-
       const insertData = {
         tenant_id: tenant[0].tenant_id,
         description: data.description,

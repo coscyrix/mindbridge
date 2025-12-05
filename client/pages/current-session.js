@@ -67,7 +67,6 @@ function CurrentSession() {
           payload.tenant_id = userObj?.tenant_id;
         }
 
-        // console.log(counselors, "counselors");
         response = await CommonServices.getCurrentSessions(payload);
       }
       if (response?.status === 200) {

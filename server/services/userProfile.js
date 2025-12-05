@@ -111,7 +111,6 @@ export default class UserProfileService {
     });
 
     console.log('//////////////////////////////////////////');
-    console.log(data);
 
     // Validate the entire data object against the schema
     const { error } = userProfileSchema.validate(data);

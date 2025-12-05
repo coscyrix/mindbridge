@@ -97,7 +97,6 @@ const SearchDetails = () => {
       if (id) {
         const response = await CommonServices.getCounselorProfile(id);
         if (response.status === 200 && response.data && response.data.rec) {
-          console.log(response);
           setCounselorDetails(response.data.rec);
           setRelatedCounselors(response.data.related_counselors);
         } else {
