@@ -52,9 +52,9 @@ import CustomLoader from "../../components/Loader/CustomLoader";
 import CustomButton from "../../components/CustomButton";
 import { bookAppointmentSchema } from "../../utils/validationSchema/validationSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { TREATMENT_TARGET } from "../../utils/constants";
+import { TREATMENT_TARGET, IMAGE_BASE_URL } from "../../utils/constants";
 const SearchDetails = () => {
-  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
+  const imageBaseUrl = IMAGE_BASE_URL;
 
   const [selectedTab, setSelectedTab] = useState("Overview");
   const [selectedDate, setSelectedDate] = useState(null);

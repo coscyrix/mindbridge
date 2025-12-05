@@ -3247,6 +3247,8 @@ export const gasQuestionBank = {
   ],
 };
 
+export const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGES_BASE_URL || "https://mindapp.mindbridge.solutions:4000";
+
 export const treatment_goals = [
   {
     label: "Coping With Disability",

@@ -25,7 +25,7 @@ import Cookies from "js-cookie";
 import WeeklyAvailability from "../components/WeeklyAvailability";
 import LocationSearch from "../components/LocationSearch";
 import axios from "axios";
-import { TREATMENT_TARGET } from "../utils/constants";
+import { TREATMENT_TARGET, IMAGE_BASE_URL } from "../utils/constants";
 import Spinner from "../components/common/Spinner";
 import ApiConfig from "../config/apiConfig";
 import { FaRegFilePdf } from "react-icons/fa";
@@ -322,7 +322,7 @@ const raceOptions = [
 ];
 
 const SignUp = () => {
-  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
+  const imageBaseUrl = IMAGE_BASE_URL;
   const router = useRouter();
   const { type } = router.query;
   const { userId } = router.query;
