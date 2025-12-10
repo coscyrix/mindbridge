@@ -10,12 +10,12 @@ dotenv.config();
 export default class SendEmail {
   constructor() {
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT) || 587,
       secure: false, // true for 465, false for other ports
       auth: {
-        user: process.env.EMAIL_FROM, // Your Gmail address
-        pass: process.env.EMAIL_PASSWORD, // Your App Password (without spaces)
+        user: process.env.EMAIL_FROM, // Your email address
+        pass: process.env.EMAIL_PASSWORD, // Your email password or App Password
       },
       tls: {
         rejectUnauthorized: false
@@ -27,8 +27,8 @@ export default class SendEmail {
     try {
       // Log email configuration for debugging
       logger.info('Email configuration:', {
-        host: 'smtp.gmail.com',
-        port: 587,
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT) || 587,
         secure: false,
         user: process.env.EMAIL_FROM ? `${process.env.EMAIL_FROM.substring(0, 3)}***` : 'NOT_SET',
         hasPassword: !!process.env.EMAIL_PASSWORD
@@ -39,13 +39,21 @@ export default class SendEmail {
       await this.transporter.verify();
       logger.info('Email connection verified successfully');
       
-      const info = await this.transporter.sendMail({
+      const mailOptions = {
         from: `"MindBridge" <${process.env.EMAIL_FROM}>`, // Sender's address and name
         to: msg.to,
         subject: msg.subject,
         html: msg.html,
         attachments: msg.attachments, // Ensure attachments are included
-      });
+      };
+
+      // Add Reply-To if provided (for counselor/manager emails)
+      if (msg.replyTo) {
+        mailOptions.replyTo = msg.replyTo;
+        logger.info('Reply-To address set:', msg.replyTo);
+      }
+
+      const info = await this.transporter.sendMail(mailOptions);
 
       if (!info.messageId) {
         logger.error('Error sending email: No message ID returned');

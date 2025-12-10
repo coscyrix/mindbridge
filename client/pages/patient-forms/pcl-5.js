@@ -9,7 +9,7 @@ import CommonServices from "../../services/CommonServices";
 
 const PCL5Page = () => {
   const router = useRouter();
-  const { form_id, session_id } = router.query;
+  const { form_id, session_id, client_name, client_id } = router.query;
 
   const [formAlreadySubmitted, setFormAlreadySubmitted] = useState(false);
   const [loading, setLoading] = useState(true);

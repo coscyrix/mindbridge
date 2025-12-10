@@ -4,53 +4,110 @@ import { CreateClientWrapper } from "./style";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import CustomInputField from "../../CustomInputField";
 import { api } from "../../../utils/auth";
-import { toast } from "react-toastify";
 import CustomSelect from "../../CustomSelect";
-import Cookies from "js-cookie";
 import { ArrowIcon } from "../../../public/assets/icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ClientValidationSchema } from "../../../utils/validationSchema/validationSchema";
 import { useReferenceContext } from "../../../context/ReferenceContext";
 import Spinner from "../../common/Spinner";
 import CustomMultiSelect from "../../CustomMultiSelect";
-import PhoneInput, { parsePhoneNumber, isValidPhoneNumber } from 'react-phone-number-input'
-import 'react-phone-number-input/style.css'
+import PhoneInput, { parsePhoneNumber } from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import TimezoneSelect from "react-timezone-select";
+import { useMutationData } from "../../../utils/hooks/useMutationData";
 
+interface User {
+  user_profile_id?: number;
+  role_id?: number;
+  user_first_name?: string;
+  user_last_name?: string;
+  email?: string;
+  country_code?: string;
+  user_phone_nbr?: string;
+  tenant?: {
+    tenant_name?: string;
+    admin_fee?: number;
+    tax_percent?: number;
+  };
+  user_target_outcome?: Array<{
+    target_name: string;
+    target_outcome_id: number;
+  }>;
+}
 
-import CustomEditableInputModal from "../../CustomEditableInputModal";
+interface CreateClientFormProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  initialData: User | null;
+  setInitialData: (data: User | null) => void;
+  setTableData?: (updater: (prev: User[]) => User[]) => void;
+  fetchClients?: () => void;
+  setActiveTab?: (tab: number) => void;
+}
+
+interface FormData {
+  user_first_name: string;
+  user_last_name: string;
+  email: string;
+  role_id: number;
+  clam_num?: string;
+  tenant_name?: string;
+  target_outcome_id?: { label: string; value: number } | string;
+  user_phone_nbr: string;
+  admin_fee?: string;
+  tax?: string;
+  service?: any[];
+  description?: string;
+  timezone?: string;
+}
+
+interface ProcessedClientData {
+  user_profile_id?: number;
+  clam_num?: number;
+  user_first_name: string;
+  user_last_name: string;
+  email: string;
+  target_outcome_id?: number;
+  role_id: number;
+  country_code: string;
+  user_phone_nbr: string;
+  tenant_name?: string;
+  admin_fee?: string;
+  tax_percent?: string;
+  timezone?: string;
+}
 
 function CreateClientForm({
   isOpen,
   setIsOpen,
-  initialData,  
+  initialData,
   setInitialData,
   setTableData,
   fetchClients,
   setActiveTab,
-}) {
-  const [formButton, setFormButton] = useState("Create");
+}: CreateClientFormProps) {
+  const [formButton, setFormButton] = useState<"Create" | "Update">("Create");
   const { targetOutcomes, roles, servicesData } = useReferenceContext();
-  const [loading, setLoading] = useState(false);
-  const [serviceTemplates, setServiceTemplates] = useState([]);
-  const [user , setUser] = useState({})
+  const [serviceTemplates, setServiceTemplates] = useState<any[]>([]);
+  const [user, setUser] = useState<User>({});
 
-  useEffect(()=>{
-    const data = localStorage.getItem("user")
-    if(data){
-      const userDetails = JSON.parse(localStorage.getItem("user"))
+  useEffect(() => {
+    const data = localStorage.getItem("user");
+    if (data) {
+      const userDetails = JSON.parse(data);
       setUser(userDetails);
     }
-  },[])
+  }, []);
 
-  const Counselor = user?.role_id == 2;
-  const admin = user?.role_id == 4;
-  const manager = user?.role_id == 3;
+  const Counselor = user?.role_id === 2;
+  const admin = user?.role_id === 4;
+  const manager = user?.role_id === 3;
 
   const Target = targetOutcomes?.map((target) => ({
     label: target?.target_name,
     value: target?.target_id,
   }));
+
   const RoleIds = roles
     ?.filter((roledetail) => {
       if (initialData) return true;
@@ -69,52 +126,29 @@ function CreateClientForm({
     value: service?.service_code,
   }));
 
-  // useEffect(() => {
-  //   if (!isOpen) return;
-  //   const fetchServiceTemplates = async () => {
-  //     try {
-  //       const res = await api.get("/service-templates");
-  //       if (res.status === 200 && res.data.rec) {
-  //         setServiceTemplates(res.data.rec);
-  //         if (methods.getValues("role_id") === 3 && !initialData) {
-  //           const allServices = res.data.rec.map((template) => ({
-  //             service_id: template.template_service_id,
-  //             service_price: parseFloat(template.price),
-  //             name: template.name,
-  //           }));
-  //           methods.setValue("service", allServices);
-  //         }
-  //       }
-  //     } catch (error) {
-  //       toast.error(error?.response?.data?.message);
-  //     }
-  //   };
-  //   fetchServiceTemplates();
-  // }, [isOpen]);
-
-  const defaultValues = {
+  const defaultValues: FormData = {
     user_first_name: "",
     user_last_name: "",
     email: "",
-    role_id: Counselor ? 1 : manager ? 2 : admin ? 3 : 3, // Default to 3 (Manager) for admin
+    role_id: Counselor ? 1 : manager ? 2 : admin ? 3 : 3,
     clam_num: "",
     tenant_name: "",
     target_outcome_id: initialData
       ? {
-          label: initialData?.user_target_outcome?.at(0).target_name,
-          value: initialData?.user_target_outcome?.at(0)?.target_outcome_id,
+          label: initialData?.user_target_outcome?.at(0)?.target_name || "",
+          value:
+            initialData?.user_target_outcome?.at(0)?.target_outcome_id || 0,
         }
       : "",
-
     user_phone_nbr: "",
     admin_fee: "",
     tax: "",
     service: [],
     description: "",
     timezone: "",
-    // service: serviceTemplates,
   };
-  const methods = useForm({
+
+  const methods = useForm<FormData>({
     mode: "onSubmit",
     resolver: zodResolver(ClientValidationSchema),
     defaultValues: defaultValues,
@@ -139,7 +173,55 @@ function CreateClientForm({
     },
   ];
 
-  const parsePhoneData = (phoneValue) => {
+  // React Query mutations
+  const createClientMutation = useMutationData(
+    ["createClient"],
+    async (processedData: ProcessedClientData) => {
+      const response = await api.post(
+        "/user-profile/user-client-profile",
+        processedData
+      );
+      return response;
+    },
+    ["clients", "clientsByCounselor", "assessment-results"],
+    () => {
+      methods.reset(defaultValues);
+      setIsOpen(false);
+      setActiveTab && setActiveTab(0);
+      if (fetchClients) fetchClients();
+    }
+  );
+
+  const updateClientMutation = useMutationData(
+    ["updateClient"],
+    async ({
+      userProfileId,
+      processedData,
+    }: {
+      userProfileId: number;
+      processedData: Partial<ProcessedClientData>;
+    }) => {
+      const response = await api.put(
+        `/user-profile/?user_profile_id=${userProfileId}`,
+        processedData
+      );
+      return response;
+    },
+    ["clients", "clientsByCounselor", "assessment-results"],
+    () => {
+      methods.reset(defaultValues);
+      setIsOpen(false);
+      setActiveTab && setActiveTab(0);
+      if (fetchClients) fetchClients();
+    }
+  );
+
+  const loading =
+    createClientMutation.isPending || updateClientMutation.isPending;
+
+  const parsePhoneData = (
+    phoneValue: string | null | undefined
+  ): { country_code: string; user_phone_nbr: string } => {
     if (phoneValue === null || phoneValue === undefined) {
       return { country_code: "+1", user_phone_nbr: "" };
     }
@@ -158,23 +240,28 @@ function CreateClientForm({
         };
       }
     } catch (error) {
-      // If parsing fails, try to extract manually
       const cleaned = normalizedValue.replace(/\s+/g, "");
       if (cleaned.startsWith("+")) {
         const match = cleaned.match(/^\+(\d{1,5})(\d+)$/);
         if (match) {
           return {
             country_code: `+${match[1]}`,
-            user_phone_nbr: match[2].slice(-10), // Take last 10 digits
+            user_phone_nbr: match[2].slice(-10),
           };
         }
       }
     }
-    
-    return { country_code: "+1", user_phone_nbr: phoneValue.replace(/\D/g, "").slice(-10) };
+
+    return {
+      country_code: "+1",
+      user_phone_nbr: phoneValue.replace(/\D/g, "").slice(-10),
+    };
   };
 
-  const formatPhoneForInput = (countryCode, phoneNumber) => {
+  const formatPhoneForInput = (
+    countryCode: string | undefined,
+    phoneNumber: string | null | undefined
+  ): string => {
     if (phoneNumber === null || phoneNumber === undefined) {
       return "";
     }
@@ -195,22 +282,25 @@ function CreateClientForm({
       }
     }
 
-    // Default to US country code when unavailable so the PhoneInput receives a valid E.164 value
     return `+1${digitsOnly}`;
   };
 
-  const handleCreateClient = async (data) => {
+  const handleCreateClient = (data: FormData) => {
     const role = methods.watch("role_id");
-    const { country_code, user_phone_nbr } = parsePhoneData(data?.user_phone_nbr);
-    let processedData;
-    if (role == 1) {
+    const { country_code, user_phone_nbr } = parsePhoneData(
+      data?.user_phone_nbr
+    );
+    let processedData: ProcessedClientData;
+
+    if (role === 1) {
       processedData = {
-        user_profile_id: user?.user_profile_id, //Static user_profile_id sent for client creation.It gets updated from GET users request. So, it is unique. Inform client to remove compulsion from this field.
-        clam_num: parseInt(data?.clam_num),
+        user_profile_id: user?.user_profile_id,
+        clam_num: parseInt(data?.clam_num || "0"),
         user_first_name: data?.user_first_name,
         user_last_name: data?.user_last_name,
         email: data?.email,
-        target_outcome_id: data?.target_outcome_id?.value,
+        target_outcome_id: (data?.target_outcome_id as { value: number })
+          ?.value,
         role_id: data?.role_id,
         country_code: country_code,
         user_phone_nbr: user_phone_nbr,
@@ -226,7 +316,6 @@ function CreateClientForm({
         country_code: country_code,
         user_phone_nbr: user_phone_nbr,
         tenant_name: data?.tenant_name,
-        // description: data.description,
       };
     } else if (role === 3) {
       processedData = {
@@ -254,38 +343,11 @@ function CreateClientForm({
         tenant_name: data?.tenant_name,
       };
     }
-    try {
-      setLoading(true);
-      const res = await api.post(
-        "/user-profile/user-client-profile",
-        processedData
-      );
-      if (res.status === 200) {
-        const messageObj = messagefortoast.find((item) => item.role === role);
-        if (messageObj) {
-          toast.success(messageObj.text, {
-            position: "top-right",
-          });
-        } else {
-          toast.info("User updated successfully", {
-            position: "top-right",
-          });
-        }
 
-        // setTableData((prev) => [processedData, ...prev]);
-        fetchClients();
-        methods.reset(defaultValues);
-        setIsOpen(false);
-      }
-    } catch (error) {
-      toast.error(`Error while creating the client`);
-    } finally {
-      setActiveTab && setActiveTab(0);
-      setLoading(false);
-    }
+    createClientMutation.mutate(processedData);
   };
 
-  const handleUpdateClient = async (data) => {
+  const handleUpdateClient = (data: FormData) => {
     const {
       user_first_name,
       user_last_name,
@@ -294,13 +356,14 @@ function CreateClientForm({
       user_phone_nbr,
       target_outcome_id,
       tenant_name,
-      description,
       tax,
       admin_fee,
       clam_num,
     } = data;
-    const { country_code, user_phone_nbr: phoneNumber } = parsePhoneData(user_phone_nbr);
-    const processedData = {
+
+    const { country_code, user_phone_nbr: phoneNumber } =
+      parsePhoneData(user_phone_nbr);
+    const processedData: Partial<ProcessedClientData> = {
       user_first_name,
       user_last_name,
       email,
@@ -308,62 +371,21 @@ function CreateClientForm({
       country_code: country_code,
       user_phone_nbr: phoneNumber,
       ...(role_id === 1 && {
-        target_outcome_id: target_outcome_id?.value,
+        target_outcome_id: (target_outcome_id as { value: number })?.value,
       }),
       ...(role_id === 3 && {
         tenant_name: tenant_name || "",
-        // admin_fee,
-        // tax_percent: tax,
-
-        tenant_name,
+        admin_fee,
+        tax_percent: tax,
       }),
-      ...(role_id === 2 &&
-        {
-          // description: description,
-        }),
-      ...(role_id === 1 && { clam_num: clam_num }),
+      ...(role_id === 1 && { clam_num: parseInt(clam_num || "0") }),
     };
 
-    try {
-      setLoading(true);
-      const res = await api.put(
-        `/user-profile/?user_profile_id=${initialData?.user_profile_id}`,
-        processedData
-      );
-
-      if (res.status === 200) {
-        setTableData((prev) =>
-          prev?.map((item) =>
-            item.user_profile_id === initialData?.user_profile_id
-              ? { ...item, ...processedData }
-              : item
-          )
-        );
-        const messageObj = messagefortoast.find((item) => item.role === role);
-        if (messageObj) {
-          toast.success(messageObj.text, {
-            position: "top-right",
-          });
-        } else {
-          toast.info("User updated successfully", {
-            position: "top-right",
-          });
-        }
-
-        fetchClients();
-        setIsOpen(false);
-        methods.reset(defaultValues);
-      }
-    } catch (error) {
-      toast.error(
-        error?.message || "Failed to update Client data. Please try again.",
-        {
-          position: "top-right",
-        }
-      );
-    } finally {
-      setActiveTab && setActiveTab(0);
-      setLoading(false);
+    if (initialData?.user_profile_id) {
+      updateClientMutation.mutate({
+        userProfileId: initialData.user_profile_id,
+        processedData,
+      });
     }
   };
 
@@ -373,7 +395,6 @@ function CreateClientForm({
       methods.reset(defaultValues);
     } else if (initialData) {
       setFormButton("Update");
-      // Format phone number for react-phone-number-input (E.164 format)
       const phoneValue = formatPhoneForInput(
         initialData?.country_code,
         initialData?.user_phone_nbr
@@ -381,20 +402,53 @@ function CreateClientForm({
       methods.reset({
         ...initialData,
         user_phone_nbr: phoneValue,
-      });
-      methods.setValue("tenant_name", initialData?.tenant?.tenant_name);
-      methods.setValue("admin_fee", initialData?.tenant?.admin_fee);
-      methods.setValue("tax", initialData?.tenant?.tax_percent);
-      methods.setValue("target_outcome_id", defaultValues?.target_outcome_id);
+      } as FormData);
+      methods.setValue("tenant_name", initialData?.tenant?.tenant_name || "");
+      methods.setValue(
+        "admin_fee",
+        initialData?.tenant?.admin_fee?.toString() || ""
+      );
+      methods.setValue(
+        "tax",
+        initialData?.tenant?.tax_percent?.toString() || ""
+      );
+      methods.setValue(
+        "target_outcome_id",
+        defaultValues?.target_outcome_id || ""
+      );
     } else {
       setFormButton("Create");
       methods.reset(defaultValues);
     }
   }, [isOpen, initialData]);
 
-  const handleDiscard = (e) => {
+  const handleDiscard = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    methods.reset(initialData || defaultValues);
+    if (initialData) {
+      const phoneValue = formatPhoneForInput(
+        initialData?.country_code,
+        initialData?.user_phone_nbr
+      );
+      methods.reset({
+        ...initialData,
+        user_phone_nbr: phoneValue,
+      } as FormData);
+      methods.setValue("tenant_name", initialData?.tenant?.tenant_name || "");
+      methods.setValue(
+        "admin_fee",
+        initialData?.tenant?.admin_fee?.toString() || ""
+      );
+      methods.setValue(
+        "tax",
+        initialData?.tenant?.tax_percent?.toString() || ""
+      );
+      methods.setValue(
+        "target_outcome_id",
+        defaultValues?.target_outcome_id || ""
+      );
+    } else {
+      methods.reset(defaultValues);
+    }
     setIsOpen(false);
   };
 
@@ -404,39 +458,18 @@ function CreateClientForm({
   useEffect(() => {
     if (role === 1) {
       methods.register("clam_num");
-      // methods.register("service");
       methods.register("target_outcome_id");
     } else {
       methods.unregister("clam_num");
-      // methods.unregister("service");
       methods.unregister("target_outcome_id");
     }
-  }, [role]);
+  }, [role, methods]);
 
   useEffect(() => {
     if (!showTimezoneSelect) {
       methods.setValue("timezone", "");
     }
   }, [showTimezoneSelect, methods]);
-
-  // Auto-fill service field for manager (role 3) as soon as both role and templates are ready, even on first open
-  // useEffect(() => {
-  //   if (
-  //     isOpen &&
-  //     role === 3 &&
-  //     not initialData &&
-  //     serviceTemplates.length > 0 &&
-  //     (!methods.getValues("service") ||
-  //       methods.getValues("service").length === 0)
-  //   ) {
-  //     const allServices = serviceTemplates.map((template) => ({
-  //       service_id: template.template_service_id,
-  //       service_price: parseFloat(template.total_invoice ?? template.price),
-  //       name: template.service_name ?? template.name,
-  //     }));
-  //     methods.setValue("service", allServices);
-  //   }
-  // }, [isOpen, role, serviceTemplates, initialData]);
 
   return (
     <CreateClientWrapper>
@@ -464,12 +497,12 @@ function CreateClientForm({
                   <CustomSelect
                     {...field}
                     options={RoleIds}
-                    disable={Counselor || manager || admin || initialData}
+                    disable={Counselor || manager || admin || !!initialData}
                     dropdownIcon={
                       <ArrowIcon style={{ transform: "rotate(90deg)" }} />
                     }
-                    isError={methods?.formState?.errors?.role_id}
-                    onChange={(selectedOption) => {
+                    isError={!!methods?.formState?.errors?.role_id}
+                    onChange={(selectedOption: { value: number }) => {
                       field.onChange(selectedOption?.value);
                     }}
                   />
@@ -481,7 +514,7 @@ function CreateClientForm({
                 </p>
               )}
             </div>
-            {role == 1 && (
+            {role === 1 && (
               <div className="fields">
                 <CustomInputField
                   name="clam_num"
@@ -491,17 +524,7 @@ function CreateClientForm({
                   type="number"
                 />
               </div>
-            )}                                                                        
-            {/* {role == 2 && user?.role_id == 4 && (
-              <div className="fields">
-                <CustomInputField
-                  name="description"
-                  label="Description"
-                  placeholder="Enter Description"
-                  type="text"
-                />
-              </div>
-            )} */}
+            )}
             <div className="fields-wrapper-name">
               <div className="fields">
                 <CustomInputField
@@ -555,61 +578,34 @@ function CreateClientForm({
               />
             </div>
             {showTimezoneSelect && (
-                  <div className="select-field-wrapper">
-                    <label>Timezone*</label>
-                    <Controller
-                      name="timezone"
-                      control={methods.control}
-                      rules={{
-                        required: "Timezone is required",
-                      }}
-                      render={({ field, fieldState }) => (
-                        <>
-                          <TimezoneSelect
-                            value={field.value || ""}
-                            onChange={(timezone) =>
-                              field.onChange(timezone?.value || "")
-                            }
-                            onBlur={field.onBlur}
-                          />
-                          {fieldState.error && (
-                            <p className="custom-error-massage">
-                              {fieldState.error.message}
-                            </p>
-                          )}
-                        </>
-                      )}
-                    />
-                  </div>
-                )}
-            {/* {role == 1 && (
               <div className="select-field-wrapper">
-                <label>Service Type*</label>
+                <label>Timezone*</label>
                 <Controller
-                  name="service"
+                  name="timezone"
                   control={methods.control}
-                  render={({ field }) => (
-                    <CustomSelect
-                      {...field}
-                      options={Services}
-                      dropdownIcon={
-                        <ArrowIcon style={{ transform: "rotate(90deg)" }} />
-                      }
-                      isError={methods?.formState?.errors?.service}
-                      onChange={(selectedOption) => {
-                        field.onChange(selectedOption?.value);
-                      }}
-                    />
+                  rules={{
+                    required: "Timezone is required",
+                  }}
+                  render={({ field, fieldState }) => (
+                    <>
+                      <TimezoneSelect
+                        value={field.value || ""}
+                        onChange={(timezone: { value: string }) =>
+                          field.onChange(timezone?.value || "")
+                        }
+                        onBlur={field.onBlur}
+                      />
+                      {fieldState.error && (
+                        <p className="custom-error-massage">
+                          {fieldState.error.message}
+                        </p>
+                      )}
+                    </>
                   )}
                 />
-                {methods?.formState?.errors?.service && (
-                  <p className="custom-error-massage">
-                    {methods.formState.errors.service.message}
-                  </p>
-                )}
               </div>
-            )} */}
-            {role == 1 && (
+            )}
+            {role === 1 && (
               <div className="select-field-wrapper">
                 <label>Target Outcomes*</label>
                 <Controller
@@ -631,7 +627,7 @@ function CreateClientForm({
                 )}
               </div>
             )}
-            {role == 3 && (
+            {role === 3 && (
               <>
                 <div className="fields">
                   <CustomInputField
@@ -647,42 +643,18 @@ function CreateClientForm({
                     label="Admin Fees*"
                     placeholder="Enter admin fees"
                     type="number"
-                    disabled={formButton === "Create" ? false : true}
+                    disabled={false}
                   />
                 </div>
                 <div className="fields">
                   <CustomInputField
                     name="tax"
                     label="Tax*"
-                    disabled={formButton === "Create" ? false : true}
+                    disabled={false}
                     placeholder="Enter Tax"
                     type="number"
                   />
                 </div>
-
-                {/* <div className="select-field-wrapper">
-                  <label>Services*</label>
-                  {serviceTemplates.length === 0 ? (
-                    <Spinner width="25px" height="25px" />
-                  ) : (
-                    <Controller
-                      name="service"
-                      control={methods.control}
-                      render={({ field }) => (
-                        <CustomEditableInputModal
-                          initialTemplates={serviceTemplates}
-                          templates={serviceTemplates}
-                          onChange={(val) => field.onChange(val)}
-                        />
-                      )}
-                    />
-                  )}
-                  {methods.formState.errors?.service && (
-                    <p className="custom-error-massage">
-                      {methods.formState.errors?.service.message}
-                    </p>
-                  )}
-                </div> */}
               </>
             )}
           </div>

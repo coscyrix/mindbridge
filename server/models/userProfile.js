@@ -1,25 +1,22 @@
 //models/userProfile.js
 
 import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const knex = require('knex');
-import logger from '../config/winston.js';
 import DBconn from '../config/db.config.js';
-
-const db = knex(DBconn.dbConn.development);
-import Common from './common.js';
-import AuthCommon from './auth/authCommon.js';
+import logger from '../config/winston.js';
 import SendEmail from '../middlewares/sendEmail.js';
+import {
+  accountRestoredEmail,
+  emailUpdateEmail
+} from '../utils/emailTmplt.js';
+import AuthCommon from './auth/authCommon.js';
+import Common from './common.js';
 import EmailTmplt from './emailTmplt.js';
 import UserForm from './userForm.js';
-import {
-  clientWelcomeEmail,
-  consentFormEmail,
-  emailUpdateEmail,
-  accountRestoredEmail,
-  welcomeAccountDetailsEmail,
-} from '../utils/emailTmplt.js';
 import UserTargetOutcome from './userTargetOutcome.js';
+const require = createRequire(import.meta.url);
+const knex = require('knex');
+
+const db = knex(DBconn.dbConn.development);
 
 // Database connection is handled by getDb() function above
 
@@ -267,7 +264,7 @@ export default class UserProfile {
           return recTargetOutcome;
         }
 
-        const welcomeClientEmail = this.emailTmplt.sendWelcomeClientEmail({
+        const welcomeClientEmail = await this.emailTmplt.sendWelcomeClientEmail({
           email: data.email,
           client_name: `${data.user_first_name} ${data.user_last_name}`,
           user_phone_nbr: data.user_phone_nbr,
@@ -276,24 +273,45 @@ export default class UserProfile {
           counselor_email: recConselor.rec[0].email,
           counselor_phone_nbr: recConselor.rec[0].user_phone_nbr,
         });
+        
+        if (welcomeClientEmail?.error) {
+          logger.error('Error sending welcome email:', welcomeClientEmail.message);
+          // Continue with client creation even if email fails, but log the error
+        }
+        
+        // Add a small delay (1 second) between emails to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       if (data.role_id !== 1) {
         const emailSentWithPassword =
-          this.emailTmplt.sendClientWelcomeWithPasswordEmail({
+          await this.emailTmplt.sendClientWelcomeWithPasswordEmail({
             email: data.email,
             password: clientPassword,
           });
+        
+        if (emailSentWithPassword?.error) {
+          logger.error('Error sending welcome email with password:', emailSentWithPassword.message);
+          // Continue even if email fails, but log the error
+        }
       }
 
       if (data.role_id === 1) {
-        const sendClientConsentForm = this.emailTmplt.sendClientConsentEmail({
+        const sendClientConsentForm = await this.emailTmplt.sendClientConsentEmail({
           email: data.email,
           client_name: `${data.user_first_name} ${data.user_last_name}`,
           client_id: postUsrProfile[0],
           tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id,
           counselor_id: data.user_profile_id,
+          counselor_email: recConselor.rec[0].email, // Add counselor email for replyTo
+          counselor_name: `${recConselor.rec[0].user_first_name} ${recConselor.rec[0].user_last_name}`, // Add counselor name
+          counselor_phone: recConselor.rec[0].user_phone_nbr, // Add counselor phone
         });
+        
+        if (sendClientConsentForm?.error) {
+          logger.error('Error sending consent form email:', sendClientConsentForm.message);
+          // Continue with client creation even if email fails, but log the error
+        }
       }
 
       // Post consent form in user_form table
@@ -403,6 +421,41 @@ export default class UserProfile {
         if (!putUsrProfile) {
           logger.error('Error updating user profile');
           return { message: 'Error updating user profile', error: -1 };
+        }
+      }
+
+      // Update tenant table for admin_fee and tax_percent if role is manager (role_id = 3)
+      if (data.role_id === 3 && (data.admin_fee !== undefined || data.tax_percent !== undefined)) {
+        // Get user profile to find tenant_id
+        const userProfileData = await this.getUserProfileById({
+          user_profile_id: user_profile_id,
+        });
+
+        if (userProfileData.error || !userProfileData.rec || userProfileData.rec.length === 0) {
+          logger.error('Error getting user profile for tenant update');
+          return { message: 'Error getting user profile for tenant update', error: -1 };
+        }
+
+        const tenant_id = userProfileData.rec[0].tenant_id;
+
+        if (tenant_id) {
+          const tmpTenant = {
+            ...(data.admin_fee !== undefined && { admin_fee: data.admin_fee }),
+            ...(data.tax_percent !== undefined && { tax_percent: data.tax_percent }),
+          };
+
+          if (Object.keys(tmpTenant).length > 0) {
+            const putTenant = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('tenant')
+              .where('tenant_id', tenant_id)
+              .update(tmpTenant);
+
+            if (!putTenant) {
+              logger.error('Error updating tenant admin_fee and tax_percent');
+              return { message: 'Error updating tenant information', error: -1 };
+            }
+          }
         }
       }
 

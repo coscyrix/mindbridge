@@ -61,6 +61,7 @@ export default class Report {
           .where('tt.is_sent', 1)
           .andWhere('client.status_yn', 'y')
           .andWhere('tr.thrpy_status', '!=', 2) // Exclude discharged therapy requests
+          .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT') // Exclude attendance forms
           .groupBy([
             'client.user_first_name',
             'client.user_last_name',
@@ -79,6 +80,12 @@ export default class Report {
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('v_user_form as vuf')
           .leftJoin('thrpy_req as tr', 'vuf.thrpy_req_id', 'tr.req_id')
+          // Join to get active therapy request if vuf.thrpy_req_id is null
+          .leftJoin('thrpy_req as tr_active', function() {
+            this.on('tr_active.client_id', '=', 'vuf.client_id')
+                .andOn('tr_active.counselor_id', '=', 'vuf.counselor_id')
+                .andOnVal('tr_active.thrpy_status', '=', 1); // 1 = ONGOING
+          })
           .leftJoin('feedback as fb', function() {
             this.on('fb.form_id', '=', 'vuf.form_id')
                 .andOn(function() {
@@ -95,7 +102,8 @@ export default class Report {
             'vuf.counselor_id',
             'vuf.form_id',
             'vuf.form_cde',
-            'vuf.thrpy_req_id',
+            // Use vuf.thrpy_req_id if available, otherwise use the active therapy request
+            db.raw('COALESCE(vuf.thrpy_req_id, MAX(tr_active.req_id)) as thrpy_req_id'),
             'vuf.tenant_id',
             'vuf.user_form_id', // Include user_form_id to make each consent form unique
             db.raw('MAX(fb.feedback_id) as feedback_id'),
@@ -111,7 +119,14 @@ export default class Report {
           .andWhere('vuf.client_status_yn', 'y')
           .andWhere('vuf.form_cde', 'CONSENT') // Only get consent forms
           .andWhere(function() {
-            this.where('tr.thrpy_status', '!=', 2).orWhereNull('tr.thrpy_status'); // Exclude discharged therapy requests
+            // Exclude discharged therapy requests
+            this.where(function() {
+              this.where('tr.thrpy_status', '!=', 2).orWhereNull('tr.thrpy_status');
+            })
+            .orWhere(function() {
+              // Also allow if there's an active therapy request via tr_active
+              this.whereNotNull('tr_active.req_id');
+            });
           })
           .groupBy([
             'vuf.client_first_name',
@@ -121,7 +136,7 @@ export default class Report {
             'vuf.form_cde',
             'vuf.client_id',
             'vuf.counselor_id',
-            'vuf.thrpy_req_id',
+            'vuf.thrpy_req_id', // Keep original thrpy_req_id in GROUP BY
             'vuf.tenant_id',
             'vuf.user_form_id', // Add user_form_id to GROUP BY to make each consent form unique
           ])
@@ -132,6 +147,12 @@ export default class Report {
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('v_user_form as vuf')
           .leftJoin('thrpy_req as tr', 'vuf.thrpy_req_id', 'tr.req_id')
+          // Join to get active therapy request if vuf.thrpy_req_id is null
+          .leftJoin('thrpy_req as tr_active', function() {
+            this.on('tr_active.client_id', '=', 'vuf.client_id')
+                .andOn('tr_active.counselor_id', '=', 'vuf.counselor_id')
+                .andOnVal('tr_active.thrpy_status', '=', 1); // 1 = ONGOING
+          })
           .leftJoin('feedback as fb', function() {
             this.on('fb.form_id', '=', 'vuf.form_id')
                 .andOn(function() {
@@ -152,7 +173,8 @@ export default class Report {
             'vuf.counselor_id',
             'vuf.form_id',
             'vuf.form_cde',
-            'vuf.thrpy_req_id',
+            // Use vuf.thrpy_req_id if available, otherwise use the active therapy request
+            db.raw('COALESCE(vuf.thrpy_req_id, MAX(tr_active.req_id)) as thrpy_req_id'),
             'vuf.tenant_id',
             'vuf.user_form_id', // Include user_form_id to make each form unique
             db.raw('MAX(fb.feedback_id) as feedback_id'),
@@ -166,8 +188,16 @@ export default class Report {
           )
           .where('vuf.is_sent', 1)
           .andWhere('vuf.client_status_yn', 'y')
+          .andWhere('vuf.form_cde', '!=', 'SESSION SUM REPORT') // Exclude attendance forms
           .andWhere(function() {
-            this.where('tr.thrpy_status', '!=', 2).orWhereNull('tr.thrpy_status'); // Exclude discharged therapy requests
+            // Exclude discharged therapy requests
+            this.where(function() {
+              this.where('tr.thrpy_status', '!=', 2).orWhereNull('tr.thrpy_status');
+            })
+            .orWhere(function() {
+              // Also allow if there's an active therapy request via tr_active
+              this.whereNotNull('tr_active.req_id');
+            });
           })
           .groupBy([
             'vuf.client_first_name',
@@ -177,7 +207,7 @@ export default class Report {
             'vuf.form_cde',
             'vuf.client_id',
             'vuf.counselor_id',
-            'vuf.thrpy_req_id',
+            'vuf.thrpy_req_id', // Keep original thrpy_req_id in GROUP BY
             'vuf.tenant_id',
             'vuf.user_form_id', // Add user_form_id to GROUP BY to make each form unique
           ])
@@ -350,6 +380,8 @@ export default class Report {
           'client_last_name',
           'counselor_id',
           'tenant_id',
+          'thrpy_req_id',
+          'session_id',
           db.raw('intake_date as due_date'),
           db.raw('service_name as report_name'),
           db.raw(`

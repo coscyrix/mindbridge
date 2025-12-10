@@ -581,7 +581,7 @@ export default class Invoice {
       const summary = {
         sum_session_price: totalPrice.toFixed(4),
         sum_session_counselor_amt: correctCounselorAmount.toFixed(4),
-        sum_session_system_amt: correctSystemAmount.toFixed(4),
+        sum_session_system_amt: totalSystemFromRecords.toFixed(4),
         sum_session_system_units: rec.length,
         sum_session_total_amount: totalAmount.toFixed(4),
         sum_session_taxes: totalTaxes.toFixed(4),

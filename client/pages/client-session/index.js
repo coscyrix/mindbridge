@@ -13,15 +13,14 @@ import CustomButton from "../../components/CustomButton";
 import { AddIcon } from "../../public/assets/icons";
 import { useReferenceContext } from "../../context/ReferenceContext";
 import Skeleton from "@mui/material/Skeleton";
-import ApiConfig from "../../config/apiConfig";
 import { useRouter } from "next/router";
+import ApiConfig from "../../config/apiConfig";
+import { useSessionModal, useFeeSplit } from "../../utils/hooks";
 
 function ClientSession() {
   const router = useRouter();
   const [counselorId, setCounselorId] = useState(null);
   const { open } = router.query;
-  const [showFlyout, setShowFlyout] = useState(false);
-  const [activeData, setActiveData] = useState();
   const [confirmationModal, setConfirmationModal] = useState(false);
   const actionDropdownRef = useRef(null);
   const [sessions, setSessions] = useState();
@@ -36,13 +35,26 @@ function ClientSession() {
   const { userObj } = useReferenceContext();
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState("");
-  console.log(userObj, "UserObj::::::::");
+  
   const tabLabels = [
     { id: 0, label: "Current Session", value: "currentSession" },
     { id: 1, label: "All Sessions", value: "allSessions" },
   ];
-  const [counselorConfiguration, setCounselorConfiguration] = useState(null);
-  const [managerSplitDetails, setManagerSplitDetails] = useState(null);
+
+  // Custom hooks for session modal and fee split management
+  const {
+    showModal: showFlyout,
+    sessionData: activeData,
+    setShowModal: setShowFlyout,
+    setSessionData: setActiveData,
+    closeSessionModal,
+  } = useSessionModal();
+
+  const {
+    counselorConfiguration,
+    managerSplitDetails,
+    fetchFeeSplit,
+  } = useFeeSplit();
   const handleFilterData = () => {
     console.log("handleFilterData has been called");
   };
@@ -148,7 +160,6 @@ function ClientSession() {
   // };
 
   const handleSelectCounselor = (data) => {
-    console.log(data, "getting data::::::");
     const counselorId = data?.value;
 
     if (counselorId !== "allCounselor") {
@@ -208,7 +219,6 @@ function ClientSession() {
   const handleEdit = (row) => {
     setShowFlyout(true);
     setActiveData(row);
-    console.log(row);
     if (row?.tenant_id) {
       setSelectTenantId(row.tenant_id);
     }
@@ -251,12 +261,10 @@ function ClientSession() {
   );
 
   const handleShowAddClientSession = (row) => {
-    console.log(row);
     setShowFlyout(true);
   };
 
   const getInvoice = async (counselorIdParam, tenantId) => {
-    console.log(tenantId, "tenantid::::");
     setSummaryLoading(true);
     try {
       let response;
@@ -287,7 +295,6 @@ function ClientSession() {
         if (counselorIdParam && counselorIdParam !== "allCounselors") {
           url += `&counselor_id=${counselorIdParam}`;
         }
-        console.log(url, "none::");
         response = await api.get(url);
       }
       if (response.status === 200) {
@@ -345,36 +352,23 @@ function ClientSession() {
       fetchHomeWorkUploadStatus();
     }
   }, [userObj]);
-  const fetchAllSplit = async () => {
+  useEffect(() => {
+    // Skip fetching fee split for Manager (role 3) when "All Counselors" is selected
     if (selectCounselor === "allCounselors" && userObj.role_id === 3) {
       return;
     }
 
-    try {
-      const tenant_id =
-        userObj?.role_id === 2 ? userObj?.tenant_id : selectTenantId;
-      const response = await api.get(
-        `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}`
-      );
-      if (response.status == 200) {
-        setCounselorConfiguration(
-          response?.data?.data?.counselor_specific_configurations
-        );
-        setManagerSplitDetails(response?.data?.data?.default_configuration);
-      }
-    } catch (error) {
-      toast.error(error?.response?.data?.message);
-    }
-  };
-  useEffect(() => {
     if (
       userObj.role_id === 2 ||
       userObj.role_id == 3 ||
       (userObj.role_id == 4 && selectTenantId)
     ) {
-      fetchAllSplit();
+      const tenant_id = userObj?.role_id === 2 ? userObj?.tenant_id : selectTenantId;
+      if (tenant_id) {
+        fetchFeeSplit(tenant_id);
+      }
     }
-  }, [selectCounselor, selectTenantId]);
+  }, [selectCounselor, selectTenantId, fetchFeeSplit, userObj.role_id, userObj?.tenant_id]);
   useEffect(() => {
     if (open === "true") {
       setShowFlyout(true);
@@ -400,7 +394,7 @@ function ClientSession() {
       </div>
       <CreateSessionLayout
         isOpen={showFlyout}
-        setIsOpen={setShowFlyout}
+        setIsOpen={closeSessionModal}
         initialData={activeData}
         setConfirmationModal={setConfirmationModal}
       >
@@ -410,7 +404,7 @@ function ClientSession() {
           fetchHomeWorkUploadStatus={fetchHomeWorkUploadStatus}
           setHomeWorkUpload={setHomeWorkUpload}
           isOpen={showFlyout}
-          setIsOpen={setShowFlyout}
+          setIsOpen={closeSessionModal}
           initialData={activeData}
           setInitialData={setActiveData}
           confirmationModal={confirmationModal}
@@ -476,7 +470,7 @@ function ClientSession() {
 
             {userObj?.role_id !== 4 && (
               <CustomTab
-                heading="Total Amount to Associate for a Month:"
+                heading="Monthly Associate Total:"
                 value={
                   summaryLoading ? (
                     <Skeleton width={120} height={40} />

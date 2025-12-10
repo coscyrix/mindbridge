@@ -1058,7 +1058,6 @@ function CreateSessionForm({
     }
   }, [scheduledSession]);
 
-  console.log(isValueChanged, "isValueChanges::::::::");
 
   return (
     <CreateSessionFormWrapper>
@@ -1538,7 +1537,6 @@ function CreateSessionForm({
           setShowVerification={setShowVerification}
         />
       )}
-      {console.log(initialData)}
       {isWorkModalOpen && (
         <HomeworkModal
           email={initialData?.email}

@@ -76,19 +76,19 @@ const FeaturesAndReportSection = () => {
 
   const featureCardsData = [
     {
-      iconPlaceholder: "/assets/images/simple.svg",
+      iconPlaceholder: "/assets/images/simple.png",
       title: "Simple",
       description:
         "Simple, intuitive design helps you schedule sessions and manage reports within minutes.",
     },
     {
-      iconPlaceholder: "/assets/images/secure.svg",
+      iconPlaceholder: "/assets/images/secure.png",
       title: "Secure",
       description:
         "Your data stays safe with enterprise-grade security, encryption, and strict privacy controls.",
     },
     {
-      iconPlaceholder: "/assets/images/pay.svg",
+      iconPlaceholder: "/assets/images/pay.png",
       title: "Pay-as-You-Go",
       description:
         "Pay only when you use it — no contracts, no subscriptions, just transparent and flexible pricing always.",
@@ -96,10 +96,10 @@ const FeaturesAndReportSection = () => {
   ];
 
   const logos = [
-    { src: "/assets/images/hippa.svg", alt: "HIPAA logo" },
-    { src: "/assets/images/soc_uodated.svg", alt: "SOC logo" },
-    { src: "/assets/images/pipeda.svg", alt: "PIPEDA logo" },
-    { src: "/assets/images/eu.svg", alt: "EU logo" },
+    { src: "/assets/images/hipaa.png", alt: "HIPAA logo" },
+    { src: "/assets/images/soc.png", alt: "SOC logo" },
+    { src: "/assets/images/pipeda.png", alt: "PIPEDA logo" },
+    { src: "/assets/images/eu.png", alt: "EU logo" },
   ];
 
   const router = useRouter();
@@ -162,6 +162,17 @@ const FeaturesAndReportSection = () => {
               iconPlaceholder={card.iconPlaceholder}
               title={card.title}
               description={card.description}
+            />
+          ))}
+        </div>
+
+        {/* Compliance Logos Section */}
+        <div className="logo-container">
+          {logos.map((logo, index) => (
+            <img 
+              key={index} 
+              src={logo.src} 
+              alt={logo.alt}
             />
           ))}
         </div>

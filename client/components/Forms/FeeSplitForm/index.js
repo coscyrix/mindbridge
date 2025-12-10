@@ -36,7 +36,6 @@ const FeeSplitForm = ({
     formState: { errors },
   } = methods;
   const onSubmit = async (data) => {
-    console.log(data);
     try {
       setLoading(true);
       let payload = {
@@ -52,7 +51,6 @@ const FeeSplitForm = ({
         ApiConfig.feeSplitManagment.getAllfeesSplit,
         payload
       );
-      console.log(response);
       if (response?.status == 200) {
         toast.success(response?.data?.message);
         fetchAllSplit();

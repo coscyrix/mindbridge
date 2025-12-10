@@ -207,15 +207,32 @@ export default class Form {
       }
 
       const rec = await query;
-      if (!rec) {
+      if (!rec || (Array.isArray(rec) && rec.length === 0)) {
         logger.error('Error getting form');
         return { message: 'Error getting form', error: -1 };
       }
-      return rec.map((form) => ({
-        ...form,
-        svc_json: JSON.parse(form.svc_json),
-        session_position: JSON.parse(form.session_position),
-      }));
+      return rec.map((form) => {
+        // Handle svc_ids or svc_json (depending on which field exists)
+        // MySQL JSON columns might return parsed arrays or JSON strings
+        let svcData = null;
+        if (form.svc_ids !== undefined) {
+          svcData = typeof form.svc_ids === 'string' ? JSON.parse(form.svc_ids) : form.svc_ids;
+        } else if (form.svc_json !== undefined) {
+          svcData = typeof form.svc_json === 'string' ? JSON.parse(form.svc_json) : form.svc_json;
+        }
+        
+        // Handle session_position (may already be parsed from MySQL JSON column)
+        const sessionPos = form.session_position 
+          ? (typeof form.session_position === 'string' ? JSON.parse(form.session_position) : form.session_position)
+          : [];
+        
+        return {
+          ...form,
+          svc_ids: svcData,
+          svc_json: svcData, // Keep both for backward compatibility
+          session_position: sessionPos,
+        };
+      });
     } catch (error) {
       logger.error(error);
       return { message: 'Error getting form', error: -1 };

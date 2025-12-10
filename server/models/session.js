@@ -918,4 +918,387 @@ export default class Session {
       return { message: 'Error getting session', error: -1 };
     }
   }
+
+  ////////////////////////////////////////// READ HOMEWORK STATS API
+
+  async getSessionsWithHomeworkStats(data) {
+    try {
+      let query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('v_session as s')
+        .leftJoin('homework as h', 's.session_id', 'h.session_id')
+        .select(
+          's.thrpy_req_id',
+          's.client_id',
+          's.client_first_name',
+          's.client_last_name',
+          's.counselor_id',
+          's.tenant_id',
+          db.raw('COUNT(DISTINCT s.session_id) as total_sessions'),
+          db.raw('COUNT(h.homework_id) as total_homework_sent'),
+          db.raw('MIN(s.intake_date) as first_session_date'),
+          db.raw('MAX(s.intake_date) as last_session_date')
+        )
+        .where('s.status_yn', 'y')
+        .andWhere('s.thrpy_status', 'ONGOING')
+        .groupBy(
+          's.thrpy_req_id',
+          's.client_id',
+          's.client_first_name',
+          's.client_last_name',
+          's.counselor_id',
+          's.tenant_id'
+        )
+        .orderBy('last_session_date', 'desc');
+
+      // Apply filters based on role
+      if (data.role_id === 2) {
+        // Counselor role
+        if (data.counselor_id) {
+          query.andWhere('s.counselor_id', data.counselor_id);
+          
+          // Get tenant_id for the counselor and filter by it
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        }
+
+        if (data.client_id) {
+          query.andWhere('s.client_id', data.client_id);
+        }
+      }
+
+      if (data.role_id === 3) {
+        // Manager role
+        if (data.tenant_id) {
+          query.andWhere('s.tenant_id', Number(data.tenant_id));
+        } else if (data.counselor_id) {
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        }
+        
+        if (data.counselor_id) {
+          query.andWhere('s.counselor_id', data.counselor_id);
+        }
+
+        if (data.start_date) {
+          query.andWhere('s.intake_date', '>=', data.start_date);
+        }
+
+        if (data.end_date) {
+          query.andWhere('s.intake_date', '<=', data.end_date);
+        }
+      }
+
+      // Handle other role_ids (like role_id === 4 - admin)
+      if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        if (tenantId && !tenantId.error && tenantId.length > 0) {
+          query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
+        }
+        query.andWhere('s.counselor_id', data.counselor_id);
+        
+        if (data.start_date) {
+          query.andWhere('s.intake_date', '>=', data.start_date);
+        }
+
+        if (data.end_date) {
+          query.andWhere('s.intake_date', '<=', data.end_date);
+        }
+      }
+
+      const rec = await query;
+
+      if (!rec) {
+        logger.error('Error getting sessions with homework stats');
+        return { message: 'Error getting sessions with homework stats', error: -1 };
+      }
+
+      return rec;
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error getting sessions with homework stats', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getAssessmentStats(data) {
+    try {
+      // Get form mode from environment variable
+      const formMode = process.env.FORM_MODE || 'auto';
+      
+      let query;
+
+      if (formMode === 'treatment_target') {
+        // Treatment target mode: query treatment target session forms
+        query = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('treatment_target_session_forms as tt')
+          .join('user_profile as client', 'tt.client_id', 'client.user_profile_id')
+          .join('forms as f', 'tt.form_id', 'f.form_id')
+          .join('thrpy_req as tr', 'tt.req_id', 'tr.req_id')
+          .leftJoin('feedback as fb', function() {
+            this.on('fb.form_id', '=', 'tt.form_id')
+                .andOn(function() {
+                  this.on('fb.session_id', '=', 'tt.session_id')
+                      .orOnNull('fb.session_id');
+                });
+          })
+          .select(
+            'tt.req_id as thrpy_req_id',
+            'tt.client_id',
+            'client.user_first_name as client_first_name',
+            'client.user_last_name as client_last_name',
+            'tt.counselor_id',
+            'tt.tenant_id',
+            'tt.form_id',
+            'f.form_cde',
+            'tt.sent_at as date_sent',
+            'tt.is_sent',
+            'fb.feedback_id',
+            db.raw(`
+              CASE 
+                WHEN fb.feedback_id IS NOT NULL THEN 'completed'
+                WHEN tt.is_sent = 1 AND fb.feedback_id IS NULL THEN 'pending'
+                WHEN tt.is_sent = 0 OR tt.is_sent IS NULL THEN 'upcoming'
+                ELSE 'pending'
+              END as status
+            `)
+          )
+          .where('client.status_yn', 'y')
+          .andWhere('tr.thrpy_status', '!=', 2)
+          .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT') // Exclude attendance forms
+          .orderBy('tt.sent_at', 'desc');
+      } else {
+        // Service mode or auto mode: query user forms
+        query = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('v_user_form as vuf')
+          .leftJoin('thrpy_req as tr', 'vuf.thrpy_req_id', 'tr.req_id')
+          .leftJoin('feedback as fb', function() {
+            this.on('fb.form_id', '=', 'vuf.form_id')
+                .andOn(function() {
+                  this.on('fb.session_id', '=', 'vuf.session_id')
+                      .orOn(function() {
+                        this.on('fb.client_id', '=', 'vuf.client_id')
+                            .andOnNull('fb.session_id');
+                      });
+                });
+          })
+          .select(
+            'vuf.thrpy_req_id',
+            'vuf.client_id',
+            'vuf.client_first_name',
+            'vuf.client_last_name',
+            'vuf.counselor_id',
+            'vuf.tenant_id',
+            'vuf.form_id',
+            'vuf.form_cde',
+            'vuf.updated_at as date_sent',
+            'vuf.is_sent',
+            'fb.feedback_id',
+            db.raw(`
+              CASE 
+                WHEN fb.feedback_id IS NOT NULL THEN 'completed'
+                WHEN vuf.is_sent = 1 AND fb.feedback_id IS NULL THEN 'pending'
+                WHEN vuf.is_sent = 0 OR vuf.is_sent IS NULL THEN 'upcoming'
+                ELSE 'pending'
+              END as status
+            `)
+          )
+          .andWhere('vuf.client_status_yn', 'y')
+          .andWhere('vuf.form_cde', '!=', 'SESSION SUM REPORT') // Exclude attendance forms
+          .andWhere(function() {
+            this.where('tr.thrpy_status', '!=', 2).orWhereNull('tr.thrpy_status');
+          })
+          .orderBy('vuf.updated_at', 'desc');
+      }
+
+      console.log('Assessment stats query mode:', formMode);
+      console.log('Assessment stats query params:', data);
+
+      // Apply filters based on role
+      if (data.role_id === 2) {
+        if (data.counselor_id) {
+          if (formMode === 'treatment_target') {
+            query.andWhere('tt.counselor_id', data.counselor_id);
+          } else {
+            query.andWhere('vuf.counselor_id', data.counselor_id);
+          }
+          
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            if (formMode === 'treatment_target') {
+              query.andWhere('tt.tenant_id', Number(tenantId[0].tenant_id));
+            } else {
+              query.andWhere('vuf.tenant_id', Number(tenantId[0].tenant_id));
+            }
+          }
+        }
+
+        if (data.thrpy_req_id) {
+          if (formMode === 'treatment_target') {
+            query.andWhere('tt.req_id', data.thrpy_req_id);
+          } else {
+            query.andWhere('vuf.thrpy_req_id', data.thrpy_req_id);
+          }
+        }
+      }
+
+      if (data.role_id === 3) {
+        if (data.tenant_id) {
+          if (formMode === 'treatment_target') {
+            query.andWhere('tt.tenant_id', Number(data.tenant_id));
+          } else {
+            query.andWhere('vuf.tenant_id', Number(data.tenant_id));
+          }
+        } else if (data.counselor_id) {
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            if (formMode === 'treatment_target') {
+              query.andWhere('tt.tenant_id', Number(tenantId[0].tenant_id));
+            } else {
+              query.andWhere('vuf.tenant_id', Number(tenantId[0].tenant_id));
+            }
+          }
+        }
+        
+        if (data.counselor_id) {
+          if (formMode === 'treatment_target') {
+            query.andWhere('tt.counselor_id', data.counselor_id);
+          } else {
+            query.andWhere('vuf.counselor_id', data.counselor_id);
+          }
+        }
+
+        if (data.thrpy_req_id) {
+          if (formMode === 'treatment_target') {
+            query.andWhere('tt.req_id', data.thrpy_req_id);
+          } else {
+            query.andWhere('vuf.thrpy_req_id', data.thrpy_req_id);
+          }
+        }
+      }
+
+      // Handle other role_ids
+      if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
+        const tenantId = await this.common.getUserTenantId({
+          user_profile_id: data.counselor_id,
+        });
+        if (tenantId && !tenantId.error && tenantId.length > 0) {
+          if (formMode === 'treatment_target') {
+            query.andWhere('tt.tenant_id', Number(tenantId[0].tenant_id));
+          } else {
+            query.andWhere('vuf.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        }
+        
+        if (formMode === 'treatment_target') {
+          query.andWhere('tt.counselor_id', data.counselor_id);
+        } else {
+          query.andWhere('vuf.counselor_id', data.counselor_id);
+        }
+
+        if (data.thrpy_req_id) {
+          if (formMode === 'treatment_target') {
+            query.andWhere('tt.req_id', data.thrpy_req_id);
+          } else {
+            query.andWhere('vuf.thrpy_req_id', data.thrpy_req_id);
+          }
+        }
+      }
+
+      console.log('Assessment stats FINAL SQL query:', query.toQuery());
+
+      const assessments = await query;
+
+      console.log('Assessment stats raw query result count:', assessments?.length || 0);
+      if (assessments && assessments.length > 0) {
+        console.log('First assessment:', assessments[0]);
+      }
+
+      if (!assessments || assessments.length === 0) {
+        return { message: 'No assessments found', error: -1 };
+      }
+
+      // Group by therapy request
+      const groupedData = {};
+      assessments.forEach((assessment) => {
+        const key = assessment.thrpy_req_id;
+        
+        if (!groupedData[key]) {
+          groupedData[key] = {
+            thrpy_req_id: assessment.thrpy_req_id,
+            client_id: assessment.client_id,
+            client_first_name: assessment.client_first_name,
+            client_last_name: assessment.client_last_name,
+            counselor_id: assessment.counselor_id,
+            tenant_id: assessment.tenant_id,
+            total_assessments: 0,
+            total_completed: 0,
+            total_pending: 0,
+            total_upcoming: 0,
+            completed_assessments: [],
+            pending_assessments: [],
+            upcoming_assessments: []
+          };
+        }
+
+        groupedData[key].total_assessments++;
+        
+        if (assessment.status === 'completed') {
+          groupedData[key].total_completed++;
+          groupedData[key].completed_assessments.push({
+            form_id: assessment.form_id,
+            form_cde: assessment.form_cde,
+            date_sent: assessment.date_sent,
+            feedback_id: assessment.feedback_id
+          });
+        } else if (assessment.status === 'pending') {
+          groupedData[key].total_pending++;
+          groupedData[key].pending_assessments.push({
+            form_id: assessment.form_id,
+            form_cde: assessment.form_cde,
+            date_sent: assessment.date_sent
+          });
+        } else if (assessment.status === 'upcoming') {
+          groupedData[key].total_upcoming++;
+          groupedData[key].upcoming_assessments.push({
+            form_id: assessment.form_id,
+            form_cde: assessment.form_cde,
+            date_sent: assessment.date_sent
+          });
+        }
+      });
+
+      // Calculate completion rate and convert to array
+      const result = Object.values(groupedData).map(item => ({
+        ...item,
+        completion_rate: item.total_assessments > 0 
+          ? Math.round((item.total_completed / item.total_assessments) * 100) 
+          : 0
+      }));
+
+      return result;
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error getting assessment stats', error: -1 };
+    }
+  }
 }

@@ -9,12 +9,12 @@ import CommonServices from "../../services/CommonServices";
 import axios from "axios";
 import CustomLoader from "../../components/Loader/CustomLoader";
 import { GoArrowLeft } from "react-icons/go";
-import { TREATMENT_TARGET } from "../../utils/constants";
+import { TREATMENT_TARGET, IMAGE_BASE_URL } from "../../utils/constants";
 import { FiSearch } from "react-icons/fi";
 const SearchListing = () => {
   const [isloading, setIsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false); // ✅ toggle for mobile filters
-  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
+  const imageBaseUrl = IMAGE_BASE_URL;
 
   const router = useRouter();
   const { query } = router;

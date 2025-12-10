@@ -278,6 +278,14 @@ export const DetailItem = styled.div`
     border-radius: 50%;
     height: 48px;
     width: 48px;
+    flex-shrink: 0;
+
+    .detail-icon {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      opacity: 0.8;
+    }
   }
 
   h3 {

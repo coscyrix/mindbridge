@@ -10,7 +10,7 @@ import SmartGoals from "./SmartGoals";
 import IpfGraph from "./IpfGraph";
 import ConsentForm from "../../Forms/PatientForms/ConsentForm";
 import AttendanceGraph from "./AttendanceGraph";
-function AssessmentResults({ assessmentResultsData }) {
+function AssessmentResults({ assessmentResultsData, onClientClick }) {
   const [loading, setLoading] = useState("assessmentResultsData");
   const [showReportDetails, setShowReportDetails] = useState(false);
   const [formName, setFormName] = useState("");
@@ -124,7 +124,7 @@ function AssessmentResults({ assessmentResultsData }) {
         ? setLoading("ipfData")
         : row?.form_cde == "CONSENT"
         ? setLoading("consentData")
-        : row?.form_cde == "ATTENDENCE"
+        : row?.form_cde == "SESSION SUM REPORT"
         ? setLoading("attendanceData")
         : row?.form_cde == "GAS"
         ? setLoading("graphData")
@@ -169,7 +169,7 @@ function AssessmentResults({ assessmentResultsData }) {
           };
           setConsentFormData(newConsentData);
           setTenant_Id(row.tenant_id);
-        } else if (row.form_cde == "ATTENDENCE") {
+        } else if (row.form_cde == "SESSION SUM REPORT") {
           setAttendanceData(data);
           setGraphDataHeading(
             `Attendence Details of ${row.client_first_name} ${row.client_last_name}`
@@ -354,7 +354,7 @@ function AssessmentResults({ assessmentResultsData }) {
       <CustomCard title="Homework And Assessment Tools Results">
         <CustomClientDetails
           tableData={{
-            columns: ASSESSMENT_DATA_COLUMNS(handleTreatmentTools),
+            columns: ASSESSMENT_DATA_COLUMNS(handleTreatmentTools, onClientClick),
             data: assessmentResultsData,
           }}
           fixedHeaderScrollHeight="230px"
@@ -388,7 +388,7 @@ function AssessmentResults({ assessmentResultsData }) {
               initialData={consentFormData}
               loader={loading == "consentData"}
             />
-          ) : formName == "ATTENDENCE" ? (
+          ) : formName == "SESSION SUM REPORT" ? (
             <AttendanceGraph
               attendanceData={attendanceData}
               loading={loading == "attendanceData"}

@@ -135,16 +135,32 @@ export default class EmailTmplt {
         return { message: 'User profile not found', error: -1 };
       }
 
-
+      // Get counselor email for Reply-To functionality
+      let counselorEmail = null;
+      if (recThrpy[0].counselor_id) {
+        try {
+          const counselorProfile = await this.common.getUserProfileByUserProfileId(recThrpy[0].counselor_id);
+          if (counselorProfile && counselorProfile.length > 0 && counselorProfile[0].user_id) {
+            const counselorUser = await this.common.getUserById(counselorProfile[0].user_id);
+            if (counselorUser && counselorUser.length > 0) {
+              counselorEmail = counselorUser[0].email;
+              logger.info('✅ Counselor email found for Reply-To:', counselorEmail);
+            }
+          }
+        } catch (error) {
+          logger.warn('Error fetching counselor email for Reply-To:', error);
+        }
+      }
 
       // Check if we should send automatic attendance report after every 4 sessions
-      await this.checkAndSendAutomaticAttendanceReport(
-        recSession[0].thrpy_req_id,
-        data.session_id,
-        recThrpy[0],
-        recUser[0],
-        tenantId
-      );
+      // WE no longer need this
+      // await this.checkAndSendAutomaticAttendanceReport(
+      //   recSession[0].thrpy_req_id,
+      //   data.session_id,
+      //   recThrpy[0],
+      //   recUser[0],
+      //   tenantId
+      // );
 
       for (const session of recSession) {
         // Get form mode from environment variable
@@ -192,12 +208,12 @@ export default class EmailTmplt {
                 client_id,
                 data.session_id,
                 clientTargetOutcomeId, // Add target outcome ID parameter
+                counselorEmail, // Add counselor email for Reply-To
               );
 
               let attendanceEmail;
               let isAttendanceForm = false;
-              
-              if (form_id === 24 && form_name === 'ATTENDANCE') {
+              if (form_id === 24 && form_name === 'SESSION SUM REPORT') {
                 // 24 is the form_id for attendance
                 isAttendanceForm = true;
                 const sessions = recThrpy[0].session_obj;
@@ -223,6 +239,112 @@ export default class EmailTmplt {
                   (session) => session.session_status === 'NO-SHOW',
                 ).length;
 
+                // Query homework count for the therapy request
+                let homeworkCount = 0;
+                try {
+                  const homeworkQuery = await db
+                    .withSchema(`${process.env.MYSQL_DATABASE}`)
+                    .from('homework as h')
+                    .join('session as s', 'h.session_id', 's.session_id')
+                    .where('s.thrpy_req_id', recThrpy[0].req_id)
+                    .andWhere('s.session_id', '<=', data.session_id)
+                    .count('h.homework_id as count');
+                  
+                  homeworkCount = homeworkQuery[0]?.count || 0;
+                } catch (error) {
+                  logger.error('Error querying homework count:', error);
+                  homeworkCount = 0;
+                }
+
+                // Query assessment names for the therapy request
+                // assessmentDoneNames = completed assessments (with feedback)
+                // assessmentNotDoneNames = not completed or not even sent
+                let assessmentDoneNames = [];
+                let assessmentNotDoneNames = [];
+                try {
+                  const formMode = process.env.FORM_MODE || 'auto';
+                  const schemaName = process.env.MYSQL_DATABASE;
+                  
+                  // Step 1: Fetch ALL assessments for this therapy request
+                  let allAssessmentsQuery;
+                  if (formMode === 'treatment_target') {
+                    allAssessmentsQuery = db
+                      .withSchema(schemaName)
+                      .from('treatment_target_session_forms as tt')
+                      .join('forms as f', 'tt.form_id', 'f.form_id')
+                      .where('tt.req_id', recThrpy[0].req_id)
+                      .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+                      .select('tt.id as instance_id', 'tt.form_id', 'f.form_cde', 'tt.session_id');
+                  } else {
+                    allAssessmentsQuery = db
+                      .withSchema(schemaName)
+                      .from('user_forms as uf')
+                      .where('uf.thrpy_req_id', recThrpy[0].req_id)
+                      .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
+                      .select('uf.user_form_id as instance_id', 'uf.form_id', 'uf.form_cde', 'uf.session_id', 'uf.client_id');
+                  }
+                  
+                  const allAssessments = await allAssessmentsQuery;
+                  
+                  // Step 2: Fetch ALL completed assessments (those with feedback)
+                  let completedAssessmentsQuery;
+                  if (formMode === 'treatment_target') {
+                    completedAssessmentsQuery = db
+                      .withSchema(schemaName)
+                      .from('treatment_target_session_forms as tt')
+                      .join('forms as f', 'tt.form_id', 'f.form_id')
+                      .join('feedback as fb', function() {
+                        this.on('fb.form_id', '=', 'tt.form_id')
+                            .andOn(function() {
+                              this.on('fb.session_id', '=', 'tt.session_id')
+                                  .orOnNull('fb.session_id');
+                            });
+                      })
+                      .where('tt.req_id', recThrpy[0].req_id)
+                      .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+                      .select('tt.id as instance_id', 'f.form_cde');
+                  } else {
+                    completedAssessmentsQuery = db
+                      .withSchema(schemaName)
+                      .from('user_forms as uf')
+                      .join('feedback as fb', function() {
+                        this.on('fb.form_id', '=', 'uf.form_id')
+                            .andOn(function() {
+                              this.on('fb.session_id', '=', 'uf.session_id')
+                                  .orOn(function() {
+                                    this.on('fb.client_id', '=', 'uf.client_id')
+                                        .andOnNull('fb.session_id');
+                                  });
+                            });
+                      })
+                      .where('uf.thrpy_req_id', recThrpy[0].req_id)
+                      .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
+                      .select('uf.user_form_id as instance_id', 'uf.form_cde');
+                  }
+                  
+                  const completedAssessments = await completedAssessmentsQuery;
+                  
+                  // Step 3: Create a Set of completed instance IDs for quick lookup
+                  const completedInstanceIds = new Set(
+                    completedAssessments.map(a => a.instance_id)
+                  );
+                  
+                  // Step 4: Categorize each assessment instance
+                  // assessmentDoneNames = completed (each instance adds its form_cde)
+                  // assessmentNotDoneNames = not completed or not sent (each instance adds its form_cde)
+                  allAssessments.forEach((assessment) => {
+                    if (completedInstanceIds.has(assessment.instance_id)) {
+                      assessmentDoneNames.push(assessment.form_cde);
+                    } else {
+                      assessmentNotDoneNames.push(assessment.form_cde);
+                    }
+                  });
+                } catch (error) {
+                  logger.error('Error querying assessment stats:', error);
+                  assessmentDoneNames = [];
+                  assessmentNotDoneNames = [];
+                }
+
                 const attendancePDFTemplt = AttendancePDF(
                   `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
                   client_full_name,
@@ -230,14 +352,22 @@ export default class EmailTmplt {
                   removeReportsSessions.length,
                   attendedSessions,
                   cancelledSessions,
+                  homeworkCount,
+                  assessmentDoneNames,
+                  assessmentNotDoneNames,
                 );
 
                 const attendancePDF = await PDFGenerator(attendancePDFTemplt);
 
+                const counselorFullName = `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`;
+                
                 attendanceEmail = attendanceSummaryEmail(
                   recUser[0].email,
                   client_full_name,
                   attendancePDF,
+                  counselorEmail,
+                  counselorFullName,
+                  process.env.BASE_URL || null,
                 );
 
                 const postATTENDANCEFeedback =
@@ -330,6 +460,7 @@ export default class EmailTmplt {
                 client_id,
                 data.session_id,
                 clientTargetOutcomeId, // Add target outcome ID parameter
+                counselorEmail, // Add counselor email for Reply-To
               );
 
               let attendanceEmail;
@@ -353,29 +484,136 @@ export default class EmailTmplt {
                   (session) => session.session_id <= data.session_id,
                 );
 
-                // Count attended and cancelled sessions
-                const attendedSessions = filteredSessions.filter(
-                  (session) => session.session_status === 'SHOW',
-                ).length;
-                const cancelledSessions = filteredSessions.filter(
-                  (session) => session.session_status === 'NO-SHOW',
-                ).length;
+              // Count attended and cancelled sessions
+              const attendedSessions = filteredSessions.filter(
+                (session) => session.session_status === 'SHOW',
+              ).length;
+              const cancelledSessions = filteredSessions.filter(
+                (session) => session.session_status === 'NO-SHOW',
+              ).length;
 
-                const attendancePDFTemplt = AttendancePDF(
-                  `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
-                  client_full_name,
-                  recUser[0].clam_num,
-                  removeReportsSessions.length,
-                  attendedSessions,
-                  cancelledSessions,
-                );
+              // Query homework count for the therapy request
+              let homeworkCount = 0;
+              try {
+                const homeworkQuery = await db
+                  .withSchema(`${process.env.MYSQL_DATABASE}`)
+                  .from('homework as h')
+                  .join('session as s', 'h.session_id', 's.session_id')
+                  .where('s.thrpy_req_id', recThrpy[0].req_id)
+                  .andWhere('s.session_id', '<=', data.session_id)
+                  .count('h.homework_id as count');
+                
+                homeworkCount = homeworkQuery[0]?.count || 0;
+              } catch (error) {
+                logger.error('Error querying homework count:', error);
+                homeworkCount = 0;
+              }
+
+              // Query assessment names for the therapy request
+              // assessmentDoneNames = ALL instances of a form are completed (all have feedback)
+              // assessmentNotDoneNames = at least one instance is not completed OR form not sent yet
+              let assessmentDoneNames = [];
+              let assessmentNotDoneNames = [];
+              try {
+                // Get form mode from environment variable
+                const formMode = process.env.FORM_MODE || 'auto';
+                
+                let assessmentQuery;
+                
+                if (formMode === 'treatment_target') {
+                  // Get assessments and check if ALL instances have feedback (not just ANY)
+                  assessmentQuery = db
+                    .withSchema(`${process.env.MYSQL_DATABASE}`)
+                    .from('treatment_target_session_forms as tt')
+                    .join('forms as f', 'tt.form_id', 'f.form_id')
+                    .join('session as s', 'tt.session_id', 's.session_id')
+                    .leftJoin('feedback as fb', function() {
+                      this.on('fb.form_id', '=', 'tt.form_id')
+                          .andOn(function() {
+                            this.on('fb.session_id', '=', 'tt.session_id')
+                                .orOnNull('fb.session_id');
+                          });
+                    })
+                    .where('tt.req_id', recThrpy[0].req_id)
+                    .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+                    .select('f.form_cde', 'f.form_id')
+                    .select(db.raw('COUNT(DISTINCT tt.id) as total_instances'))
+                    .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN tt.id END) as completed_instances'))
+                    .select(db.raw('MAX(CASE WHEN tt.is_sent = 1 THEN 1 ELSE 0 END) as is_sent'))
+                    .groupBy('f.form_id', 'f.form_cde');
+                } else {
+                  // Get assessments and check if ALL instances have feedback (not just ANY)
+                  assessmentQuery = db
+                    .withSchema(`${process.env.MYSQL_DATABASE}`)
+                    .from('user_forms as uf')
+                    .join('session as s', 'uf.session_id', 's.session_id')
+                    .leftJoin('feedback as fb', function() {
+                      this.on('fb.form_id', '=', 'uf.form_id')
+                          .andOn(function() {
+                            this.on('fb.session_id', '=', 'uf.session_id')
+                                .orOn(function() {
+                                  this.on('fb.client_id', '=', 'uf.client_id')
+                                      .andOnNull('fb.session_id');
+                                });
+                          });
+                    })
+                    .where('uf.thrpy_req_id', recThrpy[0].req_id)
+                    .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
+                    .select('uf.form_cde', 'uf.form_id')
+                    .select(db.raw('COUNT(DISTINCT uf.user_form_id) as total_instances'))
+                    .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN uf.user_form_id END) as completed_instances'))
+                    .select(db.raw('MAX(CASE WHEN uf.is_sent = 1 THEN 1 ELSE 0 END) as is_sent'))
+                    .groupBy('uf.form_id', 'uf.form_cde');
+                }
+
+                const assessmentResult = await assessmentQuery;
+                
+                if (assessmentResult && assessmentResult.length > 0) {
+                  assessmentResult.forEach((row) => {
+                    const formName = row.form_cde;
+                    const totalInstances = parseInt(row.total_instances) || 0;
+                    const completedInstances = parseInt(row.completed_instances) || 0;
+                    
+                    // A form is "done" only if ALL instances are completed
+                    if (totalInstances > 0 && completedInstances === totalInstances) {
+                      if (!assessmentDoneNames.includes(formName)) {
+                        assessmentDoneNames.push(formName);
+                      }
+                    } else {
+                      // Not done: at least one instance incomplete or not sent yet
+                      if (!assessmentNotDoneNames.includes(formName)) {
+                        assessmentNotDoneNames.push(formName);
+                      }
+                    }
+                  });
+                }
+              } catch (error) {
+                logger.error('Error querying assessment stats:', error);
+                assessmentDoneNames = [];
+                assessmentNotDoneNames = [];
+              }
+
+              const attendancePDFTemplt = AttendancePDF(
+                `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`,
+                client_full_name,
+                recUser[0].clam_num,
+                removeReportsSessions.length,
+                attendedSessions,
+                cancelledSessions,
+                homeworkCount,
+                assessmentDoneNames,
+                assessmentNotDoneNames,
+              );
 
                 const attendancePDF = await PDFGenerator(attendancePDFTemplt);
-
+                const counselorFullName = `${recThrpy[0].counselor_first_name} ${recThrpy[0].counselor_last_name}`;         
                 attendanceEmail = attendanceSummaryEmail(
                   recUser[0].email,
                   client_full_name,
                   attendancePDF,
+                  counselorEmail,
+                  counselorFullName,
+                  process.env.BASE_URL || null,
                 );
 
                 const postATTENDANCEFeedback =
@@ -596,9 +834,24 @@ export default class EmailTmplt {
         tenant_fallback_used: (!counselorProfile?.timezone || !clientProfile?.timezone) ? 'yes' : 'no',
       });
 
+      // Get counselor email for Reply-To
+      let counselorEmail = null;
+      if (counselorProfile && counselorProfile.user_id) {
+        try {
+          const counselorUser = await this.common.getUserById(counselorProfile.user_id);
+          if (counselorUser && counselorUser.length > 0) {
+            counselorEmail = counselorUser[0].email;
+            console.log('✅ Counselor email found for Reply-To:', counselorEmail);
+          }
+        } catch (error) {
+          console.warn('Error fetching counselor email:', error);
+        }
+      }
+
       const thrpyReqEmlTmplt = therapyRequestDetailsEmail(
         data.email,
         therapyRequestWithContact,
+        counselorEmail
       );
       const sendThrpyReqEmlTmpltEmail =
         this.sendEmail.sendMail(thrpyReqEmlTmplt);
@@ -665,13 +918,23 @@ export default class EmailTmplt {
         `${process.env.BASE_URL}${process.env.FORMS}consent?client_id=${data.client_id}&form_id=23&tenant_id=${data.tenant_id}&counselor_id=${data.counselor_id}&client_name=${encodedClientName}`,
         data.counselor_id,
         data.tenant_id,
+        data.counselor_email, // Pass counselor email for replyTo
+        data.counselor_name, // Pass counselor name for personalization
+        data.counselor_phone, // Pass counselor phone for contact info
       );
-
-      const sendConsentForm = this.sendEmail.sendMail(sendClientConsentForm);
+      const sendConsentForm =  this.sendEmail.sendMail(sendClientConsentForm);
+      
+      if (sendConsentForm.error) {
+        logger.error('Error sending consent form email:', sendConsentForm.message);
+        return { message: sendConsentForm.message, error: -1 };
+      }
+      
+      logger.info('Consent form email sent successfully to:', data.email);
+      return { message: 'Consent form email sent successfully' };
     } catch (error) {
       console.log(error);
       logger.error(error);
-      return { message: 'Something went wrong' };
+      return { message: 'Something went wrong', error: -1 };
     }
   }
 
@@ -788,6 +1051,123 @@ export default class EmailTmplt {
       const client_full_name = `${userProfile.user_first_name} ${userProfile.user_last_name}`;
       const counselor_full_name = `${thrpyReq.counselor_first_name} ${thrpyReq.counselor_last_name}`;
 
+      // Get counselor email for Reply-To functionality
+      let counselorEmail = null;
+      if (thrpyReq.counselor_id) {
+        try {
+          const counselorProfile = await this.common.getUserProfileByUserProfileId(thrpyReq.counselor_id);
+          if (counselorProfile && counselorProfile.length > 0 && counselorProfile[0].user_id) {
+            const counselorUser = await this.common.getUserById(counselorProfile[0].user_id);
+            if (counselorUser && counselorUser.length > 0) {
+              counselorEmail = counselorUser[0].email;
+            }
+          }
+        } catch (error) {
+          logger.warn('Error fetching counselor email for Reply-To:', error);
+        }
+      }
+
+      // Query homework count for the therapy request
+      let homeworkCount = 0;
+      try {
+        const homeworkQuery = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('homework as h')
+          .join('session as s', 'h.session_id', 's.session_id')
+          .where('s.thrpy_req_id', thrpy_req_id)
+          .andWhere('s.session_id', '<=', session_id)
+          .count('h.homework_id as count');
+        
+        homeworkCount = homeworkQuery[0]?.count || 0;
+      } catch (error) {
+        logger.error('Error querying homework count:', error);
+        homeworkCount = 0;
+      }
+
+      // Query assessment names for the therapy request
+      // assessmentDoneNames = ALL instances of a form are completed (all have feedback)
+      // assessmentNotDoneNames = at least one instance is not completed OR form not sent yet
+      let assessmentDoneNames = [];
+      let assessmentNotDoneNames = [];
+      try {
+        // Get form mode from environment variable
+        const formMode = process.env.FORM_MODE || 'auto';
+        
+        let assessmentQuery;
+        
+        if (formMode === 'treatment_target') {
+          // Get assessments and check if ALL instances have feedback (not just ANY)
+          assessmentQuery = db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('treatment_target_session_forms as tt')
+            .join('forms as f', 'tt.form_id', 'f.form_id')
+            .join('session as s', 'tt.session_id', 's.session_id')
+            .leftJoin('feedback as fb', function() {
+              this.on('fb.form_id', '=', 'tt.form_id')
+                  .andOn(function() {
+                    this.on('fb.session_id', '=', 'tt.session_id')
+                        .orOnNull('fb.session_id');
+                  });
+            })
+            .where('tt.req_id', thrpy_req_id)
+            .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+            .select('f.form_cde', 'f.form_id')
+            .select(db.raw('COUNT(DISTINCT tt.id) as total_instances'))
+            .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN tt.id END) as completed_instances'))
+            .select(db.raw('MAX(CASE WHEN tt.is_sent = 1 THEN 1 ELSE 0 END) as is_sent'))
+            .groupBy('f.form_id', 'f.form_cde');
+        } else {
+          // Get assessments and check if ALL instances have feedback (not just ANY)
+          assessmentQuery = db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('user_forms as uf')
+            .join('session as s', 'uf.session_id', 's.session_id')
+            .leftJoin('feedback as fb', function() {
+              this.on('fb.form_id', '=', 'uf.form_id')
+                  .andOn(function() {
+                    this.on('fb.session_id', '=', 'uf.session_id')
+                        .orOn(function() {
+                          this.on('fb.client_id', '=', 'uf.client_id')
+                              .andOnNull('fb.session_id');
+                        });
+                  });
+            })
+            .where('uf.thrpy_req_id', thrpy_req_id)
+            .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
+            .select('uf.form_cde', 'uf.form_id')
+            .select(db.raw('COUNT(DISTINCT uf.user_form_id) as total_instances'))
+            .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN uf.user_form_id END) as completed_instances'))
+            .select(db.raw('MAX(CASE WHEN uf.is_sent = 1 THEN 1 ELSE 0 END) as is_sent'))
+            .groupBy('uf.form_id', 'uf.form_cde');
+        }
+
+        const assessmentResult = await assessmentQuery;
+        
+        if (assessmentResult && assessmentResult.length > 0) {
+          assessmentResult.forEach((row) => {
+            const formName = row.form_cde;
+            const totalInstances = parseInt(row.total_instances) || 0;
+            const completedInstances = parseInt(row.completed_instances) || 0;
+            
+            // A form is "done" only if ALL instances are completed
+            if (totalInstances > 0 && completedInstances === totalInstances) {
+              if (!assessmentDoneNames.includes(formName)) {
+                assessmentDoneNames.push(formName);
+              }
+            } else {
+              // Not done: at least one instance incomplete or not sent yet
+              if (!assessmentNotDoneNames.includes(formName)) {
+                assessmentNotDoneNames.push(formName);
+              }
+            }
+          });
+        }
+      } catch (error) {
+        logger.error('Error querying assessment stats:', error);
+        assessmentDoneNames = [];
+        assessmentNotDoneNames = [];
+      }
+
       // Generate attendance PDF
       const attendancePDFTemplt = AttendancePDF(
         counselor_full_name,
@@ -795,7 +1175,10 @@ export default class EmailTmplt {
         userProfile.clam_num || userProfile.user_profile_id.toString(),
         nonReportSessions.length,
         attendedSessions,
-        cancelledSessions
+        cancelledSessions,
+        homeworkCount,
+        assessmentDoneNames,
+        assessmentNotDoneNames
       );
 
       const attendancePDF = await PDFGenerator(attendancePDFTemplt);
@@ -804,7 +1187,10 @@ export default class EmailTmplt {
       const attendanceEmail = attendanceSummaryEmail(
         userProfile.email,
         client_full_name,
-        attendancePDF
+        attendancePDF,
+        counselorEmail,
+        counselor_full_name,
+        process.env.BASE_URL || null
       );
 
       // Send email

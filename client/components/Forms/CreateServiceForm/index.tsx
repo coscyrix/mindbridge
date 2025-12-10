@@ -10,19 +10,15 @@ import { CrossIcon } from "../../../public/assets/icons";
 import Spinner from "../../common/Spinner";
 import { useReferenceContext } from "../../../context/ReferenceContext";
 import Cookies from "js-cookie";
+import { useMutationData } from "../../../utils/hooks/useMutationData";
 
 export default function CreateServiceForm({
   isOpen,
   initialData,
   setInitialData,
-  handleCreateService,
-  handleUpdateService,
   setIsOpen,
-  loading,
 }) {
-  console.log(initialData);
   const methods = useForm({ mode: "onTouched" });
-  // const userData = Cookies.get("user");
   const [userData, setUserData] = useState(null);
   const [positionTags, setPositionTags] = useState([]);
   const [serviceIdTags, setServiceIdTags] = useState([]);
@@ -31,7 +27,41 @@ export default function CreateServiceForm({
   const [formButton, setFormButton] = useState("Create");
   const [isAdvanceUpdate, setIsAdvanceUpdate] = useState(true);
   const [userDetails, setUserDetails] = useState({});
-  const { servicesData } = useReferenceContext();
+  const { servicesData, userObj } = useReferenceContext();
+
+  // Mutation for creating service
+  const { mutate: createService, isPending: isCreating } = useMutationData(
+    ["create-service"],
+    async (payload) => {
+      return await api.post("/service", payload);
+    },
+    "services",
+    () => {
+      setIsOpen(false);
+      methods.reset();
+      setPositionTags([]);
+      setServiceIdTags([]);
+      setFields([{ position: "", service_id: "" }]);
+    }
+  );
+
+  // Mutation for updating service
+  const { mutate: updateService, isPending: isUpdating } = useMutationData(
+    ["update-service"],
+    async ({ payload, serviceId }) => {
+      return await api.put(`/service/?service_id=${serviceId}`, payload);
+    },
+    "services",
+    () => {
+      setIsOpen(false);
+      methods.reset();
+      setPositionTags([]);
+      setServiceIdTags([]);
+      setFields([{ position: "", service_id: "" }]);
+    }
+  );
+
+  const isLoading = isCreating || isUpdating;
   const servicesDropdown = servicesData
     ?.filter((service) => service.is_report === 1)
     .map((report) => ({
@@ -119,16 +149,10 @@ export default function CreateServiceForm({
 
     if (initialData) {
       const { service_id } = initialData;
-      handleUpdateService(payload, service_id);
+      updateService({ payload, serviceId: service_id });
     } else {
-      handleCreateService(createPayload);
+      createService(createPayload);
     }
-
-    // Reset form and clear states after success
-    methods.reset();
-    setPositionTags([]);
-    setServiceIdTags([]);
-    setFields([{ position: "", service_id: "" }]);
   };
 
   const addField = () => {
@@ -512,8 +536,9 @@ export default function CreateServiceForm({
             <button
               className={formButton == "Create" && "create-button"}
               type="submit"
+              disabled={isLoading}
             >
-              {formButton}
+              {isLoading ? "Saving..." : formButton}
             </button>
           </div>
         </form>

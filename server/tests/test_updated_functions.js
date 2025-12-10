@@ -103,7 +103,7 @@ async function testUpdatedFunctions() {
         
         // Check if treatment target forms are included in reports
         const treatmentTargetFormsInReport = reportResult.filter(record => 
-          record.form_cde && ['PHQ-9', 'GAD-7', 'WHODAS', 'PCL-5', 'GAS', 'SMART Goals', 'Consent Form', 'Attendance'].includes(record.form_cde)
+          record.form_cde && ['PHQ-9', 'GAD-7', 'WHODAS', 'PCL-5', 'GAS', 'SMART Goals', 'Consent Form', 'SESSION SUM REPORT'].includes(record.form_cde)
         );
         
         console.log(`📊 Found ${treatmentTargetFormsInReport.length} treatment target forms in reports`);

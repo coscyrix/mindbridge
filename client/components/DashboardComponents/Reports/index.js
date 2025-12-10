@@ -4,7 +4,7 @@ import CustomClientDetails from "../../CustomClientDetails";
 import { ReportsContainer } from "./style";
 import { REPORTS_TABLE_DATA_COLUMNS } from "../../../utils/constants";
 
-function Reports({ reportsData }) {
+function Reports({ reportsData, onClientClick }) {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (reportsData) setLoading(false);
@@ -14,7 +14,7 @@ function Reports({ reportsData }) {
       <CustomCard title="Reports">
         <CustomClientDetails
           tableData={{
-            columns: REPORTS_TABLE_DATA_COLUMNS,
+            columns: REPORTS_TABLE_DATA_COLUMNS(onClientClick),
             data: reportsData,
           }}
           defaultSortFieldId={false}

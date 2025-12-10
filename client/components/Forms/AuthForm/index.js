@@ -80,10 +80,11 @@ const AuthForm = () => {
                 adjust treatment plans efficiently.
               </li>
             </ul>
+            <br />
             <p>Login now and bridge the gap between care and innovation</p>
           </div>
         </div>
-        <span>© 2024 MindBridge. All rights reserved.</span>
+        <span>© {new Date().getFullYear()} MindBridge. All rights reserved.</span>
       </LeftPanel>
       <RightPanel>
         {isResetPassword ? (

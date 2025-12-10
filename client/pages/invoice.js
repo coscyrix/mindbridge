@@ -105,7 +105,6 @@ const Invoice = () => {
         `${ApiConfig.feeSplitManagment.getAllfeesSplit}?tenant_id=${tenant_id}` // this is to be changed using 1 for dummy data
       );
       if (response.status == 200) {
-        console.log(response);
         setCounselorConfiguration(
           response?.data?.data?.counselor_specific_configurations
         );
@@ -637,7 +636,7 @@ const Invoice = () => {
             />
             {userObj?.role_id !== 4 && (
               <CustomTab
-                heading="Total Amount to Associate for a Month:"
+                heading="Monthly Associate Total:"
                 value={
                   loading ? (
                     <Skeleton width={120} height={40} />
@@ -740,7 +739,7 @@ const Invoice = () => {
 
             {userObj?.role_id == 4 ? (
               <CustomTab
-                heading={"Total Amount to Vapendama for a Month:"}
+                heading={"Monthly Vapendama Total:"}
                 value={
                   loading ? (
                     <Skeleton width={120} height={40} />

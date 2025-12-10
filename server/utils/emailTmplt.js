@@ -167,11 +167,12 @@ export const treatmentToolsEmail = (
   client_id,
   session_id,
   target_outcome_id = null,
+  counselorEmail = null,
 ) => {
   // Encode client name for URL parameter
   const encodedClientName = encodeURIComponent(client_full_name);
   
-  return {
+  const emailObj = {
     to: email,
     subject: `${tools_name} Assessment`,
     html: `
@@ -187,6 +188,13 @@ export const treatmentToolsEmail = (
       ${EMAIL_DISCLAIMER}
     `,
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 //This function sends an email to the client with a summary of their attendance record.
@@ -194,41 +202,140 @@ export const attendanceSummaryEmail = (
   email,
   client_full_name,
   pdfAttachment, // pdfAttachment is expected to be a Buffer
+  counselorEmail = null,
+  counselorName = 'Your Clinician',
+  counselorWebsite = null,
 ) => {
-  return {
+  const emailObj = {
     to: email,
-    subject: 'Attendance Summary',
+    subject: 'Your Recent Sessions Update',
     html: `
       <p>Hi ${capitalizeFirstLetterOfEachWord(client_full_name)},</p>
-      <p>Please find attached your attendance record summary.</p>
-      <p>Let us know if you have any questions.</p>
-      <p>Thank you,</p>
-      <p>The Counselling Team Member</p>
+      
+      <p>I hope this message finds you well. As part of our commitment to supporting your wellness journey, please find a summary of your recent sessions update, below. This summary can help you track your progress and stay informed of your session history.</p>
+      
+      <ul style="margin: 20px 0;">
+        <li><strong>Attendance Record</strong></li>
+        <li><strong>Assessment Questionnaire taken</strong></li>
+        <li><strong>Homework Sent</strong></li>
+      </ul>
+      
+      <p>Please let me know if you have any questions or if there's anything specific you'd like to discuss in our upcoming sessions.</p>
+      
+      <p>Warm regards,</p>
+      <p><strong>${counselorName}</strong></p>
+      <p><em>Clinician</em></p>
+      
+      ${counselorEmail ? `<p>Email: <a href="mailto:${counselorEmail}">${counselorEmail}</a></p>` : ''}
+      ${counselorWebsite ? `<p>Website: <a href="${counselorWebsite}">${counselorWebsite}</a></p>` : ''}
+      
       ${EMAIL_DISCLAIMER}
     `,
     attachments: [
       { filename: 'attendance-record.pdf', content: pdfAttachment },
     ],
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 // This function sends an email to the client with the consent form for their review and submission.
-export const consentFormEmail = (email, clientName, consentFormLink, counselor_id, tenant_id) => {
-  return {
+export const consentFormEmail = (email, clientName, consentFormLink, counselor_id, tenant_id, counselorEmail = null, counselorName = null, counselorPhone = null) => {
+  const emailObj = {
     to: email,
-    subject: 'Consent Form for Your Review and Submission',
+    subject: 'Important: Consent Form Required for Your Therapy Sessions',
     html: `
+    <style>
+      .consent-container {
+        font-family: Arial, sans-serif;
+        color: #333;
+        line-height: 1.6;
+      }
+      .consent-button {
+        display: inline-block;
+        padding: 15px 30px;
+        margin: 20px 0;
+        background: linear-gradient(90deg, #4CAF50, #2A9D8F);
+        color: white !important;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        text-align: center;
+      }
+      .consent-button:hover {
+        background: linear-gradient(90deg, #45a049, #258f82);
+      }
+      .info-box {
+        background-color: #f0f8ff;
+        border-left: 4px solid #4CAF50;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .contact-info {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+    </style>
+    <div class="consent-container">
       <p>Dear ${capitalizeFirstLetter(clientName)},</p>
+      
       <p>I hope this message finds you well.</p>
-      <p>Attached, you will find the Consent Form document, which is an important step in our process. This document requires careful review and your consent to proceed.</p>
-      <p>Please take some time to review the form at your earliest convenience. Once completed, kindly submit it. If you have any questions or would like further clarification, we can review and finalize it together during our next session.</p>
-      <p><a href="${consentFormLink}">Click here to access the Consent Form</a></p>
-      <p>If you have any concerns or need assistance, don't hesitate to reach out.</p>
-      <p>Thank you,</p>
-      <p>The Counselling Team Member</p>
+      
+      <div class="info-box">
+        <p><strong>Important Step Required:</strong></p>
+        <p>As part of our therapy process, we need you to review and complete a Consent Form. This form is essential for us to proceed with your treatment plan and ensure we have your informed consent.</p>
+      </div>
+      
+      <p>The consent form covers important information about:</p>
+      <ul>
+        <li>Your rights as a client</li>
+        <li>Confidentiality and privacy policies</li>
+        <li>Treatment procedures and expectations</li>
+        <li>Terms of service</li>
+      </ul>
+      
+      <p><strong>Please click the button below to access and complete your consent form:</strong></p>
+      
+      <div style="text-align: center;">
+        <a href="${consentFormLink}" class="consent-button">Access Consent Form</a>
+      </div>
+      
+      <p>The form will only take a few minutes to complete. Once you've reviewed and submitted it, you're all set! If you have any questions or would like to discuss any aspect of the form, we can review it together during our next session.</p>
+      
+      ${counselorName ? `
+      <div class="contact-info">
+        <p><strong>Your Counselor:</strong> ${capitalizeFirstLetter(counselorName)}</p>
+        ${counselorEmail ? `<p><strong>Email:</strong> ${counselorEmail}</p>` : ''}
+        ${counselorPhone ? `<p><strong>Phone:</strong> ${counselorPhone}</p>` : ''}
+        <p>Feel free to reach out if you have any concerns or need assistance.</p>
+      </div>
+      ` : `
+      <p>If you have any concerns or need assistance, please don't hesitate to reach out to your counselor.</p>
+      `}
+      
+      <p>We look forward to working with you on your therapeutic journey.</p>
+      
+      <p>Warm regards,<br/>
+      ${counselorName ? capitalizeFirstLetter(counselorName) + '<br/>' : ''}
+      <strong>MindBridge Therapy Team</strong></p>
+    </div>
       ${EMAIL_DISCLAIMER}
     `,
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 export const welcomeAccountDetailsEmail = (
@@ -240,8 +347,9 @@ export const welcomeAccountDetailsEmail = (
   counselorEmail,
   counselorPhoneNumber,
 ) => {
-  return {
+  const emailObj = {
     to: email,
+    replyTo: counselorEmail, // Replies go directly to the counselor
     subject:
       'Welcome to MindBridge - Account Details for Your Therapy Sessions',
     html: `
@@ -287,7 +395,7 @@ export const welcomeAccountDetailsEmail = (
       }
     </style>
     <p>Dear ${capitalizeFirstLetter(clientName)},</p>
-    <p>Welcome to ${process.env.PROJECT_NAME}! We are pleased to inform you that your account has been successfully created. Below are the details for your reference:</p>
+    <p>Welcome to MindBridge! We are pleased to inform you that your account has been successfully created. Below are the details for your reference:</p>
     <table class="branded-table">
       <thead>
         <tr>
@@ -324,15 +432,17 @@ export const welcomeAccountDetailsEmail = (
     <p>Together, we'll work collaboratively to achieve these goals, using these tools to facilitate a transformative healing process.</p>
     <p>If you have any questions or need assistance accessing your account, please do not hesitate to contact us at ${counselorEmail} or ${counselorPhoneNumber}.</p>
     <p>We're here to support you every step of the way.</p>
-    <p>Thank you,</p>
-    <p>The Counselling Team Member</p>
-    ${EMAIL_DISCLAIMER}
+      <p>Thank you,</p>
+      <p>The Counselling Team Member</p>
+      ${EMAIL_DISCLAIMER}
     `,
   };
+
+  return emailObj;
 };
 
 
-export const therapyRequestDetailsEmail = (email, therapyRequest) => {
+export const therapyRequestDetailsEmail = (email, therapyRequest, counselorEmail = null) => {
   const {
     counselor_first_name,
     counselor_last_name,
@@ -383,7 +493,7 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
     .join('')
     : '<tr><td colspan="5" style="padding: 8px; text-align: center; color: #666;">No session details available</td></tr>';
 
-  return {
+  const emailObj = {
     to: email,
     subject: `${service_name} Session Schedule`,
     html: `
@@ -433,10 +543,17 @@ export const therapyRequestDetailsEmail = (email, therapyRequest) => {
       </div>
     `,
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
-export const dischargeEmail = (email, clientName) => {
-  return {
+export const dischargeEmail = (email, clientName, counselorEmail = null) => {
+  const emailObj = {
     to: email,
     subject: 'Congratulations on Completing Your Therapy Journey!',
     html: `
@@ -451,6 +568,13 @@ export const dischargeEmail = (email, clientName) => {
       </div>
     `,
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 export const additionalServiceEmail = (
@@ -459,8 +583,9 @@ export const additionalServiceEmail = (
   service_name,
   date,
   time,
+  counselorEmail = null,
 ) => {
-  return {
+  const emailObj = {
     to: email,
     subject: 'Additional Service Scheduled',
     html: `
@@ -490,6 +615,13 @@ export const additionalServiceEmail = (
       </div>
     `,
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 export const homeworkEmailAttachment = (
@@ -498,10 +630,11 @@ export const homeworkEmailAttachment = (
   fileBuffer,
   fileName,
   clientName = null,
+  counselorEmail = null,
 ) => {
   const greeting = clientName ? `Hello ${capitalizeFirstLetter(clientName)},` : 'Hello,';
   
-  return {
+  const emailObj = {
     to: email,
     subject: `Homework Assignment: ${homework_title}`,
     html: `
@@ -557,6 +690,13 @@ export const homeworkEmailAttachment = (
     `,
     attachments: [{ filename: fileName, content: fileBuffer }],
   };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
 };
 
 export const onboardingAdminEmail = (data) => {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../../../../utils/auth";
 import { toast } from "react-toastify";
 import { convertLocalToUTCTime } from "../../../../utils/helper";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const useSessionActions = (
   userObj,
@@ -13,6 +14,7 @@ export const useSessionActions = (
   setDischargeOrDelete,
   dischargeOrDelete
 ) => {
+  const queryClient = useQueryClient();
   const [loader, setLoader] = useState(null);
   const [thrpyReqId, setThrpyReqId] = useState(null);
   const [createSessionPayload, setCreateSessionPayload] = useState(null);
@@ -74,6 +76,9 @@ export const useSessionActions = (
             setSessionTableData(data?.rec[0]?.session_obj);
           }
           setShowGeneratedSession(true);
+          
+          // Invalidate clients cache since has_schedule status changed
+          await queryClient.invalidateQueries({ queryKey: ["clients"] });
         }
       }
     } catch (error) {
@@ -103,6 +108,8 @@ export const useSessionActions = (
         );
         if (response.status === 200) {
           toast.success("Client Discharged!");
+          // Invalidate clients cache since has_schedule status changed
+          await queryClient.invalidateQueries({ queryKey: ["clients"] });
         }
       } else {
         response = await api.put(
@@ -114,6 +121,8 @@ export const useSessionActions = (
         if (response.status === 200) {
           await fetchCounselorClient(userProfileId);
           toast.success("Client session data deleted!");
+          // Invalidate clients cache since has_schedule status changed
+          await queryClient.invalidateQueries({ queryKey: ["clients"] });
         }
       }
     } catch (error) {
@@ -217,6 +226,8 @@ export const useSessionActions = (
         );
         if (response.status === 200) {
           toast.success("Therapy request discarded!");
+          // Invalidate clients cache since has_schedule status changed
+          await queryClient.invalidateQueries({ queryKey: ["clients"] });
         }
       }
       if (isClose) {

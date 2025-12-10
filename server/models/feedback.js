@@ -160,8 +160,6 @@ export default class Feedback {
 
       let query;
 
-      console.log('formMode', formMode);
-
 
       if (formMode === 'treatment_target') {
         // Treatment target mode: query treatment target session forms

@@ -7,6 +7,15 @@ RUN yarn install --frozen-lockfile
 # Rebuild the source code only when needed
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Accept build arguments for Next.js public environment variables
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_IMAGES_BASE_URL
+
+# Set environment variables for build time
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_IMAGES_BASE_URL=$NEXT_PUBLIC_IMAGES_BASE_URL
+
 COPY . .
 COPY --from=deps /app/node_modules ./node_modules
 RUN yarn build
@@ -14,7 +23,7 @@ RUN yarn build
 # Production image, copy all the files and run next
 FROM node:20-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Don't run as root
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001

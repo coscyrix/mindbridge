@@ -113,15 +113,15 @@ const CounselorCard = ({
         <p className="counselor-speciality">{speciality}</p>
 
         <div className="info-row">
-          <img src="/assets/icons/locationIcon.svg" />
+          <img src="/assets/images/location.png" alt="Location" className="info-icon" />
           <span className="value">{location}</span>
         </div>
         <div className="info-row">
-          <img src="/assets/icons/callIcon.svg" />
+          <img src="/assets/images/phone.jpg" alt="Phone" className="info-icon" />
           <span className="value">{contact}</span>
         </div>
         <div className="info-row">
-          <img src="/assets/icons/mailIcon.svg" />
+          <img src="/assets/images/mail.png" alt="Email" className="info-icon" />
           <span className="value">{email}</span>
         </div>
 
@@ -153,7 +153,7 @@ const CounselorCard = ({
 
       <div className="card-right">
         <img
-          src="/assets/images/verified-user.svg"
+          src="/assets/images/verified.png"
           className="cardImageFooter"
           alt="Verified"
         />

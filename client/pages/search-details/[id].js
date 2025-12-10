@@ -52,9 +52,9 @@ import CustomLoader from "../../components/Loader/CustomLoader";
 import CustomButton from "../../components/CustomButton";
 import { bookAppointmentSchema } from "../../utils/validationSchema/validationSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { TREATMENT_TARGET } from "../../utils/constants";
+import { TREATMENT_TARGET, IMAGE_BASE_URL } from "../../utils/constants";
 const SearchDetails = () => {
-  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES_BASE_URL;
+  const imageBaseUrl = IMAGE_BASE_URL;
 
   const [selectedTab, setSelectedTab] = useState("Overview");
   const [selectedDate, setSelectedDate] = useState(null);
@@ -97,7 +97,6 @@ const SearchDetails = () => {
       if (id) {
         const response = await CommonServices.getCounselorProfile(id);
         if (response.status === 200 && response.data && response.data.rec) {
-          console.log(response);
           setCounselorDetails(response.data.rec);
           setRelatedCounselors(response.data.related_counselors);
         } else {
@@ -340,7 +339,7 @@ const SearchDetails = () => {
               <DoctorDetails>
                 <DetailItem>
                   <span className="icon">
-                    <img src="/assets/icons/gynecology.svg" />
+                    <img src="/assets/images/specialist.png" alt="Specialties" className="detail-icon" />
                   </span>
                   <div>
                     <h3>Specialties</h3>
@@ -357,7 +356,7 @@ const SearchDetails = () => {
                 </DetailItem>
                 <DetailItem>
                   <span className="icon">
-                    <img src="/assets/icons/fontisto_person.svg" />
+                    <img src={counselor.service_modalities == 'online' ? '/assets/images/online.png' : '/assets/images/offline.png'} alt="Service Modalities" className="detail-icon" />
                   </span>
                   <div>
                     <h3>Service Modalities</h3>
@@ -366,7 +365,7 @@ const SearchDetails = () => {
                 </DetailItem>
                 <DetailItem>
                   <span className="icon">
-                    <img src="/assets/icons/date-today.svg" />
+                    <img src="/assets/images/availability.png" alt="Availability" className="detail-icon" />
                   </span>
                   <div>
                     <h3>Availability</h3>
@@ -379,7 +378,7 @@ const SearchDetails = () => {
                 </DetailItem>
                 <DetailItem>
                   <span className="icon">
-                    <img src="/assets/icons/lineicons_eye.svg" />
+                    <img src="/assets/images/crowd.png" alt="Seen by Patient" className="detail-icon" />
                   </span>
                   <div>
                     <h3>Seen by Patient</h3>

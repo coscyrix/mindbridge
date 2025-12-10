@@ -8,6 +8,9 @@ export const AttendancePDF =
     total_sessions,
     total_attended_sessions,
     total_cancellation_total,
+    total_homework_sent = 0,
+    assessment_done = [],
+    assessment_not_done = [],
   ) =>
   (doc) => {
     // Title
@@ -30,28 +33,39 @@ export const AttendancePDF =
     doc
       .fontSize(12)
       .text(
-        `The Session Overview presents a comprehensive view of active sessions, allowing for efficient tracking of attendance, cancellations, and engagement patterns.`,
+        `The Session Overview presents a comprehensive view of active sessions, allowing for efficient tracking of attendance, cancellations, homework assignments, assessments, and engagement patterns.`,
       );
 
     // Table Header
     doc
       .moveDown()
-      .fontSize(14)
+      .fontSize(16)
       .text(`Client Session Summary`, { bold: true })
       .moveDown();
     doc.fontSize(12);
+    
+    // Format assessment names
+    const assessmentDoneText = Array.isArray(assessment_done) && assessment_done.length > 0 
+      ? assessment_done.join(', ') 
+      : (typeof assessment_done === 'number' ? assessment_done.toString() : 'None');
+    const assessmentNotDoneText = Array.isArray(assessment_not_done) && assessment_not_done.length > 0 
+      ? assessment_not_done.join(', ') 
+      : (typeof assessment_not_done === 'number' ? assessment_not_done.toString() : 'None');
+    
     const table = [
-      [`Field`, `Details`],
       [`Client Name`, `${capitalizeFirstLetterOfEachWord(client_full_name)}`],
       [`Serial Number`, `${client_clam_nbr}`],
       [`Total Sessions`, `${total_sessions}`],
       [`Total Attendance`, `${total_attended_sessions}`],
       [`Total Cancellations`, `${total_cancellation_total}`],
+      [`Total Homework Sent`, `${total_homework_sent}`],
+      [`Assessment Done`, assessmentDoneText],
+      [`Assessment Not Done`, assessmentNotDoneText],
     ];
 
     // Draw table
     const tableStartY = doc.y;
-    const columnWidths = [200, 200];
+    const columnWidths = [200, 350];
     const rowHeight = 25;
 
     // Draw table headers

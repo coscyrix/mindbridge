@@ -3,6 +3,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import relativeTime from "dayjs/plugin/relativeTime";
+
 export function mapFormDataToQuestions(formData, allQuestions) {
   const result = [];
   for (const [code, score] of Object.entries(formData)) {

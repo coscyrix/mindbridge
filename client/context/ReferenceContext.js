@@ -55,17 +55,14 @@ export const ReferenceContextProvider = ({ children }) => {
 
   useEffect(() => {
     const data = localStorage.getItem("user");
-    console.log(data, "in use data");
     if (data) {
       const userDetails = JSON.parse(localStorage.getItem("user"));
-      console.log(userDetails, "in use userDetails");
       if (userDetails) {
         setUserObj(userDetails);
       }
     }
   }, []);
 
-  console.log(userObj, "in use userObj::::");
 
   return (
     <ReferenceContext.Provider

@@ -51,10 +51,21 @@ export default class ServiceTemplate {
 
   async updateTemplate(template_service_id, data) {
     try {
+      // Stringify JSON fields if they are objects
+      const updateData = { ...data };
+      
+      if (updateData.svc_report_formula && typeof updateData.svc_report_formula === 'object') {
+        updateData.svc_report_formula = JSON.stringify(updateData.svc_report_formula);
+      }
+      
+      if (updateData.svc_formula && typeof updateData.svc_formula === 'object') {
+        updateData.svc_formula = JSON.stringify(updateData.svc_formula);
+      }
+      
       await db.withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('service_templates')
         .where('template_service_id', template_service_id)
-        .update(data);
+        .update(updateData);
       return { message: 'Template updated' };
     } catch (error) {
       logger.error('Error updating template:', error);

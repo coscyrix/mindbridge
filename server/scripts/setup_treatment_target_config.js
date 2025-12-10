@@ -69,7 +69,7 @@ const exampleTableData = [
   },
   {
     treatment_target: 'General Mental Health',
-    tool: 'Attendance',
+    tool: 'SESSION SUM REPORT',
     purpose: 'Track session attendance and engagement',
     frequency: 'Sessions 1, 5, 10, 15, 20'
   }
