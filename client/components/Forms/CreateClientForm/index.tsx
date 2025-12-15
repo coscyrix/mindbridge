@@ -571,7 +571,6 @@ function CreateClientForm({
             <div className="fields">
               <CustomInputField
                 name="email"
-                disabled={formButton === "Create" ? false : true}
                 label="Email*"
                 placeholder="Enter your email"
                 type="email"
