@@ -63,6 +63,11 @@ export const useSessionActions = (
           intake_dte: payloadDate,
         };
 
+        // Add number_of_sessions if limit_sessions toggle is on
+        if (formData?.limit_sessions && formData?.number_of_sessions) {
+          payload.number_of_sessions = Number(formData.number_of_sessions);
+        }
+
         const response = await api.post("/thrpyReq", payload);
         if (response.status === 200) {
           const { data } = response;
@@ -78,7 +83,10 @@ export const useSessionActions = (
           setShowGeneratedSession(true);
           
           // Invalidate clients cache since has_schedule status changed
-          await queryClient.invalidateQueries({ queryKey: ["clients"] });
+          await queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] === "clients",
+            refetchType: "all",
+          });
         }
       }
     } catch (error) {
@@ -109,8 +117,12 @@ export const useSessionActions = (
         if (response.status === 200) {
           toast.success("Client Discharged!");
           // Invalidate clients cache since has_schedule status changed
-          await queryClient.invalidateQueries({ queryKey: ["clients"] });
-        }
+          await queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] === "clients",
+            refetchType: "all",
+          }); 
+          
+          }
       } else {
         response = await api.put(
           `thrpyReq/?req_id=${id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
@@ -122,7 +134,10 @@ export const useSessionActions = (
           await fetchCounselorClient(userProfileId);
           toast.success("Client session data deleted!");
           // Invalidate clients cache since has_schedule status changed
-          await queryClient.invalidateQueries({ queryKey: ["clients"] });
+          await queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] === "clients",
+            refetchType: "all",
+          });        
         }
       }
     } catch (error) {
@@ -161,6 +176,11 @@ export const useSessionActions = (
         toast.success("Session status updated successfully!");
         await getAllSessionOfClients();
         dischargeOrDelete == "Delete" && setDischargeOrDelete("Discharge");
+        // Invalidate clients cache since session status changed
+        await queryClient.invalidateQueries({
+          predicate: (query) => query.queryKey[0] === "clients",
+          refetchType: "all",
+        });
       }
     } catch (error) {
       toast.error(error?.message || "Error while updating the session status!");
@@ -192,6 +212,11 @@ export const useSessionActions = (
         setShowResetConfirmationModal(false);
         toast.success("Session status updated successfully!");
         await getAllSessionOfClients();
+        // Invalidate clients cache since session status changed
+        await queryClient.invalidateQueries({
+          predicate: (query) => query.queryKey[0] === "clients",
+          refetchType: "all",
+        });
       }
     } catch (error) {
       toast.error("Error while updating the session status!");
@@ -227,8 +252,10 @@ export const useSessionActions = (
         if (response.status === 200) {
           toast.success("Therapy request discarded!");
           // Invalidate clients cache since has_schedule status changed
-          await queryClient.invalidateQueries({ queryKey: ["clients"] });
-        }
+          await queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] === "clients",
+            refetchType: "all",
+          });        }
       }
       if (isClose) {
         setIsOpen(false);

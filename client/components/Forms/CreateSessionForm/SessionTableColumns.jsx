@@ -79,11 +79,18 @@ export const getSessionTableColumns = ({
       minWidth: "220px",
       cell: (row, rowIndex) => {
         const sessionStatus = row?.session_status?.toLowerCase();
+        const isInactive = sessionStatus === "inactive";
         const showNoShowButtonDisplay =
           initialData &&
           sessionStatus != "show" &&
           sessionStatus != "no-show" &&
-          sessionStatus != "discharged";
+          sessionStatus != "discharged" &&
+          !isInactive;
+
+        // Don't show action buttons for inactive sessions
+        if (isInactive) {
+          return <div>—</div>;
+        }
 
         return (
           <div style={{ cursor: "pointer" }}>
@@ -155,7 +162,8 @@ export const getSessionTableColumns = ({
             )}
             {initialData &&
               [3, 4].includes(userObj?.role_id) &&
-              isWithin24Hours(row.intake_date, row.scheduled_time) && (
+              isWithin24Hours(row.intake_date, row.scheduled_time) &&
+              !isInactive && (
                 <CustomButton
                   type="button"
                   title="Reset"
@@ -168,7 +176,7 @@ export const getSessionTableColumns = ({
                   disabled={showNoShowButtonDisplay}
                 />
               )}
-            {!initialData && (
+            {!initialData && !isInactive && (
               <CustomButton
                 type="button"
                 title="Edit"

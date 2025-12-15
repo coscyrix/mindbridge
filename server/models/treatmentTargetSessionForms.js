@@ -49,6 +49,11 @@ export default class TreatmentTargetSessionForms {
 
       return { message: 'Treatment target session forms created successfully' };
     } catch (error) {
+      // Handle duplicate entry error gracefully
+      if (error.code === 'ER_DUP_ENTRY') {
+        logger.warn('Duplicate entry detected, skipping insert:', error.message);
+        return { message: 'Treatment target session forms created successfully (some duplicates skipped)' };
+      }
       console.error(error);
       logger.error(error);
       return { message: 'Error creating treatment target session forms', error: -1 };

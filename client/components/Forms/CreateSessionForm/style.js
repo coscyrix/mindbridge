@@ -144,6 +144,49 @@ export const CreateSessionFormWrapper = styled.div`
       }
     }
 
+    .limit-sessions-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: 8px;
+
+      .toggle-section {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0;
+        
+        .toggle-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: #333;
+          margin: 0;
+          transition: color 0.2s ease;
+
+          &.disabled {
+            color: #999;
+            opacity: 0.6;
+          }
+        }
+      }
+
+      .session-number-dropdown {
+        margin-top: 0;
+        animation: fadeIn 0.2s ease-in;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     input {
       border: 1px solid #e1e1e1;
 
@@ -175,6 +218,9 @@ export const CreateSessionFormWrapper = styled.div`
 
     .select-wrapper {
       width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
       label {
         svg {
           color: #2196f3;

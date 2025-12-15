@@ -1840,6 +1840,20 @@ export const CONDITIONAL_ROW_STYLES = {
         },
       },
     },
+    {
+      when: (row) => row.session_status?.toLowerCase() === "inactive",
+      style: {
+        opacity: 0.6,
+        backgroundColor: "#f8f9fa",
+        color: "#6c757d",
+        fontStyle: "italic",
+        "&:hover": {
+          backgroundColor: "#e9ecef",
+          opacity: 0.7,
+          cursor: "not-allowed",
+        },
+      },
+    },
   ],
 };
 

@@ -37,6 +37,7 @@ export default class ThrpyReqService {
         .required(),
       intake_dte: joi.date().required(),
       tenant_id: joi.number().required(),
+      number_of_sessions: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);

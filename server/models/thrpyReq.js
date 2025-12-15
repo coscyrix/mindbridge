@@ -6,6 +6,7 @@ const knex = require('knex');
 import dotenv from 'dotenv';
 import logger from '../config/winston.js';
 import DBconn from '../config/db.config.js';
+import prisma from '../utils/prisma.js';
 
 const db = knex(DBconn.dbConn.development);
 import Session from './session.js';
@@ -294,12 +295,20 @@ export default class ThrpyReq {
         }
       }
 
+      // Convert session_format_id from string/number "1"/"2" or 1/2 to Prisma enum values
+      const sessionFormatId = 
+        data.session_format_id === "1" || data.session_format_id === 1 ? "ONLINE" :
+        data.session_format_id === "2" || data.session_format_id === 2 ? "IN_PERSON" :
+        data.session_format_id === "ONLINE" || data.session_format_id === "IN_PERSON" || data.session_format_id === "IN-PERSON" 
+          ? data.session_format_id === "IN-PERSON" ? "IN_PERSON" : data.session_format_id
+          : "ONLINE"; // Default to ONLINE
+
       // Prepare the therapy request object
       const tmpThrpyReq = {
         counselor_id: data.counselor_id,
         client_id: data.client_id,
         service_id: data.service_id,
-        session_format_id: data.session_format_id,
+        session_format_id: sessionFormatId,
         req_dte: req_dte,
         req_time: req_time,
         session_desc: svc.service_code,
@@ -307,13 +316,12 @@ export default class ThrpyReq {
         treatment_target: treatmentTarget, // Add treatment target to therapy request
       };
 
-      // Insert the therapy request into the database
-      const postThrpyReq = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('thrpy_req')
-        .insert(tmpThrpyReq);
+      // Insert the therapy request into the database using Prisma
+      const postThrpyReq = await prisma.thrpy_req.create({
+        data: tmpThrpyReq,
+      });
 
-      if (!postThrpyReq) {
+      if (!postThrpyReq || !postThrpyReq.req_id) {
         logger.error('Error creating therapy request');
         return { message: 'Error creating therapy request', error: -1 };
       }
@@ -330,6 +338,9 @@ export default class ThrpyReq {
 
         // Initialize currentDate using UTC to avoid timezone issues
         let currentDate = new Date(`${req_dte}T00:00:00Z`);
+
+        // Determine the active session limit
+        const activeSessionLimit = data.number_of_sessions ? Number(data.number_of_sessions) : svc.nbr_of_sessions;
 
         // For the first session, ensure it's not on a weekend
         while (
@@ -359,7 +370,7 @@ export default class ThrpyReq {
           // Prepare the session object
           const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
           const tmpSession = {
-            thrpy_req_id: postThrpyReq[0],
+            thrpy_req_id: postThrpyReq.req_id,
             service_id: data.service_id,
             intake_date: intakeDate,
             scheduled_time: req_time,
@@ -369,6 +380,12 @@ export default class ThrpyReq {
             tenant_id: data.tenant_id,
             ...sessionAmounts
           };
+
+          // Set session_status to INACTIVE if session number exceeds the limit
+          // Only apply to regular sessions (not reports or discharge sessions)
+          if (i + 1 > activeSessionLimit) {
+            tmpSession.session_status = 'INACTIVE';
+          }
 
           // Debug logging for session creation
           console.log(`🔍 DEBUG: Creating session ${i + 1}/${svc.nbr_of_sessions}:`, {
@@ -442,7 +459,7 @@ export default class ThrpyReq {
               // Create a NEW report session object (don't modify the existing one)
               const reportSessionAmounts = this.calculateSessionAmounts(Number(reportService.rec[0].total_invoice), ref_fees[0], Number(reportService.rec[0].gst));
               const reportSession = {
-                thrpy_req_id: postThrpyReq[0],
+                thrpy_req_id: postThrpyReq.req_id,
                 service_id: reportService.rec[0].service_id,
                 intake_date: intakeDate,
                 scheduled_time: req_time,
@@ -490,7 +507,7 @@ export default class ThrpyReq {
         // Prepare the discharge session object
         const dischargeSessionAmounts = this.calculateSessionAmounts(Number(drSvc.total_invoice), ref_fees[0], Number(drSvc.gst));
         const dischargeSession = {
-          thrpy_req_id: postThrpyReq[0],
+          thrpy_req_id: postThrpyReq.req_id,
           service_id: drSvc.service_id,
           intake_date: dischargeDate,
           scheduled_time: req_time,
@@ -558,6 +575,9 @@ export default class ThrpyReq {
         // Initialize currentDate using UTC to avoid timezone issues
         let currentDate = new Date(`${req_dte}T00:00:00Z`);
 
+        // Determine the active session limit
+        const activeSessionLimit = data.number_of_sessions ? Number(data.number_of_sessions) : svc.nbr_of_sessions;
+
         for (let i = 0; i < svc.nbr_of_sessions; i++) {
           if (i !== 0) {
             let daysToAdd = svcFormula[i - 1];
@@ -591,7 +611,7 @@ export default class ThrpyReq {
           // Prepare the session object
           const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
           const tmpSession = {
-            thrpy_req_id: postThrpyReq[0],
+            thrpy_req_id: postThrpyReq.req_id,
             service_id: data.service_id,
             intake_date: intakeDate,
             scheduled_time: req_time,
@@ -601,6 +621,12 @@ export default class ThrpyReq {
             tenant_id: data.tenant_id,
             ...sessionAmounts
           };
+
+          // Set session_status to INACTIVE if session number exceeds the limit
+          // Only apply to regular sessions (not reports or discharge sessions)
+          if (i + 1 > activeSessionLimit) {
+            tmpSession.session_status = 'INACTIVE';
+          }
 
           console.log('🔍 DEBUG: Created session object (days apart):', {
             session_number: i + 1,
@@ -667,7 +693,7 @@ export default class ThrpyReq {
               // Create a NEW report session object (don't modify the existing one)
               const reportSessionAmounts = this.calculateSessionAmounts(Number(reportService.rec[0].total_invoice), ref_fees[0], Number(reportService.rec[0].gst));
               const reportSession = {
-                thrpy_req_id: postThrpyReq[0],
+                thrpy_req_id: postThrpyReq.req_id,
                 service_id: reportService.rec[0].service_id,
                 intake_date: intakeDate,
                 scheduled_time: req_time,
@@ -713,7 +739,7 @@ export default class ThrpyReq {
         // Prepare the discharge session object
         const dischargeSessionAmounts = this.calculateSessionAmounts(Number(drSvc.total_invoice), ref_fees[0], Number(drSvc.gst));
         const dischargeSession = {
-          thrpy_req_id: postThrpyReq[0],
+          thrpy_req_id: postThrpyReq.req_id,
           service_id: drSvc.service_id,
           intake_date: dischargeDate,
           scheduled_time: req_time,
@@ -779,7 +805,7 @@ export default class ThrpyReq {
 
       // Load forms using the new mode-based system
       const loadForms = await this.loadSessionFormsWithMode({
-        req_id: postThrpyReq[0],
+        req_id: postThrpyReq.req_id,
         tenant_id: data.tenant_id,
         mode: "treatment_target",
         treatment_target: treatmentTarget,
@@ -793,7 +819,7 @@ export default class ThrpyReq {
       }
 
       const ThrpyReq = await this.getThrpyReqById({
-        req_id: postThrpyReq[0],
+        req_id: postThrpyReq.req_id,
       });
 
       if (!ThrpyReq) {

@@ -1,7 +1,8 @@
-import React from "react";
-import { Controller } from "react-hook-form";
+import React, { useMemo, useEffect } from "react";
+import { Controller, useWatch } from "react-hook-form";
 import CustomMultiSelect from "../../CustomMultiSelect";
 import CustomInputField from "../../CustomInputField";
+import ToggleSwitch from "../../CustomButton/ToggleButton";
 import { InfoIcon } from "../../../public/assets/icons";
 import { Tooltip } from "react-tooltip";
 
@@ -10,6 +11,7 @@ const SessionFormFields = ({
   methods,
   clientsDropdown,
   servicesDropdown,
+  servicesData,
   sessionFormatDropdown,
   handleSessionFormatChangeWithConfirmation,
   handleIntakeDate,
@@ -19,6 +21,74 @@ const SessionFormFields = ({
   infoTooltipContent,
 }) => {
   if (initialData) return null;
+
+  // Watch the service_id to check if service is selected
+  const serviceId = useWatch({
+    control: methods.control,
+    name: "service_id",
+    defaultValue: "",
+  });
+
+  // Watch the limit_sessions toggle value
+  const limitSessionsEnabled = useWatch({
+    control: methods.control,
+    name: "limit_sessions",
+    defaultValue: false,
+  });
+
+  // Get the actual service ID value (handle both object and primitive)
+  const actualServiceId = useMemo(() => {
+    if (!serviceId) return null;
+    if (typeof serviceId === 'object' && serviceId.value !== undefined) {
+      return serviceId.value;
+    }
+    return serviceId;
+  }, [serviceId]);
+
+  // Check if service is selected
+  const isServiceSelected = useMemo(() => {
+    return actualServiceId !== null && actualServiceId !== "" && actualServiceId !== undefined;
+  }, [actualServiceId]);
+
+  // Get the selected service object to access nbr_of_sessions
+  const selectedService = useMemo(() => {
+    if (!isServiceSelected || !servicesData || !Array.isArray(servicesData)) {
+      return null;
+    }
+    return servicesData.find(service => service.service_id === actualServiceId) || null;
+  }, [isServiceSelected, servicesData, actualServiceId]);
+
+  // Get max number of sessions from selected service
+  const maxSessions = useMemo(() => {
+    if (selectedService && selectedService.nbr_of_sessions) {
+      return parseInt(selectedService.nbr_of_sessions, 10) || 100;
+    }
+    return 100; // Default to 100 if no service selected or no nbr_of_sessions
+  }, [selectedService]);
+
+  // Generate options for number of sessions (1 to maxSessions from selected service)
+  const sessionNumberOptions = useMemo(() => {
+    const max = maxSessions > 0 ? maxSessions : 100;
+    return Array.from({ length: max }, (_, i) => ({
+      label: (i + 1).toString(),
+      value: i + 1,
+    }));
+  }, [maxSessions]);
+
+  // Reset toggle and number of sessions when service is deselected
+  // Also reset if selected number exceeds new service's max sessions
+  useEffect(() => {
+    if (!isServiceSelected) {
+      methods.setValue("limit_sessions", false);
+      methods.setValue("number_of_sessions", null);
+    } else {
+      // If service changed and current selected number exceeds new max, reset it
+      const currentNumber = methods.getValues("number_of_sessions");
+      if (currentNumber && currentNumber > maxSessions) {
+        methods.setValue("number_of_sessions", null);
+      }
+    }
+  }, [isServiceSelected, maxSessions, methods]);
 
   return (
     <>
@@ -150,6 +220,72 @@ const SessionFormFields = ({
           />
         </div>
       )}
+
+      <div className="limit-sessions-wrapper">
+        <div className="toggle-section">
+          <label className={`toggle-label ${!isServiceSelected ? 'disabled' : ''}`}>
+            Limit Sessions
+          </label>
+          <Controller
+            name="limit_sessions"
+            control={methods.control}
+            defaultValue={false}
+            render={({ field }) => (
+              <ToggleSwitch
+                title=""
+                isOn={isServiceSelected ? field.value : false}
+                disabled={!isServiceSelected}
+                isBlue={true}
+                onToggle={(value) => {
+                  if (isServiceSelected) {
+                    field.onChange(value);
+                    // Reset number of sessions when toggle is turned off
+                    if (!value) {
+                      methods.setValue("number_of_sessions", null);
+                    }
+                  }
+                }}
+              />
+            )}
+          />
+        </div>
+
+        {limitSessionsEnabled && isServiceSelected && (
+          <div className="select-wrapper session-number-dropdown">
+            <label>Number of Sessions*</label>
+            <Controller
+              name="number_of_sessions"
+              control={methods.control}
+              defaultValue={null}
+              rules={{
+                required: limitSessionsEnabled ? "This field is required" : false,
+              }}
+              render={({ field }) => (
+                <CustomMultiSelect
+                  {...field}
+                  options={sessionNumberOptions}
+                  placeholder="Select number of sessions"
+                  isMulti={false}
+                  isDisabled={initialData}
+                  onChange={(value) => {
+                    field.onChange(value?.value || null);
+                  }}
+                  value={
+                    field.value
+                      ? sessionNumberOptions.find((opt) => opt.value === field.value)
+                      : null
+                  }
+                />
+              )}
+            />
+            {methods.formState.errors.number_of_sessions && (
+              <p className="custom-error-message">
+                {methods.formState.errors.number_of_sessions.message}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </>
   );
 };

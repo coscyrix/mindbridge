@@ -394,6 +394,7 @@ function CreateSessionForm({
                 methods={methods}
                 clientsDropdown={clientsDropdown}
                 servicesDropdown={servicesDropdown}
+                servicesData={servicesData}
                 sessionFormatDropdown={sessionFormatDropdown}
                 handleSessionFormatChangeWithConfirmation={
                   handleSessionFormatChangeWithConfirmation

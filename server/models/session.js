@@ -101,8 +101,14 @@ export default class Session {
         session_counselor_amt: counselorAmount,
         session_system_amt: systemAmount,
       };
+      
+      // Preserve session_status if provided (e.g., INACTIVE)
+      if (data.session_status) {
+        tmpSession.session_status = data.session_status;
+      }
 
       // If intake_date is in the past, mark as NO-SHOW (3). Compare using Pacific time date.
+      // Only override if session_status wasn't explicitly set (e.g., not INACTIVE)
       try {
         const todayPacific = this.getTodayInTimezone('America/Los_Angeles');
         const intakeDatePart =
@@ -111,7 +117,7 @@ export default class Session {
                 ? data.intake_date.split('T')[0]
                 : data.intake_date)
             : '';
-        if (intakeDatePart && intakeDatePart < todayPacific && tmpSession.is_report !== 1) {
+        if (intakeDatePart && intakeDatePart < todayPacific && tmpSession.is_report !== 1 && !data.session_status) {
           tmpSession.session_status = 3; // NO-SHOW
         }
       } catch (e) {

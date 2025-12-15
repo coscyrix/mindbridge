@@ -6,6 +6,8 @@ const ToggleContainer = styled.div`
   align-items: center;
   justify-content:space-between;
   gap: 12px;
+  opacity: ${props => props.disabled ? 0.6 : 1};
+  pointer-events: ${props => props.disabled ? 'none' : 'auto'};
 `;
 
 const SwitchWrapper = styled.label`
@@ -13,17 +15,19 @@ const SwitchWrapper = styled.label`
   display: inline-block;
   width: 50px;
   height: 26px;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
 `;
 
 const HiddenCheckbox = styled.input.attrs({ type: "checkbox" })`
   opacity: 0;
   width: 0;
   height: 0;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
 `;
 
 const Slider = styled.span`
   position: absolute;
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   background-color: #ccc;
   border-radius: 34px;
   top: 0;
@@ -32,6 +36,7 @@ const Slider = styled.span`
   bottom: 0;
   transition: 0.4s;
   min-width: 50px;
+  opacity: ${props => props.disabled ? 0.5 : 1};
   &::before {
     content: "";
     height: 20px;
@@ -46,7 +51,7 @@ const Slider = styled.span`
 `;
 
 const CheckedSlider = styled(Slider)`
-  background-color: #4caf50;
+  background-color: ${props => props.isBlue ? 'var(--primary-button-color, #1b6bc0)' : '#4caf50'};
   min-width: 50px;
 
   &::before {
@@ -54,16 +59,23 @@ const CheckedSlider = styled(Slider)`
   }
 `;
 
-const ToggleSwitch = ({ title = "", isOn, onToggle }) => {
+const ToggleSwitch = ({ title = "", isOn, onToggle, disabled = false, isBlue = false }) => {
+  const handleToggle = (checked) => {
+    if (!disabled && onToggle) {
+      onToggle(checked);
+    }
+  };
+
   return (
-    <ToggleContainer>
+    <ToggleContainer disabled={disabled}>
       <span>{title}</span>
-      <SwitchWrapper>
+      <SwitchWrapper disabled={disabled}>
         <HiddenCheckbox
           checked={isOn}
-          onChange={(e) => onToggle(e.target.checked)}
+          disabled={disabled}
+          onChange={(e) => handleToggle(e.target.checked)}
         />
-        {isOn ? <CheckedSlider /> : <Slider />}
+        {isOn ? <CheckedSlider disabled={disabled} isBlue={isBlue} /> : <Slider disabled={disabled} />}
       </SwitchWrapper>
     </ToggleContainer>
   );
