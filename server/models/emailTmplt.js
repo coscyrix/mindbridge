@@ -660,6 +660,202 @@ export default class EmailTmplt {
   //////////////////////////////////////////
 
   /**
+   *
+   * @param {Object} data
+   * @param {number} data.req_id - Therapy request ID
+   * @param {number} data.client_id - Client ID (optional, will fall back to thrpy_req.client_id)
+   * @param {number} data.counselor_id - Counselor ID (optional, will fall back to thrpy_req.counselor_id)
+   * @param {Array<string>} data.form_codes - Array of form_cde values (e.g. ["PHQ-9", "PCL-5"])
+   */
+  async sendManualTreatmentToolEmailForRequest(data) {
+    try {
+      const { req_id, client_id, counselor_id, form_codes } = data;
+
+      console.log('data', data)
+
+      if (!Array.isArray(form_codes) || form_codes.length === 0) {
+        logger.warn('sendManualTreatmentToolEmailForRequest called with no form_codes', {
+          req_id,
+          client_id,
+          counselor_id,
+        });
+        return { message: 'No forms to send', warn: -1 };
+      }
+
+      logger.info('📨 Manual treatment tool email requested', {
+        req_id,
+        client_id,
+        counselor_id,
+        form_codes,
+      });
+
+      // Get therapy request (to resolve client, counselor, sessions)
+      const recThrpy = await this.common.getThrpyReqById(req_id);
+      if (!recThrpy || !Array.isArray(recThrpy) || !recThrpy[0]) {
+        logger.error('Therapy request not found for manual tools email', { req_id });
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
+      const thrpy = recThrpy[0];
+
+      // Resolve client and counselor IDs
+      const clientId = client_id || thrpy.client_id;
+      const counselorId = counselor_id || thrpy.counselor_id;
+
+      // Get client profile
+      const recUser = await this.common.getUserProfileByUserProfileId(clientId);
+      if (!recUser || !Array.isArray(recUser) || !recUser[0]) {
+        logger.error('User profile not found for manual tools email', { client_id: clientId });
+        return { message: 'User profile not found', error: -1 };
+      }
+
+      const clientProfile = recUser[0];
+      const client_full_name =
+        (clientProfile.user_first_name || '') +
+        ' ' +
+        (clientProfile.user_last_name || '');
+
+      // Get tenant ID for form lookup
+      const tenantRow = await this.common.getUserTenantId({
+        user_profile_id: counselorId,
+      });
+      const tenantIdValue = tenantRow?.[0]?.tenant_id || null;
+
+      console.log('tenantIdValue', tenantIdValue)
+      console.log('counselorId', counselorId)
+      console.log(tenantRow, 'tenantRow')
+
+      // Get counselor email for Reply-To
+      let counselorEmail = null;
+      if (counselorId) {
+        try {
+          const counselorProfile =
+            await this.common.getUserProfileByUserProfileId(counselorId);
+          if (
+            counselorProfile &&
+            counselorProfile.length > 0 &&
+            counselorProfile[0].user_id
+          ) {
+            const counselorUser = await this.common.getUserById(
+              counselorProfile[0].user_id,
+            );
+            if (counselorUser && counselorUser.length > 0) {
+              counselorEmail = counselorUser[0].email;
+              logger.info('✅ Counselor email found for manual tools Reply-To', {
+                counselor_id: counselorId,
+                counselorEmail,
+              });
+            }
+          }
+        } catch (error) {
+          logger.warn('Error fetching counselor email for manual tools Reply-To', {
+            error: error?.message || error,
+          });
+        }
+      }
+
+      // Choose a representative session_id for links (first non-report session, else first)
+      let sessionIdForLinks = null;
+      if (Array.isArray(thrpy.session_obj) && thrpy.session_obj.length > 0) {
+        const nonReportSession = thrpy.session_obj.find((s) => s.is_report !== 1);
+        sessionIdForLinks =
+          nonReportSession?.session_id || thrpy.session_obj[0].session_id;
+      }
+
+      if (!sessionIdForLinks) {
+        logger.warn(
+          'No session found for therapy request when sending manual tools email; links will be missing session context',
+          { req_id },
+        );
+      }
+
+      // Get client's target outcome ID (optional)
+      let clientTargetOutcomeId = null;
+      try {
+        const clientTargetOutcome =
+          await this.userTargetOutcome.getUserTargetOutcomeLatest({
+            user_profile_id: clientId,
+          });
+
+        if (clientTargetOutcome && clientTargetOutcome.length > 0) {
+          clientTargetOutcomeId = clientTargetOutcome[0].target_outcome_id;
+        }
+      } catch (error) {
+        logger.error('Error retrieving client target outcome for manual tools', {
+          error: error?.message || error,
+        });
+      }
+
+      let sentCount = 0;
+
+      for (const code of form_codes) {
+        // Resolve form by code, similar to resolveFormRecord() logic
+        console.log(code);
+        const formRecord = await this.form.getFormByCode({
+          form_cde: code,
+        });
+        
+
+        if (!formRecord || formRecord.error || formRecord.length === 0) {
+          logger.warn('Form not found for manual tools email', {
+            form_code: code,
+            tenant_id: tenantIdValue,
+          });
+          continue;
+        }
+
+        const form = Array.isArray(formRecord) ? formRecord[0] : formRecord;
+
+        const toolsEmail = treatmentToolsEmail(
+          clientProfile.email,
+          client_full_name,
+          code.toUpperCase(),
+          form.form_id,
+          clientId,
+          sessionIdForLinks,
+          clientTargetOutcomeId,
+          counselorEmail,
+        );
+
+        const emailResult = await this.sendEmail.sendMail(toolsEmail);
+
+        if (emailResult?.error) {
+          logger.error('Error sending manual treatment tools email', {
+            req_id,
+            client_id: clientId,
+            form_code: code,
+            error: emailResult?.message || emailResult?.error,
+          });
+          continue;
+        }
+
+        sentCount += 1;
+        logger.info('✅ Manual treatment tools email sent', {
+          req_id,
+          client_id: clientId,
+          form_code: code,
+          form_id: form.form_id,
+        });
+      }
+
+      if (sentCount === 0) {
+        return { message: 'No manual treatment tools emails were sent', warn: -1 };
+      }
+
+      return {
+        message: `Manual treatment tools email(s) sent successfully (${sentCount})`,
+      };
+    } catch (error) {
+      logger.error('Error in sendManualTreatmentToolEmailForRequest', {
+        error: error?.message || error,
+      });
+      return { message: 'Error sending manual treatment tools email', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
    * Get original service-based forms for a session
    * @param {number} session_id - Session ID
    * @param {number} service_id - Service ID

@@ -11,7 +11,7 @@ import { toast } from "react-toastify";
 export const useMutationData = (
   mutationKey: MutationKey,
   mutationFn: MutationFunction<any, any>,
-  queryKey?: string | string[], // Now accepts string or array of strings
+  queryKey?: string | string[], 
   onSuccess?: () => void
 ) => {
   const client = useQueryClient();
@@ -19,7 +19,10 @@ export const useMutationData = (
     mutationKey,
     mutationFn,
     onSuccess(data) {
-      if (onSuccess) onSuccess();
+      if (onSuccess) {
+        onSuccess();
+        return;
+      }
       
       // Show success or error toast based on response status
       if (data?.status === 200 || data?.status === 201) {

@@ -20,6 +20,7 @@ export default class Report {
       
       let query;
       let consentFormsQuery;
+      let requestFormsQuery;
 
       console.log('formMode', formMode);
       
@@ -139,6 +140,53 @@ export default class Report {
             'vuf.thrpy_req_id', // Keep original thrpy_req_id in GROUP BY
             'vuf.tenant_id',
             'vuf.user_form_id', // Add user_form_id to GROUP BY to make each consent form unique
+          ])
+          .orderBy('date_sent', 'desc');
+
+        // Also get treatment target request forms (forms tied to therapy requests, not sessions)
+        requestFormsQuery = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('treatment_target_request_forms as ttrf')
+          .join('user_profile as client', 'ttrf.client_id', 'client.user_profile_id')
+          .join('user_profile as counselor', 'ttrf.counselor_id', 'counselor.user_profile_id')
+          .join('forms as f', 'ttrf.form_id', 'f.form_id')
+          .join('thrpy_req as tr', 'ttrf.req_id', 'tr.req_id')
+          .leftJoin('feedback as fb', function() {
+            this.on('fb.form_id', '=', 'ttrf.form_id')
+                .andOn('fb.client_id', '=', 'ttrf.client_id');
+          })
+          .select(
+            'client.user_first_name as client_first_name',
+            'client.user_last_name as client_last_name',
+            'client.clam_num as client_clam_num',
+            'ttrf.client_id',
+            'ttrf.counselor_id',
+            'ttrf.form_id',
+            'f.form_cde as form_cde',
+            'ttrf.req_id as thrpy_req_id',
+            'ttrf.tenant_id',
+            db.raw('MAX(fb.feedback_id) as feedback_id'),
+            db.raw('MAX(ttrf.sent_at) as date_sent'),
+            db.raw(`
+                COALESCE(
+                  DATE_ADD(MAX(ttrf.sent_at), INTERVAL 7 DAY),
+                  DATE_ADD(MAX(ttrf.sent_at), INTERVAL 7 DAY)
+                ) as due_date
+              `),
+          )
+          .where('ttrf.is_sent', 1)
+          .andWhere('client.status_yn', 'y')
+          .andWhere('tr.thrpy_status', '!=', 2) // Exclude discharged therapy requests
+          .groupBy([
+            'client.user_first_name',
+            'client.user_last_name',
+            'client.clam_num',
+            'ttrf.form_id',
+            'f.form_cde',
+            'ttrf.client_id',
+            'ttrf.counselor_id',
+            'ttrf.req_id',
+            'ttrf.tenant_id',
           ])
           .orderBy('date_sent', 'desc');
       } else {
@@ -340,16 +388,39 @@ export default class Report {
         }
       }
 
+      // Apply filtering to treatment target request forms query based on role_id
+      if (requestFormsQuery) {
+        if (data.role_id == 2 && data.counselor_id) {
+          // For role_id=2 (counselor), filter by counselor_id
+          requestFormsQuery.where('ttrf.counselor_id', Number(data.counselor_id));
+          
+          // Get tenant_id for the counselor and filter by it
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            requestFormsQuery.where('ttrf.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        } else if (data.role_id == 3 && data.tenant_id) {
+          // For role_id=3 (manager), filter by tenant_id
+          requestFormsQuery.where('ttrf.tenant_id', Number(data.tenant_id));
+        }
+      }
+
       // Execute queries
-      const [rec, consentForms] = await Promise.all([
+      const [rec, consentForms, requestForms] = await Promise.all([
         query,
-        consentFormsQuery ? consentFormsQuery : Promise.resolve([])
+        consentFormsQuery ? consentFormsQuery : Promise.resolve([]),
+        requestFormsQuery ? requestFormsQuery : Promise.resolve([])
       ]);
 
-      // Combine results if we have both treatment target forms and consent forms
+      // Combine results if we have treatment target forms, consent forms, and request forms
       let combinedResults = [...rec];
       if (consentForms && consentForms.length > 0) {
         combinedResults = [...combinedResults, ...consentForms];
+      }
+      if (requestForms && requestForms.length > 0) {
+        combinedResults = [...combinedResults, ...requestForms];
       }
 
       // Sort combined results by date_sent

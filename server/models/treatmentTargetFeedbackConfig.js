@@ -2,6 +2,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const knex = require('knex');
 import logger from '../config/winston.js';
+import prisma from '../utils/prisma.js';
 import DBconn from '../config/db.config.js';
 
 const db = knex(DBconn.dbConn.development);
@@ -413,15 +414,21 @@ export default class TreatmentTargetFeedbackConfig {
    */
   async getFormNames() {
     try {
-      const forms = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('treatment_target_feedback_config')
-        .distinct('form_name')
-        .orderBy('form_name', 'asc');
+      const forms = await prisma.forms.findMany({
+        where: {
+          status_yn: 'y',
+        },
+        select: {
+          form_cde: true,
+        },
+        orderBy: {
+          form_cde: 'asc',
+        },
+      });
 
       return {
         message: 'Form names retrieved successfully',
-        rec: forms.map((f) => f.form_name),
+        rec: forms.map((f) => f.form_cde),
       };
     } catch (error) {
       logger.error(error);

@@ -1848,7 +1848,7 @@ export const CONDITIONAL_ROW_STYLES = {
         color: "#6c757d",
         fontStyle: "italic",
         "&:hover": {
-          backgroundColor: "#e9ecef",
+          backgroundColor: "#f8f9fa",
           opacity: 0.7,
           cursor: "not-allowed",
         },

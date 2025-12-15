@@ -13,7 +13,15 @@ import {
 import Spinner from "../../common/Spinner";
 import CustomButton from "../../CustomButton";
 import CustomTable from "../../CustomTable";
-import { CreateSessionFormWrapper, HomeworkButtonWrapper } from "./style";
+import CustomModal from "../../CustomModal";
+import Select from "react-select";
+import {
+  CreateSessionFormWrapper,
+  HomeworkButtonWrapper,
+  AssessmentButtonWrapper,
+  AssessmentModalWrapper,
+} from "./style";
+import { selectStyles } from "../../HomeworkModalContent/selectStyles";
 
 // Custom Hooks
 import { useSessionActions } from "./hooks/useSessionActions";
@@ -25,6 +33,10 @@ import SessionFormFields from "./SessionFormFields";
 import SessionModals from "./SessionModals";
 import SessionScheduleHeader from "./SessionScheduleHeader";
 import { getSessionTableColumns } from "./SessionTableColumns";
+import CommonServices from "../../../services/CommonServices";
+import { useQueryData } from "../../../utils/hooks/useQueryData";
+import { useMutationData } from "../../../utils/hooks/useMutationData";
+import { toast } from "react-toastify";
 
 function CreateSessionForm({
   time,
@@ -70,6 +82,9 @@ function CreateSessionForm({
     max: false,
   });
   const [isWorkModalOpen, setIsWorkModalOpen] = useState(false);
+  const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
+  const [assessmentOptions, setAssessmentOptions] = useState([]);
+  const [selectedAssessment, setSelectedAssessment] = useState(null);
 
   // Custom Hooks
   const {
@@ -261,6 +276,46 @@ function CreateSessionForm({
     setIsOpen(false);
   };
 
+  // Fetch all assessment form names using custom React Query hook (excluding CONSENT)
+  const { data: assessmentFormNames } = useQueryData(
+    ["assessment-form-names"],
+    async () => {
+      const response = await CommonServices.getAllAssessmentFormNames();
+      const forms = response?.data?.rec || [];
+      return forms.filter((name) => name !== "CONSENT");
+    }
+  );
+
+  useEffect(() => {
+    if (assessmentFormNames && Array.isArray(assessmentFormNames)) {
+      const options = assessmentFormNames.map((name) => ({
+        label: name,
+        value: name,
+      }));
+      setAssessmentOptions(options);
+    }
+  }, [assessmentFormNames]);
+
+  const handleOpenAssessmentModal = () => {
+    setSelectedAssessment(null);
+    setIsAssessmentModalOpen(true);
+  };
+
+  const { mutate: sendManualAssessment, isPending: isSendingAssessment } =
+    useMutationData(
+      ["send-manual-assessment"],
+      async (payload) => {
+        return await CommonServices.sendManualAssessment(payload);
+      },
+      undefined,
+      () => {
+        // On success: close modal and reset selection
+        toast.success("Assessment sent successfully");
+        setIsAssessmentModalOpen(false);
+        setSelectedAssessment(null);
+      }
+    );
+
   // Table Columns
   const sessionTableColumns = getSessionTableColumns({
     userObj,
@@ -429,6 +484,19 @@ function CreateSessionForm({
                       : "Generate Session Schedule"}
                   </button>
                 )}
+<div className="button-group">
+
+
+              {isHomeworkUpload && initialData && counselor && (
+                <AssessmentButtonWrapper>
+                  <CustomButton
+                    onClick={handleOpenAssessmentModal}
+                    icon={<SettingsIcon />}
+                    title="Manual Assessment Upload"
+                    type="button"
+                    />
+                </AssessmentButtonWrapper>
+              )}
 
               {isHomeworkUpload && initialData && counselor && (
                 <HomeworkButtonWrapper>
@@ -437,9 +505,10 @@ function CreateSessionForm({
                     icon={<SettingsIcon />}
                     title="Upload and Send Homework"
                     type="button"
-                  />
+                    />
                 </HomeworkButtonWrapper>
               )}
+              </div>
 
               {(initialData || sessionTableData) && (
                 <CustomTable
@@ -541,6 +610,73 @@ function CreateSessionForm({
           </div>
         </form>
       </FormProvider>
+
+      {isAssessmentModalOpen && (
+        <CustomModal
+          isOpen={isAssessmentModalOpen}
+          onRequestClose={() => setIsAssessmentModalOpen(false)}
+          title="Manual Assessment Upload"
+        >
+          <AssessmentModalWrapper>
+            <div className="select-wrapper">
+              <label>Assessment</label>
+              <Select
+                options={assessmentOptions}
+                placeholder="Select Assessment"
+                value={assessmentOptions.find(
+                  (opt) => opt.value === selectedAssessment
+                ) || null}
+                onChange={(option) =>
+                  setSelectedAssessment(option ? option.value : null)
+                }
+                styles={selectStyles}
+                menuPortalTarget={
+                  typeof document !== "undefined" ? document.body : undefined
+                }
+                menuPosition="fixed"
+              />
+            </div>
+
+            <div className="button-group">
+              <CustomButton
+                type="button"
+                title="Cancel"
+                onClick={() => setIsAssessmentModalOpen(false)}
+              />
+              <button
+                className="save-button"
+                type="button"
+                disabled={!selectedAssessment || isSendingAssessment}
+                style={{
+                  opacity: !selectedAssessment || isSendingAssessment ? 0.6 : 1,
+                  cursor:
+                    !selectedAssessment || isSendingAssessment
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+                onClick={() => {
+                  if (!selectedAssessment) return;
+
+                  const payload = {
+                    req_id: initialData?.req_id,
+                    session_id: session?.session_obj?.[0]?.session_id,
+                    client_id: initialData?.client_id,
+                    counselor_id: initialData?.counselor_id,
+                    treatment_target:
+                      initialData?.user_target_outcome ||
+                      initialData?.treatment_target,
+                    form_names: [selectedAssessment],
+                  };
+
+                  sendManualAssessment(payload);
+                }}
+              >
+                {isSendingAssessment ? "Sending..." : "Send Assessment"}
+              </button>
+            </div>
+          </AssessmentModalWrapper>
+        </CustomModal>
+      )}
 
       <SessionModals
         showAdditionalService={showAdditionalService}

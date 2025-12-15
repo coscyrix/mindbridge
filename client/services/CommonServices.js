@@ -52,6 +52,9 @@ const CommonServices = {
   getHomeworkStats(params) {
     return api.get(ApiConfig.sessions.getHomeworkStats, { params });
   },
+  getAllAssessmentFormNames() {
+    return api.get("/treatment-target-feedback-config/form-names/list");
+  },
   getFeedbackFormDetails(params) {
     return api.get(ApiConfig.feedback.getFeedbackFormDetails, { params });
   },
@@ -221,6 +224,18 @@ const CommonServices = {
   submitGASForm: async (payload) => {
     try {
       const response = await api.post(ApiConfig.feedback.submitGASForm, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Manually attach treatment target request forms for a specific therapy request
+  sendManualAssessment: async (payload) => {
+    try {
+      const response = await api.post(
+        '/treatment-target-request-forms/manual',
+        payload
+      );
       return response;
     } catch (error) {
       throw error;

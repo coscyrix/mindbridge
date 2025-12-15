@@ -343,6 +343,7 @@ model forms {
     ref_form_sequence              ref_form_sequence?               @relation(fields: [form_sequence_id], references: [sequence_id], onDelete: NoAction, onUpdate: NoAction, map: "forms_ref_form_sequence_FK")
     treatment_target_session_forms treatment_target_session_forms[]
     user_forms                     user_forms[]
+    treatment_target_request_forms treatment_target_request_forms[] @relation("ttrf_forms")
 
     @@index([form_sequence_id], map: "forms_ref_form_sequence_FK")
 }
@@ -646,6 +647,7 @@ model thrpy_req {
     user_profile_thrpy_req_counselor_idTouser_profile user_profile                     @relation("thrpy_req_counselor_idTouser_profile", fields: [counselor_id], references: [user_profile_id], onDelete: Cascade, map: "thrpy_req_user_profile_FK")
     user_profile_thrpy_req_client_idTouser_profile    user_profile                     @relation("thrpy_req_client_idTouser_profile", fields: [client_id], references: [user_profile_id], onDelete: Cascade, map: "thrpy_req_user_profile_FK_1")
     treatment_target_session_forms                    treatment_target_session_forms[]
+    treatment_target_request_forms                    treatment_target_request_forms[] @relation("ttrf_thrpy_req")
 
     @@index([treatment_target], map: "idx_treatment_target")
     @@index([service_id], map: "thrpy_req_service_FK")
@@ -838,6 +840,34 @@ model users_hist {
     status_yn       users_hist_status_yn?
     created_at      DateTime              @default(now()) @db.Timestamp(0)
     tenant_id       Int?
+}
+
+model treatment_target_request_forms {
+    id               Int       @id @default(autoincrement())
+    req_id           Int
+    client_id        Int
+    counselor_id     Int
+    treatment_target String    @db.VarChar(255)
+    form_name        String    @db.VarChar(255)
+    form_id          Int
+    purpose          String?   @db.Text
+    is_sent          Boolean?  @default(false)
+    sent_at          DateTime? @db.Timestamp(0)
+    tenant_id        Int?
+    created_at       DateTime? @default(now()) @db.Timestamp(0)
+    updated_at       DateTime? @default(now()) @db.Timestamp(0)
+
+    thrpy_req thrpy_req @relation("ttrf_thrpy_req", fields: [req_id], references: [req_id])
+    forms     forms     @relation("ttrf_forms", fields: [form_id], references: [form_id])
+    // Optionally, add relations to user_profile if you want:
+    // client     user_profile @relation("tt_request_forms_client", fields: [client_id], references: [user_profile_id])
+    // counselor  user_profile @relation("tt_request_forms_counselor", fields: [counselor_id], references: [user_profile_id])
+
+    @@index([req_id], map: "idx_ttrf_req_id")
+    @@index([client_id], map: "idx_ttrf_client_id")
+    @@index([counselor_id], map: "idx_ttrf_counselor_id")
+    @@index([form_id], map: "idx_ttrf_form_id")
+    @@index([tenant_id], map: "idx_ttrf_tenant_id")
 }
 
 enum counselor_documents_document_type {

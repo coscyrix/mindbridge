@@ -2,8 +2,8 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { Router } = require('express');
 import TreatmentTargetSessionFormsController from '../controllers/treatmentTargetSessionForms.js';
-import { AsyncWrapper  } from '../utils/AsyncWrapper.js';
-import { authenticate  } from '../middlewares/token.js';
+import { AsyncWrapper } from '../utils/AsyncWrapper.js';
+import { authenticate } from '../middlewares/token.js';
 
 const router = Router();
 const treatmentTargetSessionFormsController = new TreatmentTargetSessionFormsController();
