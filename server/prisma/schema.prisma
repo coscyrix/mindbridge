@@ -1,0 +1,968 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mysql"
+    url      = env("DATABASE_URL")
+}
+
+model appointment_email_tracking {
+    id                   Int       @id @default(autoincrement())
+    counselor_profile_id Int
+    customer_email       String    @db.VarChar(255)
+    customer_name        String    @db.VarChar(255)
+    service              String    @db.VarChar(255)
+    appointment_date     DateTime  @db.DateTime(0)
+    sent_at              DateTime? @default(now()) @db.Timestamp(0)
+    created_at           DateTime? @default(now()) @db.Timestamp(0)
+    updated_at           DateTime? @default(now()) @db.Timestamp(0)
+
+    @@index([counselor_profile_id, customer_email], map: "idx_counselor_customer")
+    @@index([sent_at], map: "idx_sent_at")
+}
+
+model client_enrollments {
+    id                                                      Int          @id @default(autoincrement())
+    user_id                                                 Int
+    client_id                                               Int
+    enrollment_dte                                          DateTime?    @default(now()) @db.DateTime(0)
+    created_at                                              DateTime?    @default(now()) @db.DateTime(0)
+    updated_at                                              DateTime?    @default(now()) @db.DateTime(0)
+    tenant_id                                               Int?
+    user_profile_client_enrollments_user_idTouser_profile   user_profile @relation("client_enrollments_user_idTouser_profile", fields: [user_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_enrollments_ibfk_1")
+    user_profile_client_enrollments_client_idTouser_profile user_profile @relation("client_enrollments_client_idTouser_profile", fields: [client_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_enrollments_ibfk_2")
+
+    @@index([client_id], map: "client_id")
+    @@index([user_id], map: "user_id")
+}
+
+model consent_descriptions {
+    id                Int                @id @default(autoincrement())
+    tenant_id         Int
+    counselor_id      Int?
+    description       String             @db.Text
+    created_at        DateTime?          @default(now()) @db.Timestamp(0)
+    updated_at        DateTime?          @default(now()) @db.Timestamp(0)
+    counselor_profile counselor_profile? @relation(fields: [counselor_id], references: [counselor_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_consent_counselor")
+    tenant            tenant             @relation(fields: [tenant_id], references: [tenant_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_consent_tenant")
+
+    @@index([counselor_id], map: "fk_consent_counselor")
+    @@index([tenant_id], map: "fk_consent_tenant")
+}
+
+model counselor_documents {
+    document_id          Int                               @id @default(autoincrement())
+    counselor_profile_id Int
+    document_type        counselor_documents_document_type
+    document_url         String                            @db.VarChar(255)
+    document_name        String                            @db.VarChar(255)
+    is_verified          Boolean?                          @default(false)
+    verification_date    DateTime?                         @db.DateTime(0)
+    verification_notes   String?                           @db.Text
+    expiry_date          DateTime?                         @db.Date
+    created_at           DateTime?                         @default(now()) @db.Timestamp(0)
+    updated_at           DateTime?                         @default(now()) @db.Timestamp(0)
+    counselor_profile    counselor_profile                 @relation(fields: [counselor_profile_id], references: [counselor_profile_id], onDelete: Cascade, onUpdate: NoAction, map: "counselor_documents_ibfk_1")
+
+    @@index([counselor_profile_id], map: "counselor_profile_id")
+}
+
+model counselor_profile {
+    counselor_profile_id     Int                        @id @default(autoincrement())
+    user_profile_id          Int                        @unique(map: "unique_counselor_profile")
+    profile_picture_url      String?                    @db.VarChar(255)
+    license_number           String?                    @db.VarChar(100)
+    license_provider         String?                    @db.VarChar(255)
+    license_file_url         String?                    @db.VarChar(255)
+    profile_notes            String?                    @db.Text
+    location                 String?                    @db.VarChar(255)
+    services_offered         Json?
+    specialties              Json?
+    service_modalities       Json?
+    availability             Json?
+    is_verified              Boolean?                   @default(false)
+    patients_seen            Int?                       @default(0)
+    gender                   String?                    @db.VarChar(50)
+    race                     String?                    @db.VarChar(100)
+    public_phone             String?                    @db.VarChar(20)
+    created_at               DateTime?                  @default(now()) @db.Timestamp(0)
+    updated_at               DateTime?                  @default(now()) @db.Timestamp(0)
+    consent_descriptions     consent_descriptions[]
+    counselor_documents      counselor_documents[]
+    user_profile             user_profile               @relation(fields: [user_profile_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "counselor_profile_ibfk_1")
+    counselor_reviews        counselor_reviews[]
+    counselor_services       counselor_services[]
+    counselor_target_outcome counselor_target_outcome[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model counselor_reviews {
+    review_id            Int               @id @default(autoincrement())
+    counselor_profile_id Int
+    client_id            Int
+    rating               Int?
+    review_text          String?           @db.Text
+    created_at           DateTime?         @default(now()) @db.Timestamp(0)
+    counselor_profile    counselor_profile @relation(fields: [counselor_profile_id], references: [counselor_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "counselor_reviews_ibfk_1")
+    user_profile         user_profile      @relation(fields: [client_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "counselor_reviews_ibfk_2")
+
+    @@index([client_id], map: "client_id")
+    @@index([counselor_profile_id], map: "counselor_profile_id")
+}
+
+model counselor_services {
+    counselor_service_id Int               @id @default(autoincrement())
+    counselor_profile_id Int
+    service_id           Int
+    is_specialty         Boolean?          @default(false)
+    created_at           DateTime?         @default(now()) @db.Timestamp(0)
+    updated_at           DateTime?         @default(now()) @db.Timestamp(0)
+    counselor_profile    counselor_profile @relation(fields: [counselor_profile_id], references: [counselor_profile_id], onDelete: Cascade, onUpdate: NoAction, map: "counselor_services_ibfk_1")
+    service              service           @relation(fields: [service_id], references: [service_id], onDelete: Cascade, onUpdate: NoAction, map: "counselor_services_ibfk_2")
+
+    @@unique([counselor_profile_id, service_id], map: "unique_counselor_service")
+    @@index([counselor_profile_id], map: "idx_counselor_profile_id")
+    @@index([is_specialty], map: "idx_is_specialty")
+    @@index([service_id], map: "idx_service_id")
+}
+
+model counselor_target_outcome {
+    id                   Int                 @id @default(autoincrement())
+    counselor_profile_id Int
+    target_outcome_id    Int
+    created_at           DateTime?           @default(now()) @db.Timestamp(0)
+    updated_at           DateTime?           @default(now()) @db.Timestamp(0)
+    counselor_profile    counselor_profile   @relation(fields: [counselor_profile_id], references: [counselor_profile_id], onDelete: Cascade, map: "fk_cto_counselor_profile")
+    ref_target_outcomes  ref_target_outcomes @relation(fields: [target_outcome_id], references: [target_id], onDelete: Cascade, map: "fk_cto_target_outcome")
+
+    @@index([counselor_profile_id], map: "fk_cto_counselor_profile")
+    @@index([target_outcome_id], map: "fk_cto_target_outcome")
+}
+
+model fee_split_management {
+    id                         Int       @id @default(autoincrement())
+    tenant_id                  Int
+    counselor_user_id          Int?
+    is_fee_split_enabled       Boolean?  @default(false)
+    tenant_share_percentage    Int?      @default(0)
+    counselor_share_percentage Int?      @default(100)
+    created_at                 DateTime? @default(now()) @db.Timestamp(0)
+    updated_at                 DateTime? @default(now()) @db.Timestamp(0)
+    status_yn                  Boolean?  @default(true)
+    users                      users?    @relation(fields: [counselor_user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_fee_split_counselor_user")
+    tenant                     tenant    @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_fee_split_tenant")
+
+    @@unique([tenant_id, counselor_user_id], map: "unique_tenant_counselor_fee_split")
+    @@index([counselor_user_id], map: "idx_counselor_user_id")
+    @@index([is_fee_split_enabled], map: "idx_is_enabled")
+    @@index([tenant_id], map: "idx_tenant_id")
+}
+
+model feedback {
+    feedback_id         BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+    session_id          Int?
+    form_id             Int?
+    client_id           Int?
+    feedback_json       Json?
+    is_discharged       feedback_is_discharged
+    status_yn           feedback_status_yn     @default(y)
+    created_at          DateTime?              @default(now()) @db.Timestamp(0)
+    updated_at          DateTime?              @default(now()) @db.Timestamp(0)
+    tenant_id           Int?
+    forms               forms?                 @relation(fields: [form_id], references: [form_id], onDelete: Cascade, map: "feedback_forms_FK")
+    session             session?               @relation(fields: [session_id], references: [session_id], onDelete: Cascade, map: "feedback_session_FK")
+    feedback_consent    feedback_consent[]
+    feedback_gad        feedback_gad[]
+    feedback_ipf        feedback_ipf[]
+    feedback_pcl5       feedback_pcl5[]
+    feedback_phq9       feedback_phq9[]
+    feedback_smart_goal feedback_smart_goal[]
+    feedback_whodas     feedback_whodas[]
+
+    @@unique([session_id, form_id], map: "feedback_unique")
+    @@index([form_id], map: "feedback_forms_FK")
+}
+
+model feedback_attendance {
+    id                       Int                           @id @default(autoincrement())
+    feedback_id              Int
+    total_sessions           Int
+    total_attended_sessions  Int
+    total_cancelled_sessions Int
+    status_yn                feedback_attendance_status_yn @default(y)
+    created_at               DateTime                      @default(now()) @db.Timestamp(0)
+    updated_at               DateTime                      @default(now()) @db.Timestamp(0)
+    tenant_id                Int?
+}
+
+model feedback_consent {
+    id          BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+    feedback_id BigInt?                    @db.UnsignedBigInt
+    imgBase64   String                     @db.LongText
+    status_yn   feedback_consent_status_yn @default(y)
+    created_at  DateTime                   @default(now()) @db.Timestamp(0)
+    updated_at  DateTime?                  @default(now()) @db.Timestamp(0)
+    tenant_id   Int?
+    feedback    feedback?                  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_consent_feedback_FK")
+
+    @@index([feedback_id], map: "feedback_consent_feedback_FK")
+}
+
+model feedback_gad {
+    id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    total_points Decimal   @db.Decimal(8, 2)
+    feedback_id  BigInt    @db.UnsignedBigInt
+    created_at   DateTime? @default(now()) @db.Timestamp(0)
+    updated_at   DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id    Int?
+    feedback     feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_gad_feedback_FK")
+
+    @@index([feedback_id], map: "feedback_ipf_feedback_id_foreign")
+}
+
+model feedback_gas {
+    id                       Int                  @id @default(autoincrement())
+    goal                     String               @db.VarChar(255)
+    total_score              Int
+    responses_json           Json
+    feedback_id              Int
+    tenant_id                Int
+    client_target_outcome_id Int?
+    created_at               DateTime?            @default(now()) @db.Timestamp(0)
+    updated_at               DateTime?            @default(now()) @db.Timestamp(0)
+    ref_target_outcomes      ref_target_outcomes? @relation(fields: [client_target_outcome_id], references: [target_id], onUpdate: NoAction, map: "feedback_gas_ibfk_1")
+
+    @@index([client_target_outcome_id], map: "client_target_outcome_id")
+}
+
+model feedback_ipf {
+    id                                  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    romantic_scale_score                Decimal   @db.Decimal(8, 2)
+    family_scale_score                  Decimal   @db.Decimal(8, 2)
+    work_scale_score                    Decimal   @db.Decimal(8, 2)
+    friendships_socializing_scale_score Decimal   @db.Decimal(8, 2)
+    parenting_scale_score               Decimal   @db.Decimal(8, 2)
+    education_scale_score               Decimal   @db.Decimal(8, 2)
+    self_care_scale                     Decimal   @db.Decimal(8, 2)
+    feedback_id                         BigInt    @db.UnsignedBigInt
+    created_at                          DateTime? @default(now()) @db.Timestamp(0)
+    updated_at                          DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id                           Int?
+    feedback                            feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_ipf_feedback_FK")
+
+    @@index([feedback_id], map: "feedback_ipf_feedback_id_foreign")
+}
+
+model feedback_pcl5 {
+    id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    total_score Int
+    feedback_id BigInt    @db.UnsignedBigInt
+    created_at  DateTime? @default(now()) @db.Timestamp(0)
+    updated_at  DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id   Int?
+    feedback    feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_pcl5_feedback_FK")
+
+    @@index([feedback_id], map: "feedback_pcl5_feedback_id_foreign")
+}
+
+model feedback_phq9 {
+    id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    total_score      Int
+    difficulty_score Int
+    feedback_id      BigInt    @db.UnsignedBigInt
+    created_at       DateTime? @default(now()) @db.Timestamp(0)
+    updated_at       DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id        Int?
+    feedback         feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_phq9_feedback_FK")
+
+    @@index([feedback_id], map: "feedback_phq9_feedback_id_foreign")
+}
+
+model feedback_smart_goal {
+    id                   Int       @id @default(autoincrement())
+    feedback_id          BigInt    @db.UnsignedBigInt
+    specific_1st_phase   String?   @db.VarChar(250)
+    specific_2nd_phase   String?   @db.VarChar(250)
+    specific_3rd_phase   String?   @db.VarChar(250)
+    measurable_1st_phase String?   @db.VarChar(250)
+    measurable_2nd_phase String?   @db.VarChar(250)
+    measurable_3rd_phase String?   @db.VarChar(250)
+    achievable_1st_phase String?   @db.VarChar(250)
+    achievable_2nd_phase String?   @db.VarChar(250)
+    achievable_3rd_phase String?   @db.VarChar(250)
+    relevant_1st_phase   String?   @db.VarChar(250)
+    relevant_2nd_phase   String?   @db.VarChar(250)
+    relevant_3rd_phase   String?   @db.VarChar(250)
+    time_bound_1st_phase String?   @db.VarChar(250)
+    time_bound_2nd_phase String?   @db.VarChar(250)
+    time_bound_3rd_phase String?   @db.VarChar(250)
+    created_at           DateTime? @default(now()) @db.Timestamp(0)
+    updated_at           DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id            Int?
+    feedback             feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_smart_goal_feedback_FK")
+
+    @@index([feedback_id], map: "feedback_smart_goal_feedback_FK")
+}
+
+model feedback_whodas {
+    id                            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    understandingAndCommunicating Int
+    gettingAround                 Int
+    selfCare                      Int
+    gettingAlongWithPeople        Int
+    lifeActivities                Int
+    participationInSociety        Int
+    overallScore                  Decimal   @db.Decimal(4, 2)
+    difficultyDays                Int
+    unableDays                    Int
+    healthConditionDays           Int
+    feedback_id                   BigInt    @db.UnsignedBigInt
+    created_at                    DateTime? @default(now()) @db.Timestamp(0)
+    updated_at                    DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id                     Int?
+    feedback                      feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_whodas_feedback_FK")
+
+    @@index([feedback_id], map: "feedback_whodas_feedback_id_foreign")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model forms {
+    form_id                        Int                              @id @default(autoincrement())
+    form_cde                       String                           @unique(map: "forms_form_cde_IDX") @db.VarChar(100)
+    frequency_desc                 String?                          @db.VarChar(100)
+    frequency_typ                  forms_frequency_typ              @default(static)
+    session_position               Json?
+    svc_ids                        Json
+    form_sequence_id               Int?
+    status_yn                      forms_status_yn                  @default(y)
+    created_at                     DateTime                         @default(now()) @db.Timestamp(0)
+    updated_at                     DateTime                         @default(now()) @db.Timestamp(0)
+    tenant_id                      Int?
+    feedback                       feedback[]
+    ref_form_sequence              ref_form_sequence?               @relation(fields: [form_sequence_id], references: [sequence_id], onDelete: NoAction, onUpdate: NoAction, map: "forms_ref_form_sequence_FK")
+    treatment_target_session_forms treatment_target_session_forms[]
+    user_forms                     user_forms[]
+
+    @@index([form_sequence_id], map: "forms_ref_form_sequence_FK")
+}
+
+model homework {
+    homework_id        Int       @id @default(autoincrement())
+    homework_title     String    @db.VarChar(255)
+    homework_filename  String?   @db.VarChar(255)
+    homework_file_path String?   @db.VarChar(500)
+    tenant_id          Int
+    session_id         Int?
+    file_size          BigInt?
+    file_type          String?   @db.VarChar(100)
+    created_at         DateTime? @default(now()) @db.Timestamp(0)
+    updated_at         DateTime? @default(now()) @db.Timestamp(0)
+    status_yn          Boolean?  @default(true)
+    session            session?  @relation(fields: [session_id], references: [session_id], onUpdate: NoAction, map: "fk_homework_session")
+    tenant             tenant    @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_homework_tenant")
+
+    @@index([created_at], map: "idx_created_at")
+    @@index([created_at, status_yn], map: "idx_homework_created_status")
+    @@index([tenant_id, session_id], map: "idx_homework_tenant_session")
+    @@index([session_id], map: "idx_session_id")
+    @@index([status_yn], map: "idx_status_yn")
+    @@index([tenant_id], map: "idx_tenant_id")
+}
+
+model invoice {
+    invoice_id  Int               @id @default(autoincrement())
+    session_id  Int
+    invoice_nbr String            @unique(map: "invoice_unique_1") @db.VarChar(100)
+    status_yn   invoice_status_yn @default(y)
+    created_at  DateTime          @default(now()) @db.Timestamp(0)
+    updated_at  DateTime          @default(now()) @db.Timestamp(0)
+    tenant_id   Int?
+    session     session           @relation(fields: [session_id], references: [session_id], onDelete: Cascade, map: "invoice_session_FK")
+
+    @@index([session_id], map: "invoice_session_FK")
+}
+
+model migrations {
+    id        Int    @id @default(autoincrement()) @db.UnsignedInt
+    migration String @db.VarChar(255)
+    batch     Int
+    tenant_id Int?
+}
+
+model notes {
+    id         BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+    message    String          @db.Text
+    session_id BigInt          @db.UnsignedBigInt
+    status_yn  notes_status_yn @default(y)
+    created_at DateTime        @default(now()) @db.Timestamp(0)
+    updated_at DateTime        @default(now()) @db.Timestamp(0)
+    tenant_id  Int?
+}
+
+model onboarding_requests {
+    id             Int       @id @default(autoincrement())
+    organization   String?   @db.VarChar(255)
+    contact        String?   @db.VarChar(255)
+    contact_number String?   @db.VarChar(20)
+    position       String?   @db.VarChar(255)
+    email          String?   @db.VarChar(255)
+    phone          String?   @db.VarChar(50)
+    website        String?   @db.VarChar(255)
+    address        String?   @db.VarChar(255)
+    counselors     Int?
+    clients        Int?
+    features       String?   @db.Text
+    demoTime       DateTime? @db.DateTime(0)
+    notes          String?   @db.Text
+    description    String?   @db.Text
+    typedName      String?   @db.VarChar(255)
+    signature      String?   @db.LongText
+    date           DateTime? @db.Date
+    created_at     DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model otp_codes {
+    id            Int       @id @default(autoincrement())
+    email         String    @db.VarChar(255)
+    otp           Int
+    created_at    DateTime? @default(now()) @db.Timestamp(0)
+    updated_at    DateTime  @default(now()) @db.Timestamp(0)
+    expires_at    String    @db.Text
+    should_del_at String    @db.Text
+    tenant_id     Int?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model password_resets {
+    email      String    @db.VarChar(255)
+    token      String    @db.VarChar(255)
+    created_at DateTime? @db.Timestamp(0)
+    tenant_id  Int?
+
+    @@index([email], map: "password_resets_email_index")
+    @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model permission_role {
+    role_id       Int         @db.UnsignedInt
+    permission_id Int         @db.UnsignedInt
+    tenant_id     Int?
+    permissions   permissions @relation(fields: [permission_id], references: [id], map: "permission_id_fk_6744")
+    roles         roles       @relation(fields: [role_id], references: [role_id], map: "role_id_fk_6744")
+
+    @@index([permission_id], map: "permission_id_fk_6744")
+    @@index([role_id], map: "role_id_fk_6744")
+    @@ignore
+}
+
+model permissions {
+    id              Int               @id @default(autoincrement()) @db.UnsignedInt
+    title           String?           @db.VarChar(255)
+    created_at      DateTime?         @db.Timestamp(0)
+    updated_at      DateTime?         @db.Timestamp(0)
+    deleted_at      DateTime?         @db.Timestamp(0)
+    tenant_id       Int?
+    permission_role permission_role[] @ignore
+}
+
+model ref_fees {
+    fee_id         Int      @id @default(autoincrement())
+    tenant_id      Int?
+    tax_pcnt       Decimal? @db.Decimal(10, 4)
+    counselor_pcnt Decimal? @db.Decimal(10, 4)
+    system_pcnt    Decimal? @db.Decimal(10, 4)
+    created_at     DateTime @default(now()) @db.Timestamp(0)
+    updated_at     DateTime @default(now()) @db.Timestamp(0)
+}
+
+model ref_form_sequence {
+    sequence_id   Int      @id @default(autoincrement())
+    sequence_cde  String   @unique(map: "ref_form_sequence_unique") @db.VarChar(10)
+    sequence_desc String?  @db.VarChar(100)
+    sequence_obj  Json
+    created_at    DateTime @default(now()) @db.Timestamp(0)
+    updated_at    DateTime @default(now()) @db.Timestamp(0)
+    tenant_id     Int?
+    forms         forms[]
+}
+
+model ref_target_outcomes {
+    target_id                Int                        @id @default(autoincrement())
+    target_name              String                     @unique(map: "ref_target_outcomes_unique") @db.VarChar(100)
+    target_cde               String                     @unique(map: "ref_target_outcomes_unique_1") @db.VarChar(10)
+    target_desc              String?                    @db.VarChar(300)
+    created_at               DateTime                   @default(now()) @db.Timestamp(0)
+    updated_at               DateTime                   @default(now()) @db.Timestamp(0)
+    tenant_id                Int?
+    counselor_target_outcome counselor_target_outcome[]
+    feedback_gas             feedback_gas[]
+    user_target_outcome      user_target_outcome[]
+}
+
+model roles {
+    role_id         Int               @id @default(autoincrement()) @db.UnsignedInt
+    role_cde        String            @db.VarChar(255)
+    created_at      DateTime?         @db.Timestamp(0)
+    updated_at      DateTime?         @db.Timestamp(0)
+    deleted_at      DateTime?         @db.Timestamp(0)
+    tenant_id       Int?
+    permission_role permission_role[] @ignore
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model service {
+    service_id         Int                      @id @default(autoincrement())
+    service_name       String                   @db.VarChar(255)
+    service_code       String                   @db.VarChar(255)
+    is_report          Boolean                  @default(false)
+    is_additional      Boolean                  @default(false)
+    total_invoice      Decimal                  @db.Decimal(10, 4)
+    discount_pcnt      Int                      @default(0)
+    nbr_of_sessions    Int
+    svc_formula_typ    service_svc_formula_typ?
+    svc_formula        Json?
+    svc_report_formula Json?
+    gst                Decimal                  @db.Decimal(10, 4)
+    status_yn          service_status_yn        @default(y)
+    updated_at         DateTime?                @default(now()) @db.Timestamp(0)
+    created_at         DateTime?                @default(now()) @db.Timestamp(0)
+    tenant_id          Int?
+    counselor_services counselor_services[]
+    session            session[]
+    thrpy_req          thrpy_req[]
+
+    @@unique([tenant_id, service_code], map: "unique_tenant_service_code")
+    @@index([status_yn], map: "service_status_typ_FK")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model service_templates {
+    template_service_id Int                                @id @default(autoincrement())
+    service_name        String                             @db.VarChar(255)
+    service_code        String                             @unique(map: "service_templates_service_code_IDX") @db.VarChar(255)
+    is_report           Boolean                            @default(false)
+    is_additional       Boolean                            @default(false)
+    total_invoice       Decimal                            @db.Decimal(10, 4)
+    discount_pcnt       Int                                @default(0)
+    nbr_of_sessions     Int
+    svc_formula_typ     service_templates_svc_formula_typ?
+    svc_formula         Json?
+    svc_report_formula  Json?
+    gst                 Decimal                            @db.Decimal(10, 4)
+    status_yn           service_templates_status_yn        @default(y)
+    updated_at          DateTime?                          @default(now()) @db.Timestamp(0)
+    created_at          DateTime?                          @default(now()) @db.Timestamp(0)
+
+    @@index([status_yn], map: "service_templates_status_typ_FK")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model session {
+    session_id                     Int                              @id @default(autoincrement())
+    session_number                 Int?
+    thrpy_req_id                   Int?
+    service_id                     Int?
+    session_format                 session_session_format?
+    is_report                      Boolean                          @default(false)
+    is_additional                  Boolean                          @default(false)
+    intake_date                    String?                          @db.VarChar(27)
+    scheduled_time                 String?                          @db.Text
+    session_code                   String?                          @db.VarChar(100)
+    session_description            String?                          @db.VarChar(255)
+    forms_array                    Json?
+    session_status                 session_session_status           @default(SCHEDULED)
+    status_yn                      session_status_yn                @default(y)
+    created_at                     DateTime?                        @default(now()) @db.Timestamp(0)
+    updated_at                     DateTime                         @default(now()) @db.Timestamp(0)
+    tenant_id                      Int?
+    session_price                  Decimal                          @default(0.0000) @db.Decimal(10, 4)
+    session_taxes                  Decimal                          @default(0.0000) @db.Decimal(10, 4)
+    session_counselor_amt          Decimal                          @default(0.0000) @db.Decimal(10, 4)
+    session_system_amt             Decimal                          @default(0.0000) @db.Decimal(10, 4)
+    feedback                       feedback[]
+    homework                       homework[]
+    invoice                        invoice[]
+    service                        service?                         @relation(fields: [service_id], references: [service_id], onDelete: Cascade, map: "session_service_FK")
+    thrpy_req                      thrpy_req?                       @relation(fields: [thrpy_req_id], references: [req_id], onDelete: Cascade, map: "session_thrpy_req_FK")
+    treatment_target_session_forms treatment_target_session_forms[]
+    user_forms                     user_forms[]
+
+    @@index([session_number], map: "idx_session_number")
+    @@index([service_id], map: "session_service_FK")
+    @@index([thrpy_req_id], map: "session_thrpy_req_FK")
+}
+
+model tenant {
+    tenant_id            Int                    @id @default(autoincrement())
+    tenant_name          String                 @db.VarChar(100)
+    tenant_generated_id  Int
+    created_at           DateTime               @default(now()) @db.Timestamp(0)
+    updated_at           DateTime               @default(now()) @db.Timestamp(0)
+    admin_fee            Decimal?               @default(0.00) @db.Decimal(10, 2)
+    tax_percent          Decimal?               @default(0.00) @db.Decimal(5, 2)
+    timezone             String?                @db.VarChar(64)
+    consent_descriptions consent_descriptions[]
+    fee_split_management fee_split_management[]
+    homework             homework[]
+    tenant_configuration tenant_configuration[]
+}
+
+model tenant_configuration {
+    config_id     Int       @id @default(autoincrement())
+    tenant_id     Int
+    feature_name  String    @db.VarChar(100)
+    feature_value String?   @db.Text
+    is_enabled    Boolean?  @default(true)
+    created_at    DateTime? @default(now()) @db.Timestamp(0)
+    updated_at    DateTime? @default(now()) @db.Timestamp(0)
+    status_yn     Boolean?  @default(true)
+    tenant        tenant    @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tenant_config_tenant")
+
+    @@unique([tenant_id, feature_name], map: "unique_tenant_feature")
+    @@index([feature_name], map: "idx_feature_name")
+    @@index([tenant_id], map: "idx_tenant_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model thrpy_req {
+    req_id                                            Int                              @id @default(autoincrement())
+    counselor_id                                      Int
+    client_id                                         Int
+    service_id                                        Int
+    session_format_id                                 thrpy_req_session_format_id      @default(ONLINE)
+    req_dte                                           String?                          @db.VarChar(27)
+    req_time                                          String?                          @db.Text
+    session_desc                                      String?                          @db.VarChar(250)
+    status_yn                                         thrpy_req_status_yn              @default(y)
+    thrpy_status                                      thrpy_req_thrpy_status           @default(ONGOING)
+    created_at                                        DateTime                         @default(now()) @db.Timestamp(0)
+    updated_at                                        DateTime                         @default(now()) @db.Timestamp(0)
+    tenant_id                                         Int?
+    treatment_target                                  String?                          @db.VarChar(255)
+    session                                           session[]
+    service                                           service                          @relation(fields: [service_id], references: [service_id], onDelete: Cascade, map: "thrpy_req_service_FK")
+    user_profile_thrpy_req_counselor_idTouser_profile user_profile                     @relation("thrpy_req_counselor_idTouser_profile", fields: [counselor_id], references: [user_profile_id], onDelete: Cascade, map: "thrpy_req_user_profile_FK")
+    user_profile_thrpy_req_client_idTouser_profile    user_profile                     @relation("thrpy_req_client_idTouser_profile", fields: [client_id], references: [user_profile_id], onDelete: Cascade, map: "thrpy_req_user_profile_FK_1")
+    treatment_target_session_forms                    treatment_target_session_forms[]
+
+    @@index([treatment_target], map: "idx_treatment_target")
+    @@index([service_id], map: "thrpy_req_service_FK")
+    @@index([counselor_id], map: "thrpy_req_user_profile_FK")
+    @@index([client_id], map: "thrpy_req_user_profile_FK_1")
+}
+
+model treatment_target_feedback_config {
+    id                             Int                              @id @default(autoincrement())
+    treatment_target               String                           @db.VarChar(255)
+    form_name                      String                           @db.VarChar(255)
+    service_name                   String?                          @db.VarChar(255)
+    purpose                        String?                          @db.Text
+    sessions                       Json
+    tenant_id                      Int?
+    created_at                     DateTime?                        @default(now()) @db.Timestamp(0)
+    updated_at                     DateTime?                        @default(now()) @db.Timestamp(0)
+    treatment_target_session_forms treatment_target_session_forms[]
+
+    @@unique([treatment_target, form_name, tenant_id], map: "unique_treatment_form_tenant")
+    @@index([form_name], map: "idx_form_name")
+    @@index([tenant_id], map: "idx_tenant_id")
+    @@index([treatment_target], map: "idx_treatment_target")
+    @@index([treatment_target, tenant_id], map: "idx_treatment_tenant")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model treatment_target_session_forms {
+    id                                                                     Int                              @id @default(autoincrement())
+    req_id                                                                 Int
+    session_id                                                             Int
+    client_id                                                              Int
+    counselor_id                                                           Int
+    treatment_target                                                       String                           @db.VarChar(255)
+    form_name                                                              String                           @db.VarChar(255)
+    form_id                                                                Int
+    config_id                                                              Int
+    purpose                                                                String?                          @db.Text
+    session_number                                                         Int
+    is_sent                                                                Boolean?                         @default(false)
+    sent_at                                                                DateTime?                        @db.Timestamp(0)
+    tenant_id                                                              Int?
+    created_at                                                             DateTime?                        @default(now()) @db.Timestamp(0)
+    updated_at                                                             DateTime?                        @default(now()) @db.Timestamp(0)
+    form_submit                                                            Boolean?                         @default(false)
+    thrpy_req                                                              thrpy_req                        @relation(fields: [req_id], references: [req_id], onDelete: Cascade, onUpdate: NoAction, map: "treatment_target_session_forms_ibfk_1")
+    session                                                                session                          @relation(fields: [session_id], references: [session_id], onDelete: Cascade, onUpdate: NoAction, map: "treatment_target_session_forms_ibfk_2")
+    user_profile_treatment_target_session_forms_client_idTouser_profile    user_profile                     @relation("treatment_target_session_forms_client_idTouser_profile", fields: [client_id], references: [user_profile_id], onDelete: Cascade, onUpdate: NoAction, map: "treatment_target_session_forms_ibfk_3")
+    user_profile_treatment_target_session_forms_counselor_idTouser_profile user_profile                     @relation("treatment_target_session_forms_counselor_idTouser_profile", fields: [counselor_id], references: [user_profile_id], onDelete: Cascade, onUpdate: NoAction, map: "treatment_target_session_forms_ibfk_4")
+    forms                                                                  forms                            @relation(fields: [form_id], references: [form_id], onDelete: Cascade, onUpdate: NoAction, map: "treatment_target_session_forms_ibfk_5")
+    treatment_target_feedback_config                                       treatment_target_feedback_config @relation(fields: [config_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "treatment_target_session_forms_ibfk_6")
+
+    @@unique([session_id, form_id, treatment_target], map: "unique_session_form")
+    @@index([client_id], map: "idx_client_id")
+    @@index([client_id, session_id], map: "idx_client_session")
+    @@index([config_id], map: "idx_config_id")
+    @@index([counselor_id], map: "idx_counselor_id")
+    @@index([form_id], map: "idx_form_id")
+    @@index([form_name], map: "idx_form_name")
+    @@index([form_submit], map: "idx_form_submit")
+    @@index([is_sent], map: "idx_is_sent")
+    @@index([req_id], map: "idx_req_id")
+    @@index([req_id, session_id], map: "idx_req_session")
+    @@index([session_id, form_submit], map: "idx_session_form_submit")
+    @@index([session_id], map: "idx_session_id")
+    @@index([session_number], map: "idx_session_number")
+    @@index([tenant_id], map: "idx_tenant_id")
+    @@index([treatment_target, session_number], map: "idx_treatment_session")
+    @@index([treatment_target], map: "idx_treatment_target")
+}
+
+model treatment_target_session_forms_template {
+    id               Int       @id @default(autoincrement())
+    treatment_target String    @db.VarChar(255)
+    form_name        String    @db.VarChar(255)
+    service_name     String?   @db.VarChar(255)
+    purpose          String?   @db.Text
+    sessions         Json?
+    is_active        Boolean?  @default(true)
+    created_at       DateTime? @default(now()) @db.Timestamp(0)
+    updated_at       DateTime? @default(now()) @db.Timestamp(0)
+
+    @@unique([treatment_target, form_name], map: "unique_treatment_target_form")
+    @@index([is_active], map: "idx_template_active")
+}
+
+model user_forms {
+    user_form_id                                       Int                  @id @default(autoincrement())
+    client_id                                          Int
+    counselor_id                                       Int
+    form_id                                            Int
+    session_id                                         Int?
+    is_sent                                            Boolean              @default(false)
+    form_submit                                        Boolean              @default(false)
+    status_yn                                          user_forms_status_yn @default(y)
+    created_at                                         DateTime             @default(now()) @db.Timestamp(0)
+    updated_at                                         DateTime             @default(now()) @db.Timestamp(0)
+    tenant_id                                          Int?
+    forms                                              forms                @relation(fields: [form_id], references: [form_id], onDelete: Cascade, map: "user_forms_forms_FK")
+    session                                            session?             @relation(fields: [session_id], references: [session_id], onDelete: Cascade, map: "user_forms_session_FK")
+    user_profile_user_forms_client_idTouser_profile    user_profile         @relation("user_forms_client_idTouser_profile", fields: [client_id], references: [user_profile_id], onDelete: Cascade, map: "user_forms_user_profile_FK")
+    user_profile_user_forms_counselor_idTouser_profile user_profile         @relation("user_forms_counselor_idTouser_profile", fields: [counselor_id], references: [user_profile_id], onDelete: Cascade, map: "user_forms_user_profile_FK_1")
+
+    @@unique([form_id, session_id, client_id], map: "user_forms_unique")
+    @@index([session_id], map: "user_forms_session_FK")
+    @@index([client_id], map: "user_forms_user_profile_FK")
+    @@index([counselor_id], map: "user_forms_user_profile_FK_1")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_profile {
+    user_profile_id                                                                          Int                              @id @default(autoincrement())
+    user_id                                                                                  Int                              @unique(map: "user_profile_unique")
+    user_first_name                                                                          String                           @db.VarChar(100)
+    user_last_name                                                                           String?                          @db.VarChar(100)
+    user_phone_nbr                                                                           BigInt?
+    country_code                                                                             String?                          @db.VarChar(5)
+    timezone                                                                                 String?                          @db.VarChar(64)
+    user_typ_id                                                                              Int?
+    status_id                                                                                Int                              @default(1)
+    clam_num                                                                                 BigInt?                          @unique(map: "user_profile_unique_1")
+    status_yn                                                                                user_profile_status_yn           @default(y)
+    created_at                                                                               DateTime                         @default(now()) @db.Timestamp(0)
+    updated_at                                                                               DateTime                         @default(now()) @db.Timestamp(0)
+    tenant_id                                                                                Int?
+    client_enrollments_client_enrollments_user_idTouser_profile                              client_enrollments[]             @relation("client_enrollments_user_idTouser_profile")
+    client_enrollments_client_enrollments_client_idTouser_profile                            client_enrollments[]             @relation("client_enrollments_client_idTouser_profile")
+    counselor_profile                                                                        counselor_profile?
+    counselor_reviews                                                                        counselor_reviews[]
+    thrpy_req_thrpy_req_counselor_idTouser_profile                                           thrpy_req[]                      @relation("thrpy_req_counselor_idTouser_profile")
+    thrpy_req_thrpy_req_client_idTouser_profile                                              thrpy_req[]                      @relation("thrpy_req_client_idTouser_profile")
+    treatment_target_session_forms_treatment_target_session_forms_client_idTouser_profile    treatment_target_session_forms[] @relation("treatment_target_session_forms_client_idTouser_profile")
+    treatment_target_session_forms_treatment_target_session_forms_counselor_idTouser_profile treatment_target_session_forms[] @relation("treatment_target_session_forms_counselor_idTouser_profile")
+    user_forms_user_forms_client_idTouser_profile                                            user_forms[]                     @relation("user_forms_client_idTouser_profile")
+    user_forms_user_forms_counselor_idTouser_profile                                         user_forms[]                     @relation("user_forms_counselor_idTouser_profile")
+    users                                                                                    users                            @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "user_profile_users_FK")
+    user_target_outcome_user_target_outcome_user_profile_idTouser_profile                    user_target_outcome[]            @relation("user_target_outcome_user_profile_idTouser_profile")
+    user_target_outcome_user_target_outcome_counselor_idTouser_profile                       user_target_outcome[]            @relation("user_target_outcome_counselor_idTouser_profile")
+}
+
+model user_target_outcome {
+    user_target_id                                                 Int                             @id @default(autoincrement())
+    user_profile_id                                                Int
+    target_outcome_id                                              Int
+    counselor_id                                                   Int
+    status_enum                                                    user_target_outcome_status_enum @default(y)
+    created_at                                                     DateTime                        @default(now()) @db.Timestamp(0)
+    update_at                                                      DateTime                        @default(now()) @db.Timestamp(0)
+    tenant_id                                                      Int?
+    ref_target_outcomes                                            ref_target_outcomes             @relation(fields: [target_outcome_id], references: [target_id], onDelete: NoAction, onUpdate: NoAction, map: "user_target_outcome_ref_target_outcomes_FK")
+    user_profile_user_target_outcome_user_profile_idTouser_profile user_profile                    @relation("user_target_outcome_user_profile_idTouser_profile", fields: [user_profile_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "user_target_outcome_user_profile_FK")
+    user_profile_user_target_outcome_counselor_idTouser_profile    user_profile                    @relation("user_target_outcome_counselor_idTouser_profile", fields: [counselor_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "user_target_outcome_user_profile_FK_1")
+
+    @@unique([user_profile_id, status_enum], map: "user_target_outcome_unique_1")
+    @@index([target_outcome_id], map: "user_target_outcome_ref_target_outcomes_FK")
+    @@index([counselor_id], map: "user_target_outcome_user_profile_FK_1")
+}
+
+model user_typ {
+    user_typ_id   Int      @id @default(autoincrement())
+    user_typ_cde  String   @db.VarChar(100)
+    user_typ_desc String?  @db.VarChar(100)
+    created_at    DateTime @default(now()) @db.Timestamp(0)
+    updated_at    DateTime @default(now()) @db.Timestamp(0)
+    tenant_id     Int?
+}
+
+model users {
+    user_id              Int                    @id @default(autoincrement())
+    name                 String?                @db.VarChar(255)
+    email                String                 @db.VarChar(255)
+    is_verified          Boolean                @default(false)
+    email_verified_at    DateTime?              @db.DateTime(0)
+    password             String                 @db.VarChar(255)
+    remember_token       String?                @db.VarChar(255)
+    role_id              Int
+    status_id            Int                    @default(1)
+    status_yn            users_status_yn        @default(y)
+    created_at           DateTime               @default(now()) @db.Timestamp(0)
+    updated_at           DateTime               @default(now()) @db.Timestamp(0)
+    tenant_id            Int?
+    fee_split_management fee_split_management[]
+    user_profile         user_profile?
+}
+
+model users_hist {
+    users_hist_id   Int                   @id @default(autoincrement())
+    user_id         Int
+    user_profile_id Int
+    status_yn       users_hist_status_yn?
+    created_at      DateTime              @default(now()) @db.Timestamp(0)
+    tenant_id       Int?
+}
+
+enum counselor_documents_document_type {
+    license
+    certification
+    insurance
+    education
+    identification
+    other
+}
+
+enum feedback_consent_status_yn {
+    y
+    n
+}
+
+enum forms_frequency_typ {
+    static
+    dynamic
+}
+
+enum invoice_status_yn {
+    y
+    n
+}
+
+enum notes_status_yn {
+    y
+    n
+}
+
+enum users_hist_status_yn {
+    y
+    n
+}
+
+enum session_session_format {
+    ONLINE
+    IN_PERSON @map("IN-PERSON")
+}
+
+enum thrpy_req_session_format_id {
+    ONLINE
+    IN_PERSON @map("IN-PERSON")
+}
+
+enum user_target_outcome_status_enum {
+    y
+    n
+}
+
+enum feedback_is_discharged {
+    y
+    n
+}
+
+enum feedback_attendance_status_yn {
+    y
+    n
+}
+
+enum feedback_status_yn {
+    y
+    n
+}
+
+enum forms_status_yn {
+    y
+    n
+}
+
+enum user_forms_status_yn {
+    y
+    n
+}
+
+enum service_svc_formula_typ {
+    s
+    d
+}
+
+enum service_templates_svc_formula_typ {
+    s
+    d
+}
+
+enum thrpy_req_status_yn {
+    y
+    n
+}
+
+enum thrpy_req_thrpy_status {
+    ONGOING
+    DISCHARGED
+}
+
+enum users_status_yn {
+    y
+    n
+}
+
+enum user_profile_status_yn {
+    y
+    n
+}
+
+enum service_status_yn {
+    y
+    n
+}
+
+enum service_templates_status_yn {
+    y
+    n
+}
+
+enum session_session_status {
+    SCHEDULED
+    SHOW
+    NO_SHOW    @map("NO-SHOW")
+    DISCHARGED
+    INACTIVE
+}
+
+enum session_status_yn {
+    y
+    n
+}
