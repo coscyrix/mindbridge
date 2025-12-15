@@ -95,6 +95,9 @@ export default class Report {
                       .andOnNull('fb.session_id');
                 });
           })
+          // Join to get client's role_id to filter tenant consent forms
+          .leftJoin('user_profile as client_up', 'vuf.client_id', 'client_up.user_profile_id')
+          .leftJoin('users as client_user', 'client_up.user_id', 'client_user.user_id')
           .select(
             'vuf.client_first_name',
             'vuf.client_last_name',
@@ -115,6 +118,7 @@ export default class Report {
                   DATE_ADD(MAX(vuf.updated_at), INTERVAL 7 DAY)
                 ) as due_date
               `),
+            'client_user.role_id as client_role_id', // Include client's role_id for filtering
           )
           .where('vuf.is_sent', 1)
           .andWhere('vuf.client_status_yn', 'y')
@@ -140,6 +144,7 @@ export default class Report {
             'vuf.thrpy_req_id', // Keep original thrpy_req_id in GROUP BY
             'vuf.tenant_id',
             'vuf.user_form_id', // Add user_form_id to GROUP BY to make each consent form unique
+            'client_user.role_id', // Add client's role_id to GROUP BY for filtering
           ])
           .orderBy('date_sent', 'desc');
 
@@ -213,6 +218,9 @@ export default class Report {
                       });
                 });
           })
+          // Join to get client's role_id to filter tenant consent forms
+          .leftJoin('user_profile as client_up', 'vuf.client_id', 'client_up.user_profile_id')
+          .leftJoin('users as client_user', 'client_up.user_id', 'client_user.user_id')
           .select(
             'vuf.client_first_name',
             'vuf.client_last_name',
@@ -233,6 +241,7 @@ export default class Report {
                   DATE_ADD(MAX(vuf.updated_at), INTERVAL 7 DAY)
                 ) as due_date
               `),
+            'client_user.role_id as client_role_id', // Include client's role_id for filtering
           )
           .where('vuf.is_sent', 1)
           .andWhere('vuf.client_status_yn', 'y')
@@ -258,6 +267,7 @@ export default class Report {
             'vuf.thrpy_req_id', // Keep original thrpy_req_id in GROUP BY
             'vuf.tenant_id',
             'vuf.user_form_id', // Add user_form_id to GROUP BY to make each form unique
+            'client_user.role_id', // Add client's role_id to GROUP BY for filtering
           ])
           .orderBy('date_sent', 'desc');
       }
@@ -421,6 +431,18 @@ export default class Report {
       }
       if (requestForms && requestForms.length > 0) {
         combinedResults = [...combinedResults, ...requestForms];
+      }
+
+      // Filter out tenant consent forms for non-admin users
+      // Tenant consent forms (where client has role_id = 3) should only be visible to admins (role_id = 4)
+      if (data.role_id !== 4) {
+        combinedResults = combinedResults.filter(form => {
+          // If it's a consent form and the client is a tenant (role_id = 3), exclude it
+          if (form.form_cde === 'CONSENT' && form.client_role_id === 3) {
+            return false;
+          }
+          return true;
+        });
       }
 
       // Sort combined results by date_sent

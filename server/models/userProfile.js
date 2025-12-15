@@ -296,7 +296,8 @@ export default class UserProfile {
         }
       }
 
-      if (data.role_id === 1) {
+      // Send consent email for both clients (role_id === 1) and tenants (role_id === 3)
+      if (data.role_id === 1 || data.role_id === 3) {
         const sendClientConsentForm = await this.emailTmplt.sendClientConsentEmail({
           email: data.email,
           client_name: `${data.user_first_name} ${data.user_last_name}`,
@@ -310,7 +311,7 @@ export default class UserProfile {
         
         if (sendClientConsentForm?.error) {
           logger.error('Error sending consent form email:', sendClientConsentForm.message);
-          // Continue with client creation even if email fails, but log the error
+          // Continue with user creation even if email fails, but log the error
         }
       }
 
