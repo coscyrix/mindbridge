@@ -41,6 +41,107 @@ export default class ThrpyReq {
     this.userTargetOutcome = new UserTargetOutcome();
   }
 
+  // Helper function to check for session time collisions
+  async checkSessionTimeCollision(counselor_id, intake_date, scheduled_time) {
+    try {
+      // Get environment variables with defaults
+      const SESSION_TIME_PERIOD = parseInt(process.env.SESSION_TIME_PERIOD || '60', 10);
+      const SESSION_BREAK_TIME = parseInt(process.env.SESSION_BREAK_TIME || '15', 10);
+
+      // Parse the scheduled_time to get hours and minutes
+      let scheduledHours, scheduledMinutes;
+      if (scheduled_time.includes('T')) {
+        // Format: "HH:mm:ss.sssZ" or "HH:mm:ssZ"
+        const timePart = scheduled_time.split('T')[1].split('.')[0]; // Get "HH:mm:ss"
+        const [hours, minutes] = timePart.split(':');
+        scheduledHours = parseInt(hours, 10);
+        scheduledMinutes = parseInt(minutes, 10);
+      } else if (scheduled_time.includes(':')) {
+        // Format: "HH:mm:ss" or "HH:mm"
+        const [hours, minutes] = scheduled_time.split(':');
+        scheduledHours = parseInt(hours, 10);
+        scheduledMinutes = parseInt(minutes, 10);
+      } else {
+        logger.error('Invalid scheduled_time format:', scheduled_time);
+        return { message: 'Invalid scheduled_time format', error: -1 };
+      }
+
+      // Calculate new session time range
+      // Start: scheduled_time - SESSION_TIME_PERIOD minutes
+      // End: scheduled_time + SESSION_BREAK_TIME minutes
+      const newSessionStart = new Date(`${intake_date}T${String(scheduledHours).padStart(2, '0')}:${String(scheduledMinutes).padStart(2, '0')}:00Z`);
+      newSessionStart.setMinutes(newSessionStart.getMinutes() - SESSION_TIME_PERIOD);
+      
+      const newSessionEnd = new Date(`${intake_date}T${String(scheduledHours).padStart(2, '0')}:${String(scheduledMinutes).padStart(2, '0')}:00Z`);
+      newSessionEnd.setMinutes(newSessionEnd.getMinutes() + SESSION_BREAK_TIME);
+
+      // Query existing sessions for the counselor on the same date
+      // Join session with thrpy_req to get counselor_id
+      const existingSessions = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('session as s')
+        .innerJoin('thrpy_req as tr', 's.thrpy_req_id', 'tr.req_id')
+        .select('s.session_id', 's.intake_date', 's.scheduled_time', 's.thrpy_req_id')
+        .where('tr.counselor_id', counselor_id)
+        .where('s.intake_date', intake_date)
+        .where('s.status_yn', 'y')
+        .whereNotIn('s.session_status', ['DISCHARGED', 'INACTIVE'])
+        .where('s.is_report', 0); // Only check regular sessions, not reports
+
+      // Check for collisions with existing sessions
+      for (const existingSession of existingSessions) {
+        if (!existingSession.scheduled_time) {
+          continue; // Skip sessions without scheduled_time
+        }
+
+        // Parse existing session's scheduled_time
+        let existingHours, existingMinutes;
+        const existingScheduledTime = existingSession.scheduled_time;
+        
+        if (existingScheduledTime.includes('T')) {
+          const timePart = existingScheduledTime.split('T')[1].split('.')[0];
+          const [hours, minutes] = timePart.split(':');
+          existingHours = parseInt(hours, 10);
+          existingMinutes = parseInt(minutes, 10);
+        } else if (existingScheduledTime.includes(':')) {
+          const [hours, minutes] = existingScheduledTime.split(':');
+          existingHours = parseInt(hours, 10);
+          existingMinutes = parseInt(minutes, 10);
+        } else {
+          continue; // Skip if format is invalid
+        }
+
+        // Calculate existing session time range using the same logic
+        const existingSessionStart = new Date(`${intake_date}T${String(existingHours).padStart(2, '0')}:${String(existingMinutes).padStart(2, '0')}:00Z`);
+        existingSessionStart.setMinutes(existingSessionStart.getMinutes() - SESSION_TIME_PERIOD);
+        
+        const existingSessionEnd = new Date(`${intake_date}T${String(existingHours).padStart(2, '0')}:${String(existingMinutes).padStart(2, '0')}:00Z`);
+        existingSessionEnd.setMinutes(existingSessionEnd.getMinutes() + SESSION_BREAK_TIME);
+
+        // Check if time ranges overlap
+        // Two time ranges overlap if: newStart < existingEnd && newEnd > existingStart
+        if (newSessionStart < existingSessionEnd && newSessionEnd > existingSessionStart) {
+          logger.warn('Session time collision detected', {
+            counselor_id,
+            intake_date,
+            new_session_time: scheduled_time,
+            existing_session_id: existingSession.session_id,
+            existing_session_time: existingScheduledTime,
+          });
+          return {
+            message: `Session time conflicts with an existing session. Please choose a different time slot.`,
+            error: -1,
+          };
+        }
+      }
+
+      return { message: 'No collision detected', error: 0 };
+    } catch (error) {
+      logger.error('Error checking session time collision:', error);
+      return { message: 'Error checking session time collision', error: -1 };
+    }
+  }
+
   // Helper function to calculate session amounts
   calculateSessionAmounts(totalInvoice, refFees, serviceGst) {
     // ALWAYS use tenant's tax percentage, not service GST
@@ -278,6 +379,23 @@ export default class ThrpyReq {
 
       if (checkThrpyReq.error) {
         return checkThrpyReq;
+      }
+
+      // Check for session time collision (double booking prevention)
+      // Only check the first schedule's session time (req_time)
+      const collisionCheck = await this.checkSessionTimeCollision(
+        data.counselor_id,
+        req_dte,
+        req_time,
+      );
+
+      if (collisionCheck.error) {
+        logger.warn('Session time collision detected, preventing double booking', {
+          counselor_id: data.counselor_id,
+          intake_date: req_dte,
+          scheduled_time: req_time,
+        });
+        return collisionCheck;
       }
 
       // Parse svc_report_formula if needed

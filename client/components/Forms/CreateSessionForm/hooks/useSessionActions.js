@@ -90,14 +90,31 @@ export const useSessionActions = (
         }
       }
     } catch (error) {
-      console.error("Error generating schedule:", error);
-      toast.error(
-        error?.response?.data?.message ||
-          "Failed to generate schedule. Please try again.",
-        {
-          position: "top-right",
-        }
-      );
+      // Check if the error is due to session time collision
+      const errorMessage = error?.response?.data?.message || error?.message || "";
+      const errorMessageLower = errorMessage.toLowerCase();
+      const isTimeCollision = 
+        errorMessageLower.includes("session time conflicts") ||
+        errorMessageLower.includes("conflicts with an existing session") ||
+        errorMessageLower.includes("collision") ||
+        errorMessageLower.includes("time slot");
+      
+      const displayMessage = isTimeCollision
+        ? "Time slot taken"
+        : errorMessage || "Failed to generate schedule. Please try again.";
+      
+      // Show toast notification
+      toast.error(displayMessage, {
+        position: "top-right",
+      });
+      
+      // For time collisions, don't log as error since it's expected behavior
+      if (!isTimeCollision) {
+        console.error("Error generating schedule:", error);
+      }
+      
+      // Return to prevent further execution
+      return;
     } finally {
       setLoader(null);
     }

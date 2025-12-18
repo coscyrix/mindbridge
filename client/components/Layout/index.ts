@@ -3,6 +3,7 @@ import styles from "../../styles/Layout.module.css";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import NeedHelpWrapper from "../NeedHelp/NeedHelpWrapper";
+import { useRouter } from "next/navigation";
 
 function Layout({ children }) {
   const [showSideBar, setShowSideBar] = useState(false);
@@ -32,7 +33,7 @@ function Layout({ children }) {
           <Header showSideBar={showSideBar} setShowSideBar={setShowSideBar} />
           {children}
         </main>
-       <NeedHelpWrapper/>
+        <NeedHelpWrapper />
       </div>
     </>
   );
