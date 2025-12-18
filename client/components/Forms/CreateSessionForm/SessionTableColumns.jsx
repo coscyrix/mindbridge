@@ -33,13 +33,30 @@ export const getSessionTableColumns = ({
     {
       name: "Session Date",
       selector: (row) => {
-        if (!row.intake_date) return "";
-        return convertUTCToLocalTime(
-                              `${
-                                row.req_dte_not_formatted ||
-                                row?.intake_date
-                              }T${row.req_time || row?.scheduled_time}`
-                            ).date;
+        // Always prioritize intake_date
+        if (row?.intake_date) {
+          return convertUTCToLocalTime(
+            `${row.intake_date}T${row.req_time || "00:00:00"}`
+          ).date;
+        }
+        
+        // Fallback to scheduled_time if intake_date is not available
+        if (row?.scheduled_time) {
+          const scheduledTimeStr = String(row.scheduled_time);
+          if (scheduledTimeStr.includes("T") || scheduledTimeStr.includes(" ")) {
+            const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
+            return convertUTCToLocalTime(normalizedDateTime).date;
+          }
+        }
+        
+        // Last fallback to req_dte_not_formatted
+        if (row?.req_dte_not_formatted) {
+          return convertUTCToLocalTime(
+            `${row.req_dte_not_formatted}T${row.req_time || "00:00:00"}`
+          ).date;
+        }
+        
+        return "";
       },
       selectorId: "intake_date",
       maxWidth: "120px",
@@ -47,23 +64,35 @@ export const getSessionTableColumns = ({
     {
       name: "Session Time",
       selector: (row) => {
-        if (row?.scheduled_time && row?.intake_date) {
-          return convertUTCToLocalTime(
-            `${row.intake_date}T${row.scheduled_time}`
-          ).time;
-        } else if (row?.scheduled_time) {
-          // If only scheduled_time is available without date, convert it directly
-          return convertUTCToLocalTime(row.scheduled_time).time;
-        } else {
-          const intakeTime = row?.intake_date
-            ? new Date(row.intake_date).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })
-            : "N/A";
-          return intakeTime;
+        if (row?.scheduled_time) {
+          const scheduledTimeStr = String(row.scheduled_time);
+          if (scheduledTimeStr.includes("T") || scheduledTimeStr.includes(" ")) {
+            const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
+            return convertUTCToLocalTime(normalizedDateTime).time;
+          }
+          if (row?.intake_date) {
+            return convertUTCToLocalTime(
+              `${row.intake_date}T${row.scheduled_time}`
+            ).time;
+          }
         }
+        
+        if (row?.intake_date && row?.req_time) {
+          return convertUTCToLocalTime(
+            `${row.intake_date}T${row.req_time}`
+          ).time;
+        }
+        
+        if (row?.intake_date) {
+          const intakeTime = new Date(row.intake_date).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          });
+          return intakeTime !== "Invalid Date" ? intakeTime : "N/A";
+        }
+        
+        return "N/A";
       },
       selectorId: "session_time",
       maxWidth: "120px",

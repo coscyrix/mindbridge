@@ -97,6 +97,34 @@ export const accountRestoredEmail = (email, newPassword) => {
   };
 };
 
+export const absenceNotificationEmail = (email, counselorName, absencePeriod, cancelledSessionsCount, adminName) => {
+  return {
+    to: email,
+    subject: 'Therapist Absence Notification - MindBridge',
+    html: `
+      <h1>Therapist Absence Notification</h1>
+      <p>Hello ${adminName || 'Administrator'},</p>
+      <p>This is to notify you that a therapist has marked themselves as unavailable:</p>
+      <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <p><strong>Therapist:</strong> ${counselorName}</p>
+        <p><strong>Absence Period:</strong> ${absencePeriod}</p>
+        <p><strong>Rescheduled Sessions:</strong> ${cancelledSessionsCount}</p>
+      </div>
+      <p><strong>Actions Taken:</strong></p>
+      <ul>
+        <li>All active treatment blocks have been automatically paused</li>
+        <li>All sessions within the absence period have been rescheduled to after the absence ends</li>
+        <li>Session dates have been automatically recalculated based on service frequency rules</li>
+        <li>Treatment blocks will automatically resume after the absence period ends</li>
+      </ul>
+      <p>Please review the affected schedules and inform any impacted clients as necessary.</p>
+      <p>Thank you,</p>
+      <p>The MindBridge System</p>
+      ${EMAIL_DISCLAIMER}
+    `,
+  };
+};
+
 export const emailUpdateEmail = (email) => {
   return {
     to: email,

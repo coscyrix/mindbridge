@@ -5,6 +5,8 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const cron = require('node-cron');
 import Session from './models/session.js';
+import TherapistAbsence from './models/therapistAbsence.js';
+import logger from './config/winston.js';
 
 import {
   userRouter,
@@ -32,6 +34,7 @@ import {
   treatmentTargetRequestFormsRouter,
   treatmentTargetSessionFormsRouter,
   treatmentTargetSessionFormsTemplateRouter,
+  therapistAbsenceRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -70,6 +73,7 @@ async function main() {
         treatmentTargetRequestFormsRouter,
         treatmentTargetSessionFormsRouter,
         treatmentTargetSessionFormsTemplateRouter,
+        therapistAbsenceRouter,
       ],
     });
 
@@ -77,6 +81,13 @@ async function main() {
     const session = new Session();
     cron.schedule('0 0 * * *', async () => {
       await session.dailyUpdateSessionStatus();
+    }, { timezone: 'America/Los_Angeles' });
+
+    // Schedule cron job to resume treatment blocks for expired absences (daily at 1 AM)
+    const therapistAbsence = new TherapistAbsence();
+    cron.schedule('0 1 * * *', async () => {
+      logger.info('Running expired absence resume cronjob...');
+      await therapistAbsence.resumeExpiredAbsences();
     }, { timezone: 'America/Los_Angeles' });
 
     await server.listen();

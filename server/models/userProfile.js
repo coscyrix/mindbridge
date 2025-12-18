@@ -564,11 +564,15 @@ export default class UserProfile {
             .from('client_enrollments')
             .where('user_id', data.counselor_id);
 
+          // Get clients from therapy requests, excluding DISCHARGED status
+          // Only include ONGOING and PAUSED therapy requests
           const clientListFromThrpyReq = await db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
             .distinct('client_id')
             .from('thrpy_req')
-            .where('counselor_id', data.counselor_id);
+            .where('counselor_id', data.counselor_id)
+            .whereIn('thrpy_status', ['ONGOING', 'PAUSED'])
+            .where('status_yn', 'y');
 
           // Merge the two arrays and remove duplicate elements
           const clientList = [
@@ -594,8 +598,8 @@ export default class UserProfile {
         return { message: 'User profile not found', rec: [] };
       }
 
-      // Transform the data to include a tenant object
-      const transformedRec = rec.map(profile => {
+      // Transform the data to include a tenant object and ensure has_schedule includes PAUSED status
+      const transformedRec = await Promise.all(rec.map(async (profile) => {
         const {
           tenant_tenant_id,
           tenant_generated_id,
@@ -620,13 +624,52 @@ export default class UserProfile {
           tax_percent
         };
 
-        // Return user profile with tenant object
+        // Ensure has_schedule is populated even for PAUSED status
+        // If has_schedule is null or missing, check for ONGOING or PAUSED therapy requests
+        let hasSchedule = userProfileData.has_schedule;
+        let isPaused = false;
+        
+        if (!hasSchedule || !hasSchedule.req_id) {
+          // Check for active therapy requests (ONGOING or PAUSED)
+          const activeThrpyReq = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('thrpy_req')
+            .where('client_id', userProfileData.user_profile_id)
+            .whereIn('thrpy_status', ['ONGOING', 'PAUSED'])
+            .where('status_yn', 'y')
+            .orderBy('created_at', 'desc')
+            .first();
+
+          if (activeThrpyReq) {
+            hasSchedule = {
+              req_id: activeThrpyReq.req_id
+            };
+            // Set isPaused based on the therapy request status
+            isPaused = activeThrpyReq.thrpy_status === 'PAUSED';
+          }
+        } else {
+          // If has_schedule exists, check the actual status of the therapy request
+          const thrpyReq = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('thrpy_req')
+            .where('req_id', hasSchedule.req_id)
+            .where('status_yn', 'y')
+            .first();
+
+          if (thrpyReq) {
+            isPaused = thrpyReq.thrpy_status === 'PAUSED';
+          }
+        }
+
+        // Return user profile with tenant object, ensured has_schedule, and isPaused flag
         return {
           ...userProfileData,
+          has_schedule: hasSchedule,
+          isPaused,
           country_code,
           tenant
         };
-      });
+      }));
 
       return { message: 'User profile found', rec: transformedRec };
     } catch (error) {

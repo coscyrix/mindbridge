@@ -27,3 +27,4 @@ export { treatmentTargetFeedbackConfigRouter } from './treatmentTargetFeedbackCo
 export { treatmentTargetRequestFormsRouter } from './treatmentTargetRequestForms.js';
 export { treatmentTargetSessionFormsRouter } from './treatmentTargetSessionForms.js';
 export { treatmentTargetSessionFormsTemplateRouter } from './treatmentTargetSessionFormsTemplate.js';
+export { default as therapistAbsenceRouter } from './therapistAbsence.js';

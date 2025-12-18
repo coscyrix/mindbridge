@@ -33,6 +33,8 @@ function CustomClientDetails({
   children,
   primaryButton,
   handleCreate,
+  secondaryButton,
+  handleSecondaryAction,
   selectCounselor,
   handleSelectCounselor,
   handleSelectService,
@@ -447,6 +449,13 @@ function CustomClientDetails({
                         customClass="create-client-button"
                       />
                     )}
+                    {!shouldHideButton && secondaryButton && (
+                      <CustomButton
+                        title={secondaryButton}
+                        onClick={handleSecondaryAction}
+                        customClass="create-client-button"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -522,6 +531,13 @@ function CustomClientDetails({
                       icon={<AddIcon />}
                       title={primaryButton}
                       onClick={handleCreate}
+                      customClass="create-client-button"
+                    />
+                  )}
+                  {!shouldHideButton && secondaryButton && (
+                    <CustomButton
+                      title={secondaryButton}
+                      onClick={handleSecondaryAction}
                       customClass="create-client-button"
                     />
                   )}

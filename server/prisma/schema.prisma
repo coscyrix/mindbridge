@@ -577,6 +577,7 @@ model session {
     session_description            String?                          @db.VarChar(255)
     forms_array                    Json?
     session_status                 session_session_status           @default(SCHEDULED)
+    cancellation_reason            String?                          @db.VarChar(255)
     status_yn                      session_status_yn                @default(y)
     created_at                     DateTime?                        @default(now()) @db.Timestamp(0)
     updated_at                     DateTime                         @default(now()) @db.Timestamp(0)
@@ -894,6 +895,21 @@ model treatment_target_request_forms {
     @@index([tenant_id], map: "idx_ttrf_tenant_id")
 }
 
+model therapist_absences {
+    id           Int       @id @default(autoincrement())
+    counselor_id Int
+    start_date   DateTime  @db.Date
+    end_date     DateTime  @db.Date
+    notify_admin Boolean   @default(false)
+    created_at   DateTime? @default(now()) @db.Timestamp(0)
+    updated_at   DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id    Int?
+
+    @@index([counselor_id], map: "idx_therapist_absences_counselor")
+    @@index([start_date, end_date], map: "idx_therapist_absences_dates")
+    @@index([tenant_id], map: "idx_therapist_absences_tenant")
+}
+
 enum counselor_documents_document_type {
     license
     certification
@@ -986,6 +1002,7 @@ enum thrpy_req_status_yn {
 enum thrpy_req_thrpy_status {
     ONGOING
     DISCHARGED
+    PAUSED
 }
 
 enum users_status_yn {
@@ -1014,6 +1031,7 @@ enum session_session_status {
     NO_SHOW    @map("NO-SHOW")
     DISCHARGED
     INACTIVE
+    CANCELLED
 }
 
 enum session_status_yn {
