@@ -797,7 +797,10 @@ export default class Session {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
         .where('intake_date_formatted', formattedCurrentDate)
-        .andWhere('thrpy_status', 'ONGOING');
+        .andWhere('thrpy_status', 'ONGOING')
+        .andWhere('status_yn', 'y') // Only active sessions
+        .whereNot('session_status', 'DISCHARGED') // Exclude discharged sessions
+        .whereNot('session_status', 'INACTIVE'); // Exclude inactive sessions
 
       // Apply role-based filtering
       console.log('Session filtering - role_id:', data.role_id, 'tenant_id:', data.tenant_id, 'counselor_id:', data.counselor_id);
@@ -838,7 +841,10 @@ export default class Session {
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('v_session')
         .where('intake_date_formatted', formattedTomorrowDate)
-        .andWhere('thrpy_status', 'ONGOING');
+        .andWhere('thrpy_status', 'ONGOING')
+        .andWhere('status_yn', 'y') // Only active sessions
+        .whereNot('session_status', 'DISCHARGED') // Exclude discharged sessions
+        .whereNot('session_status', 'INACTIVE'); // Exclude inactive sessions
 
       // Apply role-based filtering for tomorrow's sessions
       if (data.role_id == 2 && data.counselor_id) {
