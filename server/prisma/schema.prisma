@@ -556,6 +556,9 @@ model service_templates {
     updated_at          DateTime?                          @default(now()) @db.Timestamp(0)
     created_at          DateTime?                          @default(now()) @db.Timestamp(0)
 
+    // Relations
+    treatment_target_service_frequencies treatment_target_service_frequencies[]
+
     @@index([status_yn], map: "service_templates_status_typ_FK")
 }
 
@@ -719,19 +722,40 @@ model treatment_target_session_forms {
     @@index([treatment_target], map: "idx_treatment_target")
 }
 
+/// PARENT: One record per treatment_target + form_name combination
 model treatment_target_session_forms_template {
     id               Int       @id @default(autoincrement())
     treatment_target String    @db.VarChar(255)
     form_name        String    @db.VarChar(255)
-    service_name     String?   @db.VarChar(255)
     purpose          String?   @db.Text
-    sessions         Json?
     is_active        Boolean?  @default(true)
     created_at       DateTime? @default(now()) @db.Timestamp(0)
     updated_at       DateTime? @default(now()) @db.Timestamp(0)
 
+    // One-to-Many: has many service frequencies
+    service_frequencies treatment_target_service_frequencies[]
+
     @@unique([treatment_target, form_name], map: "unique_treatment_target_form")
     @@index([is_active], map: "idx_template_active")
+}
+
+/// CHILD: Many service-specific session frequencies per template
+model treatment_target_service_frequencies {
+    id              Int       @id @default(autoincrement())
+    template_id     Int // FK to parent template
+    service_ref_id  Int? // FK to service_templates table
+    nbr_of_sessions Int // 5, 6, 10, 12, 16, 18, 20
+    sessions        Json // Frequency: [1, 4] or [1, 5, 10]
+    created_at      DateTime? @default(now()) @db.Timestamp(0)
+    updated_at      DateTime? @default(now()) @db.Timestamp(0)
+
+    // Relations
+    template         treatment_target_session_forms_template @relation(fields: [template_id], references: [id], onDelete: Cascade, map: "fk_ttsf_template")
+    service_template service_templates?                      @relation(fields: [service_ref_id], references: [template_service_id], onUpdate: NoAction, map: "fk_ttsf_service_template")
+
+    @@unique([template_id, service_ref_id, nbr_of_sessions], map: "unique_template_service_sessions")
+    @@index([template_id], map: "idx_ttsf_template_id")
+    @@index([service_ref_id], map: "idx_ttsf_service_ref_id")
 }
 
 model user_forms {

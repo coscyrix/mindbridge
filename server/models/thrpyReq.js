@@ -808,6 +808,7 @@ export default class ThrpyReq {
         req_id: postThrpyReq.req_id,
         tenant_id: data.tenant_id,
         mode: "treatment_target",
+        number_of_sessions: data.number_of_sessions, // Pass number_of_sessions for Priority 1 matching
         treatment_target: treatmentTarget,
       });
 
@@ -1872,10 +1873,11 @@ export default class ThrpyReq {
    * @param {string} data.mode - Form attachment mode ('service' or 'treatment_target')
    * @param {string} data.treatment_target - Treatment target (required when mode is 'treatment_target')
    * @param {number} data.tenant_id - Tenant ID
+   * @param {number} data.number_of_sessions - Number of sessions (optional, for Priority 1 matching)
    */
   async loadSessionFormsWithMode(data) {
     try {
-      const { req_id, mode, treatment_target, tenant_id } = data;
+      const { req_id, mode, treatment_target, tenant_id, number_of_sessions } = data;
 
       if (!req_id) {
         logger.error('Missing required field: req_id');
@@ -1920,10 +1922,12 @@ export default class ThrpyReq {
         const TreatmentTargetFeedbackConfig = (await import('./treatmentTargetFeedbackConfig.js')).default;
         const treatmentTargetConfig = new TreatmentTargetFeedbackConfig();
         
+        logger.info(`Loading forms using treatment_target mode for req_id: ${req_id}, treatment_target: ${effectiveTreatmentTarget}`);
         return await treatmentTargetConfig.loadSessionFormsByTreatmentTarget({
           req_id,
           treatment_target: effectiveTreatmentTarget,
-          tenant_id
+          tenant_id,
+          number_of_sessions // Pass number_of_sessions for Priority 1 matching
         });
       } else if (effectiveMode === 'auto') {
         // Auto mode: check if treatment target forms exist, otherwise use service-based
@@ -1969,7 +1973,8 @@ export default class ThrpyReq {
           return await treatmentTargetConfig.loadSessionFormsByTreatmentTarget({
             req_id,
             treatment_target: actualTreatmentTarget,
-            tenant_id
+            tenant_id,
+            number_of_sessions // Pass number_of_sessions for Priority 1 matching
           });
         } else {
           // Use service-based form loading

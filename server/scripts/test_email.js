@@ -9,7 +9,7 @@ async function testEmail() {
   try {
     console.log('Testing email configuration...');
     console.log('Email From:', process.env.EMAIL_FROM);
-    console.log('Email Password:', process.env.EMAIL_PASSWORD ? '***SET***' : '***NOT SET***');
+    console.log('Email Password:', process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD : '***NOT SET***');
     
     const sendEmail = new SendEmail();
     
