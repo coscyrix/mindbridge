@@ -241,6 +241,29 @@ const CommonServices = {
       throw error;
     }
   },
+  // User activation/deactivation (works for both counselors and tenants)
+  activateUser: async (user_id, tenant_id) => {
+    try {
+      const response = await api.post('/counselor-activation/activate', {
+        counselor_user_id: user_id,
+        tenant_id,
+      });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  deactivateUser: async (user_id, tenant_id) => {
+    try {
+      const response = await api.post('/counselor-activation/deactivate', {
+        counselor_user_id: user_id,
+        tenant_id,
+      });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
 
 export default CommonServices;

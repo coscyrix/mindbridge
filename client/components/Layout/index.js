@@ -6,7 +6,10 @@ import NeedHelpWrapper from "../NeedHelp/NeedHelpWrapper";
 
 function Layout({ children }) {
   const [showSideBar, setShowSideBar] = useState(false);
+  const router = useRouter();
+
   useEffect(() => {
+    // Note: Deactivated account check is handled by middleware.js, so no need to check here
     const mediaQuery = window.matchMedia("(min-width: 1024px)");
 
     const handleMediaChange = () => {
@@ -19,7 +22,8 @@ function Layout({ children }) {
     return () => {
       mediaQuery.removeEventListener("change", handleMediaChange);
     };
-  }, []);
+  }, [router]);
+
   return (
     <>
       <div className={styles.layout}>

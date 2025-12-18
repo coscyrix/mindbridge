@@ -1399,9 +1399,14 @@ export const CLIENT_MANAGEMENT_DATA = (
   handleEdit,
   handleDelete,
   handleEditSessionInfo,
-  dropdownRef
+  dropdownRef,
+  handleActivate,
+  handleDeactivate,
+  showActivationActions = false,
+  userRoleId,
+  currentUserId = null
 ) => {
-  return [
+  const columns = [
     {
       name: "ID",
       selector: (row) => row.user_profile_id,
@@ -1438,22 +1443,53 @@ export const CLIENT_MANAGEMENT_DATA = (
       sortable: true,
       selectorId: "email",
     },
-    {
-      name: "",
-      cell: (row) => (
-        <Dropdown
-          ref={dropdownRef}
-          row={row}
-          handleCellClick={handleCellClick}
-          handleEdit={handleEdit}
-          handleDelete={handleDelete}
-        />
-      ),
-      width: "50px",
-      allowOverflow: true,
-      button: true,
-    },
   ];
+
+  // Add Status column for counselors/tenants when activation actions are enabled
+  if (showActivationActions) {
+    columns.push({
+      name: "Status",
+      cell: (row) => {
+        const isActivated = row?.isActivated !== false && row?.isActivated !== undefined;
+        return (
+          <div
+            style={{
+              color: isActivated ? "#4caf50" : "#ff9800",
+              fontWeight: "500",
+              textTransform: "capitalize",
+            }}
+          >
+            {isActivated ? "Active" : "Inactive"}
+          </div>
+        );
+      },
+      sortable: true,
+      selectorId: "isActivated",
+    });
+  }
+
+  columns.push({
+    name: "",
+    cell: (row) => (
+      <Dropdown
+        ref={dropdownRef}
+        row={row}
+        handleCellClick={handleCellClick}
+        handleEdit={handleEdit}
+        handleDelete={handleDelete}
+        handleActivate={handleActivate}
+        handleDeactivate={handleDeactivate}
+        showActivationActions={showActivationActions}
+        userRoleId={userRoleId}
+        currentUserId={currentUserId}
+      />
+    ),
+    width: "50px",
+    allowOverflow: true,
+    button: true,
+  });
+
+  return columns;
 };
 
 export const roles = [

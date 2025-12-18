@@ -7,6 +7,7 @@ const knex = require('knex');;
 import logger from '../config/winston.js';
 import AuthCommon from './auth/authCommon.js';
 import UserForm from './userForm.js';
+import prisma from '../utils/prisma.js';
 const dotenv = require('dotenv');;
 
 dotenv.config();
@@ -25,14 +26,28 @@ export default class Common {
 
   async getUserByEmail(email) {
     try {
-      const rec = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .where('email', email)
-        .from('v_user');
+      const rec = await prisma.users.findMany({
+        where: {
+          email: email.toLowerCase(),
+        },
+        select: {
+          user_id: true,
+          email: true,
+          password: true,
+          status_yn: true,
+          is_active: true,
+          is_verified: true,
+          role_id: true,
+          tenant_id: true,
+          created_at: true,
+          updated_at: true,
+        },
+      });
 
+      // Return as array to maintain backward compatibility
       return rec;
     } catch (error) {
+      logger.error('Error in getUserByEmail:', error);
       return error;
     }
   }

@@ -851,6 +851,7 @@ model users {
     role_id              Int
     status_id            Int                    @default(1)
     status_yn            users_status_yn        @default(y)
+    is_active            Boolean                @default(true)
     created_at           DateTime               @default(now()) @db.Timestamp(0)
     updated_at           DateTime               @default(now()) @db.Timestamp(0)
     tenant_id            Int?

@@ -35,6 +35,7 @@ import {
   treatmentTargetSessionFormsRouter,
   treatmentTargetSessionFormsTemplateRouter,
   therapistAbsenceRouter,
+  counselorActivationRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -74,6 +75,7 @@ async function main() {
         treatmentTargetSessionFormsRouter,
         treatmentTargetSessionFormsTemplateRouter,
         therapistAbsenceRouter,
+        counselorActivationRouter,
       ],
     });
 

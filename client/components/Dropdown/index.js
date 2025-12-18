@@ -4,7 +4,18 @@ import { DeleteIcon, EditIcon, MenuIcon } from "../../public/assets/icons";
 import { TooltipButton, TooltipContainer } from "../Tooltip/index";
 
 const Dropdown = forwardRef(
-  ({ row, handleCellClick, handleEdit, handleDelete, index }, ref) => {
+  ({ 
+    row, 
+    handleCellClick, 
+    handleEdit, 
+    handleDelete, 
+    handleActivate,
+    handleDeactivate,
+    index,
+    showActivationActions = false,
+    userRoleId,
+    currentUserId
+  }, ref) => {
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
     const buttonRef = useRef(null);
 
@@ -23,6 +34,27 @@ const Dropdown = forwardRef(
       handleCellClick(row, index);
     };
 
+    // Check if user is tenant or admin
+    const isTenantOrAdmin = [3, 4].includes(userRoleId);
+    // Check if this is a counselor or tenant row
+    const isCounselorOrTenant = row?.role_id === 2 || row?.role_id === 3;
+    // Determine if account is activated (use isActivated key from backend)
+    const isActivated = !!row?.isActivated;
+    
+    // Check if current user is a tenant
+    const isCurrentUserTenant = userRoleId === 3;
+    // Check if this row is a tenant (fellow tenant)
+    const isRowTenant = row?.role_id === 3;
+    // Check if this row is the current user themselves
+    const isCurrentUser = currentUserId && (row?.user_id === currentUserId || row?.user_profile_id === currentUserId);
+    
+    // Determine if activate/deactivate should be shown
+    // For tenants: only show for counselors, not for fellow tenants or themselves
+    // For admins: show for both counselors and tenants
+    const shouldShowActivationActions = isCounselorOrTenant && 
+      (!isCurrentUserTenant || (isCurrentUserTenant && row?.role_id === 2 && !isCurrentUser));
+
+    console.log('isActivated', isActivated, row.user_first_name, row.isActivated);
     return (
       <div style={{ position: "relative", overflow: "visible" }}>
         <div
@@ -53,6 +85,39 @@ const Dropdown = forwardRef(
               >
                 <TooltipButton color="#000" title="Edit" icon={<EditIcon />} />
               </div>
+              {shouldShowActivationActions && (
+                <>
+                  {isActivated ? (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeactivate(row, index);
+                        handleCellClick(row, index);
+                      }}
+                    >
+                      <TooltipButton
+                        title="Deactivate"
+                        icon={<DeleteIcon />}
+                        color="#ff9800"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleActivate(row, index);
+                        handleCellClick(row, index);
+                      }}
+                    >
+                      <TooltipButton
+                        title="Activate"
+                        icon={<EditIcon />}
+                        color="#4caf50"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
               {!row?.has_schedule && (
                 <div
                   onClick={(e) => {

@@ -54,7 +54,8 @@ function MyApp({ Component, pageProps }) {
   const isServiceTemplatesPage = pathname === ROUTES.SERVICE_TEMPLATES;
   const isPatientFormsPage = pathname.startsWith("/patient-forms");
 
-  const shouldUseDefaultLayout = isAuthPage || isPatientFormsPage || is404Page;
+  const isAccountDeactivatedPage = pathname === "/account-deactivated";
+  const shouldUseDefaultLayout = isAuthPage || isPatientFormsPage || is404Page || isAccountDeactivatedPage;
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -13,6 +13,7 @@ import Common from './common.js';
 import EmailTmplt from './emailTmplt.js';
 import UserForm from './userForm.js';
 import UserTargetOutcome from './userTargetOutcome.js';
+import prisma from '../utils/prisma.js';
 const require = createRequire(import.meta.url);
 const knex = require('knex');
 
@@ -524,6 +525,8 @@ export default class UserProfile {
         .select(
           'v_user_profile.*',
           'up.country_code as user_profile_country_code',
+          'u.user_id',
+          db.raw('CASE WHEN u.is_active = 1 THEN true ELSE false END as isActivated'),
           't.tenant_id as tenant_tenant_id',
           't.tenant_generated_id',
           't.tenant_name',
@@ -532,6 +535,7 @@ export default class UserProfile {
         )
         .from('v_user_profile')
         .leftJoin('user_profile as up', 'v_user_profile.user_profile_id', 'up.user_profile_id')
+        .leftJoin('users as u', 'v_user_profile.user_id', 'u.user_id')
         .leftJoin('tenant as t', 'v_user_profile.tenant_id', 't.tenant_id');
 
       if (!(data.role_id === 4) || !data.role_id) {
@@ -549,7 +553,7 @@ export default class UserProfile {
 
         if (Object.keys(data).length === 1 && data.hasOwnProperty('role_id')) {
           if (data.role_id) {
-            query.where('role_id', data.role_id);
+            query.where('v_user_profile.role_id', data.role_id);
           }
         }
 
@@ -558,34 +562,41 @@ export default class UserProfile {
         }
 
         if (data.counselor_id && data.role_id == 2) {
-          const clientListFromEnrollment = await db
-            .withSchema(`${process.env.MYSQL_DATABASE}`)
-            .distinct('client_id')
-            .from('client_enrollments')
-            .where('user_id', data.counselor_id);
+          // Convert counselor_id to integer for Prisma
+          const counselorId = parseInt(data.counselor_id, 10);
+          
+          // Get client IDs from enrollments using Prisma
+          const enrollments = await prisma.client_enrollments.findMany({
+            where: { user_id: counselorId },
+            select: { client_id: true },
+            distinct: ['client_id'],
+          });
 
-          // Get clients from therapy requests, excluding DISCHARGED status
-          // Only include ONGOING and PAUSED therapy requests
-          const clientListFromThrpyReq = await db
-            .withSchema(`${process.env.MYSQL_DATABASE}`)
-            .distinct('client_id')
-            .from('thrpy_req')
-            .where('counselor_id', data.counselor_id)
-            .whereIn('thrpy_status', ['ONGOING', 'PAUSED'])
-            .where('status_yn', 'y');
+          // Get client IDs from therapy requests using Prisma
+          const therapyRequests = await prisma.thrpy_req.findMany({
+            where: {
+              counselor_id: counselorId,
+              thrpy_status: { in: ['ONGOING', 'PAUSED'] },
+              status_yn: 'y',
+            },
+            select: { client_id: true },
+            distinct: ['client_id'],
+          });
 
-          // Merge the two arrays and remove duplicate elements
-          const clientList = [
-            ...new Map(
-              [...clientListFromEnrollment, ...clientListFromThrpyReq].map(
-                (client) => [client.client_id, client],
-              ),
-            ).values(),
+          // Merge and get unique client IDs
+          const clientIds = [
+            ...new Set([
+              ...enrollments.map((e) => e.client_id),
+              ...therapyRequests.map((tr) => tr.client_id),
+            ]),
           ];
 
-          const clientIds = clientList.map((client) => client.client_id);
-
-          query.whereIn('v_user_profile.user_profile_id', clientIds);
+          if (clientIds.length > 0) {
+            query.whereIn('v_user_profile.user_profile_id', clientIds);
+          } else {
+            // No clients found, return empty result
+            return { message: 'User profile not found', rec: [] };
+          }
         }
       }
       console.log('query', query.toQuery());
@@ -607,6 +618,7 @@ export default class UserProfile {
           admin_fee,
           tax_percent,
           user_profile_country_code,
+          isActivated,
           ...userProfileData
         } = profile;
 
@@ -624,46 +636,49 @@ export default class UserProfile {
           tax_percent
         };
 
+        // Convert isActivated to boolean
+        const isActivatedBoolean = isActivated === 1 || isActivated === true;
+
         // Ensure has_schedule is populated even for PAUSED status
         // If has_schedule is null or missing, check for ONGOING or PAUSED therapy requests
         let hasSchedule = userProfileData.has_schedule;
         let isPaused = false;
         
         if (!hasSchedule || !hasSchedule.req_id) {
-          // Check for active therapy requests (ONGOING or PAUSED)
-          const activeThrpyReq = await db
-            .withSchema(`${process.env.MYSQL_DATABASE}`)
-            .from('thrpy_req')
-            .where('client_id', userProfileData.user_profile_id)
-            .whereIn('thrpy_status', ['ONGOING', 'PAUSED'])
-            .where('status_yn', 'y')
-            .orderBy('created_at', 'desc')
-            .first();
+          // Check for active therapy requests using Prisma
+          const activeThrpyReq = await prisma.thrpy_req.findFirst({
+            where: {
+              client_id: userProfileData.user_profile_id,
+              thrpy_status: { in: ['ONGOING', 'PAUSED'] },
+              status_yn: 'y',
+            },
+            orderBy: { created_at: 'desc' },
+          });
 
           if (activeThrpyReq) {
             hasSchedule = {
               req_id: activeThrpyReq.req_id
             };
-            // Set isPaused based on the therapy request status
             isPaused = activeThrpyReq.thrpy_status === 'PAUSED';
           }
         } else {
-          // If has_schedule exists, check the actual status of the therapy request
-          const thrpyReq = await db
-            .withSchema(`${process.env.MYSQL_DATABASE}`)
-            .from('thrpy_req')
-            .where('req_id', hasSchedule.req_id)
-            .where('status_yn', 'y')
-            .first();
+          // If has_schedule exists, check the actual status using Prisma
+          const thrpyReq = await prisma.thrpy_req.findFirst({
+            where: {
+              req_id: hasSchedule.req_id,
+              status_yn: 'y',
+            },
+          });
 
           if (thrpyReq) {
             isPaused = thrpyReq.thrpy_status === 'PAUSED';
           }
         }
 
-        // Return user profile with tenant object, ensured has_schedule, and isPaused flag
+        // Return user profile with tenant object, ensured has_schedule, isPaused flag, and boolean isActivated
         return {
           ...userProfileData,
+          isActivated: isActivatedBoolean,
           has_schedule: hasSchedule,
           isPaused,
           country_code,
