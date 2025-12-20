@@ -217,6 +217,22 @@ function CreateSessionForm({
     return formattedDate;
   };
 
+  // Reorder sessions: Remove INACTIVE from main list, then append them at the end
+  const reorderSessions = (sessions) => {
+    if (!sessions || !Array.isArray(sessions)) return sessions;
+    
+    // Separate INACTIVE sessions from others
+    const inactiveSessions = sessions.filter(
+      (session) => session?.session_status?.toLowerCase() === "inactive"
+    );
+    const activeSessions = sessions.filter(
+      (session) => session?.session_status?.toLowerCase() !== "inactive"
+    );
+    
+    // Return active sessions first, then INACTIVE sessions at the end
+    return [...activeSessions, ...inactiveSessions];
+  };
+
   const handleNoShowStatus = (row) => {
     setSessionStatusModal(true);
     setActiveRow(row);
@@ -513,7 +529,7 @@ function CreateSessionForm({
               {(initialData || sessionTableData) && (
                 <CustomTable
                   columns={sessionTableColumns}
-                  data={
+                  data={reorderSessions(
                     initialData
                       ? scheduledSession?.filter((data) => {
                           return data?.is_additional === 0;
@@ -523,7 +539,7 @@ function CreateSessionForm({
                           return data?.is_additional === 0;
                         })
                       : []
-                  }
+                  )}
                   loading={
                     initialData &&
                     (loader == "scheduledSessionLoading" ||
@@ -571,7 +587,7 @@ function CreateSessionForm({
               {initialData && loader !== "scheduledSessionLoading" && (
                 <CustomTable
                   columns={sessionTableColumns}
-                  data={additionalSessions}
+                  data={reorderSessions(additionalSessions)}
                   defaultSortFieldId="schedule_date"
                   selectableRows={false}
                   conditionalRowStyles={
