@@ -1,33 +1,14 @@
 import React from "react";
 import CustomButton from "../CustomButton";
-import moment from "moment";
 import { Session } from "./types";
 import { SessionCardContainer } from "../../styles/session-management";
-import { convertUTCToLocalTime } from "../../utils/helper";
+import { formatDateTime } from "../../utils/helper";
 
 interface SessionCardProps {
   session: Session;
   onReschedule: (session: Session) => void;
   onCancel: (session: Session) => void;
 }
-
-const formatDateTime = (date: string, time: string): string => {
-  if (!date) return "N/A";
-
-  // scheduled_time always comes as "12:30:00.000Z" (UTC with milliseconds)
-  const dateTimeString = time ? `${date}T${time}` : `${date}T00:00:00Z`;
-
-  // Convert UTC to local timezone (browser's timezone)
-  const { date: localDate, time: localTime } =
-    convertUTCToLocalTime(dateTimeString);
-
-  // Format date using moment for consistent formatting
-  const dateStr = localDate
-    ? moment(localDate, "DD MMM YYYY").format("MMMM DD, YYYY")
-    : moment(date).format("MMMM DD, YYYY");
-
-  return `${dateStr}${localTime ? ` at ${localTime}` : ""}`;
-};
 
 const SessionCard: React.FC<SessionCardProps> = ({
   session,

@@ -15,6 +15,7 @@ import {
   LoadingContainer,
   ErrorContainer,
 } from "../styles/session-management";
+import { formatDateTime } from "../utils/helper";
 
 function SessionManagement() {
   const router = useRouter();
@@ -371,17 +372,6 @@ function SessionManagement() {
     }
   };
 
-  const formatDateTime = (date: string, time: string): string => {
-    if (!date) return "N/A";
-    const dateStr = moment(date).format("MMMM DD, YYYY");
-    if (time) {
-      const cleanTime = time.split(".")[0].split("Z")[0];
-      const timeStr = moment(cleanTime, "HH:mm:ss").format("h:mm A");
-      return `${dateStr} at ${timeStr}`;
-    }
-    return dateStr;
-  };
-
   // Filter upcoming sessions: SCHEDULED status and not a report session
   const upcomingSessions =
     sessionData?.session_obj?.filter((session) => {
@@ -426,6 +416,10 @@ function SessionManagement() {
         <p>
           Manage your therapy sessions. You can cancel or reschedule upcoming
           sessions.
+        </p>
+        <p className="helpful-tip">
+          Helpful tip: Save this page to your favourites so you can easily
+          manage your sessions anytime
         </p>
       </div>
 

@@ -24,6 +24,12 @@ export const SessionManagementContainer = styled.div`
       color: #666;
       font-size: 14px;
     }
+
+    .helpful-tip {
+      margin-top: 12px;
+      color: #5B9BD5;
+      font-size: 14px;
+    }
   }
 
   .session-info-card {

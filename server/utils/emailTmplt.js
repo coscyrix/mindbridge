@@ -572,7 +572,7 @@ export const therapyRequestDetailsEmail = (email, therapyRequest, counselorEmail
           </p>
           <a href="${process.env.BASE_URL || 'https://mindapp.mindbridge.solutions/'}session-management?hash=${encodeURIComponent(cancelHash)}" 
              style="display: inline-block; padding: 12px 30px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
-            Cancel or Reschedule Session
+            Manage Your Appointments
           </a>
         </div>
         ` : ''}

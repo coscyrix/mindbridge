@@ -2,8 +2,8 @@ import React from "react";
 import CustomModal from "../CustomModal";
 import CustomButton from "../CustomButton";
 import CustomDatePicker from "../DatePicker";
-import moment from "moment";
 import { Session } from "./types";
+import { formatDateTime } from "@/utils/helper";
 
 interface RescheduleModalProps {
   isOpen: boolean;
@@ -18,17 +18,6 @@ interface RescheduleModalProps {
   minDate?: Date | null;
   maxDate?: Date | null;
 }
-
-const formatDateTime = (date: string, time: string): string => {
-  if (!date) return "N/A";
-  const dateStr = moment(date).format("MMMM DD, YYYY");
-  if (time) {
-    const cleanTime = time.split(".")[0].split("Z")[0];
-    const timeStr = moment(cleanTime, "HH:mm:ss").format("h:mm A");
-    return `${dateStr} at ${timeStr}`;
-  }
-  return dateStr;
-};
 
 const RescheduleModal: React.FC<RescheduleModalProps> = ({
   isOpen,
