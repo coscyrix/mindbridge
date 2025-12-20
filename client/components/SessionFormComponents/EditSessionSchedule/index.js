@@ -1,16 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { useForm, Controller, FormProvider } from "react-hook-form";
+import React, { useEffect } from "react";
+import { useForm, FormProvider } from "react-hook-form";
 import moment from "moment";
 import CustomInputField from "../../CustomInputField";
 import CustomButton from "../../CustomButton";
 import { useReferenceContext } from "../../../context/ReferenceContext";
-import { api } from "../../../utils/auth";
 import { toast } from "react-toastify";
 import Spinner from "../../common/Spinner";
-import {
-  convertLocalToUTCTime,
-  convertUTCToLocalTime,
-} from "../../../utils/helper";
+import { convertUTCToLocalTime } from "../../../utils/helper";
+import { useEditSessionSchedule } from "../hooks/useEditSessionSchedule";
 
 const EditSessionScheduleForm = ({
   activeData,
@@ -27,7 +24,13 @@ const EditSessionScheduleForm = ({
     reset,
   } = methods;
 
-  const [loading, setLoading] = useState(false);
+  // Use custom hook for session schedule updates
+  const { handleUpdateSessionSchedule, isLoading } = useEditSessionSchedule({
+    onSuccess: () => {
+      setActiveData("");
+      setEditSessionModal(false);
+    },
+  });
 
   const getPossibleIdentifiers = (session) => {
     if (!session) return [];
@@ -141,96 +144,16 @@ const EditSessionScheduleForm = ({
     setEditSessionModal(false);
   };
 
-  const handleUpdateSessionSchedule = async (formData) => {
-    const utcDateTime = convertLocalToUTCTime(
-      formData?.intake_date,
-      formData?.scheduled_time
-    );
-
-    const updatedSessionMoment = moment.utc(utcDateTime);
-    if (!updatedSessionMoment.isValid()) {
-      toast.error("Invalid session date or time selected. Please try again.");
-      return;
-    }
-    const currentSessionMoment = getSessionMoment(activeData);
-
-    const overlapsWithExistingSession = existingSessions?.some((session) => {
-      if (!session) return false;
-
-      const sessionMoment = getSessionMoment(session);
-      if (!sessionMoment) return false;
-
-      const isSameSession =
-        hasSharedIdentifier(session, activeData) ||
-        (currentSessionMoment && sessionMoment.isSame(currentSessionMoment));
-
-      if (isSameSession) {
-        return false;
-      }
-
-      return sessionMoment.isSame(updatedSessionMoment);
-    });
-
-    if (overlapsWithExistingSession) {
-      toast.error(
-        "Selected date and time overlap with an existing session. Please choose a different slot."
-      );
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const intakeDate = moment.utc(utcDateTime).format("YYYY-MM-DD");
-      const scheduledTime = moment
-        .utc(utcDateTime)
-        .format("YYYY-MM-DD HH:mm:ss[Z]");
-
-      const payload = {
-        intake_date: intakeDate,
-        scheduled_time: scheduledTime,
-      };
-
-      const response = await api.put(
-        `session/?session_id=${formData?.session_id}`,
-        payload
-      );
-
-      if (response?.status === 200) {
-        const inputTime = moment.utc(utcDateTime).format("HH:mm");
-        const inputDate = moment.utc(utcDateTime).format("YYYY-MM-DD");
-        const sessionTableFormattedTime = moment(inputTime, "HH:mm").format(
-          "HH:mm:ss.SSS[Z]"
-        );
-
-        setScheduledSessions((prevData) =>
-          prevData.map((item, index) =>
-            index === activeData?.rowIndex
-              ? {
-                  ...item,
-                  intake_date: inputDate,
-                  scheduled_time: sessionTableFormattedTime,
-                }
-              : item
-          )
-        );
-        toast?.success("Session updated successfuly!");
-      }
-    } catch (error) {
-      console.error("Error updating session schedule:", error.message || error);
-      toast.error("Error updating session schedule");
-    } finally {
-      setActiveData("");
-      setLoading(false);
-      setEditSessionModal(false);
-    }
+  const onSubmit = (formData) => {
+    handleUpdateSessionSchedule(formData, activeData, existingSessions, setScheduledSessions);
   };
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(handleUpdateSessionSchedule)}>
+      <form onSubmit={handleSubmit(onSubmit)}>
         <CustomInputField
           name="service_name"
-          label="Service Name"
+          label="Service Name ghjf"
           disabled
           style={{
             opacity: 0.5,
@@ -272,12 +195,12 @@ const EditSessionScheduleForm = ({
           />
           <CustomButton
             type="submit"
-            title={loading ? <Spinner width="25px" height="25px" /> : "Update"}
+            title={isLoading ? <Spinner width="25px" height="25px" /> : "Update"}
             style={{
               backgroundColor: "var(--primary-button-color)",
               minWidth: "100px",
               color: "#fff",
-              padding: loading ? "5.75px 12px" : "10.5px 12px",
+              padding: isLoading ? "5.75px 12px" : "10.5px 12px",
             }}
           />
         </div>

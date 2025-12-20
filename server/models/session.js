@@ -83,14 +83,66 @@ export default class Session {
       const systemAmount = basePrice * (ref_fees[0].system_pcnt / 100);
       const counselorAmount = basePrice - systemAmount;
 
-      console.log('data.intake_date', data);
+      // Split intake_date into date and time components
+      let intakeDate = data.intake_date;
+      let scheduledTime = data.scheduled_time;
+      
+      // If intake_date is provided in ISO format, split it
+      if (data.intake_date && typeof data.intake_date === 'string' && data.intake_date.includes('T')) {
+        const splitResult = splitIsoDatetime(data.intake_date);
+        
+        if (splitResult.error) {
+          logger.error('Error splitting intake_date in postSession:', splitResult.message);
+          return { message: 'Invalid intake_date format', error: -1 };
+        }
+        
+        intakeDate = splitResult.date; // 'YYYY-MM-DD'
+        // Only use split time if scheduled_time wasn't provided separately
+        if (!scheduledTime) {
+          scheduledTime = splitResult.time; // 'HH:mm:ss.SSSZ'
+        }
+        
+        // Debug logging
+        console.log('🔍 DEBUG: Session creation - parsed date/time:', {
+          original_intake_date: data.intake_date,
+          parsed_intake_date: intakeDate,
+          parsed_scheduled_time: scheduledTime
+        });
+      } else if (data.intake_date && !scheduledTime) {
+        // If only date is provided without time, use default time
+        intakeDate = data.intake_date;
+        scheduledTime = '09:00:00.000Z';
+        logger.warn('⚠️ WARNING: No time provided in intake_date, using default time 09:00:00.000Z');
+      }
+
+      // Validate that we have valid date and time
+      if (!intakeDate || !scheduledTime) {
+        logger.error('Invalid date/time in postSession:', { intakeDate, scheduledTime, original_data: data });
+        return { message: 'Invalid date/time format provided', error: -1 };
+      }
+
+      // Check for session time collision
+      const collisionCheck = await this.common.checkSessionTimeCollision(
+        counselorId[0].counselor_id,
+        intakeDate,
+        scheduledTime,
+      );
+
+      if (collisionCheck.error) {
+        logger.warn('Session time collision detected, preventing double booking', {
+          counselor_id: counselorId[0].counselor_id,
+          intake_date: intakeDate,
+          scheduled_time: scheduledTime,
+        });
+        return collisionCheck;
+      }
 
       const tmpSession = {
         thrpy_req_id: data.thrpy_req_id,
         service_id: data.service_id,
         session_format: data.session_format,
-        intake_date: data.intake_date,
-        scheduled_time: data.scheduled_time,
+        intake_date: intakeDate,
+        scheduled_time: scheduledTime,
         session_code: svc.service_code,
         session_description: svc.service_code,
         is_additional: svc.is_additional && svc.is_additional === 1 ? 1 : 0,
@@ -111,12 +163,8 @@ export default class Session {
       // Only override if session_status wasn't explicitly set (e.g., not INACTIVE)
       try {
         const todayPacific = this.getTodayInTimezone('America/Los_Angeles');
-        const intakeDatePart =
-          typeof data.intake_date === 'string'
-            ? (data.intake_date.includes('T')
-                ? data.intake_date.split('T')[0]
-                : data.intake_date)
-            : '';
+        // Use the parsed intakeDate (already in YYYY-MM-DD format)
+        const intakeDatePart = intakeDate;
         if (intakeDatePart && intakeDatePart < todayPacific && tmpSession.is_report !== 1 && !data.session_status) {
           tmpSession.session_status = 3; // NO-SHOW
         }
@@ -451,13 +499,66 @@ export default class Session {
       }
 
       if (data.scheduled_time || data.intake_date) {
-        // Split the date and time from the intake date
-        data.scheduled_time = data.scheduled_time.split(' ')[1]; // Extract time part 'HH:mm:ssZ'
+        // Handle scheduled_time format - could be ISO format or space-separated
+        let parsedScheduledTime = data.scheduled_time;
+        let parsedIntakeDate = data.intake_date;
+
+        // If scheduled_time is in ISO format (contains 'T'), split it
+        if (data.scheduled_time && data.scheduled_time.includes('T')) {
+          const splitResult = splitIsoDatetime(data.scheduled_time);
+          if (!splitResult.error) {
+            // Use split date if intake_date wasn't provided separately
+            parsedIntakeDate = parsedIntakeDate || splitResult.date;
+            parsedScheduledTime = splitResult.time;
+          } else {
+            // Fallback: try to extract time from ISO format manually
+            const timePart = data.scheduled_time.split('T')[1];
+            if (timePart) {
+              // Extract time part: "HH:mm:ss" or "HH:mm:ss.SSSZ"
+              parsedScheduledTime = timePart.split('.')[0];
+              if (timePart.includes('Z')) {
+                parsedScheduledTime += 'Z';
+              }
+            }
+          }
+        } else if (data.scheduled_time && data.scheduled_time.includes(' ')) {
+          // Handle space-separated format: "YYYY-MM-DD HH:mm:ssZ"
+          parsedScheduledTime = data.scheduled_time.split(' ')[1]; // Extract time part 'HH:mm:ssZ'
+        }
+
+        // Get the new date and time values for collision check
+        const newIntakeDate = parsedIntakeDate || recSession[0].intake_date;
+        const newScheduledTime = parsedScheduledTime || recSession[0].scheduled_time;
+
+        // Get counselor_id from therapy request for collision check
+        const thrpyReq = await this.common.getThrpyReqById(recSession[0].thrpy_req_id);
+        if (!thrpyReq || !thrpyReq[0] || !thrpyReq[0].counselor_id) {
+          logger.error('Therapy request not found or missing counselor_id');
+          return { message: 'Therapy request not found', error: -1 };
+        }
+
+        // Check for session time collision (exclude current session being updated)
+        const collisionCheck = await this.common.checkSessionTimeCollision(
+          thrpyReq[0].counselor_id,
+          newIntakeDate,
+          newScheduledTime,
+          data.session_id, // Exclude the current session from collision check
+        );
+
+        if (collisionCheck.error) {
+          logger.warn('Session time collision detected, preventing double booking', {
+            counselor_id: thrpyReq[0].counselor_id,
+            intake_date: newIntakeDate,
+            scheduled_time: newScheduledTime,
+            session_id: data.session_id,
+          });
+          return collisionCheck;
+        }
 
         tmpSession = {
           ...tmpSession, // Preserve any existing tmpSession data
-          ...(data.scheduled_time && { scheduled_time: data.scheduled_time }),
-          ...(data.intake_date && { intake_date: data.intake_date }),
+          ...(parsedScheduledTime && { scheduled_time: parsedScheduledTime }),
+          ...(parsedIntakeDate && { intake_date: parsedIntakeDate }),
         };
       }
       
