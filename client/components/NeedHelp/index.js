@@ -20,9 +20,9 @@ const NeedHelp = () => {
     <Box
       sx={{
         position: "fixed",
-        top: 10,
-        right: 100,
-        zIndex: 9999,
+        bottom: 10,
+        right: 10,
+        zIndex: 98,
       }}
     >
       <Box sx={{ position: "relative", display: "inline-block" }}>
