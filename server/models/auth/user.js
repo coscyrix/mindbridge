@@ -2,8 +2,7 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import DBconn from '../../config/db.config.js';
-const knex = require('knex');;
+import db from '../../utils/db.js';
 import Common from '../common.js';
 import logger from '../../config/winston.js';
 import AuthCommon from './authCommon.js';
@@ -22,8 +21,6 @@ import Service from '../service.js';
 import prisma from '../../utils/prisma.js';
 
 dotenv.config();
-
-const db = knex(DBconn.dbConn.development);
 
 export default class User {
   //////////////////////////////////////////

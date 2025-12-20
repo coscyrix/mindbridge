@@ -6,13 +6,11 @@ const bcrypt = require('bcrypt');;
 import dotenv, { parse } from 'dotenv';
 const jwt = require('jsonwebtoken');;
 const speakeasy = require('speakeasy');;
-import DBconn from '../../config/db.config.js';
-const knex = require('knex');;
+import db from '../../utils/db.js';
 import logger from '../../config/winston.js';
 import SendEmail from '../../middlewares/sendEmail.js';
 import { otpEmail } from '../../utils/emailTmplt.js';
 
-const db = knex(DBconn.dbConn.development);
 dotenv.config();
 
 export default class AuthCommon {

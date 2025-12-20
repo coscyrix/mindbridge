@@ -23,4 +23,9 @@ router.get(
   authenticate,
   AsyncWrapper(reportController.getUserForm),
 );
+router.get(
+  '/homework-stats',
+  authenticate,
+  AsyncWrapper(reportController.getSessionsWithHomeworkStats),
+);
 export const reportRouter = { baseUrl: '/api/reports', router };

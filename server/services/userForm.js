@@ -61,6 +61,7 @@ export default class UserFormService {
     const schema = joi.object({
       user_form_id: joi.number().optional(),
       session_id: joi.number().optional(),
+      req_id: joi.number().optional(),
       form_id: joi.number().optional(),
       client_id: joi.number().optional(),
       counselor_id: joi.number().optional(),
@@ -84,6 +85,6 @@ export default class UserFormService {
     }
 
     const userForm = new UserForm();
-    return userForm.getUserFormByFormIdAndClientId(data.form_id, data.client_id);
+    return userForm.getUserFormByFormIdAndClientId(data);
   }
 }

@@ -1,11 +1,8 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import DBconn from '../config/db.config.js';
-const knex = require('knex');;
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
 import Common from './common.js';
-
-const db = knex(DBconn.dbConn.development);
 
 export default class Report {
   ///////////////////////////////////////////
@@ -17,7 +14,6 @@ export default class Report {
     try {
       let query;
       let consentFormsQuery;
-      let requestFormsQuery;
 
       // Treatment target mode: query treatment target session forms
       query = db
@@ -27,6 +23,7 @@ export default class Report {
         .join('user_profile as counselor', 'tt.counselor_id', 'counselor.user_profile_id')
         .join('forms as f', 'tt.form_id', 'f.form_id')
         .join('thrpy_req as tr', 'tt.req_id', 'tr.req_id')
+        .leftJoin('session as s', 'tt.session_id', 's.session_id')
         .leftJoin('feedback as fb', function() {
           this.on('fb.form_id', '=', 'tt.form_id')
               .andOn(function() {
@@ -34,6 +31,7 @@ export default class Report {
                     .orOnNull('fb.session_id');
               });
         })
+        // Include ALL forms from treatment_target_session_forms where is_sent = 1
         .select(
           'client.user_first_name as client_first_name',
           'client.user_last_name as client_last_name',
@@ -142,53 +140,6 @@ export default class Report {
         ])
         .orderBy('date_sent', 'desc');
 
-      // Also get treatment target request forms (forms tied to therapy requests, not sessions)
-      requestFormsQuery = db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('treatment_target_request_forms as ttrf')
-        .join('user_profile as client', 'ttrf.client_id', 'client.user_profile_id')
-        .join('user_profile as counselor', 'ttrf.counselor_id', 'counselor.user_profile_id')
-        .join('forms as f', 'ttrf.form_id', 'f.form_id')
-        .join('thrpy_req as tr', 'ttrf.req_id', 'tr.req_id')
-        .leftJoin('feedback as fb', function() {
-          this.on('fb.form_id', '=', 'ttrf.form_id')
-              .andOn('fb.client_id', '=', 'ttrf.client_id');
-        })
-        .select(
-          'client.user_first_name as client_first_name',
-          'client.user_last_name as client_last_name',
-          'client.clam_num as client_clam_num',
-          'ttrf.client_id',
-          'ttrf.counselor_id',
-          'ttrf.form_id',
-          'f.form_cde as form_cde',
-          'ttrf.req_id as thrpy_req_id',
-          'ttrf.tenant_id',
-          db.raw('MAX(fb.feedback_id) as feedback_id'),
-          db.raw('MAX(ttrf.sent_at) as date_sent'),
-          db.raw(`
-              COALESCE(
-                DATE_ADD(MAX(ttrf.sent_at), INTERVAL 7 DAY),
-                DATE_ADD(MAX(ttrf.sent_at), INTERVAL 7 DAY)
-              ) as due_date
-            `),
-        )
-        .where('ttrf.is_sent', 1)
-        .andWhere('client.status_yn', 'y')
-        .andWhere('tr.thrpy_status', '!=', 2) // Exclude discharged therapy requests
-        .groupBy([
-          'client.user_first_name',
-          'client.user_last_name',
-          'client.clam_num',
-          'ttrf.form_id',
-          'f.form_cde',
-          'ttrf.client_id',
-          'ttrf.counselor_id',
-          'ttrf.req_id',
-          'ttrf.tenant_id',
-        ])
-        .orderBy('date_sent', 'desc');
-
       if (data.role_id === 2) {
         if (data.counselor_id) {
           query.where('tt.counselor_id', data.counselor_id);
@@ -265,46 +216,74 @@ export default class Report {
           if (tenantId && !tenantId.error && tenantId.length > 0) {
             consentFormsQuery.where('vuf.tenant_id', Number(tenantId[0].tenant_id));
           }
-        } else if (data.role_id == 3 && data.tenant_id) {
+        } else if (data.role_id == 3) {
           // For role_id=3 (manager), filter by tenant_id
+          if (data.tenant_id) {
           consentFormsQuery.where('vuf.tenant_id', Number(data.tenant_id));
-        }
-      }
-
-      // Apply filtering to treatment target request forms query based on role_id
-      if (requestFormsQuery) {
-        if (data.role_id == 2 && data.counselor_id) {
-          // For role_id=2 (counselor), filter by counselor_id
-          requestFormsQuery.where('ttrf.counselor_id', Number(data.counselor_id));
+          }
+          
+          // If counselor_id is provided, also filter by specific counselor
+          if (data.counselor_id) {
+            consentFormsQuery.where('vuf.counselor_id', Number(data.counselor_id));
+          }
+        } else if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
+          // For other roles (like admin), filter by counselor_id if provided
+          consentFormsQuery.where('vuf.counselor_id', Number(data.counselor_id));
           
           // Get tenant_id for the counselor and filter by it
           const tenantId = await this.common.getUserTenantId({
             user_profile_id: data.counselor_id,
           });
           if (tenantId && !tenantId.error && tenantId.length > 0) {
-            requestFormsQuery.where('ttrf.tenant_id', Number(tenantId[0].tenant_id));
+            consentFormsQuery.where('vuf.tenant_id', Number(tenantId[0].tenant_id));
           }
-        } else if (data.role_id == 3 && data.tenant_id) {
-          // For role_id=3 (manager), filter by tenant_id
-          requestFormsQuery.where('ttrf.tenant_id', Number(data.tenant_id));
         }
       }
 
       // Execute queries
-      const [rec, consentForms, requestForms] = await Promise.all([
+      const [rec, consentForms] = await Promise.all([
         query,
         consentFormsQuery ? consentFormsQuery : Promise.resolve([]),
-        requestFormsQuery ? requestFormsQuery : Promise.resolve([])
       ]);
 
-      // Combine results if we have treatment target forms, consent forms, and request forms
+      // Combine results if we have treatment target forms and consent forms
       let combinedResults = [...rec];
       if (consentForms && consentForms.length > 0) {
         combinedResults = [...combinedResults, ...consentForms];
       }
-      if (requestForms && requestForms.length > 0) {
-        combinedResults = [...combinedResults, ...requestForms];
-      }
+
+      // Remove duplicates across all form types
+      // A form is considered duplicate if it has the same: client_id, counselor_id, form_id, thrpy_req_id
+      // For consent forms, also check user_form_id to keep them unique
+      const formMap = new Map();
+      
+      // First pass: collect all forms and handle duplicates by keeping the most recent one
+      combinedResults.forEach(form => {
+        // Create a unique key for each form
+        // For consent forms, include user_form_id to keep them unique
+        const uniqueKey = form.user_form_id 
+          ? `${form.client_id}_${form.counselor_id}_${form.form_id}_${form.thrpy_req_id}_${form.user_form_id}`
+          : `${form.client_id}_${form.counselor_id}_${form.form_id}_${form.thrpy_req_id}`;
+        
+        if (formMap.has(uniqueKey)) {
+          // If duplicate found, keep the one with the most recent date_sent
+          const existingForm = formMap.get(uniqueKey);
+          const existingDate = new Date(existingForm.date_sent || 0);
+          const currentDate = new Date(form.date_sent || 0);
+          
+          if (currentDate > existingDate) {
+            // Current form is newer, replace the existing one
+            formMap.set(uniqueKey, form);
+          }
+          // Otherwise, keep the existing form (already in map)
+        } else {
+          // First occurrence of this form, add it to map
+          formMap.set(uniqueKey, form);
+        }
+      });
+      
+      // Convert map values back to array
+      combinedResults = Array.from(formMap.values());
 
       // Filter out tenant consent forms for non-admin users
       // Tenant consent forms (where client has role_id = 3) should only be visible to admins (role_id = 4)

@@ -2,11 +2,8 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import DBconn from '../config/db.config.js';
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
-const knex = require('knex');
-
-const db = knex(DBconn.dbConn.development);
 
 export default class CounselorActivation {
   //////////////////////////////////////////

@@ -1,7 +1,7 @@
 //models/userProfile.js
 
 import { createRequire } from 'module';
-import DBconn from '../config/db.config.js';
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import {
@@ -15,11 +15,6 @@ import UserForm from './userForm.js';
 import UserTargetOutcome from './userTargetOutcome.js';
 import prisma from '../utils/prisma.js';
 const require = createRequire(import.meta.url);
-const knex = require('knex');
-
-const db = knex(DBconn.dbConn.development);
-
-// Database connection is handled by getDb() function above
 
 export default class UserProfile {
   //////////////////////////////////////////

@@ -1,4 +1,8 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import Report from '../models/report.js';
+import Session from '../models/session.js';
+const joi = require('joi');
 
 export default class ReportService {
   //////////////////////////////////////////
@@ -49,6 +53,38 @@ export default class ReportService {
     } catch (error) {
       console.error(error);
       return { message: 'Error fetching user session statistics', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+  async getSessionsWithHomeworkStats(data) {
+    try {
+      const schema = joi.object({
+        counselor_id: joi.number().optional(),
+        client_id: joi.number().optional(),
+        role_id: joi.number().required(),
+        tenant_id: joi.number().optional(),
+        start_date: joi.date().optional(),
+        end_date: joi.date().optional(),
+      });
+
+      const { error } = schema.validate(data);
+
+      if (error) {
+        return { message: error.details[0].message, error: -1 };
+      }
+
+      const session = new Session();
+      const homeworkStats = await session.getSessionsWithHomeworkStats(data);
+
+      if (homeworkStats.error) {
+        return homeworkStats;
+      }
+
+      return homeworkStats;
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error fetching session homework statistics', error: -1 };
     }
   }
 }

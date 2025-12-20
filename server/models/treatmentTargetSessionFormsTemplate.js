@@ -1,17 +1,14 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 import logger from '../config/winston.js';
-const knex = require('knex');
-import DBconn from '../config/db.config.js';
+import db from '../utils/db.js';
 import prisma from '../utils/prisma.js';
-
-const db = knex(DBconn.dbConn.development);
 
 export default class TreatmentTargetSessionFormsTemplate {
   //////////////////////////////////////////
 
   constructor() {
-    this.db = knex(DBconn.dbConn.development);
+    this.db = db;
   }
 
   //////////////////////////////////////////

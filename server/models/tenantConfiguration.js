@@ -1,10 +1,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const knex = require('knex');
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
-import DBconn from '../config/db.config.js';
-
-const db = knex(DBconn.dbConn.development);
 
 export default class TenantConfiguration {
   //////////////////////////////////////////

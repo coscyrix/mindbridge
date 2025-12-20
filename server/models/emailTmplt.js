@@ -1,7 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import DBconn from '../config/db.config.js';
-const knex = require('knex');;
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
 import Common from './common.js';
 import Feedback from '../services/feedback.js';
@@ -27,7 +26,6 @@ import {
 const dotenv = require('dotenv');;
 
 dotenv.config();
-const db = knex(DBconn.dbConn.development);
 
 export default class EmailTmplt {
   //////////////////////////////////////////
@@ -731,10 +729,6 @@ export default class EmailTmplt {
       });
       const tenantIdValue = tenantRow?.[0]?.tenant_id || null;
 
-      console.log('tenantIdValue', tenantIdValue)
-      console.log('counselorId', counselorId)
-      console.log(tenantRow, 'tenantRow')
-
       // Get counselor email for Reply-To
       let counselorEmail = null;
       if (counselorId) {
@@ -800,11 +794,9 @@ export default class EmailTmplt {
 
       for (const code of form_codes) {
         // Resolve form by code, similar to resolveFormRecord() logic
-        console.log(code);
         const formRecord = await this.form.getFormByCode({
           form_cde: code,
         });
-        
 
         if (!formRecord || formRecord.error || formRecord.length === 0) {
           logger.warn('Form not found for manual tools email', {

@@ -153,7 +153,7 @@ const EditSessionScheduleForm = ({
       <form onSubmit={handleSubmit(onSubmit)}>
         <CustomInputField
           name="service_name"
-          label="Service Name ghjf"
+          label="Service Name"
           disabled
           style={{
             opacity: 0.5,

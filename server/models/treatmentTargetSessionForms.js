@@ -1,10 +1,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const knex = require('knex');
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
-import DBconn from '../config/db.config.js';
-
-const db = knex(DBconn.dbConn.development);
 
 export default class TreatmentTargetSessionForms {
   //////////////////////////////////////////
@@ -31,7 +28,8 @@ export default class TreatmentTargetSessionForms {
           config_id: formData.config_id,
           purpose: formData.purpose,
           session_number: formData.session_number,
-          is_sent: 0,
+          is_sent: formData.is_sent !== undefined ? (formData.is_sent ? 1 : 0) : 0,
+          sent_at: formData.sent_at || null,
           tenant_id: formData.tenant_id || null,
         };
 

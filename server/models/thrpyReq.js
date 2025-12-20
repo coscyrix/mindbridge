@@ -2,13 +2,10 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const knex = require('knex');
+import db from '../utils/db.js';
 import dotenv from 'dotenv';
 import logger from '../config/winston.js';
-import DBconn from '../config/db.config.js';
 import prisma from '../utils/prisma.js';
-
-const db = knex(DBconn.dbConn.development);
 import Session from './session.js';
 import Service from './service.js';
 import UserProfile from './userProfile.js';

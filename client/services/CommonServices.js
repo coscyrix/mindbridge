@@ -50,7 +50,7 @@ const CommonServices = {
     return api.get(ApiConfig.dashboard.assessmentResultsData, { params });
   },
   getHomeworkStats(params) {
-    return api.get(ApiConfig.sessions.getHomeworkStats, { params });
+    return api.get(ApiConfig.dashboard.homeworkStats, { params });
   },
   getAllAssessmentFormNames() {
     return api.get("/treatment-target-feedback-config/form-names/list");

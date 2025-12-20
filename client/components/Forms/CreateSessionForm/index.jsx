@@ -523,7 +523,7 @@ function CreateSessionForm({
                   <CustomButton
                     onClick={handleOpenAssessmentModal}
                     icon={<SettingsIcon />}
-                    title="Manual Assessment Upload"
+                    title="Add Assessment"
                     type="button"
                     />
                 </AssessmentButtonWrapper>
@@ -646,9 +646,12 @@ function CreateSessionForm({
         <CustomModal
           isOpen={isAssessmentModalOpen}
           onRequestClose={() => setIsAssessmentModalOpen(false)}
-          title="Manual Assessment Upload"
+          title="Add Assessment"
         >
           <AssessmentModalWrapper>
+            <p style={{ marginBottom: '16px', color: '#666', fontSize: '14px' }}>
+              Select an assessment to add it to the latest scheduled session.
+            </p>
             <div className="select-wrapper">
               <label>Assessment</label>
               <Select

@@ -2,8 +2,7 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import DBconn from '../config/db.config.js';
-const knex = require('knex');
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
 import Common from './common.js';
 import Form from './form.js';
@@ -13,8 +12,6 @@ import Invoice from './invoice.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import EmailTmplt from './emailTmplt.js';
 import { splitIsoDatetime } from '../utils/common.js';
-
-const db = knex(DBconn.dbConn.development);
 
 export default class Session {
   constructor() {
@@ -1080,67 +1077,90 @@ export default class Session {
         .orderBy('last_session_date', 'desc');
 
       // Apply filters based on role
-      if (data.role_id === 2) {
-        // Counselor role
-        if (data.counselor_id) {
+      switch (data.role_id) {
+        case 2: {
+          // Counselor role - MUST have counselor_id and MUST filter by tenant
+          if (!data.counselor_id) {
+            return { message: 'counselor_id is required for counselor role', error: -1 };
+          }
+
           query.andWhere('s.counselor_id', data.counselor_id);
           
-          // Get tenant_id for the counselor and filter by it
+          // Get tenant_id for the counselor and filter by it (REQUIRED for counselors)
           const tenantId = await this.common.getUserTenantId({
             user_profile_id: data.counselor_id,
           });
           if (tenantId && !tenantId.error && tenantId.length > 0) {
             query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
+          } else {
+            // If we can't get tenant_id, return error to prevent cross-tenant access
+            return { message: 'Unable to determine tenant for counselor', error: -1 };
           }
-        }
 
-        if (data.client_id) {
-          query.andWhere('s.client_id', data.client_id);
-        }
-      }
-
-      if (data.role_id === 3) {
-        // Manager role
-        if (data.tenant_id) {
-          query.andWhere('s.tenant_id', Number(data.tenant_id));
-        } else if (data.counselor_id) {
-          const tenantId = await this.common.getUserTenantId({
-            user_profile_id: data.counselor_id,
-          });
-          if (tenantId && !tenantId.error && tenantId.length > 0) {
-            query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
+          if (data.client_id) {
+            query.andWhere('s.client_id', data.client_id);
           }
-        }
-        
-        if (data.counselor_id) {
-          query.andWhere('s.counselor_id', data.counselor_id);
+          break;
         }
 
-        if (data.start_date) {
-          query.andWhere('s.intake_date', '>=', data.start_date);
+        case 3: {
+          // Manager role - MUST filter by tenant (either provided or derived from counselor_id)
+          if (data.tenant_id) {
+            // Use the provided tenant_id directly
+            query.andWhere('s.tenant_id', Number(data.tenant_id));
+          } else if (data.counselor_id) {
+            // If no tenant_id provided but counselor_id is, get tenant_id from counselor
+            const tenantId = await this.common.getUserTenantId({
+              user_profile_id: data.counselor_id,
+            });
+            if (tenantId && !tenantId.error && tenantId.length > 0) {
+              query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
+            } else {
+              // If we can't get tenant_id, return error to prevent cross-tenant access
+              return { message: 'Unable to determine tenant for counselor', error: -1 };
+            }
+          } else {
+            // Manager role requires either tenant_id or counselor_id - return error if both missing
+            return { message: 'tenant_id or counselor_id is required for manager role', error: -1 };
+          }
+          
+          // If counselor_id is provided, also filter by specific counselor
+          if (data.counselor_id) {
+            query.andWhere('s.counselor_id', data.counselor_id);
+          }
+
+          if (data.start_date) {
+            query.andWhere('s.intake_date', '>=', data.start_date);
+          }
+
+          if (data.end_date) {
+            query.andWhere('s.intake_date', '<=', data.end_date);
+          }
+          break;
         }
 
-        if (data.end_date) {
-          query.andWhere('s.intake_date', '<=', data.end_date);
-        }
-      }
+        case 4:
+        default: {
+          // For admin (role_id === 4) or other roles, if counselor_id is provided, filter by that counselor's tenant
+          // If no counselor_id, admin can see all tenants (intentional)
+          if (data.counselor_id) {
+            const tenantId = await this.common.getUserTenantId({
+              user_profile_id: data.counselor_id,
+            });
+            if (tenantId && !tenantId.error && tenantId.length > 0) {
+              query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
+            }
+            query.andWhere('s.counselor_id', data.counselor_id);
+          }
+          
+          if (data.start_date) {
+            query.andWhere('s.intake_date', '>=', data.start_date);
+          }
 
-      // Handle other role_ids (like role_id === 4 - admin)
-      if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
-        const tenantId = await this.common.getUserTenantId({
-          user_profile_id: data.counselor_id,
-        });
-        if (tenantId && !tenantId.error && tenantId.length > 0) {
-          query.andWhere('s.tenant_id', Number(tenantId[0].tenant_id));
-        }
-        query.andWhere('s.counselor_id', data.counselor_id);
-        
-        if (data.start_date) {
-          query.andWhere('s.intake_date', '>=', data.start_date);
-        }
-
-        if (data.end_date) {
-          query.andWhere('s.intake_date', '<=', data.end_date);
+          if (data.end_date) {
+            query.andWhere('s.intake_date', '<=', data.end_date);
+          }
+          break;
         }
       }
 
