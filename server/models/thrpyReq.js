@@ -2048,7 +2048,7 @@ export default class ThrpyReq {
 
   //////////////////////////////////////////
 
-  async cancelSessionByHash(session_id, cancel_hash) {
+  async cancelSessionByHash(session_id, cancel_hash, cancellation_reason) {
     try {
       // Verify hash matches the thryp request
       const thrpyReq = await prisma.thrpy_req.findFirst({
@@ -2107,13 +2107,51 @@ export default class ThrpyReq {
         },
         data: {
           session_status: 'CANCELLED',
-          cancellation_reason: 'Cancelled by client via email link',
           session_price: 0,
           session_taxes: 0,
           session_counselor_amt: 0,
           session_system_amt: 0,
         },
       });
+
+      // Store cancellation reason as a note (similar to NO-SHOW notes)
+      if (cancellation_reason) {
+        try {
+          // Get tenant_id from counselor
+          const counselorProfile = thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile;
+          let tenantId = null;
+          
+          if (counselorProfile && counselorProfile.user_profile_id) {
+            const tenantIdResult = await this.common.getUserTenantId({
+              user_profile_id: counselorProfile.user_profile_id,
+            });
+            tenantId = tenantIdResult?.[0]?.tenant_id;
+          }
+          
+          // Fallback to tenant_id from therapy request if available
+          if (!tenantId && thrpyReq.tenant_id) {
+            tenantId = thrpyReq.tenant_id;
+          }
+
+          if (tenantId) {
+            const sessionNotes = await this.common.postNotes({
+              session_id: session_id,
+              message: cancellation_reason,
+              tenant_id: tenantId,
+            });
+
+            if (sessionNotes.error) {
+              logger.warn('Error adding cancellation note:', sessionNotes.message);
+              // Don't fail the cancellation if note creation fails
+            }
+          } else {
+            logger.warn('Could not determine tenant_id for cancellation note');
+          }
+        } catch (noteError) {
+          logger.error('Error storing cancellation note:', noteError);
+          // Don't fail the cancellation if note creation fails
+        }
+      }
 
       // Send email notification to counselor
       try {

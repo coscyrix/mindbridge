@@ -50,13 +50,29 @@ export const useSessionNotes = (userObj) => {
           });
         });
         setCountNotes((prev) => {
-          return prev?.map((note) => {
-            if (note?.session_id === noteData?.sessionId) {
-              return { ...note, count: note?.count + 1 };
-            } else {
+          // Check if session already exists in countNotes
+          const existingNoteIndex = prev?.findIndex(
+            (note) => note?.session_id === noteData?.sessionId
+          );
+          
+          if (existingNoteIndex >= 0) {
+            // Update existing entry - increment count
+            return prev.map((note, index) => {
+              if (index === existingNoteIndex) {
+                return { ...note, count: (note?.count || 0) + 1 };
+              }
               return note;
-            }
-          });
+            });
+          } else {
+            // Create new entry if it doesn't exist
+            return [
+              ...(prev || []),
+              {
+                session_id: noteData?.sessionId,
+                count: 1,
+              },
+            ];
+          }
         });
         handleNoteClose();
         toast.success("Note created successfully");
@@ -79,10 +95,15 @@ export const useSessionNotes = (userObj) => {
   };
 
   const getNotesCount = (countNotes, row) => {
-    const note = countNotes?.find(
+    if (!countNotes || !Array.isArray(countNotes) || !row?.session_id) {
+      return 0;
+    }
+    const note = countNotes.find(
       (note) => note?.session_id === row?.session_id
-    )?.count;
-    return note;
+    );
+    // Return the count if it exists and is a valid number, otherwise return 0
+    const count = note?.count && typeof note.count === 'number' ? note.count : 0;
+    return count;
   };
 
   return {

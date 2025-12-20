@@ -320,6 +320,7 @@ export const getSessionTableColumns = ({
         selector: (row) => row.notes,
         sortable: true,
         cell: (row) => {
+          const notesCount = getNotesCount(row) || 0;
           return (
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div
@@ -343,30 +344,33 @@ export const getSessionTableColumns = ({
                     display: "flex",
                     alignItems: "center",
                     position: "relative",
+                    whiteSpace: "nowrap",
                   }}
                   onClick={() => handleViewNotes(row)}
                 >
                   Notes
                 </button>
-                {getNotesCount(row) > 0 && (
+                {notesCount > 0 && (
                   <div
                     style={{
                       position: "absolute",
-                      top: "-5px",
-                      right: "-5px",
-                      backgroundColor: "red",
+                      top: "-8px",
+                      right: "-8px",
+                      backgroundColor: "#dc3545",
                       color: "white",
                       fontSize: "10px",
                       fontWeight: "bold",
                       borderRadius: "50%",
-                      width: "16px",
-                      height: "16px",
+                      width: "18px",
+                      height: "18px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                      zIndex: 1,
                     }}
                   >
-                    {getNotesCount(row)}
+                    {notesCount > 99 ? "99+" : notesCount}
                   </div>
                 )}
               </div>
@@ -376,7 +380,7 @@ export const getSessionTableColumns = ({
                 customClass="add-notes"
                 title="Add Notes"
                 onClick={() => {
-                  handleNoteOpen(row, "add");
+                  handleNoteOpen(row);
                 }}
               />
             </div>

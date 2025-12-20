@@ -262,6 +262,21 @@ function CreateSessionForm({
         const list = initialData?.session_obj || [];
         setScheduledSession(list?.filter((s) => s?.is_additional === 0));
         setAddittionalSessions(list?.filter((s) => s?.is_additional === 1));
+        
+        // Initialize countNotes from session_notes
+        const notes = list?.map((session) => {
+          let count = 0;
+          if (session?.session_notes) {
+            if (Array.isArray(session.session_notes)) {
+              count = session.session_notes.length;
+            }
+          }
+          return {
+            session_id: session?.session_id,
+            count: count,
+          };
+        }) || [];
+        setCountNotes(notes);
       }
     } catch (error) {
       console.error("Error generating schedule:", error);

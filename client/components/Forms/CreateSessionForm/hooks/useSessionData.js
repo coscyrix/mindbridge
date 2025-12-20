@@ -94,12 +94,22 @@ export const useSessionData = (userObj, initialData, isOpen) => {
         setScheduledSession(updatedSessions);
         setAddittionalSessions(addittionalSession);
         
+        // Initialize countNotes from session_notes array
+        // session_notes can be: array of notes, null, or undefined
         const notes = scheduledSession?.map((session) => {
+          let count = 0;
+          if (session?.session_notes) {
+            // Check if it's an array and get its length
+            if (Array.isArray(session.session_notes)) {
+              count = session.session_notes.length;
+            }
+            // If it's not an array (shouldn't happen, but handle it), count = 0
+          }
           return {
             session_id: session?.session_id,
-            count: session?.session_notes?.length || 0,
+            count: count,
           };
-        });
+        }) || [];
         setCountNotes(notes);
       }
     } catch (error) {

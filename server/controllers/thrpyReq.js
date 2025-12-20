@@ -168,7 +168,7 @@ export default class ThrpyReqController {
   //////////////////////////////////////////
 
   async cancelSessionByHash(req, res) {
-    const { session_id, hash } = req.body;
+    const { session_id, hash, cancellation_reason } = req.body;
     
     if (!session_id || !hash) {
       res.status(400).json({ message: 'Session ID and hash are required' });
@@ -176,7 +176,7 @@ export default class ThrpyReqController {
     }
 
     const thrpyReq = new ThrpyReqService();
-    const rec = await thrpyReq.cancelSessionByHash(session_id, hash);
+    const rec = await thrpyReq.cancelSessionByHash(session_id, hash, cancellation_reason);
 
     if (rec.error) {
       res.status(400).json(rec);

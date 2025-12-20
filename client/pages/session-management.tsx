@@ -3,11 +3,11 @@ import { useRouter } from "next/router";
 import { api } from "../utils/auth";
 import { toast } from "react-toastify";
 import ApiConfig from "../config/apiConfig";
-import ConfirmationModal from "../components/ConfirmationModal";
 import moment from "moment";
 import SessionCard from "../components/SessionManagement/SessionCard";
 import SessionInfo from "../components/SessionManagement/SessionInfo";
 import RescheduleModal from "../components/SessionManagement/RescheduleModal";
+import CancelSessionModal from "../components/SessionManagement/CancelSessionModal";
 import { Session, SessionData } from "../components/SessionManagement/types";
 import {
   SessionManagementContainer,
@@ -184,8 +184,15 @@ function SessionManagement() {
     setRescheduleModalOpen(true);
   };
 
-  const handleCancelConfirm = async () => {
+  const handleCancelConfirm = async (cancellationReason: string) => {
     if (!selectedSession || !hash || typeof hash !== "string") return;
+
+    if (!cancellationReason || !cancellationReason.trim()) {
+      toast.error("Please provide a reason for cancellation", {
+        position: "top-right",
+      });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -194,6 +201,7 @@ function SessionManagement() {
         {
           session_id: selectedSession.session_id,
           hash: hash,
+          cancellation_reason: cancellationReason.trim(),
         }
       );
 
@@ -443,21 +451,12 @@ function SessionManagement() {
         )}
       </div>
 
-      <ConfirmationModal
+      <CancelSessionModal
         isOpen={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
-        content={`Are you sure you want to cancel the session scheduled for ${
-          selectedSession
-            ? formatDateTime(
-                selectedSession.intake_date,
-                selectedSession.scheduled_time
-              )
-            : ""
-        }?`}
-        affirmativeAction="Yes, Cancel"
-        discardAction="No, Keep It"
-        handleAffirmativeAction={handleCancelConfirm}
-        loading={submitting}
+        session={selectedSession}
+        onSubmit={handleCancelConfirm}
+        submitting={submitting}
       />
 
       <RescheduleModal
