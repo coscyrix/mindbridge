@@ -221,9 +221,9 @@ export default class EmailTmplt {
                   (a, b) => a.session_id - b.session_id,
                 );
 
-                // Remove reports sessions
+                // Remove reports sessions and inactive sessions
                 const removeReportsSessions = sortedSessions.filter(
-                  (session) => session.is_report !== 1,
+                  (session) => session.is_report !== 1 && session.session_status !== 'INACTIVE',
                 );
 
                 // Filter sessions up to the current session
@@ -236,7 +236,7 @@ export default class EmailTmplt {
                   (session) => session.session_status === 'SHOW',
                 ).length;
                 const cancelledSessions = filteredSessions.filter(
-                  (session) => session.session_status === 'NO-SHOW',
+                  (session) => session.session_status === 'NO-SHOW' || session.session_status === 'CANCELLED',
                 ).length;
 
                 // Query homework count for the therapy request
@@ -265,34 +265,39 @@ export default class EmailTmplt {
                   const formMode = process.env.FORM_MODE || 'auto';
                   const schemaName = process.env.MYSQL_DATABASE;
                   
-                  // Step 1: Fetch ALL assessments for this therapy request
+                  // Step 1: Fetch ALL assessments for this therapy request (excluding inactive sessions)
                   let allAssessmentsQuery;
                   if (formMode === 'treatment_target') {
                     allAssessmentsQuery = db
                       .withSchema(schemaName)
                       .from('treatment_target_session_forms as tt')
                       .join('forms as f', 'tt.form_id', 'f.form_id')
+                      .join('session as s', 'tt.session_id', 's.session_id')
                       .where('tt.req_id', recThrpy[0].req_id)
                       .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+                      .andWhere('s.session_status', '!=', 'INACTIVE')
                       .select('tt.id as instance_id', 'tt.form_id', 'f.form_cde', 'tt.session_id');
                   } else {
                     allAssessmentsQuery = db
                       .withSchema(schemaName)
                       .from('user_forms as uf')
+                      .join('session as s', 'uf.session_id', 's.session_id')
                       .where('uf.thrpy_req_id', recThrpy[0].req_id)
                       .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
+                      .andWhere('s.session_status', '!=', 'INACTIVE')
                       .select('uf.user_form_id as instance_id', 'uf.form_id', 'uf.form_cde', 'uf.session_id', 'uf.client_id');
                   }
                   
                   const allAssessments = await allAssessmentsQuery;
                   
-                  // Step 2: Fetch ALL completed assessments (those with feedback)
+                  // Step 2: Fetch ALL completed assessments (those with feedback, excluding inactive sessions)
                   let completedAssessmentsQuery;
                   if (formMode === 'treatment_target') {
                     completedAssessmentsQuery = db
                       .withSchema(schemaName)
                       .from('treatment_target_session_forms as tt')
                       .join('forms as f', 'tt.form_id', 'f.form_id')
+                      .join('session as s', 'tt.session_id', 's.session_id')
                       .join('feedback as fb', function() {
                         this.on('fb.form_id', '=', 'tt.form_id')
                             .andOn(function() {
@@ -302,11 +307,13 @@ export default class EmailTmplt {
                       })
                       .where('tt.req_id', recThrpy[0].req_id)
                       .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+                      .andWhere('s.session_status', '!=', 'INACTIVE')
                       .select('tt.id as instance_id', 'f.form_cde');
                   } else {
                     completedAssessmentsQuery = db
                       .withSchema(schemaName)
                       .from('user_forms as uf')
+                      .join('session as s', 'uf.session_id', 's.session_id')
                       .join('feedback as fb', function() {
                         this.on('fb.form_id', '=', 'uf.form_id')
                             .andOn(function() {
@@ -319,6 +326,7 @@ export default class EmailTmplt {
                       })
                       .where('uf.thrpy_req_id', recThrpy[0].req_id)
                       .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
+                      .andWhere('s.session_status', '!=', 'INACTIVE')
                       .select('uf.user_form_id as instance_id', 'uf.form_cde');
                   }
                   
@@ -474,9 +482,9 @@ export default class EmailTmplt {
                   (a, b) => a.session_id - b.session_id,
                 );
 
-                // Remove reports sessions
+                // Remove reports sessions and inactive sessions
                 const removeReportsSessions = sortedSessions.filter(
-                  (session) => session.is_report !== 1,
+                  (session) => session.is_report !== 1 && session.session_status !== 'INACTIVE',
                 );
 
                 // Filter sessions up to the current session
@@ -489,7 +497,7 @@ export default class EmailTmplt {
                 (session) => session.session_status === 'SHOW',
               ).length;
               const cancelledSessions = filteredSessions.filter(
-                (session) => session.session_status === 'NO-SHOW',
+                (session) => session.session_status === 'NO-SHOW' || session.session_status === 'CANCELLED',
               ).length;
 
               // Query homework count for the therapy request
@@ -521,7 +529,7 @@ export default class EmailTmplt {
                 let assessmentQuery;
                 
                 if (formMode === 'treatment_target') {
-                  // Get assessments and check if ALL instances have feedback (not just ANY)
+                  // Get assessments and check if ALL instances have feedback (not just ANY, excluding inactive sessions)
                   assessmentQuery = db
                     .withSchema(`${process.env.MYSQL_DATABASE}`)
                     .from('treatment_target_session_forms as tt')
@@ -536,13 +544,14 @@ export default class EmailTmplt {
                     })
                     .where('tt.req_id', recThrpy[0].req_id)
                     .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+                    .andWhere('s.session_status', '!=', 'INACTIVE')
                     .select('f.form_cde', 'f.form_id')
                     .select(db.raw('COUNT(DISTINCT tt.id) as total_instances'))
                     .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN tt.id END) as completed_instances'))
                     .select(db.raw('MAX(CASE WHEN tt.is_sent = 1 THEN 1 ELSE 0 END) as is_sent'))
                     .groupBy('f.form_id', 'f.form_cde');
                 } else {
-                  // Get assessments and check if ALL instances have feedback (not just ANY)
+                  // Get assessments and check if ALL instances have feedback (not just ANY, excluding inactive sessions)
                   assessmentQuery = db
                     .withSchema(`${process.env.MYSQL_DATABASE}`)
                     .from('user_forms as uf')
@@ -559,6 +568,7 @@ export default class EmailTmplt {
                     })
                     .where('uf.thrpy_req_id', recThrpy[0].req_id)
                     .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
+                    .andWhere('s.session_status', '!=', 'INACTIVE')
                     .select('uf.form_cde', 'uf.form_id')
                     .select(db.raw('COUNT(DISTINCT uf.user_form_id) as total_instances'))
                     .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN uf.user_form_id END) as completed_instances'))
@@ -1235,14 +1245,16 @@ export default class EmailTmplt {
   async generateAndSendAttendanceReport(thrpy_req_id, session_id, thrpyReq, userProfile, tenantId) {
     try {
       const sessions = thrpyReq.session_obj || [];
-      const nonReportSessions = sessions.filter(session => session.is_report !== 1);
+      const nonReportSessions = sessions.filter(session => 
+        session.is_report !== 1 && session.session_status !== 'INACTIVE'
+      );
       
       // Count attended and cancelled sessions
       const attendedSessions = nonReportSessions.filter(
         session => session.session_status === 'SHOW'
       ).length;
       const cancelledSessions = nonReportSessions.filter(
-        session => session.session_status === 'NO-SHOW'
+        session => session.session_status === 'NO-SHOW' || session.session_status === 'CANCELLED'
       ).length;
 
       const client_full_name = `${userProfile.user_first_name} ${userProfile.user_last_name}`;
@@ -1293,7 +1305,7 @@ export default class EmailTmplt {
         let assessmentQuery;
         
         if (formMode === 'treatment_target') {
-          // Get assessments and check if ALL instances have feedback (not just ANY)
+          // Get assessments and check if ALL instances have feedback (not just ANY, excluding inactive sessions)
           assessmentQuery = db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
             .from('treatment_target_session_forms as tt')
@@ -1308,13 +1320,14 @@ export default class EmailTmplt {
             })
             .where('tt.req_id', thrpy_req_id)
             .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+            .andWhere('s.session_status', '!=', 'INACTIVE')
             .select('f.form_cde', 'f.form_id')
             .select(db.raw('COUNT(DISTINCT tt.id) as total_instances'))
             .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN tt.id END) as completed_instances'))
             .select(db.raw('MAX(CASE WHEN tt.is_sent = 1 THEN 1 ELSE 0 END) as is_sent'))
             .groupBy('f.form_id', 'f.form_cde');
         } else {
-          // Get assessments and check if ALL instances have feedback (not just ANY)
+          // Get assessments and check if ALL instances have feedback (not just ANY, excluding inactive sessions)
           assessmentQuery = db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
             .from('user_forms as uf')
@@ -1331,6 +1344,7 @@ export default class EmailTmplt {
             })
             .where('uf.thrpy_req_id', thrpy_req_id)
             .andWhere('uf.form_cde', '!=', 'SESSION SUM REPORT')
+            .andWhere('s.session_status', '!=', 'INACTIVE')
             .select('uf.form_cde', 'uf.form_id')
             .select(db.raw('COUNT(DISTINCT uf.user_form_id) as total_instances'))
             .select(db.raw('COUNT(DISTINCT CASE WHEN fb.feedback_id IS NOT NULL THEN uf.user_form_id END) as completed_instances'))
