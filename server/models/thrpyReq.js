@@ -20,7 +20,10 @@ import { capitalizeFirstLetter, splitIsoDatetime } from '../utils/common.js';
 import {
   therapyRequestDetailsEmail,
   dischargeEmail,
+  sessionCancellationNotificationEmail,
+  sessionRescheduleNotificationEmail,
 } from '../utils/emailTmplt.js';
+import { formatDateTimeInTimezone, getTimezoneByCountryCode, getDefaultTimezone } from '../utils/timezone.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import UserTargetOutcome from './userTargetOutcome.js';
 
@@ -421,6 +424,11 @@ export default class ThrpyReq {
           ? data.session_format_id === "IN-PERSON" ? "IN_PERSON" : data.session_format_id
           : "ONLINE"; // Default to ONLINE
 
+      // Generate a unique hash for cancel/reschedule functionality
+      const crypto = require('crypto');
+      const hashData = `${data.counselor_id}-${data.client_id}-${data.service_id}-${Date.now()}`;
+      const cancelHash = crypto.createHash('sha256').update(hashData).digest('base64url');
+
       // Prepare the therapy request object
       const tmpThrpyReq = {
         counselor_id: data.counselor_id,
@@ -432,6 +440,7 @@ export default class ThrpyReq {
         session_desc: svc.service_code,
         tenant_id: data.tenant_id,
         treatment_target: treatmentTarget, // Add treatment target to therapy request
+        cancel_hash: cancelHash, // Add cancel/reschedule hash
       };
 
       // Insert the therapy request into the database using Prisma
@@ -950,6 +959,7 @@ export default class ThrpyReq {
       const thrpyReqEmlTmplt = this.emailTmplt.sendThrpyReqDetailsEmail({
         email: recClient.rec[0].email,
         big_thrpy_req_obj: ThrpyReq[0],
+        cancel_hash: postThrpyReq.cancel_hash, // Pass the cancel hash to email template
       });
 
       // Return a success message
@@ -1942,6 +1952,483 @@ export default class ThrpyReq {
         message: 'Error checking client for active therapy request',
         error: -1,
       };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getThrpyReqByHash(cancel_hash) {
+    try {
+      // Get thryp request by hash using Prisma
+      const thrpyReq = await prisma.thrpy_req.findFirst({
+        where: {
+          cancel_hash: cancel_hash,
+          status_yn: 'y',
+        },
+        include: {
+          service: true,
+          user_profile_thrpy_req_counselor_idTouser_profile: {
+            select: {
+              user_profile_id: true,
+              user_first_name: true,
+              user_last_name: true,
+              user_phone_nbr: true,
+              country_code: true,
+            },
+          },
+          user_profile_thrpy_req_client_idTouser_profile: {
+            select: {
+              user_profile_id: true,
+              user_first_name: true,
+              user_last_name: true,
+              user_phone_nbr: true,
+              country_code: true,
+            },
+          },
+        },
+      });
+
+      if (!thrpyReq) {
+        return { message: 'Therapy request not found or invalid hash', error: -1 };
+      }
+
+      // Get sessions for this thryp request
+      const sessionsResult = await prisma.session.findMany({
+        where: {
+          thrpy_req_id: thrpyReq.req_id,
+          status_yn: 'y',
+        },
+      });
+
+      console.log('thrpyReq', thrpyReq.req_id);
+      console.log('sessionsResult', sessionsResult);
+
+      // Format the response similar to getThrpyReqById
+      // Convert BigInt values to strings to avoid serialization errors
+      const formattedThrpyReq = {
+        req_id: thrpyReq.req_id,
+        counselor_id: thrpyReq.counselor_id,
+        client_id: thrpyReq.client_id,
+        service_id: thrpyReq.service_id,
+        session_format_id: thrpyReq.session_format_id,
+        req_dte: thrpyReq.req_dte,
+        req_time: thrpyReq.req_time,
+        session_desc: thrpyReq.session_desc,
+        status_yn: thrpyReq.status_yn,
+        thrpy_status: thrpyReq.thrpy_status,
+        created_at: thrpyReq.created_at,
+        updated_at: thrpyReq.updated_at,
+        tenant_id: thrpyReq.tenant_id,
+        treatment_target: thrpyReq.treatment_target,
+        cancel_hash: thrpyReq.cancel_hash,
+        counselor_first_name: thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile?.user_first_name,
+        counselor_last_name: thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile?.user_last_name,
+        counselor_phone_nbr: thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile?.user_phone_nbr 
+          ? String(thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile.user_phone_nbr) 
+          : null,
+        counselor_country_code: thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile?.country_code,
+        client_first_name: thrpyReq.user_profile_thrpy_req_client_idTouser_profile?.user_first_name,
+        client_last_name: thrpyReq.user_profile_thrpy_req_client_idTouser_profile?.user_last_name,
+        client_phone_nbr: thrpyReq.user_profile_thrpy_req_client_idTouser_profile?.user_phone_nbr 
+          ? String(thrpyReq.user_profile_thrpy_req_client_idTouser_profile.user_phone_nbr) 
+          : null,
+        client_country_code: thrpyReq.user_profile_thrpy_req_client_idTouser_profile?.country_code,
+        service_name: thrpyReq.service?.service_name,
+        service_code: thrpyReq.service?.service_code,
+        session_obj: sessionsResult && !sessionsResult.error ? sessionsResult : [],
+      };
+
+      return { message: 'Therapy request found', rec: [formattedThrpyReq] };
+    } catch (error) {
+      console.error('Error getting therapy request by hash:', error);
+      logger.error(error);
+      return { message: 'Error getting therapy request by hash', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async cancelSessionByHash(session_id, cancel_hash) {
+    try {
+      // Verify hash matches the thryp request
+      const thrpyReq = await prisma.thrpy_req.findFirst({
+        where: {
+          cancel_hash: cancel_hash,
+          status_yn: 'y',
+        },
+        include: {
+          session: {
+            where: {
+              session_id: session_id,
+              status_yn: 'y',
+            },
+          },
+          service: true,
+          user_profile_thrpy_req_counselor_idTouser_profile: {
+            select: {
+              user_profile_id: true,
+              user_first_name: true,
+              user_last_name: true,
+              user_id: true,
+              country_code: true,
+            },
+          },
+          user_profile_thrpy_req_client_idTouser_profile: {
+            select: {
+              user_first_name: true,
+              user_last_name: true,
+            },
+          },
+        },
+      });
+
+      if (!thrpyReq) {
+        return { message: 'Invalid hash or therapy request not found', error: -1 };
+      }
+
+      if (!thrpyReq.session || thrpyReq.session.length === 0) {
+        return { message: 'Session not found', error: -1 };
+      }
+
+      const session = thrpyReq.session[0];
+
+      // Check if session can be cancelled (must be SCHEDULED)
+      if (session.session_status !== 'SCHEDULED') {
+        return { 
+          message: `Session cannot be cancelled. Current status: ${session.session_status}`, 
+          error: -1 
+        };
+      }
+
+      // Update session status to CANCELLED and set prices to 0 (same behavior as NO-SHOW)
+      const updatedSession = await prisma.session.update({
+        where: {
+          session_id: session_id,
+        },
+        data: {
+          session_status: 'CANCELLED',
+          cancellation_reason: 'Cancelled by client via email link',
+          session_price: 0,
+          session_taxes: 0,
+          session_counselor_amt: 0,
+          session_system_amt: 0,
+        },
+      });
+
+      // Send email notification to counselor
+      try {
+        const counselorProfile = thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile;
+        const clientProfile = thrpyReq.user_profile_thrpy_req_client_idTouser_profile;
+        
+        if (counselorProfile && counselorProfile.user_profile_id) {
+          // Get counselor email and timezone
+          const counselorUserProfile = await this.common.getUserProfileByUserProfileId(
+            counselorProfile.user_profile_id
+          );
+          
+          let counselorEmail = null;
+          let counselorTimezone = null;
+          
+          if (counselorUserProfile && !counselorUserProfile.error && counselorUserProfile.length > 0) {
+            const profile = counselorUserProfile[0];
+            counselorTimezone = profile.timezone || null;
+            
+            // Get tenant timezone if user profile doesn't have timezone
+            if (!counselorTimezone && thrpyReq.tenant_id) {
+              try {
+                const tenant = await this.common.getTenantByTenantId(thrpyReq.tenant_id);
+                if (!tenant.error && Array.isArray(tenant) && tenant[0]?.timezone) {
+                  counselorTimezone = tenant[0].timezone;
+                }
+              } catch (e) {
+                console.warn('Failed to get tenant timezone:', e?.message || e);
+              }
+            }
+            
+            // Get counselor email from user_id
+            if (profile.user_id) {
+              const counselorUser = await this.common.getUserById(profile.user_id);
+              counselorEmail = counselorUser && counselorUser.length > 0 ? counselorUser[0].email : null;
+            }
+          }
+          
+          // Fallback: try to get timezone from country code if not found in profile
+          if (!counselorTimezone && counselorProfile.country_code) {
+            counselorTimezone = getTimezoneByCountryCode(counselorProfile.country_code);
+          }
+          
+          // Final fallback to default timezone
+          if (!counselorTimezone) {
+            counselorTimezone = getDefaultTimezone();
+          }
+
+          if (counselorEmail) {
+            const counselorName = `${counselorProfile.user_first_name} ${counselorProfile.user_last_name}`;
+            const clientName = `${clientProfile?.user_first_name || ''} ${clientProfile?.user_last_name || ''}`.trim();
+            
+            // Format session date and time in counselor's timezone
+            let sessionDate = 'N/A';
+            let sessionTime = 'N/A';
+            
+            if (session.intake_date && session.scheduled_time) {
+              const { localDate, localTime } = formatDateTimeInTimezone(
+                session.intake_date,
+                session.scheduled_time,
+                counselorTimezone
+              );
+              sessionDate = localDate;
+              sessionTime = localTime;
+            } else if (session.intake_date) {
+              // If only date is available, format it
+              sessionDate = new Date(session.intake_date).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                timeZone: counselorTimezone
+              });
+            }
+
+            const emailTemplate = sessionCancellationNotificationEmail(
+              counselorEmail,
+              counselorName,
+              clientName,
+              sessionDate,
+              sessionTime,
+              thrpyReq.service?.service_name || 'N/A',
+              thrpyReq.session_format_id || 'N/A'
+            );
+
+            const emailResult = await this.sendEmail.sendMail(emailTemplate);
+            if (emailResult?.error) {
+              logger.error('Error sending cancellation email to counselor:', emailResult.message);
+              // Don't fail the cancellation if email fails
+            } else {
+              logger.info('Cancellation notification email sent to counselor:', counselorEmail);
+            }
+          }
+        }
+      } catch (emailError) {
+        logger.error('Error sending cancellation email to counselor:', emailError);
+        // Don't fail the cancellation if email fails
+      }
+
+      return { 
+        message: 'Session cancelled successfully', 
+        rec: updatedSession 
+      };
+    } catch (error) {
+      console.error('Error cancelling session:', error);
+      logger.error(error);
+      return { message: 'Error cancelling session', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async rescheduleSessionByHash(session_id, cancel_hash, new_date, new_time) {
+    try {
+      // Verify hash matches the thryp request
+      const thrpyReq = await prisma.thrpy_req.findFirst({
+        where: {
+          cancel_hash: cancel_hash,
+          status_yn: 'y',
+        },
+        include: {
+          session: {
+            where: {
+              session_id: session_id,
+              status_yn: 'y',
+            },
+          },
+          service: true,
+          user_profile_thrpy_req_counselor_idTouser_profile: {
+            select: {
+              user_profile_id: true,
+              user_first_name: true,
+              user_last_name: true,
+              user_id: true,
+              country_code: true,
+            },
+          },
+          user_profile_thrpy_req_client_idTouser_profile: {
+            select: {
+              user_first_name: true,
+              user_last_name: true,
+            },
+          },
+        },
+      });
+
+      if (!thrpyReq) {
+        return { message: 'Invalid hash or therapy request not found', error: -1 };
+      }
+
+      if (!thrpyReq.session || thrpyReq.session.length === 0) {
+        return { message: 'Session not found', error: -1 };
+      }
+
+      const session = thrpyReq.session[0];
+
+      // Check if session can be rescheduled (must be SCHEDULED)
+      if (session.session_status !== 'SCHEDULED') {
+        return { 
+          message: `Session cannot be rescheduled. Current status: ${session.session_status}`, 
+          error: -1 
+        };
+      }
+
+      // Validate new date is not in the past
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const newDateObj = new Date(new_date);
+      newDateObj.setHours(0, 0, 0, 0);
+
+      if (newDateObj < today) {
+        return { message: 'Cannot reschedule to a past date', error: -1 };
+      }
+
+      // Store old date and time for email notification
+      const oldDate = session.intake_date;
+      const oldTime = session.scheduled_time;
+
+      // Update session date and time
+      const updatedSession = await prisma.session.update({
+        where: {
+          session_id: session_id,
+        },
+        data: {
+          intake_date: new_date,
+          scheduled_time: new_time,
+        },
+      });
+
+      // Send email notification to counselor
+      try {
+        const counselorProfile = thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile;
+        const clientProfile = thrpyReq.user_profile_thrpy_req_client_idTouser_profile;
+        
+        if (counselorProfile && counselorProfile.user_profile_id) {
+          // Get counselor email and timezone
+          const counselorUserProfile = await this.common.getUserProfileByUserProfileId(
+            counselorProfile.user_profile_id
+          );
+          
+          let counselorEmail = null;
+          let counselorTimezone = null;
+          
+          if (counselorUserProfile && !counselorUserProfile.error && counselorUserProfile.length > 0) {
+            const profile = counselorUserProfile[0];
+            counselorTimezone = profile.timezone || null;
+            
+            // Get tenant timezone if user profile doesn't have timezone
+            if (!counselorTimezone && thrpyReq.tenant_id) {
+              try {
+                const tenant = await this.common.getTenantByTenantId(thrpyReq.tenant_id);
+                if (!tenant.error && Array.isArray(tenant) && tenant[0]?.timezone) {
+                  counselorTimezone = tenant[0].timezone;
+                }
+              } catch (e) {
+                console.warn('Failed to get tenant timezone:', e?.message || e);
+              }
+            }
+            
+            // Get counselor email from user_id
+            if (profile.user_id) {
+              const counselorUser = await this.common.getUserById(profile.user_id);
+              counselorEmail = counselorUser && counselorUser.length > 0 ? counselorUser[0].email : null;
+            }
+          }
+          
+          // Fallback: try to get timezone from country code if not found in profile
+          if (!counselorTimezone && counselorProfile.country_code) {
+            counselorTimezone = getTimezoneByCountryCode(counselorProfile.country_code);
+          }
+          
+          // Final fallback to default timezone
+          if (!counselorTimezone) {
+            counselorTimezone = getDefaultTimezone();
+          }
+
+          if (counselorEmail) {
+            const counselorName = `${counselorProfile.user_first_name} ${counselorProfile.user_last_name}`;
+            const clientName = `${clientProfile?.user_first_name || ''} ${clientProfile?.user_last_name || ''}`.trim();
+            
+            // Format old session date and time in counselor's timezone
+            let oldSessionDate = 'N/A';
+            let oldSessionTime = 'N/A';
+            
+            if (oldDate && oldTime) {
+              const { localDate, localTime } = formatDateTimeInTimezone(
+                oldDate,
+                oldTime,
+                counselorTimezone
+              );
+              oldSessionDate = localDate;
+              oldSessionTime = localTime;
+            } else if (oldDate) {
+              oldSessionDate = new Date(oldDate).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                timeZone: counselorTimezone
+              });
+            }
+
+            // Format new session date and time in counselor's timezone
+            let newSessionDate = 'N/A';
+            let newSessionTime = 'N/A';
+            
+            if (new_date && new_time) {
+              const { localDate, localTime } = formatDateTimeInTimezone(
+                new_date,
+                new_time,
+                counselorTimezone
+              );
+              newSessionDate = localDate;
+              newSessionTime = localTime;
+            } else if (new_date) {
+              newSessionDate = new Date(new_date).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                timeZone: counselorTimezone
+              });
+            }
+
+            const emailTemplate = sessionRescheduleNotificationEmail(
+              counselorEmail,
+              counselorName,
+              clientName,
+              oldSessionDate,
+              oldSessionTime,
+              newSessionDate,
+              newSessionTime,
+              thrpyReq.service?.service_name || 'N/A',
+              thrpyReq.session_format_id || 'N/A'
+            );
+
+            const emailResult = await this.sendEmail.sendMail(emailTemplate);
+            if (emailResult?.error) {
+              logger.error('Error sending reschedule email to counselor:', emailResult.message);
+              // Don't fail the reschedule if email fails
+            } else {
+              logger.info('Reschedule notification email sent to counselor:', counselorEmail);
+            }
+          }
+        }
+      } catch (emailError) {
+        logger.error('Error sending reschedule email to counselor:', emailError);
+        // Don't fail the reschedule if email fails
+      }
+
+      return { 
+        message: 'Session rescheduled successfully', 
+        rec: updatedSession 
+      };
+    } catch (error) {
+      console.error('Error rescheduling session:', error);
+      logger.error(error);
+      return { message: 'Error rescheduling session', error: -1 };
     }
   }
 

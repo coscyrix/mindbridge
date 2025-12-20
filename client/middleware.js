@@ -30,15 +30,21 @@ export function middleware(request) {
     "/fee-split-management",
   ];
 
-  const authRoutes = ["/login", "/reset-password", "/account-deactivated"];
+  const authRoutes = ["/login", "/reset-password"];
+  
+  // Public routes that don't require authentication (e.g., client-facing pages with hash-based access)
+  const publicRoutes = ["/session-management", "/patient-forms", "/account-deactivated"];
 
   const isAuthRoute = authRoutes.includes(pathname);
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
+  const isPublicRoute = publicRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
   
-  // Allow access to account-deactivated page
-  if (pathname === "/account-deactivated") {
+  // Allow access to public routes without authentication
+  if (isPublicRoute) {
     return NextResponse.next();
   }
 

@@ -146,6 +146,69 @@ export default class ThrpyReqController {
 
   //////////////////////////////////////////
 
+  async getThrpyReqByHash(req, res) {
+    const cancel_hash = req.query.hash || req.params.hash;
+    
+    if (!cancel_hash) {
+      res.status(400).json({ message: 'Hash parameter is required' });
+      return;
+    }
+
+    const thrpyReq = new ThrpyReqService();
+    const rec = await thrpyReq.getThrpyReqByHash(cancel_hash);
+
+    if (rec.error) {
+      res.status(404).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
+  async cancelSessionByHash(req, res) {
+    const { session_id, hash } = req.body;
+    
+    if (!session_id || !hash) {
+      res.status(400).json({ message: 'Session ID and hash are required' });
+      return;
+    }
+
+    const thrpyReq = new ThrpyReqService();
+    const rec = await thrpyReq.cancelSessionByHash(session_id, hash);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
+  async rescheduleSessionByHash(req, res) {
+    const { session_id, hash, new_date, new_time } = req.body;
+    
+    if (!session_id || !hash || !new_date || !new_time) {
+      res.status(400).json({ message: 'Session ID, hash, new date, and new time are required' });
+      return;
+    }
+
+    const thrpyReq = new ThrpyReqService();
+    const rec = await thrpyReq.rescheduleSessionByHash(session_id, hash, new_date, new_time);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
   async getThrpyReqById(req, res) {
     const data = req.query;
 

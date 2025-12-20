@@ -455,9 +455,24 @@ export default class Session {
         data.scheduled_time = data.scheduled_time.split(' ')[1]; // Extract time part 'HH:mm:ssZ'
 
         tmpSession = {
+          ...tmpSession, // Preserve any existing tmpSession data
           ...(data.scheduled_time && { scheduled_time: data.scheduled_time }),
           ...(data.intake_date && { intake_date: data.intake_date }),
         };
+      }
+      
+// TODO: RECHECK THE BELOW CODE
+
+      // If session is being cancelled, set prices to 0 (same behavior as NO-SHOW)
+      // Check this after all tmpSession assignments to ensure it applies
+      if (data.session_status === 'CANCELLED' || data.session_status === 'CANCELLATION') {
+        if (!tmpSession) {
+          tmpSession = {};
+        }
+        tmpSession.session_price = 0;
+        tmpSession.session_taxes = 0;
+        tmpSession.session_counselor_amt = 0;
+        tmpSession.session_system_amt = 0;
       }
 
       if (data.invoice_nbr) {

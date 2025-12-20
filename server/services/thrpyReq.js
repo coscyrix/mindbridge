@@ -216,6 +216,39 @@ export default class ThrpyReqService {
 
   //////////////////////////////////////////
 
+  async getThrpyReqByHash(cancel_hash) {
+    if (!cancel_hash) {
+      return { message: 'Hash is required', error: -1 };
+    }
+
+    const thrpyReq = new ThrpyReq();
+    return thrpyReq.getThrpyReqByHash(cancel_hash);
+  }
+
+  //////////////////////////////////////////
+
+  async cancelSessionByHash(session_id, cancel_hash) {
+    if (!session_id || !cancel_hash) {
+      return { message: 'Session ID and hash are required', error: -1 };
+    }
+
+    const thrpyReq = new ThrpyReq();
+    return thrpyReq.cancelSessionByHash(session_id, cancel_hash);
+  }
+
+  //////////////////////////////////////////
+
+  async rescheduleSessionByHash(session_id, cancel_hash, new_date, new_time) {
+    if (!session_id || !cancel_hash || !new_date || !new_time) {
+      return { message: 'Session ID, hash, new date, and new time are required', error: -1 };
+    }
+
+    const thrpyReq = new ThrpyReq();
+    return thrpyReq.rescheduleSessionByHash(session_id, cancel_hash, new_date, new_time);
+  }
+
+  //////////////////////////////////////////
+
   async getThrpyReqById(data) {
     console.log('/////////////////////////////////////////');
     data.role_id = Number(data.role_id);

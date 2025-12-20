@@ -646,6 +646,7 @@ model thrpy_req {
     updated_at                                        DateTime                         @default(now()) @db.Timestamp(0)
     tenant_id                                         Int?
     treatment_target                                  String?                          @db.VarChar(255)
+    cancel_hash                                       String?                          @db.VarChar(255)
     session                                           session[]
     service                                           service                          @relation(fields: [service_id], references: [service_id], onDelete: Cascade, map: "thrpy_req_service_FK")
     user_profile_thrpy_req_counselor_idTouser_profile user_profile                     @relation("thrpy_req_counselor_idTouser_profile", fields: [counselor_id], references: [user_profile_id], onDelete: Cascade, map: "thrpy_req_user_profile_FK")

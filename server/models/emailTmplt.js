@@ -1047,7 +1047,8 @@ export default class EmailTmplt {
       const thrpyReqEmlTmplt = therapyRequestDetailsEmail(
         data.email,
         therapyRequestWithContact,
-        counselorEmail
+        counselorEmail,
+        data.cancel_hash // Pass the cancel hash to email template
       );
       const sendThrpyReqEmlTmpltEmail =
         this.sendEmail.sendMail(thrpyReqEmlTmplt);

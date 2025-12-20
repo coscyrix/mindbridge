@@ -170,7 +170,8 @@ export default class Invoice {
             'session_status',
             'DISCHARGED',
           );
-        });        
+        })
+        .whereNotIn('session_status', ['CANCELLED', 'NO-SHOW', 'NO_SHOW']);        
       // Apply filters for all roles including role_id=4
       if (data.counselor_id) {
         query.andWhere('counselor_id', Number(data.counselor_id));

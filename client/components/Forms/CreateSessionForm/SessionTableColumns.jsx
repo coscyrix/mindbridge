@@ -114,6 +114,7 @@ export const getSessionTableColumns = ({
           sessionStatus != "show" &&
           sessionStatus != "no-show" &&
           sessionStatus != "discharged" &&
+          sessionStatus != "cancelled" &&
           !isInactive;
 
         // Don't show action buttons for inactive sessions

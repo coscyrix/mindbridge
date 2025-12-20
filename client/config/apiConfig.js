@@ -63,6 +63,11 @@ const ApiConfig = {
     getAllfeesSplit: "/fee-split-management/configuration",
     
   },
+  sessionManagement: {
+    getByHash: "/thrpyReq/by-hash",
+    cancelSession: "/thrpyReq/cancel",
+    rescheduleSession: "/thrpyReq/reschedule",
+  },
 };
 
 export default ApiConfig;

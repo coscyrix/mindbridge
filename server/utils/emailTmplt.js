@@ -470,7 +470,7 @@ export const welcomeAccountDetailsEmail = (
 };
 
 
-export const therapyRequestDetailsEmail = (email, therapyRequest, counselorEmail = null) => {
+export const therapyRequestDetailsEmail = (email, therapyRequest, counselorEmail = null, cancelHash = null) => {
   const {
     counselor_first_name,
     counselor_last_name,
@@ -565,6 +565,18 @@ export const therapyRequestDetailsEmail = (email, therapyRequest, counselorEmail
           </tbody>
         </table>
         
+        ${cancelHash ? `
+        <div style="margin: 30px 0; text-align: center;">
+          <p style="text-align: center; margin-bottom: 15px; font-size: 14px; color: #333;">
+            Need to cancel or reschedule your session?
+          </p>
+          <a href="${process.env.BASE_URL || 'https://mindapp.mindbridge.solutions/'}session-management?hash=${encodeURIComponent(cancelHash)}" 
+             style="display: inline-block; padding: 12px 30px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
+            Cancel or Reschedule Session
+          </a>
+        </div>
+        ` : ''}
+        
         <p style="text-align: left;">Thank you,</p>
         <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>
         ${EMAIL_DISCLAIMER}
@@ -603,6 +615,85 @@ export const dischargeEmail = (email, clientName, counselorEmail = null) => {
   }
 
   return emailObj;
+};
+
+export const sessionCancellationNotificationEmail = (
+  counselorEmail,
+  counselorName,
+  clientName,
+  sessionDate,
+  sessionTime,
+  serviceName,
+  sessionFormat
+) => {
+  return {
+    to: counselorEmail,
+    subject: `Session Cancelled - ${clientName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #dc3545; margin-bottom: 20px;">Session Cancellation Notification</h2>
+        <p>Hello ${capitalizeFirstLetter(counselorName)},</p>
+        <p>This is to notify you that a client has cancelled their scheduled session:</p>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
+          <p style="margin: 8px 0;"><strong>Client:</strong> ${capitalizeFirstLetter(clientName)}</p>
+          <p style="margin: 8px 0;"><strong>Service:</strong> ${serviceName}</p>
+          <p style="margin: 8px 0;"><strong>Session Date:</strong> ${sessionDate}</p>
+          <p style="margin: 8px 0;"><strong>Session Time:</strong> ${sessionTime}</p>
+          <p style="margin: 8px 0;"><strong>Session Format:</strong> ${sessionFormat}</p>
+          <p style="margin: 8px 0; color: #dc3545;"><strong>Status:</strong> CANCELLED</p>
+        </div>
+        <p>The session has been marked as cancelled in the system. Please update your calendar accordingly.</p>
+        <p>If you have any questions or concerns, please contact the client directly.</p>
+        <p style="margin-top: 30px;">Thank you,</p>
+        <p><strong>The MindBridge Team</strong></p>
+        ${EMAIL_DISCLAIMER}
+      </div>
+    `,
+  };
+};
+
+export const sessionRescheduleNotificationEmail = (
+  counselorEmail,
+  counselorName,
+  clientName,
+  oldSessionDate,
+  oldSessionTime,
+  newSessionDate,
+  newSessionTime,
+  serviceName,
+  sessionFormat
+) => {
+  return {
+    to: counselorEmail,
+    subject: `Session Rescheduled - ${clientName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #007bff; margin-bottom: 20px;">Session Reschedule Notification</h2>
+        <p>Hello ${capitalizeFirstLetter(counselorName)},</p>
+        <p>This is to notify you that a client has rescheduled their session:</p>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 8px 0;"><strong>Client:</strong> ${capitalizeFirstLetter(clientName)}</p>
+          <p style="margin: 8px 0;"><strong>Service:</strong> ${serviceName}</p>
+          <p style="margin: 8px 0;"><strong>Session Format:</strong> ${sessionFormat}</p>
+        </div>
+        <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
+          <p style="margin: 5px 0; font-weight: bold; color: #856404;">Previous Session:</p>
+          <p style="margin: 5px 0;"><strong>Date:</strong> ${oldSessionDate}</p>
+          <p style="margin: 5px 0;"><strong>Time:</strong> ${oldSessionTime}</p>
+        </div>
+        <div style="background-color: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745;">
+          <p style="margin: 5px 0; font-weight: bold; color: #155724;">New Session:</p>
+          <p style="margin: 5px 0;"><strong>Date:</strong> ${newSessionDate}</p>
+          <p style="margin: 5px 0;"><strong>Time:</strong> ${newSessionTime}</p>
+        </div>
+        <p>The session has been updated in the system. Please update your calendar accordingly.</p>
+        <p>If you have any questions or concerns, please contact the client directly.</p>
+        <p style="margin-top: 30px;">Thank you,</p>
+        <p><strong>The MindBridge Team</strong></p>
+        ${EMAIL_DISCLAIMER}
+      </div>
+    `,
+  };
 };
 
 export const additionalServiceEmail = (
