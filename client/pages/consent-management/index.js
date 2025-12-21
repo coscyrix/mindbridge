@@ -1,5 +1,5 @@
 import { ConsentManagementWrapper } from "../../styles/consent-management";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Switch, FormControlLabel, Typography, Box } from "@mui/material";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,12 +38,25 @@ const ConsentManagement = () => {
   useEffect(() => {
     if (userObj) setUserData(userObj);
   }, [userObj]);
-  const getConsentBody = async () => {
+  
+  const { reset } = methods;
+  
+  const getConsentBody = useCallback(async () => {
+    if (!userObj) return; // Don't fetch if userObj is not available yet
+    
     try {
+      const roleId = userObj?.role_id;
       const tenant_id = userObj?.tenant_id;
-      const result = await api.get(
-        `${ApiConfig.consentFormSubmittion.consentForm}?tenant_id=${tenant_id}`
-      );
+      
+      // If roleId == 4 (admin), always fetch system default consent form
+      let url = ApiConfig.consentFormSubmittion.consentForm;
+      if (roleId === 4) {
+        url += `?role_id=4`;
+      } else {
+        url += `?tenant_id=${tenant_id}`;
+      }
+      
+      const result = await api.get(url);
       if (result.status === 200) {
         setConsentBody(result?.data?.description);
       }
@@ -51,11 +64,11 @@ const ConsentManagement = () => {
       toast.error(error?.response?.data?.message);
       console.log(error);
     }
-  };
-  const { reset } = methods;
+  }, [userObj]);
+  
   useEffect(() => {
     getConsentBody();
-  }, []);
+  }, [getConsentBody]);
   useEffect(() => {
     if (consentBody) {
       reset((prev) => ({
@@ -88,9 +101,8 @@ const ConsentManagement = () => {
       );
       if (response.status === 201) {
         toast.success(response?.data?.message);
-        if (isAdmin) {
-          methods.reset({ consent_Editor_Values: "" });
-        }
+        // Refetch the consent body to show the updated content
+        await getConsentBody();
       }
       setLoading(false);
     } catch (error) {
