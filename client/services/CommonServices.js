@@ -241,23 +241,25 @@ const CommonServices = {
       throw error;
     }
   },
-  // User activation/deactivation (works for both counselors and tenants)
-  activateUser: async (user_id, tenant_id) => {
+  // User activation/deactivation
+  activateUser: async (user_id, role_id, target_id) => {
     try {
       const response = await api.post('/counselor-activation/activate', {
-        counselor_user_id: user_id,
-        tenant_id,
+        user_id, // Requester's user_id from localStorage
+        role_id, // Requester's role_id from localStorage
+        target_id, // Target user's user_id from row
       });
       return response;
     } catch (error) {
       throw error;
     }
   },
-  deactivateUser: async (user_id, tenant_id) => {
+  deactivateUser: async (user_id, role_id, target_id) => {
     try {
       const response = await api.post('/counselor-activation/deactivate', {
-        counselor_user_id: user_id,
-        tenant_id,
+        user_id, // Requester's user_id from localStorage
+        role_id, // Requester's role_id from localStorage
+        target_id, // Target user's user_id from row
       });
       return response;
     } catch (error) {

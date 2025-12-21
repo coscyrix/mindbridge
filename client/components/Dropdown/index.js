@@ -1,6 +1,6 @@
 import React, { forwardRef, useState, useRef } from "react";
 import ReactDOM from "react-dom";
-import { DeleteIcon, EditIcon, MenuIcon } from "../../public/assets/icons";
+import { DeleteIcon, EditIcon, MenuIcon, LockIcon, UnlockIcon } from "../../public/assets/icons";
 import { TooltipButton, TooltipContainer } from "../Tooltip/index";
 
 const Dropdown = forwardRef(
@@ -97,8 +97,8 @@ const Dropdown = forwardRef(
                     >
                       <TooltipButton
                         title="Deactivate"
-                        icon={<DeleteIcon />}
-                        color="#ff9800"
+                        icon={<LockIcon />}
+                        color="#ffc107"
                       />
                     </div>
                   ) : (
@@ -111,7 +111,7 @@ const Dropdown = forwardRef(
                     >
                       <TooltipButton
                         title="Activate"
-                        icon={<EditIcon />}
+                        icon={<UnlockIcon />}
                         color="#4caf50"
                       />
                     </div>

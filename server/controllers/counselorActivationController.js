@@ -12,34 +12,41 @@ export default class CounselorActivationController {
 
   async activateCounselor(req, res) {
     try {
-      const { counselor_user_id } = req.body;
-      const tenant_id = req.decoded?.tenant_id || req.body.tenant_id;
+      const { user_id, role_id, target_id } = req.body;
 
-      if (!counselor_user_id) {
+      if (!user_id) {
         return res.status(400).json({
-          message: 'counselor_user_id is required',
+          message: 'user_id is required',
           error: -1,
         });
       }
 
-      if (!tenant_id) {
+      if (!role_id) {
         return res.status(400).json({
-          message: 'tenant_id is required',
+          message: 'role_id is required',
           error: -1,
         });
       }
 
-      // Verify that the requester is a tenant (role_id = 3)
-      if (req.decoded && req.decoded.role_id !== 3) {
+      if (!target_id) {
+        return res.status(400).json({
+          message: 'target_id is required',
+          error: -1,
+        });
+      }
+
+      // Verify that the requester is a tenant (role_id = 3) or admin (role_id = 4)
+      if (role_id !== 3 && role_id !== 4) {
         return res.status(403).json({
-          message: 'Only tenants can activate/deactivate counselors',
+          message: 'Only tenants or admins can activate/deactivate users',
           error: -1,
         });
       }
 
-      const result = await this.counselorActivationService.activateCounselor(
-        parseInt(counselor_user_id),
-        parseInt(tenant_id)
+      const result = await this.counselorActivationService.activateUser(
+        parseInt(user_id),
+        parseInt(role_id),
+        parseInt(target_id)
       );
 
       if (result.error) {
@@ -50,7 +57,7 @@ export default class CounselorActivationController {
     } catch (error) {
       logger.error('Error in activateCounselor controller:', error);
       return res.status(500).json({
-        message: 'Error activating counselor',
+        message: 'Error activating user',
         error: -1,
       });
     }
@@ -60,34 +67,41 @@ export default class CounselorActivationController {
 
   async deactivateCounselor(req, res) {
     try {
-      const { counselor_user_id } = req.body;
-      const tenant_id = req.decoded?.tenant_id || req.body.tenant_id;
+      const { user_id, role_id, target_id } = req.body;
 
-      if (!counselor_user_id) {
+      if (!user_id) {
         return res.status(400).json({
-          message: 'counselor_user_id is required',
+          message: 'user_id is required',
           error: -1,
         });
       }
 
-      if (!tenant_id) {
+      if (!role_id) {
         return res.status(400).json({
-          message: 'tenant_id is required',
+          message: 'role_id is required',
           error: -1,
         });
       }
 
-      // Verify that the requester is a tenant (role_id = 3)
-      if (req.decoded && req.decoded.role_id !== 3) {
+      if (!target_id) {
+        return res.status(400).json({
+          message: 'target_id is required',
+          error: -1,
+        });
+      }
+
+      // Verify that the requester is a tenant (role_id = 3) or admin (role_id = 4)
+      if (role_id !== 3 && role_id !== 4) {
         return res.status(403).json({
-          message: 'Only tenants can activate/deactivate counselors',
+          message: 'Only tenants or admins can activate/deactivate users',
           error: -1,
         });
       }
 
-      const result = await this.counselorActivationService.deactivateCounselor(
-        parseInt(counselor_user_id),
-        parseInt(tenant_id)
+      const result = await this.counselorActivationService.deactivateUser(
+        parseInt(user_id),
+        parseInt(role_id),
+        parseInt(target_id)
       );
 
       if (result.error) {
@@ -98,7 +112,7 @@ export default class CounselorActivationController {
     } catch (error) {
       logger.error('Error in deactivateCounselor controller:', error);
       return res.status(500).json({
-        message: 'Error deactivating counselor',
+        message: 'Error deactivating user',
         error: -1,
       });
     }

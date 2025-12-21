@@ -31,6 +31,8 @@ export * from "./ServiceIcon";
 export * from "./InvoiceIcon";
 export * from "./CheckIcon";
 export * from "./InfoIcon";
+export * from "./LockIcon";
+export * from "./UnlockIcon";
 
 export const StarIcon = () => (
   <svg

@@ -35,7 +35,7 @@ function ClientManagement() {
   const router = useRouter();
   const { userObj } = useReferenceContext();
   const queryClient = useQueryClient();
-  
+
   const [showCreateSessionLayout, setShowCreateSessionLayout] = useState(false);
   const [clientFormData, setClientFormData] = useState();
   const [confirmationModal, setConfirmationModal] = useState(false);
@@ -243,80 +243,106 @@ function ClientManagement() {
     setActiveRowId(null);
   };
 
-  // Activate user mutation (works for both counselors and tenants)
+  // Activate user mutation
   const { mutate: activateUser, isPending: isActivating } = useMutationData(
     ["activate-user"],
-    async ({ user_id, tenant_id }) => {
-      return await CommonServices.activateUser(user_id, tenant_id);
+    async ({ user_id, role_id, target_id }) => {
+      return await CommonServices.activateUser(user_id, role_id, target_id);
     },
-    ["clients", "counselors-dropdown"] // Invalidate queries after activation
+    ["clients", "counselors-dropdown"], // Invalidate queries after activation
+    () => {
+      // Custom onSuccess - handle side effects and show custom toast
+      toast.success("User activated successfully");
+      setActiveRowId(null);
+      refetchClients();
+    }
   );
 
-  // Deactivate user mutation (works for both counselors and tenants)
+  // Deactivate user mutation
   const { mutate: deactivateUser, isPending: isDeactivating } = useMutationData(
     ["deactivate-user"],
-    async ({ user_id, tenant_id }) => {
-      return await CommonServices.deactivateUser(user_id, tenant_id);
+    async ({ user_id, role_id, target_id }) => {
+      return await CommonServices.deactivateUser(user_id, role_id, target_id);
     },
-    ["clients", "counselors-dropdown"] // Invalidate queries after deactivation
+    ["clients", "counselors-dropdown"], // Invalidate queries after deactivation
+    () => {
+      // Custom onSuccess - handle side effects and show custom toast
+      toast.success("User deactivated successfully");
+      setActiveRowId(null);
+      refetchClients();
+    }
   );
 
   const handleActivate = (row) => {
-    if (!row?.user_id) {
+    // Get user data from localStorage
+    let requesterUser = userObj;
+    if (!requesterUser?.user_id || !requesterUser?.role_id) {
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          requesterUser = JSON.parse(storedUser);
+        }
+      } catch (error) {
+        console.error("Error reading user from localStorage", error);
+      }
+    }
+
+    if (!requesterUser?.user_id) {
       toast.error("Unable to activate: User ID not found");
       return;
     }
 
-    const tenantId = row?.tenant_id || userObj?.tenant_id;
-    if (!tenantId) {
-      toast.error("Unable to activate: Tenant ID not found");
+    if (!requesterUser?.role_id) {
+      toast.error("Unable to activate: Role ID not found");
       return;
     }
 
-    activateUser(
-      { user_id: row.user_id, tenant_id: tenantId },
-      {
-        onSuccess: () => {
-          toast.success("User activated successfully");
-          setActiveRowId(null);
-          refetchClients();
-        },
-        onError: (error) => {
-          toast.error(
-            error?.response?.data?.message || "Failed to activate user"
-          );
-        },
-      }
-    );
+    if (!row?.user_id) {
+      toast.error("Unable to activate: Target ID not found");
+      return;
+    }
+
+    activateUser({
+      user_id: requesterUser.user_id,
+      role_id: requesterUser.role_id,
+      target_id: row.user_id,
+    });
   };
 
   const handleDeactivate = (row) => {
-    if (!row?.user_id) {
+    // Get user data from localStorage
+    let requesterUser = userObj;
+    if (!requesterUser?.user_id || !requesterUser?.role_id) {
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          requesterUser = JSON.parse(storedUser);
+        }
+      } catch (error) {
+        console.error("Error reading user from localStorage", error);
+      }
+    }
+
+    if (!requesterUser?.user_id) {
       toast.error("Unable to deactivate: User ID not found");
       return;
     }
 
-    const tenantId = row?.tenant_id || userObj?.tenant_id;
-    if (!tenantId) {
-      toast.error("Unable to deactivate: Tenant ID not found");
+    if (!requesterUser?.role_id) {
+      toast.error("Unable to deactivate: Role ID not found");
       return;
     }
 
-    deactivateUser(
-      { user_id: row.user_id, tenant_id: tenantId },
-      {
-        onSuccess: () => {
-          toast.success("User deactivated successfully");
-          setActiveRowId(null);
-          refetchClients();
-        },
-        onError: (error) => {
-          toast.error(
-            error?.response?.data?.message || "Failed to deactivate user"
-          );
-        },
-      }
-    );
+    if (!row?.user_id) {
+      toast.error("Unable to deactivate: Target ID not found");
+      return;
+    }
+
+    deactivateUser({
+      user_id: requesterUser.user_id,
+      role_id: requesterUser.role_id,
+      target_id: row.user_id,
+    });
   };
 
   const handleClickOutside = (e) => {

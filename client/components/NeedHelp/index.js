@@ -20,7 +20,7 @@ const NeedHelp = () => {
     <Box
       sx={{
         position: "fixed",
-        bottom: 10,
+        top: 10,
         right: 10,
         zIndex: 98,
       }}
