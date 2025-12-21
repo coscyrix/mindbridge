@@ -56,7 +56,7 @@ const NeedHelp = () => {
             paddingY: 1,
           }}
         >
-          Need Help?
+          
         </Button>
       </Box>
     </Box>

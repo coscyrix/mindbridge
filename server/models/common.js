@@ -802,21 +802,10 @@ export default class Common {
         console.warn(`Warning: Could not copy treatment target templates for tenant ${tenantRecord.tenant_id}:`, templateError.message);
       }
 
-      // Copy default consent form template to new tenant
-      try {
-        const ConsentDescription = (await import('./consentDescription.js')).default;
-        const consentDescription = new ConsentDescription();
-        const copyResult = await consentDescription.copyDefaultTemplateToTenant(tenantRecord.tenant_id);
-        
-        if (copyResult.error) {
-          console.warn(`Warning: Could not copy default consent template to tenant ${tenantRecord.tenant_id}:`, copyResult.message);
-        } else if (!copyResult.skipped) {
-          console.log(`Default consent template copied to tenant ${tenantRecord.tenant_id}`);
-        }
-      } catch (consentError) {
-        // Log the error but don't fail the tenant creation
-        console.warn(`Warning: Could not copy default consent template for tenant ${tenantRecord.tenant_id}:`, consentError.message);
-      }
+      // Note: New tenants start with empty consent_description
+      // They will need to create their own consent form via the consent management page
+      // The system default consent form (created by admin with roleId == 4) is only used as a reference
+      // and is NOT automatically copied to new tenants
 
       return tenantRecord.tenant_id;
     } catch (error) {
