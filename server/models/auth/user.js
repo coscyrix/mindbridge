@@ -9,7 +9,6 @@ import AuthCommon from './authCommon.js';
 import SendEmail from '../../middlewares/sendEmail.js';
 import {
   forgetPasswordEmail,
-  accountDeactivatedEmail,
   accountVerificationEmail,
   changePasswordEmail,
   accountRestoredEmail,
@@ -147,18 +146,6 @@ export default class User {
       const isActive = checkEmail[0].is_active === true || checkEmail[0].is_active === 1;
       if (!isActive) {
         logger.warn('Account is deactivated (is_active = false)');
-
-        // Send an Account Deactivated email
-        const emlMsg = accountDeactivatedEmail(data.email);
-        const emlDeact = this.sendEmail.sendMail(emlMsg);
-        if (emlDeact.error) {
-          logger.warn('Error sending email. Account is deactivated.');
-          return {
-            message: 'Error sending email. Account is deactivated.',
-            error: -1,
-          };
-        }
-
         return { message: 'Account is deactivated', error: -1 };
       }
 

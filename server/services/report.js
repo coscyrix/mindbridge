@@ -1,7 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 import Report from '../models/report.js';
-import Session from '../models/session.js';
 const joi = require('joi');
 
 export default class ReportService {
@@ -74,8 +73,8 @@ export default class ReportService {
         return { message: error.details[0].message, error: -1 };
       }
 
-      const session = new Session();
-      const homeworkStats = await session.getSessionsWithHomeworkStats(data);
+      const report = new Report();
+      const homeworkStats = await report.getSessionsWithHomeworkStats(data);
 
       if (homeworkStats.error) {
         return homeworkStats;

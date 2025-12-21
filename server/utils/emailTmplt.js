@@ -171,6 +171,22 @@ export const accountDeactivatedEmail = (email) => {
   };
 };
 
+export const accountActivatedEmail = (email) => {
+  return {
+    to: email,
+    subject: 'Account Activated',
+    html: `
+      <h1>Account Activated</h1>
+      <p>Hello,</p>
+      <p>Your account has been activated. You can now log in to access your account.</p>
+      <p>If you have any questions or need assistance, please contact our support team.</p>
+      <p>Thank you,</p>
+      <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
+    `,
+  };
+};
+
 export const changePasswordEmail = (email) => {
   return {
     to: email,

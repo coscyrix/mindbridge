@@ -4,8 +4,14 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 import db from '../utils/db.js';
 import logger from '../config/winston.js';
+import SendEmail from '../middlewares/sendEmail.js';
+import { accountActivatedEmail } from '../utils/emailTmplt.js';
 
 export default class CounselorActivation {
+  constructor() {
+    this.sendEmail = new SendEmail();
+  }
+
   //////////////////////////////////////////
 
   async activateCounselor(counselor_user_id, tenant_id, requester_role_id = null) {
@@ -128,7 +134,7 @@ export default class CounselorActivation {
         .from('users as u')
         .join('user_profile as up', 'u.user_id', 'up.user_id')
         .where('u.user_id', target_id)
-        .select('u.user_id', 'u.role_id', 'u.tenant_id', 'up.tenant_id as profile_tenant_id')
+        .select('u.user_id', 'u.role_id', 'u.tenant_id', 'u.email', 'up.tenant_id as profile_tenant_id')
         .first();
 
       if (!targetUser) {
@@ -182,6 +188,23 @@ export default class CounselorActivation {
       if (updateResult === 0) {
         logger.error('Error activating user');
         return { message: 'Error activating user', error: -1 };
+      }
+
+      // Send activation email to the user
+      if (targetUser.email) {
+        try {
+          const emlMsg = accountActivatedEmail(targetUser.email);
+          const emlActivate = await this.sendEmail.sendMail(emlMsg);
+          if (emlActivate.error) {
+            logger.warn('Error sending activation email, but account was activated successfully');
+            // Don't fail the activation if email fails
+          } else {
+            logger.info(`Activation email sent to ${targetUser.email}`);
+          }
+        } catch (emailError) {
+          logger.error('Error sending activation email:', emailError);
+          // Don't fail the activation if email fails
+        }
       }
 
       const requesterType = requester_role_id === 4 ? 'admin' : `tenant ${requester.tenant_id || requester.profile_tenant_id}`;
