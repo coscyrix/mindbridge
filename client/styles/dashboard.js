@@ -3,13 +3,19 @@ import styled from "styled-components";
 export const DashboardContainer = styled.div`
   padding: 20px 30px;
   display: grid;
-  grid-template-columns: 50% 50%;
+  grid-template-columns: 1fr 1fr;
   flex-direction: column;
   gap: 20px;
+  align-items: start;
+  
+  > * {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  
   @media (max-width: 567px) {
     grid-template-columns: 100%;
-  }
-  @media (max-width: 567px) {
     padding: 10px 16px;
   }
 `;

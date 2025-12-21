@@ -5,7 +5,6 @@ import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import dynamic from "next/dynamic";
 import CustomButton from "../../components/CustomButton";
-import CustomMultiSelect from "../../components/CustomMultiSelect";
 import { getConsentManagementSchema } from "../../utils/validationSchema/validationSchema";
 import ApiConfig from "../../config/apiConfig";
 import { api } from "../../utils/auth";
@@ -18,16 +17,14 @@ import Spinner from "../../components/common/Spinner";
 const ConsentManagement = () => {
   const [isEnabled, setIsEnabled] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [counselors, setCounselors] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const { userObj, allCounselors } = useReferenceContext();
+  const { userObj } = useReferenceContext();
   const [consentBody, setConsentBody] = useState(null);
   const methods = useForm({
     resolver: zodResolver(getConsentManagementSchema(userData)),
     defaultValues: {
       consent_Editor_Values: "",
-      counselorSelect: null,
     },
     mode: "onSubmit",
   });
@@ -37,22 +34,10 @@ const ConsentManagement = () => {
     handleSubmit,
     formState: { errors },
   } = methods;
+  
   useEffect(() => {
     if (userObj) setUserData(userObj);
-    if (allCounselors) setCounselors(allCounselors);
-  }, [userObj, allCounselors]);
-
-  useEffect(() => {
-    if (allCounselors && Array.isArray(allCounselors)) {
-      const formattedCounselors = allCounselors.map((counselor) => ({
-        label: `${counselor.user_first_name} ${counselor.user_last_name}`,
-        tenant_id: String(counselor.tenant_id),
-        value: String(counselor.user_profile_id),
-      }));
-
-      setCounselors(formattedCounselors);
-    }
-  }, [allCounselors]);
+  }, [userObj]);
   const getConsentBody = async () => {
     try {
       const tenant_id = userObj?.tenant_id;
@@ -87,12 +72,15 @@ const ConsentManagement = () => {
     try {
       setLoading(true);
       const isAdmin = userData?.role_id === 4;
+      
       const payload = {
         description: data.consent_Editor_Values,
-        tenant_id: isAdmin
-          ? data?.counselorSelect?.tenant_id
-          : userData?.tenant?.tenant_generated_id || "",
-        ...(!isAdmin && { counselor_id: userData?.counselor_profile_id }),
+        ...(isAdmin
+          ? { is_default_template: true } // Admins always create default template
+          : {
+              tenant_id: userData?.tenant?.tenant_generated_id || "",
+              ...(!isAdmin && { counselor_id: userData?.counselor_profile_id }),
+            }),
       };
       const response = await api.post(
         ApiConfig.consentFormSubmittion.consentForm,
@@ -100,6 +88,9 @@ const ConsentManagement = () => {
       );
       if (response.status === 201) {
         toast.success(response?.data?.message);
+        if (isAdmin) {
+          methods.reset({ consent_Editor_Values: "" });
+        }
       }
       setLoading(false);
     } catch (error) {
@@ -135,27 +126,6 @@ const ConsentManagement = () => {
           <div className="form-wrapper">
             <FormProvider {...methods}>
               <form className="consent-form">
-                {userData?.role_id === 4 ? (
-                  <div className="form-row">
-                    <Controller
-                      name="counselorSelect"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <CustomMultiSelect
-                          isMulti={false}
-                          label="Select Counselor"
-                          options={counselors}
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Choose Counselor"
-                          error={fieldState?.error?.message}
-                        />
-                      )}
-                    />
-                  </div>
-                ) : (
-                  <></>
-                )}
 
                 <div className="form-row">
                   <Controller

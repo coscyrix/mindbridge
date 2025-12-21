@@ -160,7 +160,7 @@ function Sidebar({ showSideBar, setShowSideBar }) {
               // }
               if ((isManager || isAdmin) && item.title === "Profile")
                 return false;
-              if (!isManager && item.title === "Consent Management")
+              if ((!isManager && !isAdmin) && item.title === "Consent Management")
                 return false;
               if (!isManager && item.title === "Fee Split Management") {
                 return false;

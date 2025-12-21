@@ -329,14 +329,7 @@ const counselorOptionSchema = z.object({
 
 
 export const getConsentManagementSchema = (userData) => {
-  const isAdmin = userData?.role_id === 4;
-
   return z.object({
-    // agreeTerms: z.literal(true, {
-    //   errorMap: () => ({
-    //     message: "You must agree to the Terms and condition outlined above.",
-    //   }),
-    // }), 
     consent_Editor_Values: z
       .string()
       .min(1, "Consent text is required")
@@ -347,11 +340,6 @@ export const getConsentManagementSchema = (userData) => {
         },
         { message: "Consent text cannot be empty" }
       ),
-    counselorSelect: isAdmin
-      ? counselorOptionSchema.nullable().refine((val) => !!val, {
-          message: "Counselor is required for Admin",
-        })
-      : z.any().optional(),
   });
 };
 

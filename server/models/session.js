@@ -12,6 +12,8 @@ import Invoice from './invoice.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import EmailTmplt from './emailTmplt.js';
 import { splitIsoDatetime } from '../utils/common.js';
+import { clientSessionRescheduleEmail } from '../utils/emailTmplt.js';
+import { formatDateTimeInTimezone } from '../utils/timezone.js';
 
 export default class Session {
   constructor() {
@@ -726,6 +728,109 @@ export default class Session {
         if (!putSession) {
           logger.error('Error updating session');
           return { message: 'Error updating session', error: -1 };
+        }
+
+        // Check if session was rescheduled (date or time changed) and send email to client
+        if (tmpSession && (tmpSession.intake_date || tmpSession.scheduled_time)) {
+          const oldDate = recSession[0].intake_date;
+          const oldTime = recSession[0].scheduled_time;
+          const newDate = tmpSession.intake_date || oldDate;
+          const newTime = tmpSession.scheduled_time || oldTime;
+          
+          // Check if date or time actually changed
+          const isRescheduled = (oldDate !== newDate) || (oldTime !== newTime);
+          
+          if (isRescheduled) {
+            try {
+              // Get therapy request to get client info and cancel_hash
+              const thrpyReqData = await this.common.getThrpyReqById(recSession[0].thrpy_req_id);
+              if (thrpyReqData && thrpyReqData[0]) {
+                const clientId = thrpyReqData[0].client_id;
+                
+                // Get client profile
+                const clientProfile = await this.common.getUserProfileByUserProfileId(clientId);
+                if (clientProfile && clientProfile[0]) {
+                  const clientName = `${clientProfile[0].user_first_name} ${clientProfile[0].user_last_name}`;
+                  
+                  // Get client email
+                  const clientUser = await this.common.getUserById(clientProfile[0].user_id);
+                  if (clientUser && clientUser[0] && clientUser[0].email) {
+                    const clientEmail = clientUser[0].email;
+                    
+                    // Get cancel_hash from therapy request for secure link
+                    const thrpyReqFull = await db
+                      .withSchema(`${process.env.MYSQL_DATABASE}`)
+                      .from('thrpy_req')
+                      .where('req_id', recSession[0].thrpy_req_id)
+                      .first();
+                    
+                    const cancelHash = thrpyReqFull?.cancel_hash;
+                    const secureLink = cancelHash 
+                      ? `${process.env.BASE_URL || 'https://mindapp.mindbridge.solutions/'}session-management?hash=${encodeURIComponent(cancelHash)}`
+                      : `${process.env.BASE_URL || 'https://mindapp.mindbridge.solutions/'}session-management`;
+                    
+                    // Get client timezone (prefer client, fallback to counselor, then env default)
+                    const clientTimezone = clientProfile[0].timezone 
+                      || (thrpyReqData[0].counselor_timezone) 
+                      || process.env.TIMEZONE 
+                      || 'UTC';
+                    
+                    // Format new date and time in client's timezone
+                    const { localDate, localTime } = formatDateTimeInTimezone(
+                      newDate,
+                      newTime,
+                      clientTimezone
+                    );
+                    
+                    // Get counselor email for Reply-To
+                    let counselorEmail = null;
+                    if (thrpyReqData[0].counselor_id) {
+                      const counselorProfile = await this.common.getUserProfileByUserProfileId(thrpyReqData[0].counselor_id);
+                      if (counselorProfile && counselorProfile[0] && counselorProfile[0].user_id) {
+                        const counselorUser = await this.common.getUserById(counselorProfile[0].user_id);
+                        if (counselorUser && counselorUser[0]) {
+                          counselorEmail = counselorUser[0].email;
+                        }
+                      }
+                    }
+                    
+                    // Format date and time for email (e.g., "January 15, 2025 at 2:30 PM")
+                    const formattedDateTime = `${localDate} at ${localTime}`;
+                    
+                    // Send reschedule email to client
+                    const rescheduleEmail = clientSessionRescheduleEmail(
+                      clientEmail,
+                      clientName,
+                      formattedDateTime,
+                      secureLink,
+                      counselorEmail
+                    );
+                    
+                    const emailResult = await this.sendEmail.sendMail(rescheduleEmail);
+                    if (emailResult?.error) {
+                      logger.error('Error sending reschedule email to client:', emailResult.message);
+                      // Don't fail the update if email fails
+                    } else {
+                      logger.info('Reschedule email sent successfully to client:', clientEmail);
+                    }
+                  } else {
+                    logger.warn('Client email not found for session reschedule notification', {
+                      session_id: data.session_id,
+                      client_id: clientId,
+                    });
+                  }
+                } else {
+                  logger.warn('Client profile not found for session reschedule notification', {
+                    session_id: data.session_id,
+                    client_id: clientId,
+                  });
+                }
+              }
+            } catch (emailError) {
+              logger.error('Error sending reschedule email to client:', emailError);
+              // Don't fail the session update if email fails
+            }
+          }
         }
       }
 

@@ -530,11 +530,11 @@ function ClientSession() {
                 summaryLoading ? (
                   <Skeleton width={120} height={40} />
                 ) : userObj?.role_id === 2 ? (
-                  `$${Number(summaryData?.sum_session_total_amount).toFixed(4)}`
+                  `$${Number(summaryData?.sum_session_total_amount).toFixed(2)}`
                 ) : userObj?.role_id === 3 ? (
                   <>
                     Total Amount :{" $"}
-                    {Number(summaryData?.sum_session_total_amount).toFixed(4)}
+                    {Number(summaryData?.sum_session_total_amount).toFixed(2)}
                     {/* <p>
                       Total Tax:{" "}
                       {(
@@ -550,7 +550,7 @@ function ClientSession() {
                 ) : userObj?.role_id === 4 ? (
                   <>
                     Total Amount :{" $"}
-                    {Number(summaryData?.sum_session_total_amount).toFixed(4)}
+                    {Number(summaryData?.sum_session_total_amount).toFixed(2)}
                     {/* <p>
                       Tax Amount :{" "}
                       {(
@@ -578,7 +578,7 @@ function ClientSession() {
                     ).toFixed(2)}`
                   ) : userObj?.role_id === 3 ? (
                     `$${Number(summaryData?.sum_session_counselor_amt).toFixed(
-                      4
+                      2
                     )}`
                   ) : (
                     ""
@@ -589,6 +589,7 @@ function ClientSession() {
 
             <CustomTab
               heading="Detail breakdown"
+              className="detail-breakdown-tab"
               value={
                 summaryLoading ? (
                   <Skeleton width={200} height={40} />
@@ -597,7 +598,7 @@ function ClientSession() {
                     <p>
                       Counsellor Share:{" $"}
                       {Number(summaryData?.sum_session_counselor_amt).toFixed(
-                        4
+                        2
                       )}{" "}
                       (
                       {
@@ -610,7 +611,7 @@ function ClientSession() {
                     {(
                       Number(summaryData?.sum_session_tenant_amt) +
                       Number(summaryData?.sum_session_system_amt)
-                    ).toFixed(4)}{" "}
+                    ).toFixed(2)}{" "}
                     (
                     {summaryData?.fee_split_management?.tenant_share_percentage}
                     %)

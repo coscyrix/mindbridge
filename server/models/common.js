@@ -802,6 +802,22 @@ export default class Common {
         console.warn(`Warning: Could not copy treatment target templates for tenant ${tenantRecord.tenant_id}:`, templateError.message);
       }
 
+      // Copy default consent form template to new tenant
+      try {
+        const ConsentDescription = (await import('./consentDescription.js')).default;
+        const consentDescription = new ConsentDescription();
+        const copyResult = await consentDescription.copyDefaultTemplateToTenant(tenantRecord.tenant_id);
+        
+        if (copyResult.error) {
+          console.warn(`Warning: Could not copy default consent template to tenant ${tenantRecord.tenant_id}:`, copyResult.message);
+        } else if (!copyResult.skipped) {
+          console.log(`Default consent template copied to tenant ${tenantRecord.tenant_id}`);
+        }
+      } catch (consentError) {
+        // Log the error but don't fail the tenant creation
+        console.warn(`Warning: Could not copy default consent template for tenant ${tenantRecord.tenant_id}:`, consentError.message);
+      }
+
       return tenantRecord.tenant_id;
     } catch (error) {
       console.error(error);
@@ -969,12 +985,14 @@ export default class Common {
 
       // Query existing sessions for the counselor on the same date
       // Join session with thrpy_req to get counselor_id
+      // Only check sessions from therapy requests with status ONGOING
       let query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('session as s')
         .innerJoin('thrpy_req as tr', 's.thrpy_req_id', 'tr.req_id')
         .select('s.session_id', 's.intake_date', 's.scheduled_time', 's.thrpy_req_id')
         .where('tr.counselor_id', counselor_id)
+        .where('tr.thrpy_status', 'ONGOING') // Only check therapy requests with ONGOING status
         .where('s.intake_date', intake_date)
         .where('s.status_yn', 'y')
         .whereNotIn('s.session_status', ['DISCHARGED', 'INACTIVE'])
@@ -1030,6 +1048,12 @@ export default class Common {
           return {
             message: `Session time conflicts with an existing session. Please choose a different time slot.`,
             error: -1,
+            colliding_session: {
+              session_id: existingSession.session_id,
+              thrpy_req_id: existingSession.thrpy_req_id,
+              intake_date: existingSession.intake_date,
+              scheduled_time: existingScheduledTime,
+            },
           };
         }
       }

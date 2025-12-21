@@ -14,6 +14,7 @@ export default class Report {
     try {
       let query;
       let consentFormsQuery;
+      let tenantConsentFormsQuery; // Separate query for tenant consent forms
 
       // Treatment target mode: query treatment target session forms
       query = db
@@ -114,18 +115,30 @@ export default class Report {
         )
         .where('vuf.is_sent', 1)
         .andWhere('vuf.client_status_yn', 'y')
-        .andWhere('vuf.form_cde', 'CONSENT') // Only get consent forms
-        .andWhere(function() {
-          // Exclude discharged therapy requests
+        .andWhere('vuf.form_cde', 'CONSENT'); // Only get consent forms
+      
+      // Apply therapy request filtering only for non-admins
+      // Admins (role_id = 4) see all consent forms including tenant consent forms
+      if (data.role_id !== 4) {
+        consentFormsQuery.andWhere(function() {
+          // Always allow tenant consent forms (where client is a tenant)
           this.where(function() {
-            this.where('tr.thrpy_status', '!=', 2).orWhereNull('tr.thrpy_status');
+            this.where('client_user.role_id', 3);
           })
           .orWhere(function() {
-            // Also allow if there's an active therapy request via tr_active
-            this.whereNotNull('tr_active.req_id');
+            // For non-tenant consent forms, check therapy request status
+            this.where(function() {
+              this.where('tr.thrpy_status', '!=', 2).orWhereNull('tr.thrpy_status');
+            })
+            .orWhere(function() {
+              // Also allow if there's an active therapy request via tr_active
+              this.whereNotNull('tr_active.req_id');
+            });
           });
-        })
-        .groupBy([
+        });
+      }
+      
+      consentFormsQuery.groupBy([
           'vuf.client_first_name',
           'vuf.client_last_name',
           'vuf.client_clam_num',
@@ -226,8 +239,23 @@ export default class Report {
           if (data.counselor_id) {
             consentFormsQuery.where('vuf.counselor_id', Number(data.counselor_id));
           }
+        } else if (data.role_id === 4) {
+          // For role_id=4 (admin), show all consent forms including tenant consent forms
+          // If counselor_id is provided, filter by it
+          if (data.counselor_id) {
+            consentFormsQuery.where('vuf.counselor_id', Number(data.counselor_id));
+            
+            // Get tenant_id for the counselor and filter by it
+            const tenantId = await this.common.getUserTenantId({
+              user_profile_id: data.counselor_id,
+            });
+            if (tenantId && !tenantId.error && tenantId.length > 0) {
+              consentFormsQuery.where('vuf.tenant_id', Number(tenantId[0].tenant_id));
+            }
+          }
+          // If no counselor_id provided, admin sees all consent forms (no additional filtering)
         } else if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
-          // For other roles (like admin), filter by counselor_id if provided
+          // For other roles, filter by counselor_id if provided
           consentFormsQuery.where('vuf.counselor_id', Number(data.counselor_id));
           
           // Get tenant_id for the counselor and filter by it
@@ -240,16 +268,76 @@ export default class Report {
         }
       }
 
+      // For admins, also query tenant consent forms directly from user_forms table
+      // Tenant consent forms might not be in v_user_form view if they don't have thrpy_req_id
+      if (data.role_id === 4) {
+        tenantConsentFormsQuery = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('user_forms as uf')
+          .join('forms as f', 'uf.form_id', 'f.form_id')
+          .join('user_profile as client', 'uf.client_id', 'client.user_profile_id')
+          .join('user_profile as counselor', 'uf.counselor_id', 'counselor.user_profile_id')
+          .leftJoin('users as client_user', 'client.user_id', 'client_user.user_id')
+          .leftJoin('feedback as fb', function() {
+            this.on('fb.form_id', '=', 'uf.form_id')
+                .andOn('fb.client_id', '=', 'uf.client_id')
+                .andOnNull('fb.session_id');
+          })
+          .select(
+            'client.user_first_name as client_first_name',
+            'client.user_last_name as client_last_name',
+            'client.clam_num as client_clam_num',
+            'uf.client_id',
+            'uf.counselor_id',
+            'uf.form_id',
+            'f.form_cde as form_cde',
+            db.raw('NULL as thrpy_req_id'), // Tenant consent forms don't have thrpy_req_id
+            'uf.tenant_id',
+            'uf.user_form_id',
+            db.raw('MAX(fb.feedback_id) as feedback_id'),
+            db.raw('MAX(uf.updated_at) as date_sent'),
+            db.raw(`
+                COALESCE(
+                  DATE_ADD(MAX(uf.updated_at), INTERVAL 7 DAY),
+                  DATE_ADD(MAX(uf.created_at), INTERVAL 7 DAY)
+                ) as due_date
+              `),
+            'client_user.role_id as client_role_id',
+          )
+          .where('uf.is_sent', 1)
+          .andWhere('client.status_yn', 'y')
+          .andWhere('f.form_cde', 'CONSENT')
+          .andWhere('client_user.role_id', 3) // Only get tenant consent forms (where client is a tenant)
+          .groupBy([
+            'client.user_first_name',
+            'client.user_last_name',
+            'client.clam_num',
+            'uf.form_id',
+            'f.form_cde',
+            'uf.client_id',
+            'uf.counselor_id',
+            'uf.tenant_id',
+            'uf.user_form_id',
+            'client_user.role_id',
+          ])
+          .orderBy('date_sent', 'desc');
+      }
+
       // Execute queries
-      const [rec, consentForms] = await Promise.all([
+      const [rec, consentForms, tenantConsentForms] = await Promise.all([
         query,
         consentFormsQuery ? consentFormsQuery : Promise.resolve([]),
+        tenantConsentFormsQuery ? tenantConsentFormsQuery : Promise.resolve([]),
       ]);
 
       // Combine results if we have treatment target forms and consent forms
       let combinedResults = [...rec];
       if (consentForms && consentForms.length > 0) {
         combinedResults = [...combinedResults, ...consentForms];
+      }
+      // Add tenant consent forms for admins
+      if (tenantConsentForms && tenantConsentForms.length > 0) {
+        combinedResults = [...combinedResults, ...tenantConsentForms];
       }
 
       // Remove duplicates across all form types

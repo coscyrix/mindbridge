@@ -260,43 +260,7 @@ export default class ThrpyReq {
         return { message: 'Error getting reference fees', error: -1 };
       }
 
-      // Check if the intake date is in the past
-      // if (req_dte < currentDte) {
-      //   logger.warn('Intake date is in the past');
-      //   return { message: 'Intake date is in the past', error: -1 };
-      // }
 
-      // Check if the client has an active therapy request with the same service and same counselor
-      const checkThrpyReqActiveData = {
-        counselor_id: data.counselor_id,
-        client_id: data.client_id,
-        service_id: data.service_id,
-      };
-
-      const checkThrpyReq = await this.checkThrpyReqActive(
-        checkThrpyReqActiveData,
-      );
-
-      if (checkThrpyReq.error) {
-        return checkThrpyReq;
-      }
-
-      // Check for session time collision (double booking prevention)
-      // Only check the first schedule's session time (req_time)
-      const collisionCheck = await this.common.checkSessionTimeCollision(
-        data.counselor_id,
-        req_dte,
-        req_time,
-      );
-
-      if (collisionCheck.error) {
-        logger.warn('Session time collision detected, preventing double booking', {
-          counselor_id: data.counselor_id,
-          intake_date: req_dte,
-          scheduled_time: req_time,
-        });
-        return collisionCheck;
-      }
 
       // Parse svc_report_formula if needed
       if (svc.svc_report_formula_typ === 'standard') {
@@ -820,8 +784,9 @@ export default class ThrpyReq {
         const postSessionResult = await this.session.postSession(sessionData);
         if (!postSessionResult || postSessionResult.error) {
           logger.error('Error posting session:', postSessionResult?.message || 'Unknown error');
+          console.error('Error posting session:', postSessionResult?.colliding_session || 'Unknown error');
           return {
-            message: 'Error posting session arr',
+            message: postSessionResult?.message || 'Unknown error',
             error: -1,
           };
         }

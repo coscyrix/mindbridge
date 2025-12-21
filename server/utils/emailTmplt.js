@@ -696,6 +696,40 @@ export const sessionRescheduleNotificationEmail = (
   };
 };
 
+export const clientSessionRescheduleEmail = (
+  clientEmail,
+  clientName,
+  newSessionDateTime,
+  secureLink,
+  counselorEmail = null
+) => {
+  const emailObj = {
+    to: clientEmail,
+    subject: 'Session Rescheduled - Vapendama Counselling Services',
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>Hello ${capitalizeFirstLetter(clientName)},</p>
+        <p>Your counsellor needs to reschedule your session on <strong>${newSessionDateTime}</strong>. We apologize for the inconvenience — this change was initiated by our care team, and no penalty applies.</p>
+        <p style="margin: 20px 0;">
+          <a href="${secureLink}" style="background-color: #007bff; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Manage your schedule here
+          </a>
+        </p>
+        <p>Reply to this message if you'd like help rescheduling.</p>
+        <p style="margin-top: 30px;">— Vapendama Counselling Services</p>
+        ${EMAIL_DISCLAIMER}
+      </div>
+    `,
+  };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
+};
+
 export const additionalServiceEmail = (
   email,
   clientName,

@@ -111,6 +111,19 @@ export const CreateSessionFormWrapper = styled.div`
         display: flex;
         column-gap: 40px;
         row-gap: 10px;
+        flex-wrap: wrap;
+        
+        label {
+          white-space: nowrap;
+          
+          strong {
+            white-space: nowrap;
+          }
+          
+          span {
+            white-space: nowrap;
+          }
+        }
       }
     }
 
