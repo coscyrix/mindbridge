@@ -100,9 +100,16 @@ export default class TherapistAbsence {
 
   /**
    * Recalculate and reschedule all session dates, moving sessions within absence period to after it ends
+   * This maintains the same total number of sessions by extending the schedule end date
    */
   async recalculateSessionDates(req_id, absenceStartDate, absenceEndDate) {
     try {
+      // Normalize dates to start of day for accurate comparison
+      const absenceStart = new Date(absenceStartDate);
+      absenceStart.setHours(0, 0, 0, 0);
+      const absenceEnd = new Date(absenceEndDate);
+      absenceEnd.setHours(23, 59, 59, 999);
+
       // Get the therapy request and its sessions
       const thrpyReq = await this.thrpyReq.getThrpyReqById({ req_id });
       
@@ -140,138 +147,141 @@ export default class TherapistAbsence {
 
       const service = serviceResult.rec[0];
       const svcFormula = service.svc_formula || [];
+      const svcFormulaTyp = service.svc_formula_typ || 's';
 
-      // Find the last completed session date (before absence period)
-      const lastCompletedSession = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('session')
-        .where('thrpy_req_id', req_id)
-        .whereIn('session_status', ['SHOW', 'NO-SHOW'])
-        .where('status_yn', 'y')
-        .whereRaw('DATE(intake_date) < ?', [absenceStartDate.toISOString().split('T')[0]])
-        .orderBy('session_number', 'desc')
-        .first();
-
-      // Determine the base date for rescheduling
-      // All sessions will be rescheduled starting from after the absence period ends
-      let baseDate = new Date(absenceEndDate);
-      baseDate.setDate(baseDate.getDate() + 1); // Start the day after absence ends
-
-      // Skip weekends for base date
-      while (baseDate.getDay() === 0 || baseDate.getDay() === 6) {
-        baseDate.setDate(baseDate.getDate() + 1);
+      // Determine session frequency (days between sessions)
+      // For 's' (standard): single value in array [7] for weekly
+      // For 'd' (dynamic): array of values, use first one or average
+      let sessionFrequency = 7; // Default to weekly
+      if (svcFormulaTyp === 's' && svcFormula.length > 0) {
+        sessionFrequency = Array.isArray(svcFormula) ? svcFormula[0] : 7;
+      } else if (svcFormulaTyp === 'd' && svcFormula.length > 0) {
+        // For dynamic, use the first interval or average
+        sessionFrequency = Array.isArray(svcFormula) ? svcFormula[0] : 7;
       }
 
-      // Find sessions that need rescheduling (those within or after the absence period)
-      const absenceStartStr = absenceStartDate.toISOString().split('T')[0];
-      const sessionsToReschedule = allSessions.filter(session => {
-        if (!session.intake_date) return true; // Reschedule sessions without dates
-        const sessionDate = new Date(session.intake_date).toISOString().split('T')[0];
-        return sessionDate >= absenceStartStr; // Reschedule sessions from absence start onwards
+      // Identify sessions that fall within the absence period
+      const sessionsInAbsencePeriod = allSessions.filter(session => {
+        const sessionDate = new Date(session.intake_date);
+        sessionDate.setHours(0, 0, 0, 0);
+        return sessionDate >= absenceStart && sessionDate <= absenceEnd;
       });
 
-      if (sessionsToReschedule.length === 0) {
-        logger.info(`No sessions need rescheduling for req_id ${req_id}`);
+      // Count missed sessions
+      const missedSessionsCount = sessionsInAbsencePeriod.length;
+      
+      if (missedSessionsCount === 0) {
+        logger.info(`No sessions in absence period for req_id ${req_id}`);
         return 0;
       }
 
-      // If we have a last completed session, use it to determine spacing
-      // Otherwise, start from the first session number
-      const startingSessionNumber = sessionsToReschedule[0].session_number || 1;
+      logger.info(`Found ${missedSessionsCount} sessions in absence period for req_id ${req_id}`);
 
-      // Recalculate dates for sessions to reschedule based on service formula
-      let currentDate = new Date(baseDate);
-      const updates = [];
+      // Calculate extension period in days (missed sessions * session frequency)
+      const extensionDays = missedSessionsCount * sessionFrequency;
+
+      // Find sessions that occur after the absence period (that weren't in the absence period)
+      const sessionsAfterAbsence = allSessions.filter(session => {
+        const sessionDate = new Date(session.intake_date);
+        sessionDate.setHours(0, 0, 0, 0);
+        const sessionIdsInAbsence = sessionsInAbsencePeriod.map(s => s.session_id);
+        return sessionDate > absenceEnd && !sessionIdsInAbsence.includes(session.session_id);
+      });
+
+      // Combine all sessions that need rescheduling (both in absence and after)
+      // Sort them by their original session_number to maintain order
+      const sessionsToReschedule = [
+        ...sessionsInAbsencePeriod,
+        ...sessionsAfterAbsence
+      ].sort((a, b) => {
+        // Sort by session_number first, then by intake_date as fallback
+        if (a.session_number !== null && b.session_number !== null) {
+          return a.session_number - b.session_number;
+        }
+        const dateA = new Date(a.intake_date);
+        const dateB = new Date(b.intake_date);
+        return dateA - dateB;
+      });
+
+      // Find the first session date after the absence period ends
+      const firstRescheduleDate = new Date(absenceEnd);
+      firstRescheduleDate.setDate(firstRescheduleDate.getDate() + 1); // Day after absence ends
+      firstRescheduleDate.setHours(0, 0, 0, 0);
+
+      // Skip weekends for the first rescheduled date
+      while (firstRescheduleDate.getDay() === 0 || firstRescheduleDate.getDay() === 6) {
+        firstRescheduleDate.setDate(firstRescheduleDate.getDate() + 1);
+      }
+
+      // Track which sessions were originally in the absence period
+      const sessionIdsInAbsence = sessionsInAbsencePeriod.map(s => s.session_id);
+
+      // Reschedule all sessions sequentially, maintaining proper order
       let rescheduledCount = 0;
+      let lastScheduledDate = null; // Track the last scheduled date to ensure order
 
-      // If we have a last completed session, calculate the spacing from it
-      // Otherwise, start fresh from after the absence period
-      if (lastCompletedSession && lastCompletedSession.intake_date) {
-        const lastDate = new Date(lastCompletedSession.intake_date);
-        const lastSessionNumber = lastCompletedSession.session_number || 0;
-        
-        // Calculate spacing from last completed session to first rescheduled session
-        const firstRescheduledNumber = startingSessionNumber;
-        if (firstRescheduledNumber > lastSessionNumber) {
-          // Calculate days between last completed and first rescheduled
-          let daysFromLast = 0;
-          for (let i = lastSessionNumber; i < firstRescheduledNumber - 1; i++) {
-            const formulaIndex = Math.min(i, svcFormula.length - 1);
-            daysFromLast += formulaIndex >= 0 ? svcFormula[formulaIndex] : 7;
-          }
+      for (const session of sessionsToReschedule) {
+        let calculatedDate;
+
+        if (sessionIdsInAbsence.includes(session.session_id)) {
+          // Session was in absence period - schedule it starting from firstRescheduleDate
+          // Find the position of this session in the absence period list (sorted by original date)
+          const sortedAbsenceSessions = [...sessionsInAbsencePeriod].sort((a, b) => {
+            const dateA = new Date(a.intake_date);
+            const dateB = new Date(b.intake_date);
+            return dateA - dateB;
+          });
+          const indexInAbsence = sortedAbsenceSessions.findIndex(s => s.session_id === session.session_id);
+          calculatedDate = new Date(firstRescheduleDate);
           
-          // Start from last completed date + calculated spacing
-          currentDate = new Date(lastDate);
-          currentDate.setDate(currentDate.getDate() + daysFromLast);
-          
-          // Ensure it's after absence end date
-          const absenceEnd = new Date(absenceEndDate);
-          if (currentDate <= absenceEnd) {
-            currentDate = new Date(absenceEnd);
-            currentDate.setDate(currentDate.getDate() + 1);
+          // Space out sessions by session frequency (e.g., weekly = 7 days)
+          if (indexInAbsence > 0) {
+            calculatedDate.setDate(calculatedDate.getDate() + (indexInAbsence * sessionFrequency));
           }
-          
-          // Skip weekends
-          while (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-        }
-      }
-
-      for (let i = 0; i < sessionsToReschedule.length; i++) {
-        const session = sessionsToReschedule[i];
-        const sessionNumber = session.session_number || (startingSessionNumber + i);
-
-        if (i > 0) {
-          // Calculate days to add based on formula
-          // Formula index is (previous session number - 1) for spacing
-          const prevSessionNumber = sessionsToReschedule[i - 1].session_number || (startingSessionNumber + i - 1);
-          const formulaIndex = Math.min(prevSessionNumber - 1, svcFormula.length - 1);
-          const daysToAdd = formulaIndex >= 0 ? svcFormula[formulaIndex] : 7; // Default to 7 days if formula doesn't have enough entries
-
-          currentDate.setDate(currentDate.getDate() + daysToAdd);
-
-          // Skip weekends
-          while (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-        }
-
-        // Format date for update
-        const newIntakeDate = currentDate.toISOString().split('T')[0];
-        const scheduledTime = session.scheduled_time || req.req_time || '09:00:00.000Z';
-        
-        // Parse scheduled time and combine with new date
-        let newScheduledTime;
-        if (scheduledTime.includes('T')) {
-          const timePart = scheduledTime.split('T')[1];
-          newScheduledTime = `${newIntakeDate}T${timePart}`;
         } else {
-          newScheduledTime = `${newIntakeDate} ${scheduledTime}`;
+          // Session was after absence period - move it forward by extension period
+          const originalDate = new Date(session.intake_date);
+          calculatedDate = new Date(originalDate);
+          calculatedDate.setDate(calculatedDate.getDate() + extensionDays);
         }
 
-        updates.push({
-          session_id: session.session_id,
-          intake_date: newIntakeDate,
-          scheduled_time: newScheduledTime,
-        });
-        rescheduledCount++;
-      }
+        // Determine the actual new date - must be after the last scheduled session
+        let newDate;
+        if (lastScheduledDate === null) {
+          // First session - use calculated date
+          newDate = new Date(calculatedDate);
+        } else {
+          // Ensure this session comes after the previous rescheduled session
+          // Use the later of: calculated date or last scheduled date + session frequency
+          const minDate = new Date(lastScheduledDate);
+          minDate.setDate(minDate.getDate() + sessionFrequency);
+          
+          newDate = calculatedDate > minDate ? new Date(calculatedDate) : new Date(minDate);
+        }
 
-      // Batch update all sessions
-      for (const update of updates) {
+        // Skip weekends if needed
+        while (newDate.getDay() === 0 || newDate.getDay() === 6) {
+          newDate.setDate(newDate.getDate() + 1);
+        }
+
+        const newIntakeDate = newDate.toISOString().split('T')[0];
+
         await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('session')
-          .where('session_id', update.session_id)
+          .where('session_id', session.session_id)
           .update({
-            intake_date: update.intake_date,
-            scheduled_time: update.scheduled_time,
+            intake_date: newIntakeDate,
             updated_at: new Date(),
           });
+
+        // Update lastScheduledDate to the date we just scheduled
+        lastScheduledDate = new Date(newDate);
+        rescheduledCount++;
       }
 
-      logger.info(`Rescheduled ${rescheduledCount} session dates for req_id ${req_id}`);
+      logger.info(`Rescheduled ${rescheduledCount} total session dates for req_id ${req_id}. Extended by ${extensionDays} days (${missedSessionsCount} missed sessions × ${sessionFrequency} days)`);
+      
       return rescheduledCount;
     } catch (error) {
       logger.error(`Error recalculating session dates for req_id ${req_id}:`, error);
@@ -319,7 +329,7 @@ export default class TherapistAbsence {
             admin.email,
             counselorName,
             absencePeriod,
-            rescheduledSessionsCount,
+            cancelledSessionsCount,
             admin.user_first_name
           );
 

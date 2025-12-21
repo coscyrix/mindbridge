@@ -714,7 +714,7 @@ function ClientSession() {
         }
         secondaryButton={
           Number(userObj?.role_id) === 2 &&
-          "Absence Handling"
+          "Absence Management"
         }
         handleSecondaryAction={handleAbsenceHandling}
         selectCounselor={selectCounselor}
