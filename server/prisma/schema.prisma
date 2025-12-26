@@ -307,12 +307,12 @@ model feedback_smart_goal {
 
 model feedback_whodas {
     id                            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-    understandingAndCommunicating Int
-    gettingAround                 Int
-    selfCare                      Int
-    gettingAlongWithPeople        Int
-    lifeActivities                Int
-    participationInSociety        Int
+    understandingAndCommunicating Decimal   @db.Decimal(4, 2)
+    gettingAround                 Decimal   @db.Decimal(4, 2)
+    selfCare                      Decimal   @db.Decimal(4, 2)
+    gettingAlongWithPeople        Decimal   @db.Decimal(4, 2)
+    lifeActivities                Decimal   @db.Decimal(4, 2)
+    participationInSociety        Decimal   @db.Decimal(4, 2)
     overallScore                  Decimal   @db.Decimal(4, 2)
     difficultyDays                Int
     unableDays                    Int

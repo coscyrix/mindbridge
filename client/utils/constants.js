@@ -111,7 +111,7 @@ function exportToCSV(columns, data, tableCaption) {
   link.click();
 }
 
-function capitalizeName(name) {
+export function capitalizeName(name) {
   return name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : "";
 }
 

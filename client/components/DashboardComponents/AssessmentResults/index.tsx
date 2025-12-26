@@ -3,6 +3,7 @@ import CustomCard from "../../CustomCard";
 import CustomClientDetails from "../../CustomClientDetails";
 import { AssessmentResultsContainer } from "./style";
 import { ASSESSMENT_DATA_COLUMNS } from "../../../utils/constants";
+import { capitalizeName } from "../../../utils/constants";
 import CustomModal from "../../CustomModal";
 import BarGraph from "../../CustomGraphs/BarGraph";
 import CommonServices from "../../../services/CommonServices";
@@ -10,19 +11,53 @@ import SmartGoals from "./SmartGoals";
 import IpfGraph from "./IpfGraph";
 import ConsentForm from "../../Forms/PatientForms/ConsentForm";
 import AttendanceGraph from "./AttendanceGraph";
-function AssessmentResults({ assessmentResultsData, onClientClick }) {
-  const [loading, setLoading] = useState("assessmentResultsData");
-  const [showReportDetails, setShowReportDetails] = useState(false);
-  const [formName, setFormName] = useState("");
-  const [xAxisLabels, setXAxisLabels] = useState([]);
-  const [seriesData, setSeriesData] = useState([]);
-  const [smartGoalsData, setSmartGoalsData] = useState([]);
-  const [ipfData, setIpfData] = useState([]);
-  const [consentFormData, setConsentFormData] = useState({});
-  const [graphDataHeading, setGraphDataHeading] = useState("");
-  const [attendanceData, setAttendanceData] = useState([]);
-  const [tenant_id, setTenant_Id] = useState(null);
-  const keyNameArr = [
+import WHODASDomainChart from "./WHODASDomainChart";
+
+interface AssessmentResultsProps {
+  assessmentResultsData: any[];
+  onClientClick: (row: any) => void;
+}
+
+interface KeyNameConfig {
+  formName: string;
+  keyName: string;
+  barColor?: {
+    default?: string;
+    mild?: string;
+    moderate?: string;
+    severe?: string;
+  };
+  heading: string;
+  targetMarkLines?: Array<{
+    yAxis: number;
+    name: string;
+    lineStyle: { type: string };
+  }>;
+  labelFormatter?: (data: any) => string;
+}
+
+const AssessmentResults: React.FC<AssessmentResultsProps> = ({
+  assessmentResultsData,
+  onClientClick,
+}) => {
+  console.log(assessmentResultsData, "assessmentResultsData");
+
+  const [loading, setLoading] = useState<string | null>(
+    "assessmentResultsData"
+  );
+  const [showReportDetails, setShowReportDetails] = useState<boolean>(false);
+  const [formName, setFormName] = useState<string>("");
+  const [xAxisLabels, setXAxisLabels] = useState<string[]>([]);
+  const [seriesData, setSeriesData] = useState<any[]>([]);
+  const [smartGoalsData, setSmartGoalsData] = useState<any[]>([]);
+  const [ipfData, setIpfData] = useState<any[]>([]);
+  const [consentFormData, setConsentFormData] = useState<any>({});
+  const [graphDataHeading, setGraphDataHeading] = useState<string>("");
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [tenant_id, setTenant_Id] = useState<number | null>(null);
+  const [whodasDomainData, setWhodasDomainData] = useState<any[]>([]);
+
+  const keyNameArr: KeyNameConfig[] = [
     {
       formName: "gad",
       keyName: "total_points",
@@ -57,7 +92,7 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
       heading:
         "WHODAS Overall Scores Across Assessments with Disability Interpretation",
       barColor: { mild: "", moderate: "", severe: "" },
-      labelFormatter: (data) => {
+      labelFormatter: (data: any) => {
         return data?.value < 0.2
           ? `${data?.value}\nMild Disability`
           : data?.value < 0.5
@@ -97,7 +132,7 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
       formName: "phq9",
       keyName: "total_score",
       heading: "PHQ-9 Assessment Scores Over Time for",
-      labelFormatter: (data) => {
+      labelFormatter: (data: any) => {
         const labels = [
           "Minimal Depression",
           "Mild Depression",
@@ -112,7 +147,7 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
     },
   ];
 
-  const handleTreatmentTools = async (row) => {
+  const handleTreatmentTools = async (row: any) => {
     if (row.form_cde === "CONSENT") {
       setTenant_Id(row.tenant_id);
     }
@@ -135,8 +170,9 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
       setIpfData([]);
       setSeriesData([]);
       setGraphDataHeading("");
+      setWhodasDomainData([]);
       // setConsentFormData("");
-      let payload;
+      let payload: any;
       if (row?.form_cde === "CONSENT") {
         payload = { feedback_id: row.feedback_id };
       } else {
@@ -180,12 +216,12 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
             : [response.data.rec];
 
           if (!gasEntries.length) return;
-          const gasLabels = {
+          const gasLabels: { [key: string]: string } = {
             "-2": "Much Worse (-2)",
             "-1": "Worse (-1)",
-            0: "Expected (0)",
-            1: "Better (+1)",
-            2: "Much Better (+2)",
+            "0": "Expected (0)",
+            "1": "Better (+1)",
+            "2": "Much Better (+2)",
           };
           setGraphDataHeading(
             `Goal Attainment Scaling (GAS) - ${gasEntries[0]?.feedback_json?.goal?.replace(
@@ -194,7 +230,7 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
             )}`
           );
           const lastWeeks = gasEntries.slice(-7);
-          const xLabels = lastWeeks.map((entry) =>
+          const xLabels = lastWeeks.map((entry: any) =>
             new Date(entry.session_dte).toLocaleDateString("en-UK", {
               day: "2-digit",
               month: "short",
@@ -203,11 +239,13 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
           );
 
           // Weekly average calculation
-          const weekAverages = lastWeeks.map((entry) => {
+          const weekAverages = lastWeeks.map((entry: any) => {
             const scores =
-              entry.feedback_json?.responses?.map((r) => r.score ?? 0) || [];
+              entry.feedback_json?.responses?.map((r: any) => r.score ?? 0) ||
+              [];
             return scores.length
-              ? scores.reduce((a, b) => a + b, 0) / scores.length
+              ? scores.reduce((a: number, b: number) => a + b, 0) /
+                  scores.length
               : 0;
           });
 
@@ -228,8 +266,9 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
                 position: "top",
                 fontSize: 12,
                 color: "#333",
-                formatter: (params) =>
-                  gasLabels[Math.round(params.value)] || params.value,
+                formatter: (params: any) =>
+                  gasLabels[Math.round(params.value).toString()] ||
+                  params.value,
               },
             },
             {
@@ -250,8 +289,25 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
             ? response.data.rec
             : [response.data.rec];
 
+          // Check if this is WHODAS - show domain chart instead
+          const isWHODAS =
+            row.form_cde === "WHODAS" ||
+            row.form_cde?.toLowerCase() === "whodas";
+
+          console.log(isWHODAS, "isWHODAS");
+
+          if (isWHODAS) {
+            setWhodasDomainData(records);
+            const firstName = capitalizeName(row.client_first_name);
+            const lastName = capitalizeName(row.client_last_name);
+            setGraphDataHeading(
+              `WHODAS 2.0 Domain Scores for ${firstName} ${lastName}`
+            );
+            return; // Exit early, domain chart will be rendered separately
+          }
+
           // X-Axis labels
-          setXAxisLabels(records.map((item) => item.session_dte));
+          setXAxisLabels(records.map((item: any) => item.session_dte));
 
           // Format form name
           const formattedFormName =
@@ -273,13 +329,15 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
           // Main chart series
           const mainSeries = {
             name: "Scores",
-            data: records.map((item) => {
+            data: records.map((item: any) => {
               const feedbackKey = `feedback_${formattedFormName}`;
               const feedbackData = item[feedbackKey]?.at(0);
               const value =
                 formattedFormName === "whodas"
-                  ? Number(feedbackData?.[keyName.keyName] / 100).toFixed(4)
-                  : feedbackData?.[keyName.keyName];
+                  ? Number(
+                      feedbackData?.[keyName?.keyName || ""] / 100
+                    ).toFixed(4)
+                  : feedbackData?.[keyName?.keyName || ""];
               const additionalInfo =
                 formattedFormName == "phq9"
                   ? { difficultyScore: feedbackData?.difficulty_score ?? "NA" }
@@ -307,16 +365,16 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
             },
             type: "bar",
             itemStyle: {
-              color: keyName.barColor?.default || "#6fd0ef",
+              color: keyName?.barColor?.default || "#6fd0ef",
             },
             label: {
               show: true,
               position: "top",
               fontSize: 12,
               color: "#333",
-              formatter: ({ data }) =>
+              formatter: ({ data }: any) =>
                 keyName?.labelFormatter
-                  ? keyName?.labelFormatter(data)
+                  ? keyName.labelFormatter(data)
                   : data?.value,
             },
           };
@@ -349,26 +407,37 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
   useEffect(() => {
     if (assessmentResultsData) setLoading(null);
   }, [assessmentResultsData]);
+
   return (
     <AssessmentResultsContainer>
-      <CustomCard title="Homework And Assessment Tools Results">
+      <CustomCard
+        title="Homework And Assessment Tools Results"
+        {...({} as any)}
+      >
         <CustomClientDetails
-          tableData={{
-            columns: ASSESSMENT_DATA_COLUMNS(handleTreatmentTools, onClientClick),
-            data: assessmentResultsData,
-          }}
-          fixedHeaderScrollHeight="230px"
-          loading={loading === "assessmentResultsData"}
-          loaderBackground="transparent"
-          itemsPerPage={Infinity}
-          tableCaption="Homework And Assessment Tools Results"
+          {...({
+            tableData: {
+              columns: ASSESSMENT_DATA_COLUMNS(
+                handleTreatmentTools,
+                onClientClick
+              ) as any,
+              data: assessmentResultsData,
+            },
+            fixedHeaderScrollHeight: "230px",
+            loading: loading === "assessmentResultsData",
+            loaderBackground: "transparent",
+            itemsPerPage: Infinity,
+            tableCaption: "Homework And Assessment Tools Results",
+          } as any)}
         />
       </CustomCard>
       <CustomModal
         title={formName == "CONSENT" ? "Consent Form" : "Report Details"}
         isOpen={showReportDetails}
         onRequestClose={() => setShowReportDetails(false)}
+        icon={null}
         customStyles={{ maxWidth: "unset" }}
+        {...({} as any)}
       >
         <div>
           <h4 style={{ textAlign: "center", margin: 0 }}>{graphDataHeading}</h4>
@@ -384,7 +453,7 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
               client_name={consentFormData?.clientName}
               consent_date={consentFormData?.date}
               consent_img={consentFormData?.img}
-              tenant_ID={tenant_id}
+              tenant_ID={tenant_id?.toString() || ""}
               initialData={consentFormData}
               loader={loading == "consentData"}
             />
@@ -406,22 +475,29 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
                   axisLabel: {
                     rotate: -45,
                     color: "red",
-                    formatter: (value) =>
-                      value.length > 50 ? value.slice(0, 50) + "…" : value,
-                    interval: 0,
+                    formatter: (value: any) =>
+                      String(value).length > 50
+                        ? String(value).slice(0, 50) + "…"
+                        : String(value),
                     tooltip: { show: true },
-                  },
+                  } as any,
                 },
                 tooltip: {
                   trigger: "axis",
-                  formatter: (params) => {
+                  formatter: (params: any) => {
                     const data = params[0];
                     const fullQuestion =
-                      responses[data.dataIndex]?.question || data.name;
+                      (params as any).responses?.[data.dataIndex]?.question ||
+                      data.name;
                     return `<b>${fullQuestion}</b><br/>Score: ${data.value}`;
                   },
                 },
               }}
+            />
+          ) : formName == "WHODAS" ? (
+            <WHODASDomainChart
+              whodasData={whodasDomainData}
+              loading={loading === "graphData"}
             />
           ) : (
             <BarGraph
@@ -430,13 +506,13 @@ function AssessmentResults({ assessmentResultsData, onClientClick }) {
               xAxisLabels={xAxisLabels}
               seriesData={seriesData}
               loading={loading === "graphData"}
-              formName={formName}
+              formName={formName || undefined}
             />
           )}
         </div>
       </CustomModal>
     </AssessmentResultsContainer>
   );
-}
+};
 
 export default AssessmentResults;

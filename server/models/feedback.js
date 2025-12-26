@@ -681,8 +681,8 @@ export default class Feedback {
         items['item' + i] = Number(data['item' + i]);
       }
 
-      let total = 0;
-      //avg of 6 items (Understanding and communicating)
+      // Calculate domain averages (using 1-5 scale)
+      // Domain 1: Cognition (6 items)
       let d1_avg =
         (items.item1 +
           items.item2 +
@@ -691,7 +691,7 @@ export default class Feedback {
           items.item5 +
           items.item6) /
         6;
-      //avg of 5 items (Getting around)
+      // Domain 2: Mobility (5 items)
       let d2_avg =
         (items.item7 +
           items.item8 +
@@ -699,10 +699,10 @@ export default class Feedback {
           items.item10 +
           items.item11) /
         5;
-      //avg of 4 items (Self-care)
+      // Domain 3: Self-care (4 items)
       let d3_avg =
         (items.item12 + items.item13 + items.item14 + items.item15) / 4;
-      //avg of 5 items (Getting along with people)
+      // Domain 4: Getting along (5 items)
       let d4_avg =
         (items.item16 +
           items.item17 +
@@ -710,7 +710,7 @@ export default class Feedback {
           items.item19 +
           items.item20) /
         5;
-      //avg of 8 items (Life activities)
+      // Domain 5: Life activities (8 items: 4 household + 4 work/school)
       let d5_avg =
         (items.item21 +
           items.item22 +
@@ -721,7 +721,7 @@ export default class Feedback {
           items.item27 +
           items.item28) /
         8;
-      //avg of 8 items (Participation in society)
+      // Domain 6: Participation (8 items)
       let d6_avg =
         (items.item29 +
           items.item30 +
@@ -733,7 +733,8 @@ export default class Feedback {
           items.item36) /
         8;
 
-      total +=
+      // Calculate total sum for overall score
+      let total =
         items.item1 +
         items.item2 +
         items.item3 +
@@ -771,7 +772,9 @@ export default class Feedback {
         items.item35 +
         items.item36;
 
-      let overall_score = (total / 144) * 100;
+      // Overall score: (total / max_possible) * 100
+      // Max possible with 1-5 scale: 36 items * 5 = 180
+      let overall_score = (total / 180) * 100;
 
       const checkSession = await this.session.getSessionById({
         session_id: data.session_id,
