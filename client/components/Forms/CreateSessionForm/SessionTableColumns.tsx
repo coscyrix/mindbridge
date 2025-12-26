@@ -26,6 +26,13 @@ export const getSessionTableColumns = ({
 }) => {
   return [
     {
+      name: "S.No.",
+      cell: (row, rowIndex) => rowIndex + 1,
+      selectorId: "serial_number",
+      maxWidth: "70px",
+      center: true,
+    },
+    {
       name: "Service Type",
       selector: (row) => row.service_name,
       selectorId: "service_desc",
