@@ -370,4 +370,44 @@ export default class CounselorProfileService {
       return { message: 'Internal server error', error: -1 };
     }
   }
+
+  async getMyAppointments(user_profile_id) {
+    try {
+      const schema = joi.object({
+        user_profile_id: joi.number().required(),
+      });
+      
+      const { error } = schema.validate({ user_profile_id });
+      if (error) {
+        return { message: error.details[0].message, error: -1 };
+      }
+
+      // Get counselor_profile_id from user_profile_id
+      const counselorProfile = await this.counselorProfile.getCounselorProfile({
+        user_profile_id: user_profile_id,
+      });
+
+      if (!counselorProfile.rec || counselorProfile.rec.length === 0) {
+        return { 
+          message: 'Counselor profile not found', 
+          error: -1 
+        };
+      }
+
+      const counselor_profile_id = counselorProfile.rec[0].counselor_profile_id;
+
+      // Get all appointments for this counselor
+      const appointments = await this.appointmentEmailTracking.getAppointmentsByCounselor(
+        counselor_profile_id
+      );
+
+      return { 
+        message: 'Appointments retrieved successfully',
+        data: appointments
+      };
+    } catch (err) {
+      logger.error('Error in getMyAppointments service:', err);
+      return { message: 'Internal server error', error: -1 };
+    }
+  }
 }

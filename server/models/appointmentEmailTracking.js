@@ -50,17 +50,38 @@ export default class AppointmentEmailTracking {
 
   async getEmailHistory(counselor_profile_id, limit = 10) {
     try {
+      let query = this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('*')
+        .from(this.tableName)
+        .where('counselor_profile_id', counselor_profile_id)
+        .orderBy('sent_at', 'desc');
+      
+      if (limit && limit > 0) {
+        query = query.limit(limit);
+      }
+      
+      const result = await query;
+      
+      return result;
+    } catch (error) {
+      logger.error('Error getting email history:', error);
+      throw error;
+    }
+  }
+
+  async getAppointmentsByCounselor(counselor_profile_id) {
+    try {
       const result = await this.db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select('*')
         .from(this.tableName)
         .where('counselor_profile_id', counselor_profile_id)
-        .orderBy('sent_at', 'desc')
-        .limit(limit);
+        .orderBy('sent_at', 'desc');
       
       return result;
     } catch (error) {
-      logger.error('Error getting email history:', error);
+      logger.error('Error getting appointments by counselor:', error);
       throw error;
     }
   }

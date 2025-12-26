@@ -72,6 +72,13 @@ const CommonServices = {
       },
     });
   },
+  getMyAppointments(limit = 100) {
+    return api.get(`${ApiConfig.counselorProfile.getCounselorProfile}/appointments`, {
+      params: {
+        limit,
+      },
+    });
+  },
   getSearchedCounselors(payload) {
     return api.get(`${ApiConfig.counselorProfile.searchCounselors}/`, {
       params: payload,

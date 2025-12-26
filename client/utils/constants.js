@@ -209,6 +209,12 @@ export const SIDEBAR_HEADINGS = [
     title: "Dashboard",
   },
   {
+    id: 10,
+    icon: <SessionIcon />,
+    url: "/appointments",
+    title: "Appointments",
+  },
+  {
     id: 2,
     icon: <ClientsManagementIcon />,
     url: "/client-management",
@@ -269,6 +275,11 @@ export const SIDEBAR_HEADINGS = [
   //   title: "Logo Managment",
   // },
 ];
+
+// React Query Keys
+export const QUERY_KEYS = {
+  APPOINTMENTS: (userProfileId) => ["appointments", userProfileId],
+};
 
 export const TABLE_DATA = (handleCellClick, handleEdit, handleDelete) => {
   return {

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Overlay, SidebarContainer } from "./style";
-import { SIDEBAR_HEADINGS } from "../../../utils/constants";
+import { SIDEBAR_HEADINGS, QUERY_KEYS } from "../../../utils/constants";
 import Link from "next/link";
 import { CrossIcon, LogoutIcon } from "../../../public/assets/icons";
 import { useRouter } from "next/router";
@@ -12,6 +12,8 @@ import { MdOutlineEventAvailable } from "react-icons/md";
 import Image from "next/image";
 import ChangePasswordModal from "../../ChangePasswordModal";
 import ProfileOptionsModal from "../../ProfileOptionModal";
+import CommonServices from "../../../services/CommonServices";
+import { useQueryData } from "../../../utils/hooks/useQueryData";
 
 function Sidebar({ showSideBar, setShowSideBar }) {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
@@ -25,6 +27,23 @@ function Sidebar({ showSideBar, setShowSideBar }) {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const profileDropdownRef = useRef(null);
   const profileRef = useRef(null);
+
+  // Fetch appointments using React Query (for count display)
+  const {
+    data: appointmentsData,
+  } = useQueryData(
+    QUERY_KEYS.APPOINTMENTS(userData?.user_profile_id),
+    async () => {
+      const response = await CommonServices.getMyAppointments(1000);
+      if (response.status === 200) {
+        return response.data?.data || response.data || [];
+      }
+      return [];
+    },
+    userData?.role_id === 2 && !!userData?.user_profile_id // Only fetch for counselors
+  );
+
+  const appointmentCount = appointmentsData?.length || 0;
 
   const handleOpenPasswordModal = () => {
     setShowPasswordModal(true);
@@ -54,6 +73,7 @@ function Sidebar({ showSideBar, setShowSideBar }) {
       mediaQuery.removeEventListener("change", handleMediaChange);
     };
   }, []);
+
 
   const handleCloseSideBar = () => {
     setShowSideBar(false);
@@ -154,54 +174,53 @@ function Sidebar({ showSideBar, setShowSideBar }) {
             </div>
           </div>
           <div className="headings">
-            {SIDEBAR_HEADINGS.filter((item) => {
-              // if (!isAdmin && item.title === "Logo Managment") {
-              //   return false;
-              // }
-              if ((isManager || isAdmin) && item.title === "Profile")
-                return false;
-              if ((!isManager && !isAdmin) && item.title === "Consent Management")
-                return false;
-              if (!isManager && item.title === "Fee Split Management") {
-                return false;
-              }
-              return true;
-            }).map((heading, index) => (
-              <div key={heading.title || index}>
-                <div
-                  // href={heading?.url}
-                  style={{ cursor: "pointer" }}
-                  key={index}
-                  onClick={() =>
-                    heading?.title === "Profile"
-                      ? router.push(
-                          `/onboarding?type=basic&userId=${userData?.counselor_profile_id}`
-                        )
-                      : heading?.title !== "Profile"
-                      ? router.push(heading?.url)
-                      : isSmallScreen
-                      ? handleCloseSideBar
-                      : null
-                  }
-                  className={
-                    route == heading.url ? "active-item" : "heading-item"
-                  }
+            {SIDEBAR_HEADINGS.map((heading, index) => {
+              // Determine if item should be hidden - consolidate all visibility logic
+              const isManagerOrAdmin = ["Manager", "Admin"].includes(getRole(userData?.role_id));
+              const isCounselor = userData?.role_id === 2;
+              
+              const shouldHide = 
+                ((isManager || isAdmin) && heading.title === "Profile") ||
+                ((!isManager && !isAdmin) && heading.title === "Consent Management") ||
+                (!isManager && heading.title === "Fee Split Management") ||
+                (heading.title === "Appointments" && !isCounselor) ||
+                (!isManagerOrAdmin && (heading.title === "Service" || heading.title === "Invoice"));
+
+              return (
+                <div 
+                  key={heading.title || index}
+                  style={{ display: shouldHide ? "none" : "block" }}
                 >
-                  {["Manager", "Admin"].includes(getRole(userData?.role_id)) ? (
-                    <>
-                      {heading.icon} <span>{heading.title}</span>
-                    </>
-                  ) : (
-                    heading.title != "Service" &&
-                    heading.title != "Invoice" && (
-                      <>
-                        {heading.icon} <span>{heading.title}</span>
-                      </>
-                    )
-                  )}
+                  <div
+                    style={{ cursor: "pointer" }}
+                    key={index}
+                    onClick={() =>
+                      heading?.title === "Profile"
+                        ? router.push(
+                            `/onboarding?type=basic&userId=${userData?.counselor_profile_id}`
+                          )
+                        : heading?.title !== "Profile"
+                        ? router.push(heading?.url)
+                        : isSmallScreen
+                        ? handleCloseSideBar
+                        : null
+                    }
+                    className={
+                      route == heading.url ? "active-item" : "heading-item"
+                    }
+                  >
+                    {heading.icon} <span>
+                      {heading.title}
+                      {heading.title === "Appointments" && appointmentCount > 0 && (
+                        <span style={{ marginLeft: "8px", opacity: 0.7 }}>
+                          ({appointmentCount})
+                        </span>
+                      )}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
         <div className="profile">

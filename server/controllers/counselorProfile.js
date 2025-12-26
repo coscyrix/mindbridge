@@ -320,4 +320,24 @@ export default class CounselorProfileController {
       res.status(500).json({ message: 'Internal server error', error: -1 });
     }
   }
+
+  async getMyAppointments(req, res) {
+    try {
+      const user_profile_id = req.decoded.user_profile_id;
+
+
+      const result = await this.counselorProfileService.getMyAppointments(
+        user_profile_id
+      );
+
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error('Error getting my appointments:', error);
+      res.status(500).json({ message: 'Internal server error', error: -1 });
+    }
+  }
 }

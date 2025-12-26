@@ -13,7 +13,6 @@ import Common from './common.js';
 import EmailTmplt from './emailTmplt.js';
 import UserForm from './userForm.js';
 import UserTargetOutcome from './userTargetOutcome.js';
-import prisma from '../utils/prisma.js';
 const require = createRequire(import.meta.url);
 
 export default class UserProfile {
@@ -514,6 +513,7 @@ export default class UserProfile {
   //////////////////////////////////////////
 
   async getUserProfileById(data) {
+
     try {
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -557,26 +557,26 @@ export default class UserProfile {
         }
 
         if (data.counselor_id && data.role_id == 2) {
-          // Convert counselor_id to integer for Prisma
+          // Convert counselor_id to integer
           const counselorId = parseInt(data.counselor_id, 10);
           
-          // Get client IDs from enrollments using Prisma
-          const enrollments = await prisma.client_enrollments.findMany({
-            where: { user_id: counselorId },
-            select: { client_id: true },
-            distinct: ['client_id'],
-          });
+          // Get client IDs from enrollments using Knex
+          const enrollments = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .select('client_id')
+            .distinct('client_id')
+            .from('client_enrollments')
+            .where('user_id', counselorId);
 
-          // Get client IDs from therapy requests using Prisma
-          const therapyRequests = await prisma.thrpy_req.findMany({
-            where: {
-              counselor_id: counselorId,
-              thrpy_status: { in: ['ONGOING', 'PAUSED'] },
-              status_yn: 'y',
-            },
-            select: { client_id: true },
-            distinct: ['client_id'],
-          });
+          // Get client IDs from therapy requests using Knex
+          const therapyRequests = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .select('client_id')
+            .distinct('client_id')
+            .from('thrpy_req')
+            .where('counselor_id', counselorId)
+            .whereIn('thrpy_status', ['ONGOING', 'PAUSED'])
+            .where('status_yn', 'y');
 
           // Merge and get unique client IDs
           const clientIds = [
@@ -640,15 +640,16 @@ export default class UserProfile {
         let isPaused = false;
         
         if (!hasSchedule || !hasSchedule.req_id) {
-          // Check for active therapy requests using Prisma
-          const activeThrpyReq = await prisma.thrpy_req.findFirst({
-            where: {
-              client_id: userProfileData.user_profile_id,
-              thrpy_status: { in: ['ONGOING', 'PAUSED'] },
-              status_yn: 'y',
-            },
-            orderBy: { created_at: 'desc' },
-          });
+          // Check for active therapy requests using Knex
+          const activeThrpyReq = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .select('req_id', 'thrpy_status')
+            .from('thrpy_req')
+            .where('client_id', userProfileData.user_profile_id)
+            .whereIn('thrpy_status', ['ONGOING', 'PAUSED'])
+            .where('status_yn', 'y')
+            .orderBy('created_at', 'desc')
+            .first();
 
           if (activeThrpyReq) {
             hasSchedule = {
@@ -657,13 +658,14 @@ export default class UserProfile {
             isPaused = activeThrpyReq.thrpy_status === 'PAUSED';
           }
         } else {
-          // If has_schedule exists, check the actual status using Prisma
-          const thrpyReq = await prisma.thrpy_req.findFirst({
-            where: {
-              req_id: hasSchedule.req_id,
-              status_yn: 'y',
-            },
-          });
+          // If has_schedule exists, check the actual status using Knex
+          const thrpyReq = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .select('*')
+            .from('thrpy_req')
+            .where('req_id', hasSchedule.req_id)
+            .where('status_yn', 'y')
+            .first();
 
           if (thrpyReq) {
             isPaused = thrpyReq.thrpy_status === 'PAUSED';
