@@ -8,6 +8,7 @@ import logger from '../config/winston.js';
 import CounselorDocumentsService from './counselorDocuments.js';
 import CounselorTargetOutcome from '../models/counselorTargetOutcome.js';
 import AppointmentEmailTracking from '../models/appointmentEmailTracking.js';
+import { newAppointmentEmail } from '../utils/emailTmplt.js';
 
 export default class CounselorProfileService {
   constructor() {
@@ -285,8 +286,8 @@ export default class CounselorProfileService {
   async sendAppointmentEmail(data) {
     const schema = joi.object({
       counselor_profile_id: joi.number().required(),
-      customer_name: joi.string().required(),
-      customer_email: joi.string().email().required(),
+      client_name: joi.string().required(),
+      client_email: joi.string().email().required(),
       contact_number: joi.string().required(),
       service: joi.string().required(),
       appointment_date: joi.date().iso().required(),
@@ -297,15 +298,15 @@ export default class CounselorProfileService {
       return { message: error.details[0].message, error: -1 };
     }
     try {
-      // Check if email has already been sent to this customer for this counselor
+      // Check if email has already been sent to this client for this counselor
       const emailAlreadySent = await this.appointmentEmailTracking.checkEmailAlreadySent(
         data.counselor_profile_id,
-        data.customer_email
+        data.client_email
       );
       
       if (emailAlreadySent) {
         return { 
-          message: 'Appointment email has already been sent to this customer for this counselor', 
+          message: 'Appointment email has already been sent to this client for this counselor', 
           error: -1,
           alreadySent: true
         };
@@ -320,26 +321,16 @@ export default class CounselorProfileService {
       const counselor = counselorProfile.rec[0];
       const counselorEmail = counselor.email;
       const counselorName = `${counselor.user_first_name} ${counselor.user_last_name}`;
-      const emailMsg = {
-        to: counselorEmail,
-        subject: `New Appointment with ${data.customer_name}`,
-        html: `
-          <h1>New Appointment Confirmation</h1>
-          <p>Hello ${counselorName},</p>
-          <p>You have a new appointment scheduled with the following details:</p>
-          <ul>
-            <li><strong>Customer Name:</strong> ${data.customer_name}</li>
-            <li><strong>Customer Email:</strong> ${data.customer_email}</li>
-            <li><strong>Customer Phone:</strong> ${data.contact_number}</li>
-            <li><strong>Service:</strong> ${data.service}</li>
-            <li><strong>Appointment Date:</strong> ${new Date(data.appointment_date).toDateString()}</li>
-            ${data.description ? `<li><strong>Description:</strong> ${data.description}</li>` : ''}
-          </ul>
-          <p>Please reach out to the customer to confirm the details.</p>
-          <p>Thank you,</p>
-          <p>The MindBridge Team</p>
-        `,
-      };
+      const emailMsg = newAppointmentEmail(
+        counselorEmail,
+        counselorName,
+        data.client_name,
+        data.client_email,
+        data.contact_number,
+        data.service,
+        data.appointment_date,
+        data.description,
+      );
       const emailResult = await this.sendEmail.sendMail(emailMsg);
       if (!emailResult || emailResult.error) {
         const errorMessage = emailResult?.message || 'Failed to send appointment email';

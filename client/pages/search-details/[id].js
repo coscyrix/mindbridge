@@ -63,8 +63,8 @@ const SearchDetails = () => {
     resolver: zodResolver(bookAppointmentSchema),
     mode: "onTouched",
     defaultValues: {
-      customer_name: "",
-      customer_email: "",
+      client_name: "",
+      client_email: "",
       contact_number: "",
       service: "",
       appointment_date: null,
@@ -233,6 +233,7 @@ const SearchDetails = () => {
     methods.reset();
     setSelectedService("");
     setAppointmentDate("");
+    setSelectedDate(null);
   };
 
   const onSubmit = async (values) => {
@@ -241,8 +242,8 @@ const SearchDetails = () => {
       setIsSendingAppointment(true);
       const payload = {
         counselor_profile_id: id,
-        customer_name: values?.customer_name,
-        customer_email: values?.customer_email,
+        client_name: values?.client_name,
+        client_email: values?.client_email,
         service: values.service,
         appointment_date: values.appointment_date,
         contact_number: values.contact_number,
@@ -496,14 +497,14 @@ const SearchDetails = () => {
           >
             <div style={{ marginBottom: 18 }}>
               <label
-                htmlFor="customer_name"
+                htmlFor="client_name"
                 style={{ display: "block", fontWeight: 500 }}
               >
-                Customer Name
+                Client Name
               </label>
               <input
-                id="customer_name"
-                {...methods.register("customer_name")}
+                id="client_name"
+                {...methods.register("client_name")}
                 type="text"
                 placeholder="Enter your name"
                 style={{
@@ -514,7 +515,7 @@ const SearchDetails = () => {
                   fontSize: 15,
                 }}
               />
-              {methods.formState.errors.customer_name && (
+              {methods.formState.errors.client_name && (
                 <p
                   style={{
                     color: "#f04438",
@@ -522,21 +523,21 @@ const SearchDetails = () => {
                     fontSize: 13,
                   }}
                 >
-                  {methods.formState.errors.customer_name.message}
+                  {methods.formState.errors.client_name.message}
                 </p>
               )}
             </div>
 
             <div style={{ marginBottom: 18 }}>
               <label
-                htmlFor="customer_email"
+                htmlFor="client_email"
                 style={{ display: "block", fontWeight: 500 }}
               >
-                Customer Email
+                Client Email
               </label>
               <input
-                id="customer_email"
-                {...methods.register("customer_email")}
+                id="client_email"
+                {...methods.register("client_email")}
                 type="email"
                 placeholder="Enter your email"
                 style={{
@@ -547,7 +548,7 @@ const SearchDetails = () => {
                   fontSize: 15,
                 }}
               />
-              {methods.formState.errors.customer_email && (
+              {methods.formState.errors.client_email && (
                 <p
                   style={{
                     color: "#f04438",
@@ -555,7 +556,7 @@ const SearchDetails = () => {
                     fontSize: 13,
                   }}
                 >
-                  {methods.formState.errors.customer_email.message}
+                  {methods.formState.errors.client_email.message}
                 </p>
               )}
             </div>
@@ -565,7 +566,7 @@ const SearchDetails = () => {
                 htmlFor="contact_number"
                 style={{ display: "block", fontWeight: 500 }}
               >
-                Customer Contact No.
+                Client Contact No.
               </label>
               <input
                 id="contact_number"

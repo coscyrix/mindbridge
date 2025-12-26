@@ -293,8 +293,8 @@ export const getStartedSchema = z.object({
 });
 
 export const bookAppointmentSchema = z.object({
-  customer_name: z.string().min(1, "Name is required"),
-  customer_email: z.string().email("Invalid email address"),
+  client_name: z.string().min(1, "Name is required"),
+  client_email: z.string().email("Invalid email address"),
   contact_number: z
     .string()
     .min(10, "Phone number must be at least 10 digits")

@@ -9,7 +9,7 @@ export default class AppointmentEmailTracking {
     this.tableName = 'appointment_email_tracking';
   }
 
-  async checkEmailAlreadySent(counselor_profile_id, customer_email) {
+  async checkEmailAlreadySent(counselor_profile_id, client_email) {
     try {
       const result = await this.db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -17,7 +17,7 @@ export default class AppointmentEmailTracking {
         .from(this.tableName)
         .where({
           counselor_profile_id: counselor_profile_id,
-          customer_email: customer_email
+          customer_email: client_email // Database column is still customer_email
         })
         .first();
       
@@ -35,8 +35,8 @@ export default class AppointmentEmailTracking {
         .from(this.tableName)
         .insert({
           counselor_profile_id: data.counselor_profile_id,
-          customer_email: data.customer_email,
-          customer_name: data.customer_name,
+          customer_email: data.client_email || '',
+          customer_name: data.client_name ,
           service: data.service,
           appointment_date: data.appointment_date
         });

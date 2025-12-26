@@ -8,15 +8,16 @@ datasource db {
 }
 
 model appointment_email_tracking {
-    id                   Int       @id @default(autoincrement())
+    id                   Int               @id @default(autoincrement())
     counselor_profile_id Int
-    customer_email       String    @db.VarChar(255)
-    customer_name        String    @db.VarChar(255)
-    service              String    @db.VarChar(255)
-    appointment_date     DateTime  @db.DateTime(0)
-    sent_at              DateTime? @default(now()) @db.Timestamp(0)
-    created_at           DateTime? @default(now()) @db.Timestamp(0)
-    updated_at           DateTime? @default(now()) @db.Timestamp(0)
+    customer_email       String            @db.VarChar(255)
+    customer_name        String            @db.VarChar(255)
+    service              String            @db.VarChar(255)
+    appointment_date     DateTime          @db.DateTime(0)
+    sent_at              DateTime?         @default(now()) @db.Timestamp(0)
+    created_at           DateTime?         @default(now()) @db.Timestamp(0)
+    updated_at           DateTime?         @default(now()) @db.Timestamp(0)
+    counselor_profile    counselor_profile @relation(fields: [counselor_profile_id], references: [counselor_profile_id], onDelete: Cascade, onUpdate: NoAction, map: "appointment_email_tracking_ibfk_1")
 
     @@index([counselor_profile_id, customer_email], map: "idx_counselor_customer")
     @@index([sent_at], map: "idx_sent_at")
@@ -69,31 +70,32 @@ model counselor_documents {
 }
 
 model counselor_profile {
-    counselor_profile_id     Int                        @id @default(autoincrement())
-    user_profile_id          Int                        @unique(map: "unique_counselor_profile")
-    profile_picture_url      String?                    @db.VarChar(255)
-    license_number           String?                    @db.VarChar(100)
-    license_provider         String?                    @db.VarChar(255)
-    license_file_url         String?                    @db.VarChar(255)
-    profile_notes            String?                    @db.Text
-    location                 String?                    @db.VarChar(255)
-    services_offered         Json?
-    specialties              Json?
-    service_modalities       Json?
-    availability             Json?
-    is_verified              Boolean?                   @default(false)
-    patients_seen            Int?                       @default(0)
-    gender                   String?                    @db.VarChar(50)
-    race                     String?                    @db.VarChar(100)
-    public_phone             String?                    @db.VarChar(20)
-    created_at               DateTime?                  @default(now()) @db.Timestamp(0)
-    updated_at               DateTime?                  @default(now()) @db.Timestamp(0)
-    consent_descriptions     consent_descriptions[]
-    counselor_documents      counselor_documents[]
-    user_profile             user_profile               @relation(fields: [user_profile_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "counselor_profile_ibfk_1")
-    counselor_reviews        counselor_reviews[]
-    counselor_services       counselor_services[]
-    counselor_target_outcome counselor_target_outcome[]
+    counselor_profile_id       Int                          @id @default(autoincrement())
+    user_profile_id            Int                          @unique(map: "unique_counselor_profile")
+    profile_picture_url        String?                      @db.VarChar(255)
+    license_number             String?                      @db.VarChar(100)
+    license_provider           String?                      @db.VarChar(255)
+    license_file_url           String?                      @db.VarChar(255)
+    profile_notes              String?                      @db.Text
+    location                   String?                      @db.VarChar(255)
+    services_offered           Json?
+    specialties                Json?
+    service_modalities         Json?
+    availability               Json?
+    is_verified                Boolean?                     @default(false)
+    patients_seen              Int?                         @default(0)
+    gender                     String?                      @db.VarChar(50)
+    race                       String?                      @db.VarChar(100)
+    public_phone               String?                      @db.VarChar(20)
+    created_at                 DateTime?                    @default(now()) @db.Timestamp(0)
+    updated_at                 DateTime?                    @default(now()) @db.Timestamp(0)
+    consent_descriptions       consent_descriptions[]
+    counselor_documents        counselor_documents[]
+    user_profile               user_profile                 @relation(fields: [user_profile_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "counselor_profile_ibfk_1")
+    counselor_reviews          counselor_reviews[]
+    counselor_services         counselor_services[]
+    counselor_target_outcome   counselor_target_outcome[]
+    appointment_email_tracking appointment_email_tracking[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

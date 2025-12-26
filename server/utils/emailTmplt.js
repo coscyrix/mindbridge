@@ -17,7 +17,7 @@ dotenv.config();
 const EMAIL_DISCLAIMER = `
 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; line-height: 1.4;">
   <p><strong>DISCLAIMER:</strong></p>
-  <p>Assessment tools are used with proper author permissions for clinical purposes.<br/>
+  <p>Assessment tools are used with proper author permissions for clinical purposes.<br/> 
   Emails and attachments may contain confidential and legally protected information.<br/>
   Email transmission is not guaranteed to be secure or error-free. The sender assumes no liability for issues arising from electronic delivery.<br/>
   Unauthorized access, use, or distribution is prohibited.<br/>
@@ -866,6 +866,39 @@ export const homeworkEmailAttachment = (
   }
 
   return emailObj;
+};
+
+export const newAppointmentEmail = (
+  counselorEmail,
+  counselorName,
+  clientName,
+  clientEmail,
+  contactNumber,
+  service,
+  appointmentDate,
+  description = null,
+) => {
+  return {
+    to: counselorEmail,
+    subject: `New Appointment with ${clientName}`,
+    html: `
+      <h1>New Appointment Confirmation</h1>
+      <p>Hello ${capitalizeFirstLetter(counselorName)},</p>
+      <p>You have a new appointment request with the following details:</p>
+      <ul>
+        <li><strong>Client Name:</strong> ${capitalizeFirstLetter(clientName)}</li>
+        <li><strong>Client Email:</strong> ${clientEmail}</li>
+        <li><strong>Client Phone:</strong> ${contactNumber}</li>
+        <li><strong>Service:</strong> ${service}</li>
+        <li><strong>Appointment Date:</strong> ${new Date(appointmentDate).toDateString()}</li>
+        ${description ? `<li><strong>Description:</strong> ${description}</li>` : ''}
+      </ul>
+      <p>Please reach out to the client to confirm the details.</p>
+      <p>Thank you,</p>
+      <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
+    `,
+  };
 };
 
 export const onboardingAdminEmail = (data) => {
