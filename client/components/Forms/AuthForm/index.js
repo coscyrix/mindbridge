@@ -38,8 +38,10 @@ const AuthForm = () => {
         router.push("/login");
       }
     } catch (error) {
+      // Deactivated account errors are handled by the interceptor in auth.js
+      const errorMessage = error?.response?.data?.message || error?.message;
       toast.error(
-        error?.response?.data?.message ||
+        errorMessage ||
           "Something unexpected happened. Kindly check your connection.",
         { position: "top-right" }
       );

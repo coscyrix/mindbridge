@@ -581,13 +581,38 @@ export const SESSION_TABLE_COLUMNS = (args) => {
     {
       name: "Date",
       selector: (row) => {
-        if (row.intake_date && row.scheduled_time) {
-          return convertUTCToLocalTime(
-            `${row.intake_date}T${row.scheduled_time}`
-          ).date;
-        } else {
-          return convertUTCToLocalTime(`${row.intake_date}`).date;
+        if (row?.scheduled_time) {
+          const scheduledTimeStr = String(row.scheduled_time).trim();
+
+          const hasDatePattern = scheduledTimeStr.match(/\d{4}-\d{2}-\d{2}/);
+          const hasTimeSeparator = scheduledTimeStr.includes("T") || scheduledTimeStr.includes(" ");
+          const isFullDateTime = hasDatePattern && hasTimeSeparator && scheduledTimeStr.length > 10;
+          
+          if (isFullDateTime) {
+            const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
+            return convertUTCToLocalTime(normalizedDateTime).date;
+          }
         }
+        
+        if (row?.intake_date) {
+          if (row?.scheduled_time) {
+            const scheduledTimeStr = String(row.scheduled_time).trim();
+            const hasDatePattern = scheduledTimeStr.match(/\d{4}-\d{2}-\d{2}/);
+            const hasTimeSeparator = scheduledTimeStr.includes("T") || scheduledTimeStr.includes(" ");
+            const isFullDateTime = hasDatePattern && hasTimeSeparator && scheduledTimeStr.length > 10;
+            
+            if (!isFullDateTime) {
+              return convertUTCToLocalTime(
+                `${row.intake_date}T${row.scheduled_time}`
+              ).date;
+            }
+            const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
+            return convertUTCToLocalTime(normalizedDateTime).date;
+          }
+          return convertUTCToLocalTime(`${row.intake_date}T00:00:00`).date;
+        }
+        
+        return "";
       },
       sortable: true,
       selectorId: "intake_date",
@@ -619,20 +644,34 @@ export const SESSION_TABLE_COLUMNS = (args) => {
     {
       name: "Start Time",
       selector: (row) => {
-        if (row.intake_date && row.scheduled_time) {
-          return convertUTCToLocalTime(
-            `${row.intake_date}T${row.scheduled_time}`
-          ).time;
-        } else {
-          const intakeTime = row?.intake_date
-            ? new Date(row.intake_date).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })
-            : "N/A";
-          return intakeTime;
+        if (row?.scheduled_time) {
+          const scheduledTimeStr = String(row.scheduled_time).trim();
+          const hasDatePattern = scheduledTimeStr.match(/\d{4}-\d{2}-\d{2}/);
+          const hasTimeSeparator = scheduledTimeStr.includes("T") || scheduledTimeStr.includes(" ");
+          const isFullDateTime = hasDatePattern && hasTimeSeparator && scheduledTimeStr.length > 10;
+          
+          if (isFullDateTime) {
+            const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
+            return convertUTCToLocalTime(normalizedDateTime).time;
+          }
+          
+          if (row?.intake_date) {
+            return convertUTCToLocalTime(
+              `${row.intake_date}T${row.scheduled_time}`
+            ).time;
+          }
         }
+        
+        if (row?.intake_date) {
+          const intakeTime = new Date(row.intake_date).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          });
+          return intakeTime !== "Invalid Date" ? intakeTime : "N/A";
+        }
+        
+        return "N/A";
       },
       sortable: true,
       selectorId: "scheduled_time",
@@ -1360,9 +1399,14 @@ export const CLIENT_MANAGEMENT_DATA = (
   handleEdit,
   handleDelete,
   handleEditSessionInfo,
-  dropdownRef
+  dropdownRef,
+  handleActivate,
+  handleDeactivate,
+  showActivationActions = false,
+  userRoleId,
+  currentUserId = null
 ) => {
-  return [
+  const columns = [
     {
       name: "ID",
       selector: (row) => row.user_profile_id,
@@ -1399,22 +1443,53 @@ export const CLIENT_MANAGEMENT_DATA = (
       sortable: true,
       selectorId: "email",
     },
-    {
-      name: "",
-      cell: (row) => (
-        <Dropdown
-          ref={dropdownRef}
-          row={row}
-          handleCellClick={handleCellClick}
-          handleEdit={handleEdit}
-          handleDelete={handleDelete}
-        />
-      ),
-      width: "50px",
-      allowOverflow: true,
-      button: true,
-    },
   ];
+
+  // Add Status column for counselors/tenants when activation actions are enabled
+  if (showActivationActions) {
+    columns.push({
+      name: "Status",
+      cell: (row) => {
+        const isActivated = row?.isActivated !== false && row?.isActivated !== undefined;
+        return (
+          <div
+            style={{
+              color: isActivated ? "#4caf50" : "#ff9800",
+              fontWeight: "500",
+              textTransform: "capitalize",
+            }}
+          >
+            {isActivated ? "Active" : "Inactive"}
+          </div>
+        );
+      },
+      sortable: true,
+      selectorId: "isActivated",
+    });
+  }
+
+  columns.push({
+    name: "",
+    cell: (row) => (
+      <Dropdown
+        ref={dropdownRef}
+        row={row}
+        handleCellClick={handleCellClick}
+        handleEdit={handleEdit}
+        handleDelete={handleDelete}
+        handleActivate={handleActivate}
+        handleDeactivate={handleDeactivate}
+        showActivationActions={showActivationActions}
+        userRoleId={userRoleId}
+        currentUserId={currentUserId}
+      />
+    ),
+    width: "50px",
+    allowOverflow: true,
+    button: true,
+  });
+
+  return columns;
 };
 
 export const roles = [
@@ -1807,7 +1882,19 @@ export const CONDITIONAL_ROW_STYLES = {
   defaultConditions: [{}],
   clientManagent: [
     {
-      when: (row) => row.has_schedule,
+      when: (row) => row.isPaused === true,
+      style: {
+        background: "transparent",
+        color: "#ffc107",
+        "&:hover": {
+          backgroundColor: "white",
+          color: "#ff9800",
+          cursor: "pointer",
+        },
+      },
+    },
+    {
+      when: (row) => row.has_schedule && row.isPaused !== true,
       style: {
         background: "transparent",
         color: "#00c317",
@@ -1837,6 +1924,20 @@ export const CONDITIONAL_ROW_STYLES = {
         "&:hover": {
           color: "#ac3e31",
           cursor: "pointer",
+        },
+      },
+    },
+    {
+      when: (row) => row.session_status?.toLowerCase() === "inactive",
+      style: {
+        opacity: 0.6,
+        backgroundColor: "#f8f9fa",
+        color: "#6c757d",
+        fontStyle: "italic",
+        "&:hover": {
+          backgroundColor: "#f8f9fa",
+          opacity: 0.7,
+          cursor: "not-allowed",
         },
       },
     },

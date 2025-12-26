@@ -3,7 +3,7 @@ import { CLIENT_SESSION_LIST_DATA } from "../../utils/constants";
 import CustomClientDetails from "../../components/CustomClientDetails";
 import CreateSessionLayout from "../../components/FormLayouts/CreateSessionLayout/CreateSessionLayout";
 import CreateSessionForm from "../../components/Forms/CreateSessionForm";
-import { ClientSessionWrapper } from "../../styles/client-session";
+import { ClientSessionWrapper, AbsenceModalWrapper } from "../../styles/client-session";
 import SmartTab from "../../components/SmartTab";
 import { api } from "../../utils/auth";
 import { toast } from "react-toastify";
@@ -16,6 +16,9 @@ import Skeleton from "@mui/material/Skeleton";
 import { useRouter } from "next/router";
 import ApiConfig from "../../config/apiConfig";
 import { useSessionModal, useFeeSplit } from "../../utils/hooks";
+import CustomModal from "../../components/CustomModal";
+import CustomDatePicker from "../../components/DatePicker";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 function ClientSession() {
   const router = useRouter();
@@ -35,6 +38,11 @@ function ClientSession() {
   const { userObj } = useReferenceContext();
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false);
+  const [absenceLoading, setAbsenceLoading] = useState(false);
   
   const tabLabels = [
     { id: 0, label: "Current Session", value: "currentSession" },
@@ -264,6 +272,96 @@ function ClientSession() {
     setShowFlyout(true);
   };
 
+  const handleAbsenceHandling = () => {
+    setAbsenceModalOpen(true);
+  };
+
+  const handleAbsenceModalClose = () => {
+    setAbsenceModalOpen(false);
+    setStartDate(null);
+    setEndDate(null);
+    setNotificationModalOpen(false);
+  };
+
+  const handleAbsenceSubmit = () => {
+    if (!startDate || !endDate) {
+      toast.error("Please select both start and end dates", {
+        position: "top-right",
+      });
+      return;
+    }
+
+    if (startDate > endDate) {
+      toast.error("Start date cannot be after end date", {
+        position: "top-right",
+      });
+      return;
+    }
+
+    // Validate minimum 3 weeks (21 days) absence period
+    const daysDifference = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+    const minimumDays = 21; // 3 weeks
+    
+    if (daysDifference < minimumDays) {
+      toast.error(
+        `Absence period must be at least ${minimumDays} days (3 weeks). Current period: ${daysDifference} days`,
+        {
+          position: "top-right",
+        }
+      );
+      return;
+    }
+
+    // Close the absence modal and show notification confirmation modal
+    setAbsenceModalOpen(false);
+    setNotificationModalOpen(true);
+  };
+
+  const handleNotificationConfirm = async (notifyAdmin) => {
+    try {
+      setAbsenceLoading(true);
+      const counselor_id = userObj?.user_profile_id;
+      const tenant_id = userObj?.tenant_id;
+
+      if (!counselor_id) {
+        toast.error("Counselor ID not found", {
+          position: "top-right",
+        });
+        return;
+      }
+
+      const response = await api.post("/therapist-absence", {
+        counselor_id,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        notify_admin: notifyAdmin,
+        tenant_id,
+      });
+
+      if (response.status === 200) {
+        const { data } = response;
+        toast.success(
+          `Absence handled successfully. ${data.paused_blocks} blocks paused, ${data.rescheduled_sessions} sessions rescheduled.`,
+          {
+            position: "top-right",
+          }
+        );
+        
+        // Refresh sessions list
+        fetchSessions(selectCounselor);
+        handleAbsenceModalClose();
+      }
+    } catch (error) {
+      console.error("Error handling absence:", error);
+      toast.error(error?.response?.data?.message || "Error handling absence", {
+        position: "top-right",
+      });
+    } finally {
+      setAbsenceLoading(false);
+      setNotificationModalOpen(false);
+    }
+  };
+
   const getInvoice = async (counselorIdParam, tenantId) => {
     setSummaryLoading(true);
     try {
@@ -432,11 +530,11 @@ function ClientSession() {
                 summaryLoading ? (
                   <Skeleton width={120} height={40} />
                 ) : userObj?.role_id === 2 ? (
-                  `$${Number(summaryData?.sum_session_total_amount).toFixed(4)}`
+                  `$${Number(summaryData?.sum_session_total_amount).toFixed(2)}`
                 ) : userObj?.role_id === 3 ? (
                   <>
                     Total Amount :{" $"}
-                    {Number(summaryData?.sum_session_total_amount).toFixed(4)}
+                    {Number(summaryData?.sum_session_total_amount).toFixed(2)}
                     {/* <p>
                       Total Tax:{" "}
                       {(
@@ -452,7 +550,7 @@ function ClientSession() {
                 ) : userObj?.role_id === 4 ? (
                   <>
                     Total Amount :{" $"}
-                    {Number(summaryData?.sum_session_total_amount).toFixed(4)}
+                    {Number(summaryData?.sum_session_total_amount).toFixed(2)}
                     {/* <p>
                       Tax Amount :{" "}
                       {(
@@ -480,7 +578,7 @@ function ClientSession() {
                     ).toFixed(2)}`
                   ) : userObj?.role_id === 3 ? (
                     `$${Number(summaryData?.sum_session_counselor_amt).toFixed(
-                      4
+                      2
                     )}`
                   ) : (
                     ""
@@ -491,6 +589,7 @@ function ClientSession() {
 
             <CustomTab
               heading="Detail breakdown"
+              className="detail-breakdown-tab"
               value={
                 summaryLoading ? (
                   <Skeleton width={200} height={40} />
@@ -499,7 +598,7 @@ function ClientSession() {
                     <p>
                       Counsellor Share:{" $"}
                       {Number(summaryData?.sum_session_counselor_amt).toFixed(
-                        4
+                        2
                       )}{" "}
                       (
                       {
@@ -512,7 +611,7 @@ function ClientSession() {
                     {(
                       Number(summaryData?.sum_session_tenant_amt) +
                       Number(summaryData?.sum_session_system_amt)
-                    ).toFixed(4)}{" "}
+                    ).toFixed(2)}{" "}
                     (
                     {summaryData?.fee_split_management?.tenant_share_percentage}
                     %)
@@ -613,6 +712,11 @@ function ClientSession() {
           userObj?.role_id !== 3 &&
           "Add Client Session"
         }
+        secondaryButton={
+          Number(userObj?.role_id) === 2 &&
+          "Absence Management"
+        }
+        handleSecondaryAction={handleAbsenceHandling}
         selectCounselor={selectCounselor}
         handleSelectCounselor={handleSelectCounselor}
         setSelectedTenantId={setSelectedTenantId}
@@ -633,6 +737,104 @@ function ClientSession() {
           />
         </div>
       </CustomClientDetails>
+
+      {/* Absence Handling Modal */}
+      <CustomModal
+        isOpen={absenceModalOpen}
+        onRequestClose={handleAbsenceModalClose}
+        title="Absence Handling"
+        customStyles={{ maxWidth: "600px" }}
+      >
+        <AbsenceModalWrapper>
+          <div className="modal-content">
+            <div className="date-field">
+              <label>Start Date</label>
+              <div className="date-picker-wrapper">
+                <CustomDatePicker
+                  selected={startDate}
+                  onChange={(date) => setStartDate(date)}
+                  selectsStart
+                  startDate={startDate}
+                  endDate={endDate}
+                  dateFormat="yyyy-MM-dd"
+                  placeholderText="Select start date"
+                  isClearable
+                />
+              </div>
+            </div>
+
+            <div className="date-field">
+              <label>End Date (Minimum 3 weeks from start date)</label>
+              <div className="date-picker-wrapper">
+                <CustomDatePicker
+                  selected={endDate}
+                  onChange={(date) => setEndDate(date)}
+                  selectsEnd
+                  startDate={startDate}
+                  endDate={endDate}
+                  minDate={
+                    startDate
+                      ? new Date(new Date(startDate).setDate(startDate.getDate() + 20))
+                      : null
+                  }
+                  dateFormat="yyyy-MM-dd"
+                  placeholderText="Select end date (minimum 3 weeks)"
+                  isClearable
+                />
+              </div>
+            </div>
+
+            {startDate && endDate && (() => {
+              const daysDifference = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+              const minimumDays = 21;
+              const isValid = daysDifference >= minimumDays;
+              
+              return (
+                <div className={`date-range-info ${!isValid ? 'date-range-warning' : ''}`}>
+                  <p className="info-text">
+                    <span>📅</span>
+                    <span>
+                      Selected range: {startDate.toLocaleDateString()} to {endDate.toLocaleDateString()}
+                      <span> ({daysDifference} days)</span>
+                      {!isValid && (
+                        <span style={{ color: '#dc3545', fontWeight: 'bold', marginLeft: '8px' }}>
+                          ⚠️ Minimum {minimumDays} days (3 weeks) required
+                        </span>
+                      )}
+                    </span>
+                  </p>
+                </div>
+              );
+            })()}
+
+            <div className="button-group">
+              <button
+                className="cancel-button"
+                onClick={handleAbsenceModalClose}
+              >
+                Cancel
+              </button>
+              <button
+                className="submit-button"
+                onClick={handleAbsenceSubmit}
+                disabled={!startDate || !endDate}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </AbsenceModalWrapper>
+      </CustomModal>
+
+      <ConfirmationModal
+        isOpen={notificationModalOpen}
+        onClose={() => handleNotificationConfirm(false)}
+        content="Notify Admin/Supplier of Therapist Absence?"
+        affirmativeAction="Yes"
+        discardAction="No"
+        handleAffirmativeAction={() => handleNotificationConfirm(true)}
+        loading={absenceLoading}
+      />
     </ClientSessionWrapper>
   );
 }

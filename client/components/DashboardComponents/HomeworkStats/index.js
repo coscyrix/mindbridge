@@ -56,7 +56,9 @@ function OverallScore({ filterCounselorId }) {
       const firstName = client.client_first_name || "";
       const lastName = client.client_last_name || "";
       // Format as "FirstName L." (e.g., "Sam R")
-      return `${firstName} ${lastName.charAt(0)}.`;
+      // Truncate if too long to prevent overlap
+      const name = `${firstName} ${lastName.charAt(0)}.`;
+      return name.length > 15 ? `${name.substring(0, 12)}...` : name;
     });
 
     const homeworkCounts = homeworkStatsData.map(
@@ -107,9 +109,9 @@ function OverallScore({ filterCounselorId }) {
         itemHeight: 15,
       },
       grid: {
-        left: "3%",
-        right: "3%",
-        bottom: "3%",
+        left: "10%",
+        right: "5%",
+        bottom: "15%",
         top: "80px",
         containLabel: true,
       },
@@ -118,18 +120,26 @@ function OverallScore({ filterCounselorId }) {
         data: clientNames,
         axisLabel: {
           interval: 0,
-          rotate: 45,
-          fontSize: 10,
+          rotate: clientNames.length > 5 ? 30 : 0,
+          fontSize: 11,
+          margin: 12,
+          showMinLabel: true,
+          showMaxLabel: true,
         },
         name: "Client Name",
         nameLocation: "middle",
-        nameGap: 45,
+        nameGap: clientNames.length > 5 ? 70 : 35,
+        nameTextStyle: {
+          padding: clientNames.length > 5 ? [0, 0, 70, 0] : [0, 0, 35, 0],
+        },
+        axisPointer: { type: "shadow" },
       },
       yAxis: {
         type: "value",
         name: "Total Homework Assignments Sent",
         nameLocation: "middle",
-        nameGap: 50,
+        nameGap: 40,
+        nameRotate: 90,
       },
       series: [
         {
@@ -195,7 +205,7 @@ function OverallScore({ filterCounselorId }) {
         lazyUpdate={true}
         theme={"theme_name"}
         option={chartOption}
-        style={{ height: "400px", width: "100%" }}
+        style={{ height: "400px", width: "100%", marginTop: "24px" }}
       />
     </CustomCard>
   );

@@ -63,6 +63,11 @@ export const useSessionActions = (
           intake_dte: payloadDate,
         };
 
+        // Add number_of_sessions if limit_sessions toggle is on
+        if (formData?.limit_sessions && formData?.number_of_sessions) {
+          payload.number_of_sessions = Number(formData.number_of_sessions);
+        }
+
         const response = await api.post("/thrpyReq", payload);
         if (response.status === 200) {
           const { data } = response;
@@ -78,18 +83,38 @@ export const useSessionActions = (
           setShowGeneratedSession(true);
           
           // Invalidate clients cache since has_schedule status changed
-          await queryClient.invalidateQueries({ queryKey: ["clients"] });
+          await queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] === "clients",
+            refetchType: "all",
+          });
         }
       }
     } catch (error) {
-      console.error("Error generating schedule:", error);
-      toast.error(
-        error?.response?.data?.message ||
-          "Failed to generate schedule. Please try again.",
-        {
-          position: "top-right",
-        }
-      );
+      // Check if the error is due to session time collision
+      const errorMessage = error?.response?.data?.message || error?.message || "";
+      const errorMessageLower = errorMessage.toLowerCase();
+      const isTimeCollision = 
+        errorMessageLower.includes("session time conflicts") ||
+        errorMessageLower.includes("conflicts with an existing session") ||
+        errorMessageLower.includes("collision") ||
+        errorMessageLower.includes("time slot");
+      
+      const displayMessage = isTimeCollision
+        ? "Time slot taken"
+        : errorMessage || "Failed to generate schedule. Please try again.";
+      
+      // Show toast notification
+      toast.error(displayMessage, {
+        position: "top-right",
+      });
+      
+      // For time collisions, don't log as error since it's expected behavior
+      if (!isTimeCollision) {
+        console.error("Error generating schedule:", error);
+      }
+      
+      // Return to prevent further execution
+      return;
     } finally {
       setLoader(null);
     }
@@ -109,8 +134,12 @@ export const useSessionActions = (
         if (response.status === 200) {
           toast.success("Client Discharged!");
           // Invalidate clients cache since has_schedule status changed
-          await queryClient.invalidateQueries({ queryKey: ["clients"] });
-        }
+          await queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] === "clients",
+            refetchType: "all",
+          }); 
+          
+          }
       } else {
         response = await api.put(
           `thrpyReq/?req_id=${id}&role_id=${userObj?.role_id}&user_profile_id=${userObj?.user_profile_id}`,
@@ -122,7 +151,10 @@ export const useSessionActions = (
           await fetchCounselorClient(userProfileId);
           toast.success("Client session data deleted!");
           // Invalidate clients cache since has_schedule status changed
-          await queryClient.invalidateQueries({ queryKey: ["clients"] });
+          await queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] === "clients",
+            refetchType: "all",
+          });        
         }
       }
     } catch (error) {
@@ -161,6 +193,11 @@ export const useSessionActions = (
         toast.success("Session status updated successfully!");
         await getAllSessionOfClients();
         dischargeOrDelete == "Delete" && setDischargeOrDelete("Discharge");
+        // Invalidate clients cache since session status changed
+        await queryClient.invalidateQueries({
+          predicate: (query) => query.queryKey[0] === "clients",
+          refetchType: "all",
+        });
       }
     } catch (error) {
       toast.error(error?.message || "Error while updating the session status!");
@@ -192,6 +229,11 @@ export const useSessionActions = (
         setShowResetConfirmationModal(false);
         toast.success("Session status updated successfully!");
         await getAllSessionOfClients();
+        // Invalidate clients cache since session status changed
+        await queryClient.invalidateQueries({
+          predicate: (query) => query.queryKey[0] === "clients",
+          refetchType: "all",
+        });
       }
     } catch (error) {
       toast.error("Error while updating the session status!");
@@ -227,8 +269,10 @@ export const useSessionActions = (
         if (response.status === 200) {
           toast.success("Therapy request discarded!");
           // Invalidate clients cache since has_schedule status changed
-          await queryClient.invalidateQueries({ queryKey: ["clients"] });
-        }
+          await queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] === "clients",
+            refetchType: "all",
+          });        }
       }
       if (isClose) {
         setIsOpen(false);

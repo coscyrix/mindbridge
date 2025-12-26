@@ -21,7 +21,17 @@ export default class ConsentDescriptionController {
 
   async getConsentDescription(req, res) {
     try {
-      const { tenant_id, counselor_id } = req.query;
+      const { tenant_id, counselor_id, role_id } = req.query;
+      
+      // If role_id == 4 (admin), always fetch system default consent form
+      if (role_id && Number(role_id) === 4) {
+        const result = await this.consentDescriptionService.getDefaultConsentTemplate();
+        if (result && result.error) {
+          return res.status(400).json(result);
+        }
+        return res.status(200).json(result);
+      }
+      
       if (!tenant_id) {
         return res.status(400).json({ message: 'tenant_id is required', error: -1 });
       }

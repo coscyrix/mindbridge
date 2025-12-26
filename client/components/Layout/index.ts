@@ -3,10 +3,14 @@ import styles from "../../styles/Layout.module.css";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import NeedHelpWrapper from "../NeedHelp/NeedHelpWrapper";
+import { useRouter } from "next/navigation";
 
 function Layout({ children }) {
   const [showSideBar, setShowSideBar] = useState(false);
+  const router = useRouter();
+
   useEffect(() => {
+    // Note: Deactivated account check is handled by middleware.js, so no need to check here
     const mediaQuery = window.matchMedia("(min-width: 1024px)");
 
     const handleMediaChange = () => {
@@ -19,7 +23,8 @@ function Layout({ children }) {
     return () => {
       mediaQuery.removeEventListener("change", handleMediaChange);
     };
-  }, []);
+  }, [router]);
+
   return (
     <>
       <div className={styles.layout}>
@@ -28,7 +33,7 @@ function Layout({ children }) {
           <Header showSideBar={showSideBar} setShowSideBar={setShowSideBar} />
           {children}
         </main>
-       <NeedHelpWrapper/>
+        <NeedHelpWrapper />
       </div>
     </>
   );

@@ -28,10 +28,4 @@ router.get(
   AsyncWrapper(sessionController.getSessionTodayAndTomorrow),
 );
 
-router.get(
-  '/homework-stats',
-  authenticate,
-  AsyncWrapper(sessionController.getSessionsWithHomeworkStats),
-);
-
 export const sessionRouter = { baseUrl: '/api/session', router };

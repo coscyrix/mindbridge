@@ -10,6 +10,14 @@ export function middleware(request) {
   const userObj = user && JSON.parse(user);
   const admin = [3, 4].includes(userObj?.role_id);
 
+  // Check if counselor or tenant account is deactivated
+  if (userObj && (userObj.role_id === 2 || userObj.role_id === 3) && userObj.is_active === false) {
+    // Redirect to deactivated page if not already there
+    if (pathname !== "/account-deactivated") {
+      return NextResponse.redirect(new URL("/account-deactivated", request.url));
+    }
+  }
+
   const protectedRoutes = [
     "/dashboard",
     "/current-session",
@@ -23,11 +31,22 @@ export function middleware(request) {
   ];
 
   const authRoutes = ["/login", "/reset-password"];
+  
+  // Public routes that don't require authentication (e.g., client-facing pages with hash-based access)
+  const publicRoutes = ["/session-management", "/patient-forms", "/account-deactivated"];
 
   const isAuthRoute = authRoutes.includes(pathname);
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
+  const isPublicRoute = publicRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+  
+  // Allow access to public routes without authentication
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
 
   if (isProtectedRoute && (!token || accountVerified !== "true")) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -35,6 +54,7 @@ export function middleware(request) {
 
   if (isAuthRoute && token) {
     if (accountVerified === "true") {
+      // Deactivated account check is already handled above (lines 14-19)
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }

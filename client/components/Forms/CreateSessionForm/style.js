@@ -2,7 +2,7 @@ import styled from "styled-components";
 
 export const HomeworkButtonWrapper = styled.div`
   display: flex;
-  justify-content: flex-end; /* or center, or flex-start */
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 20px;
 
@@ -15,6 +15,8 @@ export const HomeworkButtonWrapper = styled.div`
     align-items: center;
   }
 `;
+
+export const AssessmentButtonWrapper = styled(HomeworkButtonWrapper)``;
 
 export const CreateSessionFormWrapper = styled.div`
   height: 100%;
@@ -109,6 +111,19 @@ export const CreateSessionFormWrapper = styled.div`
         display: flex;
         column-gap: 40px;
         row-gap: 10px;
+        flex-wrap: wrap;
+        
+        label {
+          white-space: nowrap;
+          
+          strong {
+            white-space: nowrap;
+          }
+          
+          span {
+            white-space: nowrap;
+          }
+        }
       }
     }
 
@@ -144,6 +159,49 @@ export const CreateSessionFormWrapper = styled.div`
       }
     }
 
+    .limit-sessions-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: 8px;
+
+      .toggle-section {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0;
+        
+        .toggle-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: #333;
+          margin: 0;
+          transition: color 0.2s ease;
+
+          &.disabled {
+            color: #999;
+            opacity: 0.6;
+          }
+        }
+      }
+
+      .session-number-dropdown {
+        margin-top: 0;
+        animation: fadeIn 0.2s ease-in;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     input {
       border: 1px solid #e1e1e1;
 
@@ -175,6 +233,9 @@ export const CreateSessionFormWrapper = styled.div`
 
     .select-wrapper {
       width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
       label {
         svg {
           color: #2196f3;
@@ -254,6 +315,70 @@ export const CreateSessionFormWrapper = styled.div`
     }
     .create-button {
       max-width: 100%;
+    }
+  }
+`;
+
+export const AssessmentModalWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .select-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 20px;
+
+    label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #000000;
+    }
+  }
+
+  .custom-select {
+    width: 100% !important;
+    &:focus-visible,
+    &:hover {
+      border-radius: 6px;
+      outline: 1px solid #1b6bc0;
+      box-shadow: 0px 0px 0px 1.9px #1b6bc042 inset;
+      box-shadow: 0px 0px 0px 4px #1b6bc030;
+    }
+  }
+
+  .custom-select__selected {
+    width: 100% !important;
+    border: 1px solid #e1e1e1;
+    box-shadow: 0px 1px 2px 0px #a4acb933;
+    border-radius: 6px;
+    padding: 9px 12px !important;
+  }
+
+  .button-group {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .save-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    min-width: 107px;
+    width: 100%;
+    max-width: max-content;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    background: var(--primary-button-color) !important;
+    color: white;
+    &:hover {
+      background: var(--primary-button-hover-color);
     }
   }
 `;

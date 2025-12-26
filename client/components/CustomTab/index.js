@@ -1,9 +1,9 @@
 import React from "react";
 import { CustomTabContainer } from "./style";
 
-function CustomTab({ heading, value, lines = [] }) {
+function CustomTab({ heading, value, lines = [], className }) {
   return (
-    <CustomTabContainer>
+    <CustomTabContainer className={className}>
       {(heading || value) && (
         <div className="tab-headline">
           {heading && <p className="heading">{heading}</p>}

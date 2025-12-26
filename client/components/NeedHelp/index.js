@@ -21,8 +21,8 @@ const NeedHelp = () => {
       sx={{
         position: "fixed",
         top: 10,
-        right: 100,
-        zIndex: 9999,
+        right: 10,
+        zIndex: 98,
       }}
     >
       <Box sx={{ position: "relative", display: "inline-block" }}>
@@ -56,7 +56,7 @@ const NeedHelp = () => {
             paddingY: 1,
           }}
         >
-          Need Help?
+          
         </Button>
       </Box>
     </Box>

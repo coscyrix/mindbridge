@@ -37,6 +37,17 @@ const OtpVerificationForm = ({ email }) => {
       setError("");
       const response = await otpVerication({ email, otp });
 
+      // Check if account is deactivated after OTP verification
+      const updatedUserData = Cookies.get("user");
+      if (updatedUserData) {
+        const updatedUser = JSON.parse(updatedUserData);
+        if ((updatedUser.role_id === 2 || updatedUser.role_id === 3) && updatedUser.is_active === false) {
+          setLoading(false);
+          router.push("/account-deactivated");
+          return;
+        }
+      }
+
       if(userObj?.role_id === 3&&response.status ==200  ){
         if(hasService){
           return router.push("/dashboard");

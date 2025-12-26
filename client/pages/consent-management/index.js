@@ -1,11 +1,10 @@
 import { ConsentManagementWrapper } from "../../styles/consent-management";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Switch, FormControlLabel, Typography, Box } from "@mui/material";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import dynamic from "next/dynamic";
 import CustomButton from "../../components/CustomButton";
-import CustomMultiSelect from "../../components/CustomMultiSelect";
 import { getConsentManagementSchema } from "../../utils/validationSchema/validationSchema";
 import ApiConfig from "../../config/apiConfig";
 import { api } from "../../utils/auth";
@@ -18,16 +17,14 @@ import Spinner from "../../components/common/Spinner";
 const ConsentManagement = () => {
   const [isEnabled, setIsEnabled] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [counselors, setCounselors] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const { userObj, allCounselors } = useReferenceContext();
+  const { userObj } = useReferenceContext();
   const [consentBody, setConsentBody] = useState(null);
   const methods = useForm({
     resolver: zodResolver(getConsentManagementSchema(userData)),
     defaultValues: {
       consent_Editor_Values: "",
-      counselorSelect: null,
     },
     mode: "onSubmit",
   });
@@ -37,28 +34,29 @@ const ConsentManagement = () => {
     handleSubmit,
     formState: { errors },
   } = methods;
+  
   useEffect(() => {
     if (userObj) setUserData(userObj);
-    if (allCounselors) setCounselors(allCounselors);
-  }, [userObj, allCounselors]);
-
-  useEffect(() => {
-    if (allCounselors && Array.isArray(allCounselors)) {
-      const formattedCounselors = allCounselors.map((counselor) => ({
-        label: `${counselor.user_first_name} ${counselor.user_last_name}`,
-        tenant_id: String(counselor.tenant_id),
-        value: String(counselor.user_profile_id),
-      }));
-
-      setCounselors(formattedCounselors);
-    }
-  }, [allCounselors]);
-  const getConsentBody = async () => {
+  }, [userObj]);
+  
+  const { reset } = methods;
+  
+  const getConsentBody = useCallback(async () => {
+    if (!userObj) return; // Don't fetch if userObj is not available yet
+    
     try {
+      const roleId = userObj?.role_id;
       const tenant_id = userObj?.tenant_id;
-      const result = await api.get(
-        `${ApiConfig.consentFormSubmittion.consentForm}?tenant_id=${tenant_id}`
-      );
+      
+      // If roleId == 4 (admin), always fetch system default consent form
+      let url = ApiConfig.consentFormSubmittion.consentForm;
+      if (roleId === 4) {
+        url += `?role_id=4`;
+      } else {
+        url += `?tenant_id=${tenant_id}`;
+      }
+      
+      const result = await api.get(url);
       if (result.status === 200) {
         setConsentBody(result?.data?.description);
       }
@@ -66,11 +64,11 @@ const ConsentManagement = () => {
       toast.error(error?.response?.data?.message);
       console.log(error);
     }
-  };
-  const { reset } = methods;
+  }, [userObj]);
+  
   useEffect(() => {
     getConsentBody();
-  }, []);
+  }, [getConsentBody]);
   useEffect(() => {
     if (consentBody) {
       reset((prev) => ({
@@ -87,12 +85,15 @@ const ConsentManagement = () => {
     try {
       setLoading(true);
       const isAdmin = userData?.role_id === 4;
+      
       const payload = {
         description: data.consent_Editor_Values,
-        tenant_id: isAdmin
-          ? data?.counselorSelect?.tenant_id
-          : userData?.tenant?.tenant_generated_id || "",
-        ...(!isAdmin && { counselor_id: userData?.counselor_profile_id }),
+        ...(isAdmin
+          ? { is_default_template: true } // Admins always create default template
+          : {
+              tenant_id: userData?.tenant?.tenant_generated_id || "",
+              ...(!isAdmin && { counselor_id: userData?.counselor_profile_id }),
+            }),
       };
       const response = await api.post(
         ApiConfig.consentFormSubmittion.consentForm,
@@ -100,6 +101,8 @@ const ConsentManagement = () => {
       );
       if (response.status === 201) {
         toast.success(response?.data?.message);
+        // Refetch the consent body to show the updated content
+        await getConsentBody();
       }
       setLoading(false);
     } catch (error) {
@@ -135,27 +138,6 @@ const ConsentManagement = () => {
           <div className="form-wrapper">
             <FormProvider {...methods}>
               <form className="consent-form">
-                {userData?.role_id === 4 ? (
-                  <div className="form-row">
-                    <Controller
-                      name="counselorSelect"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <CustomMultiSelect
-                          isMulti={false}
-                          label="Select Counselor"
-                          options={counselors}
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Choose Counselor"
-                          error={fieldState?.error?.message}
-                        />
-                      )}
-                    />
-                  </div>
-                ) : (
-                  <></>
-                )}
 
                 <div className="form-row">
                   <Controller

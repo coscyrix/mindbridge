@@ -4,11 +4,8 @@ import ServiceTemplate from '../models/serviceTemplate.js';
 import Service from '../models/service.js';
 import Common from '../models/common.js';
 import Form from '../models/form.js';
-import DBconn from '../config/db.config.js';
-const knex = require('knex');;
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
-
-const db = knex(DBconn.dbConn.development);
 
 export default class ServiceTemplateService {
   constructor() {

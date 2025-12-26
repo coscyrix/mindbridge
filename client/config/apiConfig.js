@@ -5,6 +5,7 @@ const ApiConfig = {
     overallSessions: "/reports/session-stats",
     reportsData: "/reports/session",
     assessmentResultsData: "/reports/user-form",
+    homeworkStats: "/reports/homework-stats",
   },
   clients: {
     getClients: "/user-profile",
@@ -15,7 +16,6 @@ const ApiConfig = {
     getSessions: "/thrpyReq",
     updateSessions: "/",
     deleteSessions: "/",
-    getHomeworkStats: "/session/homework-stats",
   },
   currentSessions: {
     getTodayAndTomorrowSessions: "/session/today",
@@ -62,6 +62,11 @@ const ApiConfig = {
   feeSplitManagment: {
     getAllfeesSplit: "/fee-split-management/configuration",
     
+  },
+  sessionManagement: {
+    getByHash: "/thrpyReq/by-hash",
+    cancelSession: "/thrpyReq/cancel",
+    rescheduleSession: "/thrpyReq/reschedule",
   },
 };
 

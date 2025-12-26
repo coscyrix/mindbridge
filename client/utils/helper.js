@@ -3,6 +3,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import relativeTime from "dayjs/plugin/relativeTime";
+import moment from "moment";
 
 export function mapFormDataToQuestions(formData, allQuestions) {
   const result = [];
@@ -86,6 +87,24 @@ export function convertUTCToLocalTime(utcTimeString) {
     date: isOnlyTime ? "" : formattedDate,
     time: formattedTime,
   };
+}
+
+export function formatDateTime(date, time) {
+  if (!date) return "N/A";
+
+  // scheduled_time always comes as "12:30:00.000Z" (UTC with milliseconds)
+  const dateTimeString = time ? `${date}T${time}` : `${date}T00:00:00Z`;
+
+  // Convert UTC to local timezone (browser's timezone)
+  const { date: localDate, time: localTime } =
+    convertUTCToLocalTime(dateTimeString);
+
+  // Format date using moment for consistent formatting
+  const dateStr = localDate
+    ? moment(localDate, "DD MMM YYYY").format("MMMM DD, YYYY")
+    : moment(date).format("MMMM DD, YYYY");
+
+  return `${dateStr}${localTime ? ` at ${localTime}` : ""}`;
 }
 
 export function convertLocalToUTCTime(req_dte, req_time) {

@@ -34,6 +34,11 @@ router.put(
 
 router.get('/', authenticate, AsyncWrapper(thrpyReqController.getThrpyReqById));
 
+// Public endpoints for client cancel/reschedule (no authentication required)
+router.get('/by-hash', AsyncWrapper(thrpyReqController.getThrpyReqByHash));
+router.put('/cancel', AsyncWrapper(thrpyReqController.cancelSessionByHash));
+router.put('/reschedule', AsyncWrapper(thrpyReqController.rescheduleSessionByHash));
+
 // Load session forms with mode selection (service-based or treatment target-based)
 router.post('/load-session-forms', authenticate, AsyncWrapper(thrpyReqController.loadSessionFormsWithMode));
 

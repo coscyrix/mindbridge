@@ -1,13 +1,10 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import DBconn from '../config/db.config.js';
-const knex = require('knex');;
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
 import Session from './session.js';
 import UserForm from './userForm.js';
 import UserTargetOutcome from './userTargetOutcome.js';
-
-const db = knex(DBconn.dbConn.development);
 
 export default class Feedback {
   //////////////////////////////////////////

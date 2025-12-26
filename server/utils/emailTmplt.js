@@ -97,6 +97,34 @@ export const accountRestoredEmail = (email, newPassword) => {
   };
 };
 
+export const absenceNotificationEmail = (email, counselorName, absencePeriod, cancelledSessionsCount, adminName) => {
+  return {
+    to: email,
+    subject: 'Therapist Absence Notification - MindBridge',
+    html: `
+      <h1>Therapist Absence Notification</h1>
+      <p>Hello ${adminName || 'Administrator'},</p>
+      <p>This is to notify you that a therapist has marked themselves as unavailable:</p>
+      <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <p><strong>Therapist:</strong> ${counselorName}</p>
+        <p><strong>Absence Period:</strong> ${absencePeriod}</p>
+        <p><strong>Rescheduled Sessions:</strong> ${cancelledSessionsCount}</p>
+      </div>
+      <p><strong>Actions Taken:</strong></p>
+      <ul>
+        <li>All active treatment blocks have been automatically paused</li>
+        <li>All sessions within the absence period have been rescheduled to after the absence ends</li>
+        <li>Session dates have been automatically recalculated based on service frequency rules</li>
+        <li>Treatment blocks will automatically resume after the absence period ends</li>
+      </ul>
+      <p>Please review the affected schedules and inform any impacted clients as necessary.</p>
+      <p>Thank you,</p>
+      <p>The MindBridge System</p>
+      ${EMAIL_DISCLAIMER}
+    `,
+  };
+};
+
 export const emailUpdateEmail = (email) => {
   return {
     to: email,
@@ -136,6 +164,22 @@ export const accountDeactivatedEmail = (email) => {
       <h1>Account Deactivated</h1>
       <p>Hello,</p>
       <p>Your account is currently deactivated. If you want to restore your account, please contact our support team.</p>
+      <p>Thank you,</p>
+      <p>The MindBridge Team</p>
+      ${EMAIL_DISCLAIMER}
+    `,
+  };
+};
+
+export const accountActivatedEmail = (email) => {
+  return {
+    to: email,
+    subject: 'Account Activated',
+    html: `
+      <h1>Account Activated</h1>
+      <p>Hello,</p>
+      <p>Your account has been activated. You can now log in to access your account.</p>
+      <p>If you have any questions or need assistance, please contact our support team.</p>
       <p>Thank you,</p>
       <p>The MindBridge Team</p>
       ${EMAIL_DISCLAIMER}
@@ -442,7 +486,7 @@ export const welcomeAccountDetailsEmail = (
 };
 
 
-export const therapyRequestDetailsEmail = (email, therapyRequest, counselorEmail = null) => {
+export const therapyRequestDetailsEmail = (email, therapyRequest, counselorEmail = null, cancelHash = null) => {
   const {
     counselor_first_name,
     counselor_last_name,
@@ -537,6 +581,18 @@ export const therapyRequestDetailsEmail = (email, therapyRequest, counselorEmail
           </tbody>
         </table>
         
+        ${cancelHash ? `
+        <div style="margin: 30px 0; text-align: center;">
+          <p style="text-align: center; margin-bottom: 15px; font-size: 14px; color: #333;">
+            Need to cancel or reschedule your session?
+          </p>
+          <a href="${process.env.BASE_URL || 'https://mindapp.mindbridge.solutions/'}session-management?hash=${encodeURIComponent(cancelHash)}" 
+             style="display: inline-block; padding: 12px 30px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
+            Manage Your Appointments
+          </a>
+        </div>
+        ` : ''}
+        
         <p style="text-align: left;">Thank you,</p>
         <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>
         ${EMAIL_DISCLAIMER}
@@ -564,6 +620,119 @@ export const dischargeEmail = (email, clientName, counselorEmail = null) => {
         <p>Thank you for trusting me to be part of your journey. I wish you continued strength, growth, and fulfillment in the path ahead.</p>
         <p style="text-align: left;">Thank you,</p>
         <p style="text-align: left;"><strong>The Counselling Team Member</strong></p>     
+        ${EMAIL_DISCLAIMER}
+      </div>
+    `,
+  };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
+};
+
+export const sessionCancellationNotificationEmail = (
+  counselorEmail,
+  counselorName,
+  clientName,
+  sessionDate,
+  sessionTime,
+  serviceName,
+  sessionFormat
+) => {
+  return {
+    to: counselorEmail,
+    subject: `Session Cancelled - ${clientName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #dc3545; margin-bottom: 20px;">Session Cancellation Notification</h2>
+        <p>Hello ${capitalizeFirstLetter(counselorName)},</p>
+        <p>This is to notify you that a client has cancelled their scheduled session:</p>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
+          <p style="margin: 8px 0;"><strong>Client:</strong> ${capitalizeFirstLetter(clientName)}</p>
+          <p style="margin: 8px 0;"><strong>Service:</strong> ${serviceName}</p>
+          <p style="margin: 8px 0;"><strong>Session Date:</strong> ${sessionDate}</p>
+          <p style="margin: 8px 0;"><strong>Session Time:</strong> ${sessionTime}</p>
+          <p style="margin: 8px 0;"><strong>Session Format:</strong> ${sessionFormat}</p>
+          <p style="margin: 8px 0; color: #dc3545;"><strong>Status:</strong> CANCELLED</p>
+        </div>
+        <p>The session has been marked as cancelled in the system. Please update your calendar accordingly.</p>
+        <p>If you have any questions or concerns, please contact the client directly.</p>
+        <p style="margin-top: 30px;">Thank you,</p>
+        <p><strong>The MindBridge Team</strong></p>
+        ${EMAIL_DISCLAIMER}
+      </div>
+    `,
+  };
+};
+
+export const sessionRescheduleNotificationEmail = (
+  counselorEmail,
+  counselorName,
+  clientName,
+  oldSessionDate,
+  oldSessionTime,
+  newSessionDate,
+  newSessionTime,
+  serviceName,
+  sessionFormat
+) => {
+  return {
+    to: counselorEmail,
+    subject: `Session Rescheduled - ${clientName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #007bff; margin-bottom: 20px;">Session Reschedule Notification</h2>
+        <p>Hello ${capitalizeFirstLetter(counselorName)},</p>
+        <p>This is to notify you that a client has rescheduled their session:</p>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 8px 0;"><strong>Client:</strong> ${capitalizeFirstLetter(clientName)}</p>
+          <p style="margin: 8px 0;"><strong>Service:</strong> ${serviceName}</p>
+          <p style="margin: 8px 0;"><strong>Session Format:</strong> ${sessionFormat}</p>
+        </div>
+        <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
+          <p style="margin: 5px 0; font-weight: bold; color: #856404;">Previous Session:</p>
+          <p style="margin: 5px 0;"><strong>Date:</strong> ${oldSessionDate}</p>
+          <p style="margin: 5px 0;"><strong>Time:</strong> ${oldSessionTime}</p>
+        </div>
+        <div style="background-color: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745;">
+          <p style="margin: 5px 0; font-weight: bold; color: #155724;">New Session:</p>
+          <p style="margin: 5px 0;"><strong>Date:</strong> ${newSessionDate}</p>
+          <p style="margin: 5px 0;"><strong>Time:</strong> ${newSessionTime}</p>
+        </div>
+        <p>The session has been updated in the system. Please update your calendar accordingly.</p>
+        <p>If you have any questions or concerns, please contact the client directly.</p>
+        <p style="margin-top: 30px;">Thank you,</p>
+        <p><strong>The MindBridge Team</strong></p>
+        ${EMAIL_DISCLAIMER}
+      </div>
+    `,
+  };
+};
+
+export const clientSessionRescheduleEmail = (
+  clientEmail,
+  clientName,
+  newSessionDateTime,
+  secureLink,
+  counselorEmail = null
+) => {
+  const emailObj = {
+    to: clientEmail,
+    subject: 'Session Rescheduled - Vapendama Counselling Services',
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>Hello ${capitalizeFirstLetter(clientName)},</p>
+        <p>Your counsellor needs to reschedule your session on <strong>${newSessionDateTime}</strong>. We apologize for the inconvenience — this change was initiated by our care team, and no penalty applies.</p>
+        <p style="margin: 20px 0;">
+          <a href="${secureLink}" style="background-color: #007bff; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Manage your schedule here
+          </a>
+        </p>
+        <p>Reply to this message if you'd like help rescheduling.</p>
+        <p style="margin-top: 30px;">— Vapendama Counselling Services</p>
         ${EMAIL_DISCLAIMER}
       </div>
     `,

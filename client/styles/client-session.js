@@ -273,3 +273,164 @@ export const ClientSessionWrapper = styled.div`
     }
   }
 `;
+
+export const AbsenceModalWrapper = styled.div`
+  padding: 0;
+  width: 100%;
+
+  .modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .date-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+
+    label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #000000;
+      margin-bottom: 0;
+    }
+
+    .date-picker-wrapper {
+      width: 100%;
+      
+      .react-datepicker-wrapper {
+        width: 100%;
+        
+        input {
+          width: 100%;
+          height: 44px;
+          padding: 11px 16px;
+          border: 1px solid #e1e1e1;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 400;
+          color: #000000;
+          background: #ffffff;
+          box-shadow: 0px 1px 2px 0px #a4acb933;
+          transition: all 0.2s ease;
+          outline: none;
+          box-sizing: border-box;
+
+          &::placeholder {
+            color: #000000;
+            opacity: 0.3;
+          }
+
+          &:focus,
+          &:hover {
+            border-color: #1b6bc0;
+            box-shadow: 0px 0px 0px 1.9px #1b6bc042 inset,
+                        0px 0px 0px 4px #1b6bc030;
+            outline: none;
+          }
+
+          &:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            opacity: 0.6;
+          }
+        }
+      }
+    }
+  }
+
+  .date-range-info {
+    margin-top: -8px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #6b7280;
+    
+    &.date-range-warning {
+      background-color: #fff3cd;
+      border-color: #ffc107;
+      color: #856404;
+    }
+    
+    .info-text {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+    }
+  }
+
+  .button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+    padding-top: 20px;
+    border-top: 1px solid #e1e1e1;
+
+    @media screen and (max-width: 480px) {
+      flex-direction: column-reverse;
+      
+      button {
+        width: 100%;
+      }
+    }
+  }
+
+  .cancel-button {
+    padding: 10px 20px;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 107px;
+    box-shadow: 0px 1px 2px 0px #a4acb933;
+
+    &:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  .submit-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    background: var(--primary-button-color, #1b6bc0);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 107px;
+    box-shadow: 0px 1px 2px 0px #a4acb933;
+
+    &:hover {
+      background: var(--primary-button-hover-color, #155a9e);
+      box-shadow: 0px 2px 4px 0px #a4acb966;
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #9ca3af;
+    }
+  }
+`;

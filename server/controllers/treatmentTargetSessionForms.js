@@ -14,6 +14,44 @@ export default class TreatmentTargetSessionFormsController {
   //////////////////////////////////////////
 
   /**
+   * Manually attach treatment target session forms for a specific session
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async createManualTreatmentTargetSessionForms(req, res) {
+    try {
+      const data = req.body || {};
+
+      // Get tenant ID from token if available
+      if (req.decoded && req.decoded.tenant_id && !data.tenant_id) {
+        data.tenant_id = req.decoded.tenant_id;
+      }
+
+      const treatmentTargetSessionFormsService =
+        new TreatmentTargetSessionFormsService();
+      const result =
+        await treatmentTargetSessionFormsService.createManualTreatmentTargetSessionForms(
+          data
+        );
+
+      if (result.error) {
+        res.status(400).json(result);
+        return;
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: "Internal server error",
+        error: -1,
+      });
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
    * Get treatment target session forms by request ID
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object

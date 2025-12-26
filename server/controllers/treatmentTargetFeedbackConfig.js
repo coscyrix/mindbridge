@@ -1,12 +1,16 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 import TreatmentTargetFeedbackConfig from '../models/treatmentTargetFeedbackConfig.js';
+import TreatmentTargetFeedbackConfigService from '../services/treatmentTargetFeedbackConfig.js';
+import Common from '../models/common.js';
 import logger from '../config/winston.js';
 
 export default class TreatmentTargetFeedbackConfigController {
   //////////////////////////////////////////
   constructor() {
     this.treatmentTargetFeedbackConfig = new TreatmentTargetFeedbackConfig();
+    this.treatmentTargetFeedbackConfigService = new TreatmentTargetFeedbackConfigService();
+    this.common = new Common();
   }
   //////////////////////////////////////////
 
@@ -408,8 +412,7 @@ export default class TreatmentTargetFeedbackConfigController {
       });
       data.tenant_id = Number(tenantId[0]?.tenant_id);
 
-      const treatmentTargetFeedbackConfigService = new TreatmentTargetFeedbackConfigService();
-      const result = await treatmentTargetFeedbackConfigService.loadSessionFormsByTreatmentTarget(data);
+      const result = await this.treatmentTargetFeedbackConfigService.loadSessionFormsByTreatmentTarget(data);
 
       if (result.error) {
         res.status(400).json(result);
@@ -418,7 +421,7 @@ export default class TreatmentTargetFeedbackConfigController {
 
       res.status(200).json(result);
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       res.status(500).json({
         message: 'Internal server error',
         error: -1

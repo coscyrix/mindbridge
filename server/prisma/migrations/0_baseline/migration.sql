@@ -1,0 +1,7 @@
+-- Baseline Migration
+-- 
+-- This migration represents the current state of the database
+-- which was created using raw SQL migrations.
+-- 
+-- No changes are made here - this is just to establish
+-- Prisma migration history for future migrations.

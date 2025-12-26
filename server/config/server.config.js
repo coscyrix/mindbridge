@@ -307,9 +307,8 @@ export default class ServerConfig {
         this.console.info('🔓 SSL disabled via DISABLE_SSL environment variable');
       }
 
-      const { default: knex } = await import('knex');
-      const { default: DbConfig } = await import('./db.config.js');
-      const db = knex(DbConfig.dbConn.development);
+      // Use shared database instance
+      const { default: db, destroyDb } = await import('../utils/db.js');
       
       // Test database connection
       try {
@@ -326,7 +325,11 @@ export default class ServerConfig {
         throw error;
       }
       
+      // Store db instance in app.locals for backward compatibility
       this.app.locals.knex = db;
+      
+      // Store destroyDb function for graceful shutdown
+      this.app.locals.destroyDb = destroyDb;
 
       // Create server based on SSL configuration
       let server;
@@ -341,12 +344,36 @@ export default class ServerConfig {
       }
 
       // Add graceful shutdown handling
-      const gracefulShutdown = (signal) => {
+      const gracefulShutdown = async (signal) => {
         this.console.info(`Received ${signal}. Starting graceful shutdown...`);
-        server.close(() => {
+        
+        // Close server first
+        server.close(async () => {
           this.console.info('Server closed.');
+          
+          // Then close database connections (both Knex and Prisma)
+          try {
+            // Disconnect Knex connection pool
+            const { destroyDb } = await import('../utils/db.js');
+            await destroyDb();
+            this.console.info('Knex connections closed.');
+            
+            // Disconnect Prisma Client
+            const prisma = await import('../utils/prisma.js');
+            await prisma.default.$disconnect();
+            this.console.info('Prisma connections closed.');
+          } catch (dbError) {
+            this.console.error('Error closing database connections:', dbError);
+          }
+          
           process.exit(0);
         });
+        
+        // Force shutdown after timeout
+        setTimeout(() => {
+          this.console.error('Forced shutdown after timeout');
+          process.exit(1);
+        }, 10000);
       };
 
       // Listen for shutdown signals

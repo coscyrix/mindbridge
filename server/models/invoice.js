@@ -2,11 +2,8 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import DBconn from '../config/db.config.js';
-const knex = require('knex');;
+import db from '../utils/db.js';
 import FeeSplitManagement from './feeSplitManagement.js';
-
-const db = knex(DBconn.dbConn.development);
 
 export default class Invoice {
   constructor() {
@@ -170,7 +167,8 @@ export default class Invoice {
             'session_status',
             'DISCHARGED',
           );
-        });        
+        })
+        .whereNotIn('session_status', ['CANCELLED', 'NO-SHOW', 'NO_SHOW']);        
       // Apply filters for all roles including role_id=4
       if (data.counselor_id) {
         query.andWhere('counselor_id', Number(data.counselor_id));

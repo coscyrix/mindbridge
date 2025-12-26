@@ -13,6 +13,12 @@ export const CreateSessionLayoutWrapper = styled.div`
   z-index: 99;
 
  
+  .button-group {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 20px;
+  }
 
   .heading {
     position: absolute;

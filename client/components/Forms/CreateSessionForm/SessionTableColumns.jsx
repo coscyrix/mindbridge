@@ -33,13 +33,30 @@ export const getSessionTableColumns = ({
     {
       name: "Session Date",
       selector: (row) => {
-        if (!row.intake_date) return "";
-        return convertUTCToLocalTime(
-                              `${
-                                row.req_dte_not_formatted ||
-                                row?.intake_date
-                              }T${row.req_time || row?.scheduled_time}`
-                            ).date;
+        // Always prioritize intake_date
+        if (row?.intake_date) {
+          return convertUTCToLocalTime(
+            `${row.intake_date}T${row.req_time || "00:00:00"}`
+          ).date;
+        }
+        
+        // Fallback to scheduled_time if intake_date is not available
+        if (row?.scheduled_time) {
+          const scheduledTimeStr = String(row.scheduled_time);
+          if (scheduledTimeStr.includes("T") || scheduledTimeStr.includes(" ")) {
+            const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
+            return convertUTCToLocalTime(normalizedDateTime).date;
+          }
+        }
+        
+        // Last fallback to req_dte_not_formatted
+        if (row?.req_dte_not_formatted) {
+          return convertUTCToLocalTime(
+            `${row.req_dte_not_formatted}T${row.req_time || "00:00:00"}`
+          ).date;
+        }
+        
+        return "";
       },
       selectorId: "intake_date",
       maxWidth: "120px",
@@ -47,23 +64,35 @@ export const getSessionTableColumns = ({
     {
       name: "Session Time",
       selector: (row) => {
-        if (row?.scheduled_time && row?.intake_date) {
-          return convertUTCToLocalTime(
-            `${row.intake_date}T${row.scheduled_time}`
-          ).time;
-        } else if (row?.scheduled_time) {
-          // If only scheduled_time is available without date, convert it directly
-          return convertUTCToLocalTime(row.scheduled_time).time;
-        } else {
-          const intakeTime = row?.intake_date
-            ? new Date(row.intake_date).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })
-            : "N/A";
-          return intakeTime;
+        if (row?.scheduled_time) {
+          const scheduledTimeStr = String(row.scheduled_time);
+          if (scheduledTimeStr.includes("T") || scheduledTimeStr.includes(" ")) {
+            const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
+            return convertUTCToLocalTime(normalizedDateTime).time;
+          }
+          if (row?.intake_date) {
+            return convertUTCToLocalTime(
+              `${row.intake_date}T${row.scheduled_time}`
+            ).time;
+          }
         }
+        
+        if (row?.intake_date && row?.req_time) {
+          return convertUTCToLocalTime(
+            `${row.intake_date}T${row.req_time}`
+          ).time;
+        }
+        
+        if (row?.intake_date) {
+          const intakeTime = new Date(row.intake_date).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          });
+          return intakeTime !== "Invalid Date" ? intakeTime : "N/A";
+        }
+        
+        return "N/A";
       },
       selectorId: "session_time",
       maxWidth: "120px",
@@ -79,11 +108,19 @@ export const getSessionTableColumns = ({
       minWidth: "220px",
       cell: (row, rowIndex) => {
         const sessionStatus = row?.session_status?.toLowerCase();
+        const isInactive = sessionStatus === "inactive";
         const showNoShowButtonDisplay =
           initialData &&
           sessionStatus != "show" &&
           sessionStatus != "no-show" &&
-          sessionStatus != "discharged";
+          sessionStatus != "discharged" &&
+          sessionStatus != "cancelled" &&
+          !isInactive;
+
+        // Don't show action buttons for inactive sessions
+        if (isInactive) {
+          return <div>—</div>;
+        }
 
         return (
           <div style={{ cursor: "pointer" }}>
@@ -155,7 +192,8 @@ export const getSessionTableColumns = ({
             )}
             {initialData &&
               [3, 4].includes(userObj?.role_id) &&
-              isWithin24Hours(row.intake_date, row.scheduled_time) && (
+              isWithin24Hours(row.intake_date, row.scheduled_time) &&
+              !isInactive && (
                 <CustomButton
                   type="button"
                   title="Reset"
@@ -168,7 +206,7 @@ export const getSessionTableColumns = ({
                   disabled={showNoShowButtonDisplay}
                 />
               )}
-            {!initialData && (
+            {!initialData && !isInactive && (
               <CustomButton
                 type="button"
                 title="Edit"
@@ -282,6 +320,7 @@ export const getSessionTableColumns = ({
         selector: (row) => row.notes,
         sortable: true,
         cell: (row) => {
+          const notesCount = getNotesCount(row) || 0;
           return (
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div
@@ -305,30 +344,33 @@ export const getSessionTableColumns = ({
                     display: "flex",
                     alignItems: "center",
                     position: "relative",
+                    whiteSpace: "nowrap",
                   }}
                   onClick={() => handleViewNotes(row)}
                 >
                   Notes
                 </button>
-                {getNotesCount(row) > 0 && (
+                {notesCount > 0 && (
                   <div
                     style={{
                       position: "absolute",
-                      top: "-5px",
-                      right: "-5px",
-                      backgroundColor: "red",
+                      top: "-8px",
+                      right: "-8px",
+                      backgroundColor: "#dc3545",
                       color: "white",
                       fontSize: "10px",
                       fontWeight: "bold",
                       borderRadius: "50%",
-                      width: "16px",
-                      height: "16px",
+                      width: "18px",
+                      height: "18px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                      zIndex: 1,
                     }}
                   >
-                    {getNotesCount(row)}
+                    {notesCount > 99 ? "99+" : notesCount}
                   </div>
                 )}
               </div>
@@ -338,7 +380,7 @@ export const getSessionTableColumns = ({
                 customClass="add-notes"
                 title="Add Notes"
                 onClick={() => {
-                  handleNoteOpen(row, "add");
+                  handleNoteOpen(row);
                 }}
               />
             </div>

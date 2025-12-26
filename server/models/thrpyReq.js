@@ -2,12 +2,10 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const knex = require('knex');
+import db from '../utils/db.js';
 import dotenv from 'dotenv';
 import logger from '../config/winston.js';
-import DBconn from '../config/db.config.js';
-
-const db = knex(DBconn.dbConn.development);
+import prisma from '../utils/prisma.js';
 import Session from './session.js';
 import Service from './service.js';
 import UserProfile from './userProfile.js';
@@ -19,7 +17,10 @@ import { capitalizeFirstLetter, splitIsoDatetime } from '../utils/common.js';
 import {
   therapyRequestDetailsEmail,
   dischargeEmail,
+  sessionCancellationNotificationEmail,
+  sessionRescheduleNotificationEmail,
 } from '../utils/emailTmplt.js';
+import { formatDateTimeInTimezone, getTimezoneByCountryCode, getDefaultTimezone } from '../utils/timezone.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import UserTargetOutcome from './userTargetOutcome.js';
 
@@ -39,6 +40,7 @@ export default class ThrpyReq {
     this.common = new Common();
     this.userTargetOutcome = new UserTargetOutcome();
   }
+
 
   // Helper function to calculate session amounts
   calculateSessionAmounts(totalInvoice, refFees, serviceGst) {
@@ -258,26 +260,7 @@ export default class ThrpyReq {
         return { message: 'Error getting reference fees', error: -1 };
       }
 
-      // Check if the intake date is in the past
-      // if (req_dte < currentDte) {
-      //   logger.warn('Intake date is in the past');
-      //   return { message: 'Intake date is in the past', error: -1 };
-      // }
 
-      // Check if the client has an active therapy request with the same service and same counselor
-      const checkThrpyReqActiveData = {
-        counselor_id: data.counselor_id,
-        client_id: data.client_id,
-        service_id: data.service_id,
-      };
-
-      const checkThrpyReq = await this.checkThrpyReqActive(
-        checkThrpyReqActiveData,
-      );
-
-      if (checkThrpyReq.error) {
-        return checkThrpyReq;
-      }
 
       // Parse svc_report_formula if needed
       if (svc.svc_report_formula_typ === 'standard') {
@@ -294,26 +277,39 @@ export default class ThrpyReq {
         }
       }
 
+      // Convert session_format_id from string/number "1"/"2" or 1/2 to Prisma enum values
+      const sessionFormatId = 
+        data.session_format_id === "1" || data.session_format_id === 1 ? "ONLINE" :
+        data.session_format_id === "2" || data.session_format_id === 2 ? "IN_PERSON" :
+        data.session_format_id === "ONLINE" || data.session_format_id === "IN_PERSON" || data.session_format_id === "IN-PERSON" 
+          ? data.session_format_id === "IN-PERSON" ? "IN_PERSON" : data.session_format_id
+          : "ONLINE"; // Default to ONLINE
+
+      // Generate a unique hash for cancel/reschedule functionality
+      const crypto = require('crypto');
+      const hashData = `${data.counselor_id}-${data.client_id}-${data.service_id}-${Date.now()}`;
+      const cancelHash = crypto.createHash('sha256').update(hashData).digest('base64url');
+
       // Prepare the therapy request object
       const tmpThrpyReq = {
         counselor_id: data.counselor_id,
         client_id: data.client_id,
         service_id: data.service_id,
-        session_format_id: data.session_format_id,
+        session_format_id: sessionFormatId,
         req_dte: req_dte,
         req_time: req_time,
         session_desc: svc.service_code,
         tenant_id: data.tenant_id,
         treatment_target: treatmentTarget, // Add treatment target to therapy request
+        cancel_hash: cancelHash, // Add cancel/reschedule hash
       };
 
-      // Insert the therapy request into the database
-      const postThrpyReq = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('thrpy_req')
-        .insert(tmpThrpyReq);
+      // Insert the therapy request into the database using Prisma
+      const postThrpyReq = await prisma.thrpy_req.create({
+        data: tmpThrpyReq,
+      });
 
-      if (!postThrpyReq) {
+      if (!postThrpyReq || !postThrpyReq.req_id) {
         logger.error('Error creating therapy request');
         return { message: 'Error creating therapy request', error: -1 };
       }
@@ -330,6 +326,9 @@ export default class ThrpyReq {
 
         // Initialize currentDate using UTC to avoid timezone issues
         let currentDate = new Date(`${req_dte}T00:00:00Z`);
+
+        // Determine the active session limit
+        const activeSessionLimit = data.number_of_sessions ? Number(data.number_of_sessions) : svc.nbr_of_sessions;
 
         // For the first session, ensure it's not on a weekend
         while (
@@ -359,7 +358,7 @@ export default class ThrpyReq {
           // Prepare the session object
           const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
           const tmpSession = {
-            thrpy_req_id: postThrpyReq[0],
+            thrpy_req_id: postThrpyReq.req_id,
             service_id: data.service_id,
             intake_date: intakeDate,
             scheduled_time: req_time,
@@ -369,6 +368,12 @@ export default class ThrpyReq {
             tenant_id: data.tenant_id,
             ...sessionAmounts
           };
+
+          // Set session_status to INACTIVE if session number exceeds the limit
+          // Only apply to regular sessions (not reports or discharge sessions)
+          if (i + 1 > activeSessionLimit) {
+            tmpSession.session_status = 'INACTIVE';
+          }
 
           // Debug logging for session creation
           console.log(`🔍 DEBUG: Creating session ${i + 1}/${svc.nbr_of_sessions}:`, {
@@ -442,7 +447,7 @@ export default class ThrpyReq {
               // Create a NEW report session object (don't modify the existing one)
               const reportSessionAmounts = this.calculateSessionAmounts(Number(reportService.rec[0].total_invoice), ref_fees[0], Number(reportService.rec[0].gst));
               const reportSession = {
-                thrpy_req_id: postThrpyReq[0],
+                thrpy_req_id: postThrpyReq.req_id,
                 service_id: reportService.rec[0].service_id,
                 intake_date: intakeDate,
                 scheduled_time: req_time,
@@ -490,7 +495,7 @@ export default class ThrpyReq {
         // Prepare the discharge session object
         const dischargeSessionAmounts = this.calculateSessionAmounts(Number(drSvc.total_invoice), ref_fees[0], Number(drSvc.gst));
         const dischargeSession = {
-          thrpy_req_id: postThrpyReq[0],
+          thrpy_req_id: postThrpyReq.req_id,
           service_id: drSvc.service_id,
           intake_date: dischargeDate,
           scheduled_time: req_time,
@@ -558,6 +563,9 @@ export default class ThrpyReq {
         // Initialize currentDate using UTC to avoid timezone issues
         let currentDate = new Date(`${req_dte}T00:00:00Z`);
 
+        // Determine the active session limit
+        const activeSessionLimit = data.number_of_sessions ? Number(data.number_of_sessions) : svc.nbr_of_sessions;
+
         for (let i = 0; i < svc.nbr_of_sessions; i++) {
           if (i !== 0) {
             let daysToAdd = svcFormula[i - 1];
@@ -591,7 +599,7 @@ export default class ThrpyReq {
           // Prepare the session object
           const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
           const tmpSession = {
-            thrpy_req_id: postThrpyReq[0],
+            thrpy_req_id: postThrpyReq.req_id,
             service_id: data.service_id,
             intake_date: intakeDate,
             scheduled_time: req_time,
@@ -601,6 +609,12 @@ export default class ThrpyReq {
             tenant_id: data.tenant_id,
             ...sessionAmounts
           };
+
+          // Set session_status to INACTIVE if session number exceeds the limit
+          // Only apply to regular sessions (not reports or discharge sessions)
+          if (i + 1 > activeSessionLimit) {
+            tmpSession.session_status = 'INACTIVE';
+          }
 
           console.log('🔍 DEBUG: Created session object (days apart):', {
             session_number: i + 1,
@@ -667,7 +681,7 @@ export default class ThrpyReq {
               // Create a NEW report session object (don't modify the existing one)
               const reportSessionAmounts = this.calculateSessionAmounts(Number(reportService.rec[0].total_invoice), ref_fees[0], Number(reportService.rec[0].gst));
               const reportSession = {
-                thrpy_req_id: postThrpyReq[0],
+                thrpy_req_id: postThrpyReq.req_id,
                 service_id: reportService.rec[0].service_id,
                 intake_date: intakeDate,
                 scheduled_time: req_time,
@@ -713,7 +727,7 @@ export default class ThrpyReq {
         // Prepare the discharge session object
         const dischargeSessionAmounts = this.calculateSessionAmounts(Number(drSvc.total_invoice), ref_fees[0], Number(drSvc.gst));
         const dischargeSession = {
-          thrpy_req_id: postThrpyReq[0],
+          thrpy_req_id: postThrpyReq.req_id,
           service_id: drSvc.service_id,
           intake_date: dischargeDate,
           scheduled_time: req_time,
@@ -770,8 +784,9 @@ export default class ThrpyReq {
         const postSessionResult = await this.session.postSession(sessionData);
         if (!postSessionResult || postSessionResult.error) {
           logger.error('Error posting session:', postSessionResult?.message || 'Unknown error');
+          console.error('Error posting session:', postSessionResult?.colliding_session || 'Unknown error');
           return {
-            message: 'Error posting session arr',
+            message: postSessionResult?.message || 'Unknown error',
             error: -1,
           };
         }
@@ -779,9 +794,10 @@ export default class ThrpyReq {
 
       // Load forms using the new mode-based system
       const loadForms = await this.loadSessionFormsWithMode({
-        req_id: postThrpyReq[0],
+        req_id: postThrpyReq.req_id,
         tenant_id: data.tenant_id,
         mode: "treatment_target",
+        number_of_sessions: data.number_of_sessions, // Pass number_of_sessions for Priority 1 matching
         treatment_target: treatmentTarget,
       });
 
@@ -793,7 +809,7 @@ export default class ThrpyReq {
       }
 
       const ThrpyReq = await this.getThrpyReqById({
-        req_id: postThrpyReq[0],
+        req_id: postThrpyReq.req_id,
       });
 
       if (!ThrpyReq) {
@@ -805,6 +821,7 @@ export default class ThrpyReq {
       const thrpyReqEmlTmplt = this.emailTmplt.sendThrpyReqDetailsEmail({
         email: recClient.rec[0].email,
         big_thrpy_req_obj: ThrpyReq[0],
+        cancel_hash: postThrpyReq.cancel_hash, // Pass the cancel hash to email template
       });
 
       // Return a success message
@@ -1308,15 +1325,11 @@ export default class ThrpyReq {
       };
 
       orderSessionObj(rec);
-
-      // Handle form mode selection based on environment variable
-      const formMode = process.env.FORM_MODE || 'auto';
-      
       if (rec && Array.isArray(rec)) {
         for (const thrpyReq of rec) {
           if (thrpyReq.session_obj && Array.isArray(thrpyReq.session_obj)) {
             for (const session of thrpyReq.session_obj) {
-              // Check if this session has treatment target forms
+              // Get treatment target forms for this session
               const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
               const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
               
@@ -1325,42 +1338,15 @@ export default class ThrpyReq {
                 tenant_id: thrpyReq.tenant_id
               });
               
-              const hasTreatmentTargetForms = !treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0;
-              
-              // Determine form mode based on environment variable
-              let sessionFormMode = 'service'; // default
-              let sessionFormsArray = session.forms_array || [];
-              
-              if (formMode === 'auto') {
-                // Auto mode: treatment target forms take precedence if they exist
-                if (hasTreatmentTargetForms) {
-                  sessionFormMode = 'treatment_target';
-                  sessionFormsArray = treatmentTargetForms.rec.map(form => form.form_id);
-                } else {
-                  sessionFormMode = 'service';
-                  // Keep existing service-based forms
-                }
-              } else if (formMode === 'treatment_target') {
-                // Force treatment target mode
-                if (hasTreatmentTargetForms) {
-                  sessionFormMode = 'treatment_target';
-                  sessionFormsArray = treatmentTargetForms.rec.map(form => form.form_id);
-                } else {
-                  sessionFormMode = 'service';
-                  // Fallback to service-based forms if no treatment target forms exist
-                }
-              } else if (formMode === 'service') {
-                // Force service mode
-                sessionFormMode = 'service';
-                // Get original service-based forms for this session
-                const serviceIdForSession = session.service_id || thrpyReq.service_id;
-                const originalServiceForms = await this.getOriginalServiceForms(session.session_id, serviceIdForSession);
-                sessionFormsArray = originalServiceForms.length > 0 ? originalServiceForms : session.forms_array || [];
+              // Update session with treatment target forms
+              if (!treatmentTargetForms.error && treatmentTargetForms.rec && treatmentTargetForms.rec.length > 0) {
+                session.forms_array = treatmentTargetForms.rec.map(form => form.form_id);
+                session.form_mode = 'treatment_target';
+              } else {
+                // If no treatment target forms exist, use empty array
+                session.forms_array = [];
+                session.form_mode = 'treatment_target';
               }
-              
-              // Update session with determined form mode
-              session.forms_array = sessionFormsArray;
-              session.form_mode = sessionFormMode;
             }
           }
         }
@@ -1802,6 +1788,539 @@ export default class ThrpyReq {
 
   //////////////////////////////////////////
 
+  async getThrpyReqByHash(cancel_hash) {
+    try {
+      // Get thryp request by hash using Prisma
+      const thrpyReq = await prisma.thrpy_req.findFirst({
+        where: {
+          cancel_hash: cancel_hash,
+          status_yn: 'y',
+        },
+        include: {
+          service: true,
+          user_profile_thrpy_req_counselor_idTouser_profile: {
+            select: {
+              user_profile_id: true,
+              user_first_name: true,
+              user_last_name: true,
+              user_phone_nbr: true,
+              country_code: true,
+            },
+          },
+          user_profile_thrpy_req_client_idTouser_profile: {
+            select: {
+              user_profile_id: true,
+              user_first_name: true,
+              user_last_name: true,
+              user_phone_nbr: true,
+              country_code: true,
+            },
+          },
+        },
+      });
+
+      if (!thrpyReq) {
+        return { message: 'Therapy request not found or invalid hash', error: -1 };
+      }
+
+      // Get sessions for this thryp request
+      const sessionsResult = await prisma.session.findMany({
+        where: {
+          thrpy_req_id: thrpyReq.req_id,
+          status_yn: 'y',
+        },
+      });
+
+      console.log('thrpyReq', thrpyReq.req_id);
+      console.log('sessionsResult', sessionsResult);
+
+      // Format the response similar to getThrpyReqById
+      // Convert BigInt values to strings to avoid serialization errors
+      const formattedThrpyReq = {
+        req_id: thrpyReq.req_id,
+        counselor_id: thrpyReq.counselor_id,
+        client_id: thrpyReq.client_id,
+        service_id: thrpyReq.service_id,
+        session_format_id: thrpyReq.session_format_id,
+        req_dte: thrpyReq.req_dte,
+        req_time: thrpyReq.req_time,
+        session_desc: thrpyReq.session_desc,
+        status_yn: thrpyReq.status_yn,
+        thrpy_status: thrpyReq.thrpy_status,
+        created_at: thrpyReq.created_at,
+        updated_at: thrpyReq.updated_at,
+        tenant_id: thrpyReq.tenant_id,
+        treatment_target: thrpyReq.treatment_target,
+        cancel_hash: thrpyReq.cancel_hash,
+        counselor_first_name: thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile?.user_first_name,
+        counselor_last_name: thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile?.user_last_name,
+        counselor_phone_nbr: thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile?.user_phone_nbr 
+          ? String(thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile.user_phone_nbr) 
+          : null,
+        counselor_country_code: thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile?.country_code,
+        client_first_name: thrpyReq.user_profile_thrpy_req_client_idTouser_profile?.user_first_name,
+        client_last_name: thrpyReq.user_profile_thrpy_req_client_idTouser_profile?.user_last_name,
+        client_phone_nbr: thrpyReq.user_profile_thrpy_req_client_idTouser_profile?.user_phone_nbr 
+          ? String(thrpyReq.user_profile_thrpy_req_client_idTouser_profile.user_phone_nbr) 
+          : null,
+        client_country_code: thrpyReq.user_profile_thrpy_req_client_idTouser_profile?.country_code,
+        service_name: thrpyReq.service?.service_name,
+        service_code: thrpyReq.service?.service_code,
+        session_obj: sessionsResult && !sessionsResult.error ? sessionsResult : [],
+      };
+
+      return { message: 'Therapy request found', rec: [formattedThrpyReq] };
+    } catch (error) {
+      console.error('Error getting therapy request by hash:', error);
+      logger.error(error);
+      return { message: 'Error getting therapy request by hash', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async cancelSessionByHash(session_id, cancel_hash, cancellation_reason) {
+    try {
+      // Verify hash matches the thryp request
+      const thrpyReq = await prisma.thrpy_req.findFirst({
+        where: {
+          cancel_hash: cancel_hash,
+          status_yn: 'y',
+        },
+        include: {
+          session: {
+            where: {
+              session_id: session_id,
+              status_yn: 'y',
+            },
+          },
+          service: true,
+          user_profile_thrpy_req_counselor_idTouser_profile: {
+            select: {
+              user_profile_id: true,
+              user_first_name: true,
+              user_last_name: true,
+              user_id: true,
+              country_code: true,
+            },
+          },
+          user_profile_thrpy_req_client_idTouser_profile: {
+            select: {
+              user_first_name: true,
+              user_last_name: true,
+            },
+          },
+        },
+      });
+
+      if (!thrpyReq) {
+        return { message: 'Invalid hash or therapy request not found', error: -1 };
+      }
+
+      if (!thrpyReq.session || thrpyReq.session.length === 0) {
+        return { message: 'Session not found', error: -1 };
+      }
+
+      const session = thrpyReq.session[0];
+
+      // Check if session can be cancelled (must be SCHEDULED)
+      if (session.session_status !== 'SCHEDULED') {
+        return { 
+          message: `Session cannot be cancelled. Current status: ${session.session_status}`, 
+          error: -1 
+        };
+      }
+
+      // Update session status to CANCELLED and set prices to 0 (same behavior as NO-SHOW)
+      const updatedSession = await prisma.session.update({
+        where: {
+          session_id: session_id,
+        },
+        data: {
+          session_status: 'CANCELLED',
+          session_price: 0,
+          session_taxes: 0,
+          session_counselor_amt: 0,
+          session_system_amt: 0,
+        },
+      });
+
+      // Store cancellation reason as a note (similar to NO-SHOW notes)
+      if (cancellation_reason) {
+        try {
+          // Get tenant_id from counselor
+          const counselorProfile = thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile;
+          let tenantId = null;
+          
+          if (counselorProfile && counselorProfile.user_profile_id) {
+            const tenantIdResult = await this.common.getUserTenantId({
+              user_profile_id: counselorProfile.user_profile_id,
+            });
+            tenantId = tenantIdResult?.[0]?.tenant_id;
+          }
+          
+          // Fallback to tenant_id from therapy request if available
+          if (!tenantId && thrpyReq.tenant_id) {
+            tenantId = thrpyReq.tenant_id;
+          }
+
+          if (tenantId) {
+            const sessionNotes = await this.common.postNotes({
+              session_id: session_id,
+              message: cancellation_reason,
+              tenant_id: tenantId,
+            });
+
+            if (sessionNotes.error) {
+              logger.warn('Error adding cancellation note:', sessionNotes.message);
+              // Don't fail the cancellation if note creation fails
+            }
+          } else {
+            logger.warn('Could not determine tenant_id for cancellation note');
+          }
+        } catch (noteError) {
+          logger.error('Error storing cancellation note:', noteError);
+          // Don't fail the cancellation if note creation fails
+        }
+      }
+
+      // Send email notification to counselor
+      try {
+        const counselorProfile = thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile;
+        const clientProfile = thrpyReq.user_profile_thrpy_req_client_idTouser_profile;
+        
+        if (counselorProfile && counselorProfile.user_profile_id) {
+          // Get counselor email and timezone
+          const counselorUserProfile = await this.common.getUserProfileByUserProfileId(
+            counselorProfile.user_profile_id
+          );
+          
+          let counselorEmail = null;
+          let counselorTimezone = null;
+          
+          if (counselorUserProfile && !counselorUserProfile.error && counselorUserProfile.length > 0) {
+            const profile = counselorUserProfile[0];
+            counselorTimezone = profile.timezone || null;
+            
+            // Get tenant timezone if user profile doesn't have timezone
+            if (!counselorTimezone && thrpyReq.tenant_id) {
+              try {
+                const tenant = await this.common.getTenantByTenantId(thrpyReq.tenant_id);
+                if (!tenant.error && Array.isArray(tenant) && tenant[0]?.timezone) {
+                  counselorTimezone = tenant[0].timezone;
+                }
+              } catch (e) {
+                console.warn('Failed to get tenant timezone:', e?.message || e);
+              }
+            }
+            
+            // Get counselor email from user_id
+            if (profile.user_id) {
+              const counselorUser = await this.common.getUserById(profile.user_id);
+              counselorEmail = counselorUser && counselorUser.length > 0 ? counselorUser[0].email : null;
+            }
+          }
+          
+          // Fallback: try to get timezone from country code if not found in profile
+          if (!counselorTimezone && counselorProfile.country_code) {
+            counselorTimezone = getTimezoneByCountryCode(counselorProfile.country_code);
+          }
+          
+          // Final fallback to default timezone
+          if (!counselorTimezone) {
+            counselorTimezone = getDefaultTimezone();
+          }
+
+          if (counselorEmail) {
+            const counselorName = `${counselorProfile.user_first_name} ${counselorProfile.user_last_name}`;
+            const clientName = `${clientProfile?.user_first_name || ''} ${clientProfile?.user_last_name || ''}`.trim();
+            
+            // Format session date and time in counselor's timezone
+            let sessionDate = 'N/A';
+            let sessionTime = 'N/A';
+            
+            if (session.intake_date && session.scheduled_time) {
+              const { localDate, localTime } = formatDateTimeInTimezone(
+                session.intake_date,
+                session.scheduled_time,
+                counselorTimezone
+              );
+              sessionDate = localDate;
+              sessionTime = localTime;
+            } else if (session.intake_date) {
+              // If only date is available, format it
+              sessionDate = new Date(session.intake_date).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                timeZone: counselorTimezone
+              });
+            }
+
+            const emailTemplate = sessionCancellationNotificationEmail(
+              counselorEmail,
+              counselorName,
+              clientName,
+              sessionDate,
+              sessionTime,
+              thrpyReq.service?.service_name || 'N/A',
+              thrpyReq.session_format_id || 'N/A'
+            );
+
+            const emailResult = await this.sendEmail.sendMail(emailTemplate);
+            if (emailResult?.error) {
+              logger.error('Error sending cancellation email to counselor:', emailResult.message);
+              // Don't fail the cancellation if email fails
+            } else {
+              logger.info('Cancellation notification email sent to counselor:', counselorEmail);
+            }
+          }
+        }
+      } catch (emailError) {
+        logger.error('Error sending cancellation email to counselor:', emailError);
+        // Don't fail the cancellation if email fails
+      }
+
+      return { 
+        message: 'Session cancelled successfully', 
+        rec: updatedSession 
+      };
+    } catch (error) {
+      console.error('Error cancelling session:', error);
+      logger.error(error);
+      return { message: 'Error cancelling session', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async rescheduleSessionByHash(session_id, cancel_hash, new_date, new_time) {
+    try {
+      // Verify hash matches the thryp request
+      const thrpyReq = await prisma.thrpy_req.findFirst({
+        where: {
+          cancel_hash: cancel_hash,
+          status_yn: 'y',
+        },
+        include: {
+          session: {
+            where: {
+              session_id: session_id,
+              status_yn: 'y',
+            },
+          },
+          service: true,
+          user_profile_thrpy_req_counselor_idTouser_profile: {
+            select: {
+              user_profile_id: true,
+              user_first_name: true,
+              user_last_name: true,
+              user_id: true,
+              country_code: true,
+            },
+          },
+          user_profile_thrpy_req_client_idTouser_profile: {
+            select: {
+              user_first_name: true,
+              user_last_name: true,
+            },
+          },
+        },
+      });
+
+      if (!thrpyReq) {
+        return { message: 'Invalid hash or therapy request not found', error: -1 };
+      }
+
+      if (!thrpyReq.session || thrpyReq.session.length === 0) {
+        return { message: 'Session not found', error: -1 };
+      }
+
+      const session = thrpyReq.session[0];
+
+      // Check if session can be rescheduled (must be SCHEDULED)
+      if (session.session_status !== 'SCHEDULED') {
+        return { 
+          message: `Session cannot be rescheduled. Current status: ${session.session_status}`, 
+          error: -1 
+        };
+      }
+
+      // Validate new date is not in the past
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const newDateObj = new Date(new_date);
+      newDateObj.setHours(0, 0, 0, 0);
+
+      if (newDateObj < today) {
+        return { message: 'Cannot reschedule to a past date', error: -1 };
+      }
+
+      // Check for session time collision (exclude current session being rescheduled)
+      const counselor_id = thrpyReq.counselor_id;
+      const collisionCheck = await this.common.checkSessionTimeCollision(
+        counselor_id,
+        new_date,
+        new_time,
+        session_id, // Exclude the current session from collision check
+      );
+
+      if (collisionCheck.error) {
+        logger.warn('Session time collision detected, preventing double booking', {
+          counselor_id: counselor_id,
+          intake_date: new_date,
+          scheduled_time: new_time,
+        });
+        return collisionCheck;
+      }
+
+      // Store old date and time for email notification
+      const oldDate = session.intake_date;
+      const oldTime = session.scheduled_time;
+
+      // Update session date and time
+      const updatedSession = await prisma.session.update({
+        where: {
+          session_id: session_id,
+        },
+        data: {
+          intake_date: new_date,
+          scheduled_time: new_time,
+        },
+      });
+
+      // Send email notification to counselor
+      try {
+        const counselorProfile = thrpyReq.user_profile_thrpy_req_counselor_idTouser_profile;
+        const clientProfile = thrpyReq.user_profile_thrpy_req_client_idTouser_profile;
+        
+        if (counselorProfile && counselorProfile.user_profile_id) {
+          // Get counselor email and timezone
+          const counselorUserProfile = await this.common.getUserProfileByUserProfileId(
+            counselorProfile.user_profile_id
+          );
+          
+          let counselorEmail = null;
+          let counselorTimezone = null;
+          
+          if (counselorUserProfile && !counselorUserProfile.error && counselorUserProfile.length > 0) {
+            const profile = counselorUserProfile[0];
+            counselorTimezone = profile.timezone || null;
+            
+            // Get tenant timezone if user profile doesn't have timezone
+            if (!counselorTimezone && thrpyReq.tenant_id) {
+              try {
+                const tenant = await this.common.getTenantByTenantId(thrpyReq.tenant_id);
+                if (!tenant.error && Array.isArray(tenant) && tenant[0]?.timezone) {
+                  counselorTimezone = tenant[0].timezone;
+                }
+              } catch (e) {
+                console.warn('Failed to get tenant timezone:', e?.message || e);
+              }
+            }
+            
+            // Get counselor email from user_id
+            if (profile.user_id) {
+              const counselorUser = await this.common.getUserById(profile.user_id);
+              counselorEmail = counselorUser && counselorUser.length > 0 ? counselorUser[0].email : null;
+            }
+          }
+          
+          // Fallback: try to get timezone from country code if not found in profile
+          if (!counselorTimezone && counselorProfile.country_code) {
+            counselorTimezone = getTimezoneByCountryCode(counselorProfile.country_code);
+          }
+          
+          // Final fallback to default timezone
+          if (!counselorTimezone) {
+            counselorTimezone = getDefaultTimezone();
+          }
+
+          if (counselorEmail) {
+            const counselorName = `${counselorProfile.user_first_name} ${counselorProfile.user_last_name}`;
+            const clientName = `${clientProfile?.user_first_name || ''} ${clientProfile?.user_last_name || ''}`.trim();
+            
+            // Format old session date and time in counselor's timezone
+            let oldSessionDate = 'N/A';
+            let oldSessionTime = 'N/A';
+            
+            if (oldDate && oldTime) {
+              const { localDate, localTime } = formatDateTimeInTimezone(
+                oldDate,
+                oldTime,
+                counselorTimezone
+              );
+              oldSessionDate = localDate;
+              oldSessionTime = localTime;
+            } else if (oldDate) {
+              oldSessionDate = new Date(oldDate).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                timeZone: counselorTimezone
+              });
+            }
+
+            // Format new session date and time in counselor's timezone
+            let newSessionDate = 'N/A';
+            let newSessionTime = 'N/A';
+            
+            if (new_date && new_time) {
+              const { localDate, localTime } = formatDateTimeInTimezone(
+                new_date,
+                new_time,
+                counselorTimezone
+              );
+              newSessionDate = localDate;
+              newSessionTime = localTime;
+            } else if (new_date) {
+              newSessionDate = new Date(new_date).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                timeZone: counselorTimezone
+              });
+            }
+
+            const emailTemplate = sessionRescheduleNotificationEmail(
+              counselorEmail,
+              counselorName,
+              clientName,
+              oldSessionDate,
+              oldSessionTime,
+              newSessionDate,
+              newSessionTime,
+              thrpyReq.service?.service_name || 'N/A',
+              thrpyReq.session_format_id || 'N/A'
+            );
+
+            const emailResult = await this.sendEmail.sendMail(emailTemplate);
+            if (emailResult?.error) {
+              logger.error('Error sending reschedule email to counselor:', emailResult.message);
+              // Don't fail the reschedule if email fails
+            } else {
+              logger.info('Reschedule notification email sent to counselor:', counselorEmail);
+            }
+          }
+        }
+      } catch (emailError) {
+        logger.error('Error sending reschedule email to counselor:', emailError);
+        // Don't fail the reschedule if email fails
+      }
+
+      return { 
+        message: 'Session rescheduled successfully', 
+        rec: updatedSession 
+      };
+    } catch (error) {
+      console.error('Error rescheduling session:', error);
+      logger.error(error);
+      return { message: 'Error rescheduling session', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
   async checkThrpyReqIsONGOING(req_id) {
     try {
       const checkSessions = await this.session.getSessionByThrpyReqId({
@@ -1846,10 +2365,11 @@ export default class ThrpyReq {
    * @param {string} data.mode - Form attachment mode ('service' or 'treatment_target')
    * @param {string} data.treatment_target - Treatment target (required when mode is 'treatment_target')
    * @param {number} data.tenant_id - Tenant ID
+   * @param {number} data.number_of_sessions - Number of sessions (optional, for Priority 1 matching)
    */
   async loadSessionFormsWithMode(data) {
     try {
-      const { req_id, mode, treatment_target, tenant_id } = data;
+      const { req_id, mode, treatment_target, tenant_id, number_of_sessions } = data;
 
       if (!req_id) {
         logger.error('Missing required field: req_id');
@@ -1894,10 +2414,12 @@ export default class ThrpyReq {
         const TreatmentTargetFeedbackConfig = (await import('./treatmentTargetFeedbackConfig.js')).default;
         const treatmentTargetConfig = new TreatmentTargetFeedbackConfig();
         
+        logger.info(`Loading forms using treatment_target mode for req_id: ${req_id}, treatment_target: ${effectiveTreatmentTarget}`);
         return await treatmentTargetConfig.loadSessionFormsByTreatmentTarget({
           req_id,
           treatment_target: effectiveTreatmentTarget,
-          tenant_id
+          tenant_id,
+          number_of_sessions // Pass number_of_sessions for Priority 1 matching
         });
       } else if (effectiveMode === 'auto') {
         // Auto mode: check if treatment target forms exist, otherwise use service-based
@@ -1943,7 +2465,8 @@ export default class ThrpyReq {
           return await treatmentTargetConfig.loadSessionFormsByTreatmentTarget({
             req_id,
             treatment_target: actualTreatmentTarget,
-            tenant_id
+            tenant_id,
+            number_of_sessions // Pass number_of_sessions for Priority 1 matching
           });
         } else {
           // Use service-based form loading

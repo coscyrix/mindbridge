@@ -1,10 +1,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const knex = require('knex');
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
-import DBconn from '../config/db.config.js';
-
-const db = knex(DBconn.dbConn.development);
 
 export default class UserForm {
   //////////////////////////////////////////
@@ -441,13 +438,79 @@ export default class UserForm {
     }
   }
 
-  async getUserFormByFormIdAndClientId(form_id, client_id) {
+  // TODO: Confirm this function is still needed Remove if not needed
+  async getUserFormByFormIdAndClientId(data) {
     try {
+      const { form_id, client_id, req_id, session_id } = data;
+
+      // If req_id is provided and session_id is null, fetch from treatment_target_request_forms
+      if (req_id && !session_id) {
+        const requestForm = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('treatment_target_request_forms as ttrf')
+          .leftJoin('feedback as fb', function() {
+            this.on('fb.form_id', '=', 'ttrf.form_id')
+                .andOn('fb.client_id', '=', 'ttrf.client_id')
+                .andOnNull('fb.session_id'); // Request forms don't have session_id
+          })
+          .select(
+            'ttrf.req_id',
+            'ttrf.client_id',
+            'ttrf.counselor_id',
+            'ttrf.form_id',
+            'ttrf.form_name',
+            'ttrf.treatment_target',
+            'ttrf.is_sent',
+            'ttrf.sent_at',
+            'ttrf.tenant_id',
+            db.raw('CASE WHEN MAX(fb.feedback_id) IS NOT NULL THEN 1 ELSE 0 END as form_submit'),
+            db.raw('MAX(fb.feedback_id) as feedback_id')
+          )
+          .where('ttrf.form_id', form_id)
+          .andWhere('ttrf.client_id', client_id)
+          .andWhere('ttrf.req_id', req_id)
+          .groupBy(
+            'ttrf.req_id',
+            'ttrf.client_id',
+            'ttrf.counselor_id',
+            'ttrf.form_id',
+            'ttrf.form_name',
+            'ttrf.treatment_target',
+            'ttrf.is_sent',
+            'ttrf.sent_at',
+            'ttrf.tenant_id'
+          )
+          .first();
+
+        if (!requestForm) {
+          return [];
+        }
+
+        // Format response to match expected structure
+        return [{
+          form_id: requestForm.form_id,
+          client_id: requestForm.client_id,
+          counselor_id: requestForm.counselor_id,
+          req_id: requestForm.req_id,
+          form_submit: requestForm.form_submit === 1 || requestForm.form_submit === true,
+          is_sent: requestForm.is_sent,
+          sent_at: requestForm.sent_at,
+          tenant_id: requestForm.tenant_id,
+          feedback_id: requestForm.feedback_id
+        }];
+      }
+
+      // Otherwise, fetch from user_forms (usual way)
       const userForm = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('user_forms')
         .where('form_id', form_id)
-        .andWhere('client_id', client_id);
+        .andWhere('client_id', client_id)
+        .modify((queryBuilder) => {
+          if (session_id) {
+            queryBuilder.andWhere('session_id', session_id);
+          }
+        });
 
       return userForm;
     }

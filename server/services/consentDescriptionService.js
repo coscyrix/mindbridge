@@ -19,4 +19,8 @@ export default class ConsentDescriptionService {
   async deleteConsentDescription(id) {
     return await consentDescriptionModel.deleteConsentDescription(id);
   }
+
+  async getDefaultConsentTemplate() {
+    return await consentDescriptionModel.getDefaultConsentTemplate();
+  }
 } 

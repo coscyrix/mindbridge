@@ -66,21 +66,52 @@ export const AttendancePDF =
     // Draw table
     const tableStartY = doc.y;
     const columnWidths = [200, 350];
-    const rowHeight = 25;
+    const defaultRowHeight = 25;
+    const padding = 5;
 
     // Draw table headers
-    doc.rect(50, tableStartY, columnWidths[0], rowHeight).stroke();
-    doc.rect(250, tableStartY, columnWidths[1], rowHeight).stroke();
-    doc.text('Field', 55, tableStartY + 5);
-    doc.text('Details', 255, tableStartY + 5);
+    doc.rect(50, tableStartY, columnWidths[0], defaultRowHeight).stroke();
+    doc.rect(250, tableStartY, columnWidths[1], defaultRowHeight).stroke();
+    doc.text('Field', 55, tableStartY + padding);
+    doc.text('Details', 255, tableStartY + padding);
 
     // Draw table rows
-    let rowY = tableStartY + rowHeight;
+    let rowY = tableStartY + defaultRowHeight;
     for (let i = 1; i < table.length; i++) {
+      const fieldName = table[i][0];
+      const fieldValue = table[i][1];
+      
+      // Calculate row height based on content
+      // For assessment rows, calculate height based on text wrapping
+      let rowHeight = defaultRowHeight;
+      if (fieldName === 'Assessment Done' || fieldName === 'Assessment Not Done') {
+        // Calculate height needed for wrapped text
+        // heightOfString returns the height in points for the text when wrapped to the specified width
+        const textHeight = doc.heightOfString(fieldValue, {
+          width: columnWidths[1] - (padding * 2),
+        });
+        // Add padding (top and bottom) and ensure minimum height
+        // Add a small buffer (2 points) to ensure text doesn't get cut off
+        rowHeight = Math.max(defaultRowHeight, Math.ceil(textHeight) + (padding * 2) + 2);
+      }
+      
+      // Draw cell borders
       doc.rect(50, rowY, columnWidths[0], rowHeight).stroke();
       doc.rect(250, rowY, columnWidths[1], rowHeight).stroke();
-      doc.text(table[i][0], 55, rowY + 5);
-      doc.text(table[i][1], 255, rowY + 5);
+      
+      // Draw field name (left column)
+      doc.text(fieldName, 55, rowY + padding);
+      
+      // Draw field value (right column) with text wrapping for assessment rows
+      if (fieldName === 'Assessment Done' || fieldName === 'Assessment Not Done') {
+        doc.text(fieldValue, 255, rowY + padding, {
+          width: columnWidths[1] - (padding * 2),
+          align: 'left',
+        });
+      } else {
+        doc.text(fieldValue, 255, rowY + padding);
+      }
+      
       rowY += rowHeight;
     }
   };

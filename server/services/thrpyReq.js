@@ -37,6 +37,7 @@ export default class ThrpyReqService {
         .required(),
       intake_dte: joi.date().required(),
       tenant_id: joi.number().required(),
+      number_of_sessions: joi.number().optional(),
     });
 
     const { error } = schema.validate(data);
@@ -211,6 +212,75 @@ export default class ThrpyReqService {
 
     const thrpyReq = new ThrpyReq();
     return thrpyReq.delThrpyReqById(data);
+  }
+
+  //////////////////////////////////////////
+
+  async getThrpyReqByHash(cancel_hash) {
+    if (!cancel_hash) {
+      return { message: 'Hash is required', error: -1 };
+    }
+
+    const thrpyReq = new ThrpyReq();
+    return thrpyReq.getThrpyReqByHash(cancel_hash);
+  }
+
+  //////////////////////////////////////////
+
+  async cancelSessionByHash(session_id, cancel_hash, cancellation_reason) {
+    const schema = joi.object({
+      session_id: joi.number().integer().positive().required()
+        .messages({
+          'number.base': 'Session ID must be a number',
+          'number.integer': 'Session ID must be an integer',
+          'number.positive': 'Session ID must be a positive number',
+          'any.required': 'Session ID is required',
+        }),
+      cancel_hash: joi.string().required()
+        .messages({
+          'string.base': 'Hash must be a string',
+          'any.required': 'Hash is required',
+        }),
+      cancellation_reason: joi.string().trim().min(3).max(500).required()
+        .messages({
+          'string.base': 'Cancellation reason must be a string',
+          'string.empty': 'Cancellation reason cannot be empty',
+          'string.min': 'Cancellation reason must be at least 3 characters long',
+          'string.max': 'Cancellation reason cannot exceed 500 characters',
+          'any.required': 'Cancellation reason is required',
+        }),
+    });
+
+    const data = {
+      session_id,
+      cancel_hash,
+      cancellation_reason,
+    };
+
+    const { error, value } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    // Use validated values (trimmed cancellation_reason)
+    const thrpyReq = new ThrpyReq();
+    return thrpyReq.cancelSessionByHash(
+      value.session_id,
+      value.cancel_hash,
+      value.cancellation_reason
+    );
+  }
+
+  //////////////////////////////////////////
+
+  async rescheduleSessionByHash(session_id, cancel_hash, new_date, new_time) {
+    if (!session_id || !cancel_hash || !new_date || !new_time) {
+      return { message: 'Session ID, hash, new date, and new time are required', error: -1 };
+    }
+
+    const thrpyReq = new ThrpyReq();
+    return thrpyReq.rescheduleSessionByHash(session_id, cancel_hash, new_date, new_time);
   }
 
   //////////////////////////////////////////

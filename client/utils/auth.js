@@ -19,6 +19,21 @@ export const login = async (credentials) => {
     const response = await api.post("/auth/sign-in", credentials);
     if (response.status === 200) {
       const { token, usr } = response.data;
+      
+      // Check if account is deactivated (for counselors or tenants)
+      if ((usr.role_id === 2 || usr.role_id === 3) && usr.is_active === false) {
+        // Clear any partial login data
+        Cookies.remove("token");
+        Cookies.remove("user");
+        Cookies.remove("accountVerified");
+        Cookies.remove("email");
+        localStorage.removeItem("user");
+        
+        // Redirect to deactivated page
+        Router.push("/account-deactivated");
+        throw new Error("Your account has been deactivated. Please contact your administrator.");
+      }
+      
       loginToken = token;
       Cookies.set("user", JSON.stringify(usr));
       Cookies.set("email", credentials.email);
@@ -136,6 +151,21 @@ const addInterceptors = (instance) => {
   instance.interceptors.response.use(
     (response) => response,
     (error) => {
+      // Check for deactivated account error
+      if (
+        error.response &&
+        error.response.data?.msg_id === 'account_deactivated'
+      ) {
+        // Clear session and redirect to deactivated page
+        Cookies.remove("token");
+        Cookies.remove("user");
+        Cookies.remove("accountVerified");
+        Cookies.remove("email");
+        localStorage.removeItem("user");
+        Router.push("/account-deactivated");
+        return Promise.reject(error);
+      }
+      
       if (
         error.response &&
         (error.response.status === 401 || error.response.status === 403)

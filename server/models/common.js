@@ -2,16 +2,14 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import DBconn from '../config/db.config.js';
-const knex = require('knex');;
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
 import AuthCommon from './auth/authCommon.js';
 import UserForm from './userForm.js';
+import prisma from '../utils/prisma.js';
 const dotenv = require('dotenv');;
 
 dotenv.config();
-
-const db = knex(DBconn.dbConn.development);
 
 export default class Common {
   //////////////////////////////////////////
@@ -25,14 +23,28 @@ export default class Common {
 
   async getUserByEmail(email) {
     try {
-      const rec = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .select()
-        .where('email', email)
-        .from('v_user');
+      const rec = await prisma.users.findMany({
+        where: {
+          email: email.toLowerCase(),
+        },
+        select: {
+          user_id: true,
+          email: true,
+          password: true,
+          status_yn: true,
+          is_active: true,
+          is_verified: true,
+          role_id: true,
+          tenant_id: true,
+          created_at: true,
+          updated_at: true,
+        },
+      });
 
+      // Return as array to maintain backward compatibility
       return rec;
     } catch (error) {
+      logger.error('Error in getUserByEmail:', error);
       return error;
     }
   }
@@ -790,6 +802,11 @@ export default class Common {
         console.warn(`Warning: Could not copy treatment target templates for tenant ${tenantRecord.tenant_id}:`, templateError.message);
       }
 
+      // Note: New tenants start with empty consent_description
+      // They will need to create their own consent form via the consent management page
+      // The system default consent form (created by admin with roleId == 4) is only used as a reference
+      // and is NOT automatically copied to new tenants
+
       return tenantRecord.tenant_id;
     } catch (error) {
       console.error(error);
@@ -916,6 +933,124 @@ export default class Common {
     } catch (error) {
       console.error('Error creating default tenant configurations:', error);
       return { message: 'Error creating default tenant configurations', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  // Helper function to check for session time collisions
+  async checkSessionTimeCollision(counselor_id, intake_date, scheduled_time, exclude_session_id = null) {
+    try {
+      // Get environment variables with defaults
+      const SESSION_TIME_PERIOD = parseInt(process.env.SESSION_TIME_PERIOD || '60', 10);
+      const SESSION_BREAK_TIME = parseInt(process.env.SESSION_BREAK_TIME || '15', 10);
+
+      // Parse the scheduled_time to get hours and minutes
+      let scheduledHours, scheduledMinutes;
+      if (scheduled_time.includes('T')) {
+        // Format: "HH:mm:ss.sssZ" or "HH:mm:ssZ"
+        const timePart = scheduled_time.split('T')[1].split('.')[0]; // Get "HH:mm:ss"
+        const [hours, minutes] = timePart.split(':');
+        scheduledHours = parseInt(hours, 10);
+        scheduledMinutes = parseInt(minutes, 10);
+      } else if (scheduled_time.includes(':')) {
+        // Format: "HH:mm:ss" or "HH:mm"
+        const [hours, minutes] = scheduled_time.split(':');
+        scheduledHours = parseInt(hours, 10);
+        scheduledMinutes = parseInt(minutes, 10);
+      } else {
+        logger.error('Invalid scheduled_time format:', scheduled_time);
+        return { message: 'Invalid scheduled_time format', error: -1 };
+      }
+
+      // Calculate new session time range
+      // Start: scheduled_time - SESSION_TIME_PERIOD minutes
+      // End: scheduled_time + SESSION_BREAK_TIME minutes
+      const newSessionStart = new Date(`${intake_date}T${String(scheduledHours).padStart(2, '0')}:${String(scheduledMinutes).padStart(2, '0')}:00Z`);
+      newSessionStart.setMinutes(newSessionStart.getMinutes() - SESSION_TIME_PERIOD);
+      
+      const newSessionEnd = new Date(`${intake_date}T${String(scheduledHours).padStart(2, '0')}:${String(scheduledMinutes).padStart(2, '0')}:00Z`);
+      newSessionEnd.setMinutes(newSessionEnd.getMinutes() + SESSION_BREAK_TIME);
+
+      // Query existing sessions for the counselor on the same date
+      // Join session with thrpy_req to get counselor_id
+      // Only check sessions from therapy requests with status ONGOING
+      let query = db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('session as s')
+        .innerJoin('thrpy_req as tr', 's.thrpy_req_id', 'tr.req_id')
+        .select('s.session_id', 's.intake_date', 's.scheduled_time', 's.thrpy_req_id')
+        .where('tr.counselor_id', counselor_id)
+        .where('tr.thrpy_status', 'ONGOING') // Only check therapy requests with ONGOING status
+        .where('s.intake_date', intake_date)
+        .where('s.status_yn', 'y')
+        .whereNotIn('s.session_status', ['DISCHARGED', 'INACTIVE'])
+        .where('s.is_report', 0); // Only check regular sessions, not reports
+
+      // Exclude the current session if provided (useful for rescheduling)
+      if (exclude_session_id) {
+        query = query.whereNot('s.session_id', exclude_session_id);
+      }
+
+      const existingSessions = await query;
+
+      // Check for collisions with existing sessions
+      for (const existingSession of existingSessions) {
+        if (!existingSession.scheduled_time) {
+          continue; // Skip sessions without scheduled_time
+        }
+
+        // Parse existing session's scheduled_time
+        let existingHours, existingMinutes;
+        const existingScheduledTime = existingSession.scheduled_time;
+        
+        if (existingScheduledTime.includes('T')) {
+          const timePart = existingScheduledTime.split('T')[1].split('.')[0];
+          const [hours, minutes] = timePart.split(':');
+          existingHours = parseInt(hours, 10);
+          existingMinutes = parseInt(minutes, 10);
+        } else if (existingScheduledTime.includes(':')) {
+          const [hours, minutes] = existingScheduledTime.split(':');
+          existingHours = parseInt(hours, 10);
+          existingMinutes = parseInt(minutes, 10);
+        } else {
+          continue; // Skip if format is invalid
+        }
+
+        // Calculate existing session time range using the same logic
+        const existingSessionStart = new Date(`${intake_date}T${String(existingHours).padStart(2, '0')}:${String(existingMinutes).padStart(2, '0')}:00Z`);
+        existingSessionStart.setMinutes(existingSessionStart.getMinutes() - SESSION_TIME_PERIOD);
+        
+        const existingSessionEnd = new Date(`${intake_date}T${String(existingHours).padStart(2, '0')}:${String(existingMinutes).padStart(2, '0')}:00Z`);
+        existingSessionEnd.setMinutes(existingSessionEnd.getMinutes() + SESSION_BREAK_TIME);
+
+        // Check if time ranges overlap
+        // Two time ranges overlap if: newStart < existingEnd && newEnd > existingStart
+        if (newSessionStart < existingSessionEnd && newSessionEnd > existingSessionStart) {
+          logger.warn('Session time collision detected', {
+            counselor_id,
+            intake_date,
+            new_session_time: scheduled_time,
+            existing_session_id: existingSession.session_id,
+            existing_session_time: existingScheduledTime,
+          });
+          return {
+            message: `Session time conflicts with an existing session. Please choose a different time slot.`,
+            error: -1,
+            colliding_session: {
+              session_id: existingSession.session_id,
+              thrpy_req_id: existingSession.thrpy_req_id,
+              intake_date: existingSession.intake_date,
+              scheduled_time: existingScheduledTime,
+            },
+          };
+        }
+      }
+
+      return { message: 'No collision detected', error: 0 };
+    } catch (error) {
+      logger.error('Error checking session time collision:', error);
+      return { message: 'Error checking session time collision', error: -1 };
     }
   }
 }

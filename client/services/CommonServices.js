@@ -50,7 +50,10 @@ const CommonServices = {
     return api.get(ApiConfig.dashboard.assessmentResultsData, { params });
   },
   getHomeworkStats(params) {
-    return api.get(ApiConfig.sessions.getHomeworkStats, { params });
+    return api.get(ApiConfig.dashboard.homeworkStats, { params });
+  },
+  getAllAssessmentFormNames() {
+    return api.get("/treatment-target-feedback-config/form-names/list");
   },
   getFeedbackFormDetails(params) {
     return api.get(ApiConfig.feedback.getFeedbackFormDetails, { params });
@@ -221,6 +224,43 @@ const CommonServices = {
   submitGASForm: async (payload) => {
     try {
       const response = await api.post(ApiConfig.feedback.submitGASForm, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Manually attach treatment target request forms for a specific therapy request
+  sendManualAssessment: async (payload) => {
+    try {
+      const response = await api.post(
+        '/treatment-target-request-forms/manual',
+        payload
+      );
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  // User activation/deactivation
+  activateUser: async (user_id, role_id, target_id) => {
+    try {
+      const response = await api.post('/counselor-activation/activate', {
+        user_id, // Requester's user_id from localStorage
+        role_id, // Requester's role_id from localStorage
+        target_id, // Target user's user_id from row
+      });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  deactivateUser: async (user_id, role_id, target_id) => {
+    try {
+      const response = await api.post('/counselor-activation/deactivate', {
+        user_id, // Requester's user_id from localStorage
+        role_id, // Requester's role_id from localStorage
+        target_id, // Target user's user_id from row
+      });
       return response;
     } catch (error) {
       throw error;

@@ -1,16 +1,45 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const knex = require('knex');
+import db from '../utils/db.js';
 import logger from '../config/winston.js';
-import DBconn from '../config/db.config.js';
-
-const db = knex(DBconn.dbConn.development);
+import prisma from '../utils/prisma.js';
 
 export default class TreatmentTargetFeedbackConfig {
   //////////////////////////////////////////
   constructor() {
     // Initialize the model
   }
+  //////////////////////////////////////////
+
+  /**
+   * Helper function to parse sessions array from various formats
+   * @param {*} sessions - Sessions data (can be array, string, or other)
+   * @param {string} context - Context for logging (e.g., "frequency 123" or "form_name")
+   * @returns {Array} Parsed sessions array
+   */
+  parseSessionsArray(sessions, context = '') {
+    if (Array.isArray(sessions)) {
+      return sessions;
+    }
+
+    if (typeof sessions === 'string') {
+      try {
+        const parsed = JSON.parse(sessions);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+        logger.warn(`Parsed sessions is not an array for ${context}:`, typeof parsed);
+        return [];
+      } catch (e) {
+        logger.error(`Failed to parse sessions for ${context}:`, sessions);
+        return [];
+      }
+    }
+
+    logger.warn(`Sessions is not an array for ${context}:`, typeof sessions);
+    return [];
+  }
+
   //////////////////////////////////////////
 
   /**
@@ -413,15 +442,21 @@ export default class TreatmentTargetFeedbackConfig {
    */
   async getFormNames() {
     try {
-      const forms = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('treatment_target_feedback_config')
-        .distinct('form_name')
-        .orderBy('form_name', 'asc');
+      const forms = await prisma.forms.findMany({
+        where: {
+          status_yn: 'y',
+        },
+        select: {
+          form_cde: true,
+        },
+        orderBy: {
+          form_cde: 'asc',
+        },
+      });
 
       return {
         message: 'Form names retrieved successfully',
-        rec: forms.map((f) => f.form_name),
+        rec: forms.map((f) => f.form_cde),
       };
     } catch (error) {
       logger.error(error);
@@ -457,10 +492,15 @@ export default class TreatmentTargetFeedbackConfig {
 
   /**
    * Load session forms based on treatment target for a therapy request
+
+   * 
+   * Template-based system that supports service-specific session frequencies.
+   * 
    * @param {Object} data - Request data
    * @param {number} data.req_id - Therapy request ID
    * @param {string} data.treatment_target - Treatment target
    * @param {number} data.tenant_id - Tenant ID
+   * @param {number} data.number_of_sessions - Number of sessions
    */
   async loadSessionFormsByTreatmentTarget(data) {
     try {
@@ -479,25 +519,195 @@ export default class TreatmentTargetFeedbackConfig {
         return { message: 'Error getting therapy request', error: -1 };
       }
 
-      // Get treatment target feedback configurations
-      const configQuery = db
+      // Get service details to find service template
+      const service = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('treatment_target_feedback_config')
-        .where('treatment_target', data.treatment_target);
+        .from('service')
+        .where('service_id', rec.service_id)
+        .first();
 
-      if (data.tenant_id !== undefined) {
-        configQuery.where('tenant_id', data.tenant_id);
+      if (!service) {
+        logger.error('Service not found for therapy request');
+        return { message: 'Service not found', error: -1 };
       }
 
-      const configs = await configQuery;
+      // Find matching service template by service_code
+      // Try exact match first, then try case-insensitive
+      let serviceTemplate = await prisma.service_templates.findFirst({
+        where: {
+          service_code: service.service_code,
+          status_yn: 'y',
+        },
+      });
 
-      if (!configs || configs.length === 0) {
-        logger.error('No treatment target feedback configurations found');
+      // If not found, try case-insensitive search
+      if (!serviceTemplate) {
+        const allTemplates = await prisma.service_templates.findMany({
+          where: {
+            status_yn: 'y',
+          },
+        });
+        
+        serviceTemplate = allTemplates.find(
+          t => t.service_code.toUpperCase() === service.service_code.toUpperCase()
+        );
+      }
+
+      const serviceTemplateId = serviceTemplate?.template_service_id || null;
+      // Use number_of_sessions from data or rec if available, otherwise fall back to service.nbr_of_sessions
+      // This matches the logic in thrpyReq.js line 343 to ensure Priority 1 matching works correctly
+      const nbrOfSessions = (data.number_of_sessions ? Number(data.number_of_sessions) : 
+                             (rec.number_of_sessions ? Number(rec.number_of_sessions) : service.nbr_of_sessions));
+
+      logger.info(`Service lookup - service_code: ${service.service_code}, service_template_id: ${serviceTemplateId}, nbr_of_sessions: ${nbrOfSessions} (from data.number_of_sessions: ${data.number_of_sessions}, rec.number_of_sessions: ${rec.number_of_sessions}, service.nbr_of_sessions: ${service.nbr_of_sessions})`);
+      
+      if (!serviceTemplate) {
+        logger.warn(`Service template not found for service_code: ${service.service_code}. Will use default frequencies (service_ref_id = null)`);
+      }
+
+      // Get treatment target templates with service frequencies using NEW template system
+      // Get all frequencies first, then filter/prioritize in code for better matching
+      const templates = await prisma.treatment_target_session_forms_template.findMany({
+        where: {
+          treatment_target: data.treatment_target,
+          is_active: true,
+        },
+        include: {
+          service_frequencies: {
+            where: {
+              OR: [
+                { service_ref_id: serviceTemplateId },
+                { service_ref_id: null }, // Default frequencies
+              ],
+            },
+            include: {
+              service_template: {
+                select: {
+                  template_service_id: true,
+                  service_name: true,
+                  service_code: true,
+                },
+              },
+            },
+            orderBy: [
+              { service_ref_id: 'asc' }, // Prefer service-specific over null
+              { nbr_of_sessions: 'asc' },
+            ],
+          },
+        },
+      });
+
+      if (!templates || templates.length === 0) {
+        logger.error('No treatment target templates found');
         return {
-          message: 'No treatment target feedback configurations found',
+          message: 'No treatment target templates found',
           error: -1,
         };
       }
+
+      // Build configs array from templates and their frequencies
+      const configs = [];
+      
+      for (const template of templates) {
+        logger.info(`🔍 Matching frequency for template: ${template.form_name} (template_id: ${template.id})`);
+        logger.info(`   Looking for: service_template_id=${serviceTemplateId}, nbr_of_sessions=${nbrOfSessions}`);
+        logger.info(`   Available frequencies: ${template.service_frequencies.length}`);
+        
+        // Log available frequencies for debugging
+        template.service_frequencies.forEach((f, idx) => {
+          logger.info(`   Frequency ${idx + 1}: service_ref_id=${f.service_ref_id}, nbr_of_sessions=${f.nbr_of_sessions}, sessions=[${Array.isArray(f.sessions) ? f.sessions.join(', ') : f.sessions}]`);
+        });
+
+        // Prioritize frequency matching:
+        // 1. Service-specific with exact nbr_of_sessions
+        // 2. Service-specific with any nbr_of_sessions
+        // 3. Default (null) with exact nbr_of_sessions
+        // 4. Default (null) with any nbr_of_sessions
+        let frequency = template.service_frequencies.find(
+          f => f.service_ref_id === serviceTemplateId && f.nbr_of_sessions === nbrOfSessions
+        );
+        
+        if (frequency) {
+          logger.info(`   ✅ Matched: Priority 1 - Service-specific + exact nbr_of_sessions (frequency_id: ${frequency.id})`);
+        } else {
+          // Priority 2: Service-specific with any nbr_of_sessions - select the one with largest nbr_of_sessions
+          const serviceSpecificFrequencies = template.service_frequencies.filter(
+            f => f.service_ref_id === serviceTemplateId
+          );
+          if (serviceSpecificFrequencies.length > 0) {
+            frequency = serviceSpecificFrequencies.sort((a, b) => b.nbr_of_sessions - a.nbr_of_sessions)[0];
+            logger.info(`   ✅ Matched: Priority 2 - Service-specific + any nbr_of_sessions (frequency_id: ${frequency.id}, nbr_of_sessions: ${frequency.nbr_of_sessions})`);
+          }
+        }
+        
+        if (!frequency) {
+          frequency = template.service_frequencies.find(
+            f => f.service_ref_id === null && f.nbr_of_sessions === nbrOfSessions
+          );
+          if (frequency) {
+            logger.info(`   ✅ Matched: Priority 3 - Default (null) + exact nbr_of_sessions (frequency_id: ${frequency.id})`);
+          }
+        }
+        
+        if (!frequency) {
+          // Priority 4: Default (null) with any nbr_of_sessions - select the one with largest nbr_of_sessions
+          const defaultFrequencies = template.service_frequencies.filter(
+            f => f.service_ref_id === null
+          );
+          if (defaultFrequencies.length > 0) {
+            frequency = defaultFrequencies.sort((a, b) => b.nbr_of_sessions - a.nbr_of_sessions)[0];
+            logger.info(`   ✅ Matched: Priority 4 - Default (null) + any nbr_of_sessions (frequency_id: ${frequency.id}, nbr_of_sessions: ${frequency.nbr_of_sessions})`);
+          }
+        }
+        
+        if (!frequency && template.service_frequencies.length > 0) {
+          // Fallback to first available frequency
+          frequency = template.service_frequencies[0];
+          logger.warn(`   ⚠️ Using fallback: First available frequency (frequency_id: ${frequency.id}, service_ref_id: ${frequency.service_ref_id}, nbr_of_sessions: ${frequency.nbr_of_sessions})`);
+        }
+
+        if (!frequency) {
+          logger.error(`   ❌ No frequency found for template: ${template.form_name}`);
+          continue; // Skip this template if no frequency found
+        }
+
+        // Ensure sessions is properly extracted as an array
+        const sessionsArray = this.parseSessionsArray(frequency.sessions, `frequency ${frequency.id}`);
+
+        if (sessionsArray.length === 0) {
+          logger.warn(`⚠️ Frequency ${frequency.id} has empty sessions array for ${template.form_name}`);
+        }
+
+        logger.info(`   📋 Final config: ${template.form_name} → Sessions: [${sessionsArray.join(', ')}]`);
+
+        configs.push({
+          id: template.id, // Use template.id from treatment_target_session_forms_template
+          template_id: template.id,
+          frequency_id: frequency.id,
+          treatment_target: template.treatment_target,
+          form_name: template.form_name,
+          purpose: template.purpose,
+          sessions: sessionsArray,
+          service_ref_id: frequency.service_ref_id,
+          nbr_of_sessions: frequency.nbr_of_sessions,
+        });
+      }
+
+      if (configs.length === 0) {
+        logger.error('No matching service frequencies found for treatment target and service');
+        return {
+          message: 'No matching service frequencies found for treatment target and service',
+          error: -1,
+        };
+      }
+
+      logger.info(`Found ${configs.length} form configurations for treatment_target: ${data.treatment_target}, service_template_id: ${serviceTemplateId}, nbr_of_sessions: ${nbrOfSessions}`);
+      
+      // Debug: Log each config's sessions
+      configs.forEach((cfg, idx) => {
+        const sessionsArray = this.parseSessionsArray(cfg.sessions, `config ${idx + 1} (${cfg.form_name})`);
+        logger.info(`   Config ${idx + 1}: ${cfg.form_name} → Sessions: [${sessionsArray.join(', ')}] (service_ref_id: ${cfg.service_ref_id}, nbr_of_sessions: ${cfg.nbr_of_sessions})`);
+      });
 
       const tmpSession = [];
       const tmpForm = [];
@@ -511,13 +721,6 @@ export default class TreatmentTargetFeedbackConfig {
       rec.session_obj = rec.session_obj.sort(
         (a, b) => a.session_id - b.session_id,
       );
-
-      // Check if service type is OTR_TS (Occupational Therapy - Transition Service)
-      // OTR_TS service has custom form distribution logic
-      const isOTR_TS = rec.service_code && 
-        rec.service_code.toUpperCase() === 'OTR_TS';
-
-      logger.info(`Service type check - service_code: ${rec.service_code}, service_name: ${rec.service_name}, isOTR_TS: ${isOTR_TS}`);
 
       //  Attendance form lookup (required for attendance reports)
       const attendanceForm = await db
@@ -534,143 +737,63 @@ export default class TreatmentTargetFeedbackConfig {
 
       // Existing loop for configs
       for (const config of configs) {
-        const sessions = config.sessions;
+        // Ensure sessions is an array
+        const sessions = this.parseSessionsArray(config.sessions, config.form_name);
+
+        logger.info(`📋 Processing form: ${config.form_name}, sessions: [${sessions.join(', ')}], treatment_target: ${config.treatment_target}`);
 
         // Get dynamic form ID from form name
         const form = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('forms')
           .where('form_cde', config.form_name)
+          .andWhere('status_yn', 1) // Only active forms
           .first();
 
         if (!form) {
-          logger.warn(`Form not found for form_name: ${config.form_name}`);
+          logger.error(`❌ Form not found or inactive for form_name: ${config.form_name}`);
+          logger.error(`   Attempted query: form_cde = '${config.form_name}' AND status_yn = 1`);
+          
+          // Try to find if form exists but is inactive
+          const inactiveForm = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('forms')
+            .where('form_cde', config.form_name)
+            .first();
+          
+          if (inactiveForm) {
+            logger.error(`   Form exists but status_yn = ${inactiveForm.status_yn} (inactive)`);
+          } else {
+            logger.error(`   Form does not exist in database`);
+          }
+          
           continue;
         }
+
+        logger.info(`✓ Form found: ${config.form_name} (form_id: ${form.form_id}, status_yn: ${form.status_yn})`);
+
+        // Check if sessions array is empty
+        if (!sessions || sessions.length === 0) {
+          logger.warn(`⚠️ Skipping form ${config.form_name} - sessions array is empty`);
+          continue;
+        }
+
+        logger.info(`   📊 Will distribute ${config.form_name} to sessions: [${sessions.join(', ')}] out of ${rec.session_obj.length} total sessions`);
+
         // Process each session number in the configuration
         for (
           let sessionNumber = 1;
           sessionNumber <= rec.session_obj.length;
           sessionNumber++
         ) {
-          // OTR_TS Service Exception: Custom form distribution
-          // Session 1: IPF + WHODAS | Session 5: WHODAS | Session 9: IPF
-          // Attendance: Sessions 4, 8, 12, 16, 19, 23, 27, 31... (pattern: 4,4,4,4,3,4,4...)
-          if (isOTR_TS) {
-            const sessionIndex = sessionNumber - 1;
-            if (!rec.session_obj[sessionIndex]) continue;
-
-            // Define OTR_TS form distribution mapping
-            const otrTSFormMap = {
-              1: ['IPF', 'WHODAS'],
-              5: ['WHODAS'],
-              9: ['IPF'],
-            };
-
-            const formCodes = otrTSFormMap[sessionNumber];
-            
-            // Check if attendance form should be added (same pattern as regular sessions)
-            // Sessions 4, 8, 12, 16: every 4 sessions up to 16
-            // Sessions 19, 23, 27, 31...: every 4 sessions starting from 19 (gap of 3 after session 16)
-            const shouldAddAttendance = attendanceForm && (
-              (sessionNumber <= 16 && sessionNumber % 4 === 0) || 
-              (sessionNumber >= 19 && (sessionNumber - 19) % 4 === 0)
-            );
-            
-            logger.info(`OTR_TS Session ${sessionNumber}: hasAssessmentForms=${!!formCodes}, shouldAddAttendance=${shouldAddAttendance}`);
-            
-            // Skip this session if it has no assessment forms AND no attendance form
-            if (!formCodes && !shouldAddAttendance) {
-              logger.info(`OTR_TS Session ${sessionNumber}: Skipping - no forms to add`);
-              continue; // No forms for this session
-            }
-
-            let tmpFormSession = null;
-            let formNames = [];
-
-            // Process assessment forms if they exist for this session
-            if (formCodes) {
-              // Fetch required forms in one query
-              const forms = await db
-                .withSchema(`${process.env.MYSQL_DATABASE}`)
-                .from('forms')
-                .whereIn('form_cde', formCodes)
-                .andWhere('status_yn', 1);
-
-              if (forms.length > 0) {
-                // Create form entries
-                formNames = forms.map(f => f.form_cde);
-                tmpFormSession = {
-                  session_id: rec.session_obj[sessionIndex].session_id,
-                  form_array: formNames,
-                };
-
-                forms.forEach((form) => {
-                  tmpForm.push({
-                    req_id: rec.req_id,
-                    session_id: rec.session_obj[sessionIndex].session_id,
-                    client_id: rec.client_id,
-                    counselor_id: rec.counselor_id,
-                    treatment_target: data.treatment_target,
-                    form_name: form.form_cde,
-                    form_id: form.form_id,
-                    config_id: config.id,
-                    purpose: `${form.form_cde} assessment for OTR_TS service`,
-                    session_number: sessionNumber,
-                    tenant_id: data.tenant_id || null,
-                  });
-                });
-              } else {
-                logger.warn(`OTR_TS: Forms not found for session ${sessionNumber}`);
-              }
-            }
-            
-            // Add attendance form if needed
-            if (shouldAddAttendance) {
-              // Initialize tmpFormSession if it wasn't created above
-              if (!tmpFormSession) {
-                tmpFormSession = {
-                  session_id: rec.session_obj[sessionIndex].session_id,
-                  form_array: [],
-                };
-              }
-              
-              // Add attendance form to the session's form array
-              tmpFormSession.form_array.push('SESSION SUM REPORT');
-
-              const tmpAttendanceFormEntry = {
-                req_id: rec.req_id,
-                session_id: rec.session_obj[sessionIndex].session_id,
-                client_id: rec.client_id,
-                counselor_id: rec.counselor_id,
-                treatment_target: data.treatment_target,
-                form_name: 'SESSION SUM REPORT',
-                form_id: attendanceForm.form_id,
-                config_id: config.id,
-                purpose: 'SESSION SUM REPORT',
-                session_number: sessionNumber,
-                tenant_id: data.tenant_id || null,
-              };
-
-              tmpForm.push(tmpAttendanceFormEntry);
-              logger.info(`OTR_TS: Added attendance form for session ${sessionNumber}`);
-            }
-            
-            // Only add to tmpSession if we have forms to add
-            if (tmpFormSession && tmpFormSession.form_array.length > 0) {
-              tmpSession.push(tmpFormSession);
-              const hasAttendance = tmpFormSession.form_array.includes('SESSION SUM REPORT');
-              logger.info(`OTR_TS Session ${sessionNumber}: Forms added [${tmpFormSession.form_array.join(', ')}] ${hasAttendance ? '✓ Includes Attendance' : ''}`);
-            } else {
-              logger.warn(`OTR_TS Session ${sessionNumber}: No forms to add (this should not happen)`);
-            }
-            
-            continue;
-          }
-
-          if (sessions.includes(sessionNumber)) {
+          // Check if this session number should receive this form
+          // Ensure both are numbers for comparison
+          const sessionsAsNumbers = sessions.map(s => typeof s === 'string' ? parseInt(s, 10) : s);
+          if (sessionsAsNumbers.includes(sessionNumber)) {
             const sessionIndex = sessionNumber - 1;
             if (rec.session_obj[sessionIndex]) {
+              logger.info(`✅ Distributing form "${config.form_name}" to session ${sessionNumber} (session_id: ${rec.session_obj[sessionIndex].session_id})`);
+              
               const tmpFormSession = {
                 session_id: rec.session_obj[sessionIndex].session_id,
                 form_array: [config.form_name],
@@ -692,21 +815,50 @@ export default class TreatmentTargetFeedbackConfig {
 
               tmpSession.push(tmpFormSession);
               tmpForm.push(tmpTreatmentTargetForm);
+            } else {
+              logger.warn(`⚠️ Session ${sessionNumber} not found in session_obj (length: ${rec.session_obj.length})`);
+            }
+          } else {
+            // Log when session is skipped (only for first few sessions to avoid spam)
+            if (sessionNumber <= 5) {
+              logger.debug(`⏭️ Skipping session ${sessionNumber} for form "${config.form_name}" (not in sessions: [${sessions.join(', ')}])`);
             }
           }
+        }
+      }
 
-          // ***********************
-          // ADD Attendance with pattern: 4,4,4,4,3,4,4...
-          // Sessions: 4, 8, 12, 16, 19, 23, 27, 31...
-          // ***********************
-          const shouldAddAttendance = attendanceForm && (
+      // ***********************
+      // ADD Attendance with pattern: 4,4,4,4,3,4,4...
+      // Sessions: 4, 8, 12, 16, 19, 23, 27, 31...
+      // Add attendance form once per eligible session (outside config loop)
+      // Note: config_id is required by database, so we use the first config's ID as a fallback
+      // ***********************
+      if (attendanceForm && configs.length > 0) {
+        // Log SESSION SUM REPORT template matching (system form with fixed pattern)
+        logger.info(`🔍 Matching frequency for template: SESSION SUM REPORT (system form)`);
+        logger.info(`   Looking for: service_template_id=${serviceTemplateId}, nbr_of_sessions=${nbrOfSessions}`);
+        logger.info(`   Available frequencies: 1`);
+        logger.info(`   Frequency 1: service_ref_id=null, nbr_of_sessions=system, sessions=[4, 8, 12, 16, 19, 23, 27, 31...] (pattern-based)`);
+        logger.info(`   ✅ Matched: System form with fixed pattern (sessions: 4, 8, 12, 16, 19, 23, 27, 31...)`);
+        
+        const attendanceSessionsAdded = new Set(); // Track which sessions already have attendance form
+        const fallbackConfigId = configs[0].id; // Use first config's ID as fallback (required by DB schema)
+        
+        for (
+          let sessionNumber = 1;
+          sessionNumber <= rec.session_obj.length;
+          sessionNumber++
+        ) {
+          const shouldAddAttendance = (
             (sessionNumber <= 16 && sessionNumber % 4 === 0) || 
             (sessionNumber >= 19 && (sessionNumber - 19) % 4 === 0)
           );
           
-          if (shouldAddAttendance) {
+          if (shouldAddAttendance && !attendanceSessionsAdded.has(sessionNumber)) {
             const sessionIndex = sessionNumber - 1;
             if (rec.session_obj[sessionIndex]) {
+              attendanceSessionsAdded.add(sessionNumber);
+              
               const tmpFormSessionAttendance = {
                 session_id: rec.session_obj[sessionIndex].session_id,
                 form_array: ['SESSION SUM REPORT'],
@@ -720,7 +872,7 @@ export default class TreatmentTargetFeedbackConfig {
                 treatment_target: data.treatment_target,
                 form_name: 'SESSION SUM REPORT',
                 form_id: attendanceForm.form_id,
-                config_id: config.id,
+                config_id: fallbackConfigId, // Use first config's ID (required by DB, attendance form not tied to specific config)
                 purpose: 'SESSION SUM REPORT',
                 session_number: sessionNumber,
                 tenant_id: data.tenant_id || null,
@@ -728,9 +880,13 @@ export default class TreatmentTargetFeedbackConfig {
 
               tmpSession.push(tmpFormSessionAttendance);
               tmpForm.push(tmpAttendanceFormEntry);
+              
+              logger.info(`✅ Adding attendance form (SESSION SUM REPORT) to session ${sessionNumber}`);
             }
           }
         }
+      } else if (attendanceForm && configs.length === 0) {
+        logger.warn(`⚠️ Cannot add attendance forms: No configs found to use as fallback config_id`);
       }
 
       // Update session forms
@@ -739,16 +895,46 @@ export default class TreatmentTargetFeedbackConfig {
         return updateResult;
       }
 
-      // Create treatment target session forms
-      const treatmentTargetFormResult =
-        await this.createTreatmentTargetSessionForms(tmpForm);
-      if (treatmentTargetFormResult.error) {
-        return treatmentTargetFormResult;
+      // Insert all forms
+      if (tmpForm.length > 0) {
+        logger.info(`📋 Inserting ${tmpForm.length} form(s) for req_id: ${data.req_id}`);
+        const treatmentTargetFormResult =
+          await this.createTreatmentTargetSessionForms(tmpForm);
+        if (treatmentTargetFormResult.error) {
+          return treatmentTargetFormResult;
+        }
       }
 
-      return { message: 'Treatment target session forms loaded successfully' };
+      // Summary log
+      logger.info(`📊 Form Distribution Summary for req_id: ${data.req_id}`);
+      logger.info(`   - Total forms prepared: ${tmpForm.length}`);
+      logger.info(`   - Total forms inserted: ${tmpForm.length}`);
+      logger.info(`   - Total sessions updated: ${tmpSession.length}`);
+      
+      // Group by form name for summary
+      const formsByFormName = {};
+      tmpForm.forEach(f => {
+        if (!formsByFormName[f.form_name]) {
+          formsByFormName[f.form_name] = [];
+        }
+        formsByFormName[f.form_name].push(f.session_number);
+      });
+      
+      Object.keys(formsByFormName).forEach(formName => {
+        const sessionNumbers = formsByFormName[formName].sort((a, b) => a - b);
+        logger.info(`   - ${formName}: Sessions [${sessionNumbers.join(', ')}]`);
+      });
+
+      return { 
+        message: 'Treatment target session forms loaded successfully',
+        summary: {
+          total_forms_prepared: tmpForm.length,
+          total_forms_inserted: tmpForm.length,
+          total_sessions: tmpSession.length,
+          forms_by_name: formsByFormName
+        }
+      };
     } catch (error) {
-      console.error(error);
       logger.error(error);
       return {
         message: 'Error loading treatment target session forms',
@@ -782,10 +968,8 @@ export default class TreatmentTargetFeedbackConfig {
           ? getSession.forms_array
           : JSON.parse(getSession.forms_array || '[]');
 
-        // Add new forms and remove duplicates
-        const updatedForms = Array.from(
-          new Set([...currentForms, ...post.form_array]),
-        );
+        // Add new forms
+        const updatedForms = [...currentForms, ...post.form_array];
 
         const tmpSession = {
           forms_array: JSON.stringify(updatedForms),
@@ -800,7 +984,6 @@ export default class TreatmentTargetFeedbackConfig {
 
       return { message: 'Sessions updated successfully' };
     } catch (error) {
-      console.error(error);
       logger.error(error);
       return { message: 'Error updating session forms', error: -1 };
     }
@@ -823,7 +1006,6 @@ export default class TreatmentTargetFeedbackConfig {
         data,
       );
     } catch (error) {
-      console.error(error);
       logger.error(error);
       return {
         message: 'Error creating treatment target session forms',

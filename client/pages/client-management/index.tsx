@@ -18,6 +18,7 @@ import { useQueryData } from "../../utils/hooks/useQueryData";
 import { useMutationData } from "../../utils/hooks/useMutationData";
 import { api } from "../../utils/auth";
 import { useQueryClient } from "@tanstack/react-query";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 const CreateClientForm = dynamic(
   () => import("../../components/Forms/CreateClientForm"),
@@ -35,7 +36,7 @@ function ClientManagement() {
   const router = useRouter();
   const { userObj } = useReferenceContext();
   const queryClient = useQueryClient();
-  
+
   const [showCreateSessionLayout, setShowCreateSessionLayout] = useState(false);
   const [clientFormData, setClientFormData] = useState();
   const [confirmationModal, setConfirmationModal] = useState(false);
@@ -44,6 +45,8 @@ function ClientManagement() {
   const [activeTab, setActiveTab] = useState(0);
   const [counselorId, setCounselorId] = useState(null);
   const [activeRowId, setActiveRowId] = useState(null); // Track active dropdown row
+  const [deactivateModalOpen, setDeactivateModalOpen] = useState(false);
+  const [rowToDeactivate, setRowToDeactivate] = useState(null);
 
   const actionDropdownRef = useRef(null);
 
@@ -243,6 +246,127 @@ function ClientManagement() {
     setActiveRowId(null);
   };
 
+  // Activate user mutation
+  const { mutate: activateUser, isPending: isActivating } = useMutationData(
+    ["activate-user"],
+    async ({ user_id, role_id, target_id }) => {
+      return await CommonServices.activateUser(user_id, role_id, target_id);
+    },
+    ["clients", "counselors-dropdown"], // Invalidate queries after activation
+    () => {
+      // Custom onSuccess - handle side effects and show custom toast
+      toast.success("User activated successfully");
+      setActiveRowId(null);
+      refetchClients();
+    }
+  );
+
+  // Deactivate user mutation
+  const { mutate: deactivateUser, isPending: isDeactivating } = useMutationData(
+    ["deactivate-user"],
+    async ({ user_id, role_id, target_id }) => {
+      return await CommonServices.deactivateUser(user_id, role_id, target_id);
+    },
+    ["clients", "counselors-dropdown"], // Invalidate queries after deactivation
+    () => {
+      // Custom onSuccess - handle side effects and show custom toast
+      toast.success("User deactivated successfully");
+      setActiveRowId(null);
+      refetchClients();
+    }
+  );
+
+  const handleActivate = (row) => {
+    // Get user data from localStorage
+    let requesterUser = userObj;
+    if (!requesterUser?.user_id || !requesterUser?.role_id) {
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          requesterUser = JSON.parse(storedUser);
+        }
+      } catch (error) {
+        console.error("Error reading user from localStorage", error);
+      }
+    }
+
+    if (!requesterUser?.user_id) {
+      toast.error("Unable to activate: User ID not found");
+      return;
+    }
+
+    if (!requesterUser?.role_id) {
+      toast.error("Unable to activate: Role ID not found");
+      return;
+    }
+
+    if (!row?.user_id) {
+      toast.error("Unable to activate: Target ID not found");
+      return;
+    }
+
+    activateUser({
+      user_id: requesterUser.user_id,
+      role_id: requesterUser.role_id,
+      target_id: row.user_id,
+    });
+  };
+
+  const handleDeactivate = (row) => {
+    // Store the row and open confirmation modal
+    setRowToDeactivate(row);
+    setDeactivateModalOpen(true);
+  };
+
+  const confirmDeactivate = () => {
+    if (!rowToDeactivate) {
+      toast.error("Unable to deactivate: No user selected");
+      setDeactivateModalOpen(false);
+      return;
+    }
+
+    // Get user data from localStorage
+    let requesterUser = userObj;
+    if (!requesterUser?.user_id || !requesterUser?.role_id) {
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          requesterUser = JSON.parse(storedUser);
+        }
+      } catch (error) {
+        console.error("Error reading user from localStorage", error);
+      }
+    }
+
+    if (!requesterUser?.user_id) {
+      toast.error("Unable to deactivate: User ID not found");
+      setDeactivateModalOpen(false);
+      return;
+    }
+
+    if (!requesterUser?.role_id) {
+      toast.error("Unable to deactivate: Role ID not found");
+      setDeactivateModalOpen(false);
+      return;
+    }
+
+    if (!rowToDeactivate?.user_id) {
+      toast.error("Unable to deactivate: Target ID not found");
+      setDeactivateModalOpen(false);
+      return;
+    }
+
+    deactivateUser({
+      user_id: requesterUser.user_id,
+      role_id: requesterUser.role_id,
+      target_id: rowToDeactivate.user_id,
+    });
+
+    // Close modal and reset
+    setDeactivateModalOpen(false);
+    setRowToDeactivate(null);
+  };
+
   const handleClickOutside = (e) => {
     if (
       actionDropdownRef.current &&
@@ -260,12 +384,22 @@ function ClientManagement() {
     };
   }, []);
 
+  // Determine if activation actions should be shown
+  // Only show for tenants/admins (role_id 3 or 4) and when viewing counselors or managers tab (activeTab === 1 or 2)
+  const showActivationActions =
+    [3, 4].includes(userObj?.role_id) && (activeTab === 1 || activeTab === 2);
+
   const clientDataColumns = CLIENT_MANAGEMENT_DATA(
     handleCellClick,
     handleEdit,
     handleDelete,
     handleEditSessionInfo,
-    actionDropdownRef
+    actionDropdownRef,
+    handleActivate,
+    handleDeactivate,
+    showActivationActions,
+    userObj?.role_id,
+    userObj?.user_profile_id || userObj?.user_id
   );
 
   const handleCreateClient = () => {
@@ -364,6 +498,25 @@ function ClientManagement() {
           </div>
         )}
       </CustomClientDetails>
+
+      <ConfirmationModal
+        isOpen={deactivateModalOpen}
+        onClose={() => {
+          setDeactivateModalOpen(false);
+          setRowToDeactivate(null);
+        }}
+        affirmativeAction="Deactivate"
+        discardAction="Cancel"
+        content={
+          rowToDeactivate
+            ? `Are you sure you want to deactivate ${
+                rowToDeactivate.user_first_name || ""
+              } ${rowToDeactivate.user_last_name || ""}?`
+            : "Are you sure you want to deactivate this user?"
+        }
+        handleAffirmativeAction={confirmDeactivate}
+        loading={isDeactivating}
+      />
     </ClientManagementContainer>
   );
 }

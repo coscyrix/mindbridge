@@ -2,15 +2,13 @@
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-import DBconn from '../../config/db.config.js';
-const knex = require('knex');;
+import db from '../../utils/db.js';
 import Common from '../common.js';
 import logger from '../../config/winston.js';
 import AuthCommon from './authCommon.js';
 import SendEmail from '../../middlewares/sendEmail.js';
 import {
   forgetPasswordEmail,
-  accountDeactivatedEmail,
   accountVerificationEmail,
   changePasswordEmail,
   accountRestoredEmail,
@@ -19,10 +17,9 @@ import UserProfile from '../userProfile.js';
 const dotenv = require('dotenv');;
 import CounselorProfile from '../counselorProfile.js';
 import Service from '../service.js';
+import prisma from '../../utils/prisma.js';
 
 dotenv.config();
-
-const db = knex(DBconn.dbConn.development);
 
 export default class User {
   //////////////////////////////////////////
@@ -145,49 +142,13 @@ export default class User {
         return { message: 'Email does not exist', error: -1 };
       }
 
-      // Check if account is deactivated
-      if (checkEmail[0].status_yn == 'n') {
-        logger.warn('Account is deactivated');
-
-        // Send an Account Deactivated email
-        const emlMsg = accountDeactivatedEmail(data.email);
-        const emlDeact = this.sendEmail.sendMail(emlMsg);
-        if (emlDeact.error) {
-          logger.warn('Error sending email. Account is deactivated.');
-          return {
-            message: 'Error sending email. Account is deactivated.',
-            error: -1,
-          };
-        }
-
+      // Check if account is deactivated using is_active
+      const isActive = checkEmail[0].is_active === true || checkEmail[0].is_active === 1;
+      if (!isActive) {
+        logger.warn('Account is deactivated (is_active = false)');
         return { message: 'Account is deactivated', error: -1 };
       }
 
-      // Check if account is verified
-      // if (checkEmail[0].is_verified === 0) {
-      //   logger.warn('Account is inactive');
-
-      //   // Send an OTP for verification if account is not deactivated
-      //   if (checkEmail[0].status_yn == 'y') {
-      //     // Send an Inactive Account email
-      //     const emlInactiveMsg = accountVerificationEmail(data.email);
-      //     const sendInactiveEml = this.sendEmail.sendMail(emlInactiveMsg);
-      //     if (sendInactiveEml.error) {
-      //       logger.warn('Error sending email. Account is deactivated.');
-      //       return {
-      //         message: 'Error sending email. Account is deactivated.',
-      //         error: -1,
-      //       };
-      //     }
-
-      //     const sendOTP = this.sendOTPforVerification({ email: data.email });
-      //   }
-
-      //   return {
-      //     message: 'Account is inactive. Please contact the adminstrator.',
-      //     error: -1,
-      //   };
-      // }
 
       const checkPassword = await this.authCommon.comparePassword(
         data.password,
@@ -209,8 +170,12 @@ export default class User {
           logger.warn('User with role_id = 1 is not allowed to login');
           return { message: 'Access denied. This account type is not allowed to login.', error: -1 };
         }
+
+        // Ensure is_active is a boolean
+        const userIsActive = checkEmail[0].is_active === true || checkEmail[0].is_active === 1;
         
         var usr = {
+          user_id: checkEmail[0].user_id,
           user_profile_id: usrPro[0].user_profile_id,
           user_first_name: usrPro[0].user_first_name,
           user_last_name: usrPro[0].user_last_name,
@@ -220,7 +185,20 @@ export default class User {
           role_cde: usrPro[0].role_cde,
           tenant_id: usrPro[0].tenant_id,
           tenant_name: usrPro[0].tenant_name,
+          is_active: userIsActive,
+          email: checkEmail[0].email, 
         };
+
+        console.log('usr', checkEmail[0].is_active, usr.is_active);
+        
+        // Check if counselor or tenant account is activated using is_active
+        if (usr.role_id === 2 || usr.role_id === 3) {
+          if (!usr.is_active) {
+            logger.warn(`Account ${usr.user_id} (role: ${usr.role_id}) is deactivated - is_active: ${usr.is_active}`);
+            return { message: 'Your account has been deactivated. Please contact your administrator or tenant to reactivate your account.', error: -1 };
+          }
+        }
+        
         // If user is a counselor, add complete counselor profile data and tenant object
         if (usr.role_id === 2) {
           console.log('User is a counselor, user_profile_id:', usr.user_profile_id);
