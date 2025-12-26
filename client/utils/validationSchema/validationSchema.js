@@ -293,13 +293,23 @@ export const getStartedSchema = z.object({
 });
 
 export const bookAppointmentSchema = z.object({
-  client_name: z.string().min(1, "Name is required"),
+  client_first_name: z.string().min(1, "First name is required").min(2, "First name must be at least 2 characters"),
+  client_last_name: z.string().min(1, "Last name is required").min(2, "Last name must be at least 2 characters"),
   client_email: z.string().email("Invalid email address"),
   contact_number: z
-    .string()
-    .min(10, "Phone number must be at least 10 digits")
-    .max(15, "Phone number can't exceed 15 digits")
-    .regex(/^[0-9]+$/, "Phone number must contain only digits"),
+    .string({
+      required_error: "Phone number is required",
+      invalid_type_error: "Please enter a valid phone number",
+    })
+    .min(1, { message: "Phone number is required" })
+    .refine(
+      (value) => {
+        if (!value) return false;
+        // Basic validation for E.164 format (react-phone-number-input format)
+        return /^\+[1-9]\d{1,14}$/.test(value.replace(/\s/g, ""));
+      },
+      { message: "Please enter a valid phone number" }
+    ),
   service: z.string().min(1, "Please select a service"),
   appointment_date: z
     .string()

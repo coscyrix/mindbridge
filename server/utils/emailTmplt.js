@@ -873,30 +873,88 @@ export const newAppointmentEmail = (
   counselorName,
   clientName,
   clientEmail,
+  countryCode,
   contactNumber,
   service,
   appointmentDate,
   description = null,
 ) => {
+  // Format phone number for display
+  const formatPhoneForDisplay = (code, number) => {
+    if (!number) return '';
+    const codeStr = code || '+1';
+    const numStr = number.replace(/\D/g, '');
+    
+    // Format based on length
+    if (numStr.length === 10) {
+      // US/Canada format: (XXX) XXX-XXXX
+      return `${codeStr} (${numStr.slice(0, 3)}) ${numStr.slice(3, 6)}-${numStr.slice(6)}`;
+    } else if (numStr.length > 10) {
+      // International format: +XX XXX XXX XXXX
+      const chunks = [];
+      let remaining = numStr;
+      while (remaining.length > 0) {
+        if (remaining.length > 4) {
+          chunks.push(remaining.slice(0, 3));
+          remaining = remaining.slice(3);
+        } else {
+          chunks.push(remaining);
+          remaining = '';
+        }
+      }
+      return `${codeStr} ${chunks.join(' ')}`;
+    }
+    return `${codeStr} ${numStr}`;
+  };
+
+  const formattedPhone = formatPhoneForDisplay(countryCode, contactNumber);
+  const fullPhoneNumber = formattedPhone || `${countryCode || ''} ${contactNumber || ''}`.trim();
+
   return {
     to: counselorEmail,
     subject: `New Appointment with ${clientName}`,
     html: `
-      <h1>New Appointment Confirmation</h1>
-      <p>Hello ${capitalizeFirstLetter(counselorName)},</p>
-      <p>You have a new appointment request with the following details:</p>
-      <ul>
-        <li><strong>Client Name:</strong> ${capitalizeFirstLetter(clientName)}</li>
-        <li><strong>Client Email:</strong> ${clientEmail}</li>
-        <li><strong>Client Phone:</strong> ${contactNumber}</li>
-        <li><strong>Service:</strong> ${service}</li>
-        <li><strong>Appointment Date:</strong> ${new Date(appointmentDate).toDateString()}</li>
-        ${description ? `<li><strong>Description:</strong> ${description}</li>` : ''}
-      </ul>
-      <p>Please reach out to the client to confirm the details.</p>
-      <p>Thank you,</p>
-      <p>The MindBridge Team</p>
-      ${EMAIL_DISCLAIMER}
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1a73e8; margin-bottom: 20px;">New Appointment Confirmation</h1>
+        <p style="font-size: 16px; line-height: 1.6;">Hello ${capitalizeFirstLetter(counselorName)},</p>
+        <p style="font-size: 16px; line-height: 1.6;">You have a new appointment request with the following details:</p>
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+              <strong style="color: #333; display: inline-block; min-width: 150px;">Client Name:</strong>
+              <span style="color: #666;">${capitalizeFirstLetter(clientName)}</span>
+            </li>
+            <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+              <strong style="color: #333; display: inline-block; min-width: 150px;">Client Email:</strong>
+              <a href="mailto:${clientEmail}" style="color: #1a73e8; text-decoration: none;">${clientEmail}</a>
+            </li>
+            <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+              <strong style="color: #333; display: inline-block; min-width: 150px;">Client Phone:</strong>
+              <a href="tel:${countryCode || ''}${contactNumber || ''}" style="color: #1a73e8; text-decoration: none; font-weight: 500;">
+                ${fullPhoneNumber}
+              </a>
+            </li>
+            <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+              <strong style="color: #333; display: inline-block; min-width: 150px;">Service:</strong>
+              <span style="color: #666;">${service}</span>
+            </li>
+            <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+              <strong style="color: #333; display: inline-block; min-width: 150px;">Appointment Date:</strong>
+              <span style="color: #666;">${new Date(appointmentDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </li>
+            ${description ? `
+            <li style="margin-bottom: 12px;">
+              <strong style="color: #333; display: block; margin-bottom: 8px;">Description:</strong>
+              <span style="color: #666; line-height: 1.6;">${description}</span>
+            </li>
+            ` : ''}
+          </ul>
+        </div>
+        <p style="font-size: 16px; line-height: 1.6;">Please reach out to the client to confirm the details.</p>
+        <p style="font-size: 16px; line-height: 1.6; margin-top: 20px;">Thank you,</p>
+        <p style="font-size: 16px; line-height: 1.6; color: #1a73e8; font-weight: 500;">The MindBridge Team</p>
+        ${EMAIL_DISCLAIMER}
+      </div>
     `,
   };
 };

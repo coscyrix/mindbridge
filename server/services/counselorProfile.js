@@ -9,6 +9,7 @@ import CounselorDocumentsService from './counselorDocuments.js';
 import CounselorTargetOutcome from '../models/counselorTargetOutcome.js';
 import AppointmentEmailTracking from '../models/appointmentEmailTracking.js';
 import { newAppointmentEmail } from '../utils/emailTmplt.js';
+import { parsePhoneNumber } from '../utils/phoneUtils.js';
 
 export default class CounselorProfileService {
   constructor() {
@@ -321,12 +322,17 @@ export default class CounselorProfileService {
       const counselor = counselorProfile.rec[0];
       const counselorEmail = counselor.email;
       const counselorName = `${counselor.user_first_name} ${counselor.user_last_name}`;
+      
+      // Parse phone number to extract country code and contact number
+      const { country_code, contact_number } = parsePhoneNumber(data.contact_number);
+      
       const emailMsg = newAppointmentEmail(
         counselorEmail,
         counselorName,
         data.client_name,
         data.client_email,
-        data.contact_number,
+        country_code,
+        contact_number,
         data.service,
         data.appointment_date,
         data.description,
@@ -338,8 +344,12 @@ export default class CounselorProfileService {
         return { message: 'Failed to send appointment email', error: -1 };
       }
 
-      // Record that the email was sent successfully
-      await this.appointmentEmailTracking.recordEmailSent(data);
+      // Record that the email was sent successfully with parsed phone data
+      await this.appointmentEmailTracking.recordEmailSent({
+        ...data,
+        country_code,
+        contact_number,
+      });
       
       return { message: 'Appointment email sent successfully' };
     } catch (err) {

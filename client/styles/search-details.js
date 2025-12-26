@@ -453,3 +453,200 @@ export const SliderContainer = styled.div`
     height: auto;
   }
 `;
+
+export const AppointmentForm = styled.form`
+  padding: 0 20px;
+  min-width: 320px;
+`;
+
+export const FormField = styled.div`
+  margin-bottom: 20px;
+`;
+
+export const FormFieldRow = styled.div`
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  ${FormField} {
+    flex: 1;
+    margin-bottom: 0;
+
+    @media (max-width: 480px) {
+      margin-bottom: 20px;
+    }
+  }
+`;
+
+export const FormLabel = styled.label`
+  display: block;
+  font-weight: 500;
+  text-align: left;
+  margin-bottom: ${props => props.marginBottom || '8px'};
+`;
+
+export const FormInput = styled.input`
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #e7e7e9;
+  font-size: 15px;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+  }
+`;
+
+export const FormSelect = styled.select`
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #e7e7e9;
+  font-size: 15px;
+  font-family: inherit;
+  background-color: white;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+  }
+`;
+
+export const FormTextarea = styled.textarea`
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #e7e7e9;
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+  }
+`;
+
+export const FormError = styled.p`
+  color: #f04438;
+  margin: 6px 0 0 2px;
+  font-size: 13px;
+`;
+
+export const FormFooter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 1px solid #eee;
+  background: #fff;
+  position: sticky;
+  bottom: 0;
+`;
+
+export const FormButton = styled.button`
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  min-width: 107px;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+export const FormButtonCancel = styled(FormButton)`
+  border: 1px solid #e1e1e1;
+  background: #fff;
+  color: #333;
+
+  &:hover:not(:disabled) {
+    background: #f5f5f5;
+  }
+`;
+
+export const FormButtonSubmit = styled(FormButton)`
+  border: none;
+  background: var(--primary-button-color);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+`;
+
+export const PhoneInputWrapper = styled.div`
+  &.phone-input-wrapper {
+    .PhoneInput {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .PhoneInput .PhoneInputInput {
+      flex: 1;
+      height: 45px;
+      border: 1px solid #e7e7e9;
+      background: #ffffff;
+      color: #000000;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 24px;
+      border-radius: 6px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .PhoneInput .PhoneInputInput::placeholder {
+      color: #000000;
+      opacity: 0.2;
+    }
+
+    .PhoneInput .PhoneInputInput:focus-visible,
+    .PhoneInput .PhoneInputInput:hover {
+      outline: 1px solid #1b6bc0;
+      box-shadow: 0px 0px 0px 1.9px #1b6bc042 inset;
+      box-shadow: 0px 0px 0px 4px #1b6bc030;
+      border-color: #1b6bc0;
+    }
+
+    .PhoneInput .PhoneInputCountry {
+      margin-right: 0;
+      padding: 0 8px;
+      border: 1px solid #e7e7e9;
+      border-radius: 6px;
+      background: #ffffff;
+      height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 60px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .PhoneInput .PhoneInputCountry:hover {
+      border-color: #1b6bc0;
+    }
+
+    .PhoneInput.phone-input-error .PhoneInputInput,
+    .PhoneInput.phone-input-error .PhoneInputCountry {
+      border-color: #f04438;
+    }
+  }
+`;

@@ -36,9 +36,11 @@ export default class AppointmentEmailTracking {
         .insert({
           counselor_profile_id: data.counselor_profile_id,
           customer_email: data.client_email || '',
-          customer_name: data.client_name ,
+          customer_name: data.client_name,
           service: data.service,
-          appointment_date: data.appointment_date
+          appointment_date: data.appointment_date,
+          contact_number: data.contact_number || null,
+          country_code: data.country_code || null,
         });
       
       return result[0];
