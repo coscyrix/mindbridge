@@ -532,14 +532,14 @@ const SearchDetails = () => {
                 <FormInput
                   id="client_last_name"
                   {...methods.register("client_last_name")}
-                  type="text"
+                type="text"
                   placeholder="Enter your last name"
-                />
+              />
                 {methods.formState.errors.client_last_name && (
                   <FormError>
                     {methods.formState.errors.client_last_name.message}
                   </FormError>
-                )}
+              )}
               </FormField>
             </FormFieldRow>
 
@@ -576,12 +576,12 @@ const SearchDetails = () => {
                       onChange={field.onChange}
                       onBlur={field.onBlur}
                       className={fieldState.error ? "phone-input-error" : ""}
-                    />
+              />
                     {fieldState.error && (
                       <FormError>
                         {fieldState.error.message}
                       </FormError>
-                    )}
+              )}
                   </PhoneInputWrapper>
                 )}
               />

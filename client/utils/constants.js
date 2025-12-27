@@ -279,6 +279,7 @@ export const SIDEBAR_HEADINGS = [
 // React Query Keys
 export const QUERY_KEYS = {
   APPOINTMENTS: (userProfileId) => ["appointments", userProfileId],
+  APPOINTMENT_BY_ID: (appointmentId) => ["appointment", appointmentId],
 };
 
 export const TABLE_DATA = (handleCellClick, handleEdit, handleDelete) => {

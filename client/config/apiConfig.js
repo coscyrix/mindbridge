@@ -42,6 +42,7 @@ const ApiConfig = {
     getCounselorProfile: "/counselor-profile",
     searchCounselors: "/counselor-profile/search",
     getSearchFilters: "/counselor-profile/search/filters",
+    getAppointmentById: "/counselor-profile/appointment",
   },
   getstartedsubmittion: {
     getstarted: "/get-started-form",

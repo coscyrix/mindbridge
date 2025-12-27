@@ -340,4 +340,31 @@ export default class CounselorProfileController {
       res.status(500).json({ message: 'Internal server error', error: -1 });
     }
   }
+
+  async sendIntakeForm(req, res) {
+    try {
+      const result = await this.counselorProfileService.sendIntakeForm(req.body);
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error('Error in sendIntakeForm controller:', error);
+      res.status(500).json({ message: 'Internal server error', error: -1 });
+    }
+  }
+
+  async getAppointmentById(req, res) {
+    try {
+      const { appointment_id } = req.query;
+      const result = await this.counselorProfileService.getAppointmentById(appointment_id);
+      if (result.error) {
+        return res.status(400).json(result);
+      }
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error('Error in getAppointmentById controller:', error);
+      res.status(500).json({ message: 'Internal server error', error: -1 });
+    }
+  }
 }

@@ -241,6 +241,101 @@ export const treatmentToolsEmail = (
   return emailObj;
 };
 
+// This function sends an email to the client with the intake form link
+export const intakeFormEmail = (email, clientName, intakeFormLink, counselor_id, appointment_id, intake_form_id, counselorEmail = null, counselorName = null, counselorPhone = null) => {
+  const emailObj = {
+    to: email,
+    subject: 'Intake Form Required for Your Appointment',
+    html: `
+    <style>
+      .intake-container {
+        font-family: Arial, sans-serif;
+        color: #333;
+        line-height: 1.6;
+      }
+      .intake-button {
+        display: inline-block;
+        padding: 15px 30px;
+        margin: 20px 0;
+        background: linear-gradient(90deg, #1a73e8, #1557b0);
+        color: white !important;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        text-align: center;
+      }
+      .intake-button:hover {
+        background: linear-gradient(90deg, #1557b0, #0f4a8a);
+      }
+      .info-box {
+        background-color: #f0f4f8;
+        border-left: 4px solid #1a73e8;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .contact-info {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+    </style>
+    <div class="intake-container">
+      <p>Dear ${capitalizeFirstLetter(clientName)},</p>
+      
+      <p>I hope this message finds you well.</p>
+      
+      <div class="info-box">
+        <p><strong>Action Required:</strong></p>
+        <p>Before your upcoming appointment, we need you to complete an Intake Form. This form helps us understand your background, concerns, and goals so we can provide you with the best possible care.</p>
+        <p><strong>Intake Form ID:</strong> ${intake_form_id}</p>
+      </div>
+      
+      <p>The intake form will help us:</p>
+      <ul>
+        <li>Understand your current situation and concerns</li>
+        <li>Learn about your goals for therapy</li>
+        <li>Gather important background information</li>
+        <li>Prepare for our first session together</li>
+      </ul>
+      
+      <p><strong>Please click the button below to access and complete your intake form:</strong></p>
+      
+      <div style="text-align: center;">
+        <a href="${intakeFormLink}" class="intake-button">Complete Intake Form</a>
+      </div>
+      
+      <p>The form will take approximately 10-15 minutes to complete. Please complete it at your earliest convenience so we can prepare for your appointment.</p>
+      
+      ${counselorName ? `
+      <div class="contact-info">
+        <p><strong>Your Counselor:</strong> ${capitalizeFirstLetter(counselorName)}</p>
+        ${counselorEmail ? `<p><strong>Email:</strong> ${counselorEmail}</p>` : ''}
+        ${counselorPhone ? `<p><strong>Phone:</strong> ${counselorPhone}</p>` : ''}
+        <p>If you have any questions or need assistance, feel free to reach out.</p>
+      </div>
+      ` : `
+      <p>If you have any questions or need assistance, please don't hesitate to reach out to your counselor.</p>
+      `}
+      
+      <p>We look forward to working with you.</p>
+      
+      <p>Warm regards,<br/>
+      ${counselorName ? capitalizeFirstLetter(counselorName) + '<br/>' : ''}
+      <strong>MindBridge Therapy Team</strong></p>
+    </div>
+      ${EMAIL_DISCLAIMER}
+    `,
+  };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
+};
+
 //This function sends an email to the client with a summary of their attendance record.
 export const attendanceSummaryEmail = (
   email,

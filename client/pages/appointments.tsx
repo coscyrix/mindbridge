@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import CustomLoader from "../components/Loader/CustomLoader";
 import moment from "moment";
 import { useQueryData } from "../utils/hooks/useQueryData";
+import { useMutationData } from "../utils/hooks/useMutationData";
 import { QUERY_KEYS } from "../utils/constants";
 
 function Appointments() {
@@ -32,6 +33,28 @@ function Appointments() {
     },
     userObj?.role_id === 2 && !!userObj?.user_profile_id // Only fetch for counselors
   );
+
+  // Get counselor_profile_id from first appointment (all appointments are for the same counselor)
+  const counselorProfileId = appointments?.[0]?.counselor_profile_id;
+
+  // Mutation for sending intake form
+  const { mutate: sendIntakeForm, isPending: isSendingIntakeForm } =
+    useMutationData(
+      ["send-intake-form"],
+      async (payload: {
+        appointment_id: number;
+        counselor_profile_id: number;
+      }) => {
+        const response = await CommonServices.sendIntakeForm(payload);
+        if (response.status !== 200 && response.status !== 201) {
+          throw new Error(
+            response.data?.message || "Failed to send intake form"
+          );
+        }
+        return response;
+      },
+      QUERY_KEYS.APPOINTMENTS(userObj?.user_profile_id)[0] // Invalidate appointments query after success
+    );
 
   // Define table columns
   const appointmentColumns = [
@@ -75,6 +98,74 @@ function Appointments() {
       sortable: true,
       wrap: true,
     },
+    {
+      name: "Action",
+      cell: (row: any) => {
+        const handleSendIntakeForm = () => {
+          const profileId = row.counselor_profile_id || counselorProfileId;
+
+          if (!profileId) {
+            toast.error(
+              "Counselor profile ID not found. Please refresh the page."
+            );
+            return;
+          }
+
+          if (!row.id) {
+            toast.error("Appointment ID not found");
+            return;
+          }
+
+          sendIntakeForm({
+            appointment_id: row.id,
+            counselor_profile_id: profileId,
+          });
+        };
+
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSendIntakeForm();
+            }}
+            disabled={isSendingIntakeForm}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "1px solid #1a73e8",
+              background: "#fff",
+              color: "#1a73e8",
+              cursor: isSendingIntakeForm ? "not-allowed" : "pointer",
+              fontSize: "14px",
+              fontWeight: 500,
+              transition: "all 0.2s ease",
+              opacity: isSendingIntakeForm ? 0.6 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!isSendingIntakeForm) {
+                const target = e.target as HTMLButtonElement;
+                target.style.background = "#1a73e8";
+                target.style.color = "#fff";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isSendingIntakeForm) {
+                const target = e.target as HTMLButtonElement;
+                target.style.background = "#fff";
+                target.style.color = "#1a73e8";
+              }
+            }}
+          >
+            {isSendingIntakeForm ? "Sending..." : "Send Intake Form"}
+          </button>
+        );
+      },
+      width: "180px",
+      ignoreRowClick: true,
+      allowOverflow: true,
+      button: true,
+      wrap: true,
+    },
   ];
 
   // Update displayed appointments when data or filter changes
@@ -85,7 +176,9 @@ function Appointments() {
       filteredData = filteredData?.filter((row) => {
         return (
           row.customer_name?.toLowerCase().includes(filterText.toLowerCase()) ||
-          row.customer_email?.toLowerCase().includes(filterText.toLowerCase()) ||
+          row.customer_email
+            ?.toLowerCase()
+            .includes(filterText.toLowerCase()) ||
           row.service?.toLowerCase().includes(filterText.toLowerCase())
         );
       });
@@ -133,7 +226,6 @@ function Appointments() {
           }}
           selectableRows={false}
           loading={loading}
-          tableCaption="Appointment Requests"
         >
           <div className="user-info-selects">
             <div className="custom-search-wrapper">
@@ -151,4 +243,3 @@ function Appointments() {
 }
 
 export default Appointments;
-

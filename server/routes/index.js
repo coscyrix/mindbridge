@@ -29,3 +29,4 @@ export { treatmentTargetSessionFormsRouter } from './treatmentTargetSessionForms
 export { treatmentTargetSessionFormsTemplateRouter } from './treatmentTargetSessionFormsTemplate.js';
 export { default as therapistAbsenceRouter } from './therapistAbsence.js';
 export { counselorActivationRouter } from './counselorActivation.js';
+export { intakeFormRouter } from './intakeForm.js';

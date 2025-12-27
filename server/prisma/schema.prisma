@@ -8,33 +8,36 @@ datasource db {
 }
 
 model appointment_email_tracking {
-    id                   Int               @id @default(autoincrement())
-    counselor_profile_id Int
-    customer_email       String            @db.VarChar(255)
-    customer_name        String            @db.VarChar(255)
-    service              String            @db.VarChar(255)
-    appointment_date     DateTime          @db.DateTime(0)
-    contact_number       String?           @db.VarChar(20)
-    country_code         String?           @db.VarChar(10)
-    sent_at              DateTime?         @default(now()) @db.Timestamp(0)
-    created_at           DateTime?         @default(now()) @db.Timestamp(0)
-    updated_at           DateTime?         @default(now()) @db.Timestamp(0)
-    counselor_profile    counselor_profile @relation(fields: [counselor_profile_id], references: [counselor_profile_id], onDelete: Cascade, onUpdate: NoAction, map: "appointment_email_tracking_ibfk_1")
+    id                    Int               @id @default(autoincrement())
+    counselor_profile_id  Int
+    customer_email        String            @db.VarChar(255)
+    customer_name         String            @db.VarChar(255)
+    service               String            @db.VarChar(255)
+    appointment_date      DateTime          @db.DateTime(0)
+    contact_number        String?           @db.VarChar(20)
+    country_code          String?           @db.VarChar(10)
+    sent_at               DateTime?         @default(now()) @db.Timestamp(0)
+    send_intake_form      Boolean?          @default(false)
+    intake_form_submitted Boolean?          @default(false)
+    created_at            DateTime?         @default(now()) @db.Timestamp(0)
+    updated_at            DateTime?         @default(now()) @db.Timestamp(0)
+    counselor_profile     counselor_profile @relation(fields: [counselor_profile_id], references: [counselor_profile_id], onDelete: Cascade, onUpdate: NoAction, map: "appointment_email_tracking_ibfk_1")
 
     @@index([counselor_profile_id, customer_email], map: "idx_counselor_customer")
     @@index([sent_at], map: "idx_sent_at")
 }
 
 model client_enrollments {
-    id                                                      Int          @id @default(autoincrement())
+    id                                                      Int                 @id @default(autoincrement())
     user_id                                                 Int
     client_id                                               Int
-    enrollment_dte                                          DateTime?    @default(now()) @db.DateTime(0)
-    created_at                                              DateTime?    @default(now()) @db.DateTime(0)
-    updated_at                                              DateTime?    @default(now()) @db.DateTime(0)
+    enrollment_dte                                          DateTime?           @default(now()) @db.DateTime(0)
+    created_at                                              DateTime?           @default(now()) @db.DateTime(0)
+    updated_at                                              DateTime?           @default(now()) @db.DateTime(0)
     tenant_id                                               Int?
-    user_profile_client_enrollments_user_idTouser_profile   user_profile @relation("client_enrollments_user_idTouser_profile", fields: [user_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_enrollments_ibfk_1")
-    user_profile_client_enrollments_client_idTouser_profile user_profile @relation("client_enrollments_client_idTouser_profile", fields: [client_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_enrollments_ibfk_2")
+    user_profile_client_enrollments_user_idTouser_profile   user_profile        @relation("client_enrollments_user_idTouser_profile", fields: [user_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_enrollments_ibfk_1")
+    user_profile_client_enrollments_client_idTouser_profile user_profile        @relation("client_enrollments_client_idTouser_profile", fields: [client_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_enrollments_ibfk_2")
+    client_intake_form                                      client_intake_form?
 
     @@index([client_id], map: "client_id")
     @@index([user_id], map: "user_id")
@@ -98,6 +101,7 @@ model counselor_profile {
     counselor_services         counselor_services[]
     counselor_target_outcome   counselor_target_outcome[]
     appointment_email_tracking appointment_email_tracking[]
+    client_intake_form         client_intake_form[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -915,6 +919,50 @@ model therapist_absences {
     @@index([tenant_id], map: "idx_therapist_absences_tenant")
 }
 
+model client_intake_form {
+    id                             Int                             @id @default(autoincrement())
+    client_enrollment_id           Int?
+    // Basic Information
+    full_name                      String                          @db.VarChar(255)
+    phone                          String?                         @db.VarChar(20)
+    email                          String?                         @db.VarChar(255)
+    // Emergency Contact
+    emergency_contact_name         String?                         @db.VarChar(255)
+    emergency_contact_relationship String?                         @db.VarChar(100)
+    emergency_contact_phone        String?                         @db.VarChar(20)
+    // Insurance Coverage
+    using_insurance                client_intake_using_insurance?
+    insurance_provider             String?                         @db.VarChar(255)
+    policyholder_name              String?                         @db.VarChar(255)
+    policyholder_date_of_birth     DateTime?                       @db.Date
+    member_id                      String?                         @db.VarChar(100)
+    group_number                   String?                         @db.VarChar(100)
+    // Reason for Seeking Therapy
+    reason_for_therapy             String?                         @db.Text
+    concern_duration               client_intake_concern_duration?
+    // Current Symptoms (stored as JSON array)
+    current_symptoms               Json?
+    // Safety Check
+    self_harm_thoughts             client_intake_self_harm?
+    harming_others_thoughts        client_intake_harming_others?
+    // Goals for Therapy
+    therapy_goals                  String?                         @db.Text
+    // Consent
+    client_name                    String?                         @db.VarChar(255)
+    signature                      String?                         @db.LongText
+    consent_date                   DateTime?                       @db.Date
+    // Metadata
+    counselor_profile_id           Int
+    created_at                     DateTime?                       @default(now()) @db.Timestamp(0)
+    updated_at                     DateTime?                       @default(now()) @db.Timestamp(0)
+    client_enrollment              client_enrollments?             @relation(fields: [client_enrollment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "client_intake_form_enrollment_fk")
+    counselor_profile              counselor_profile               @relation(fields: [counselor_profile_id], references: [counselor_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_intake_form_counselor_profile_fk")
+
+    @@unique([client_enrollment_id], map: "unique_client_intake_enrollment")
+    @@index([counselor_profile_id], map: "idx_client_intake_counselor_profile_id")
+    @@index([created_at], map: "idx_client_intake_created_at")
+}
+
 enum counselor_documents_document_type {
     license
     certification
@@ -1042,4 +1090,27 @@ enum session_session_status {
 enum session_status_yn {
     y
     n
+}
+
+enum client_intake_using_insurance {
+    yes
+    no
+}
+
+enum client_intake_concern_duration {
+    less_than_1_month
+    one_to_six_months
+    six_to_twelve_months
+    over_1_year
+}
+
+enum client_intake_self_harm {
+    no
+    past
+    current
+}
+
+enum client_intake_harming_others {
+    no
+    yes
 }

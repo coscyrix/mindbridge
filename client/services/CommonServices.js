@@ -79,6 +79,19 @@ const CommonServices = {
       },
     });
   },
+  getAppointmentById(appointment_id) {
+    return api.get(ApiConfig.counselorProfile.getAppointmentById, {
+      params: {
+        appointment_id,
+      },
+    });
+  },
+  getIntakeFormDetails(params) {
+    return api.get('/intake-form/details', { params });
+  },
+  sendIntakeForm(payload) {
+    return api.post(`${ApiConfig.counselorProfile.getCounselorProfile}/send-intake-form`, payload);
+  },
   getSearchedCounselors(payload) {
     return api.get(`${ApiConfig.counselorProfile.searchCounselors}/`, {
       params: payload,

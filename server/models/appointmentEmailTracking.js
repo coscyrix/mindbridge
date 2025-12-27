@@ -79,11 +79,48 @@ export default class AppointmentEmailTracking {
         .select('*')
         .from(this.tableName)
         .where('counselor_profile_id', counselor_profile_id)
+        .where(function() {
+          this.where('send_intake_form', false).orWhereNull('send_intake_form');
+        })
         .orderBy('sent_at', 'desc');
       
       return result;
     } catch (error) {
       logger.error('Error getting appointments by counselor:', error);
+      throw error;
+    }
+  }
+
+  async updateSendIntakeForm(appointment_id) {
+    try {
+      const result = await this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from(this.tableName)
+        .where('id', appointment_id)
+        .update({
+          send_intake_form: true,
+          updated_at: this.db.fn.now(),
+        });
+      
+      return result;
+    } catch (error) {
+      logger.error('Error updating send_intake_form:', error);
+      throw error;
+    }
+  }
+
+  async getAppointmentById(appointment_id) {
+    try {
+      const result = await this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('*')
+        .from(this.tableName)
+        .where('id', appointment_id)
+        .first();
+      
+      return result;
+    } catch (error) {
+      logger.error('Error getting appointment by id:', error);
       throw error;
     }
   }

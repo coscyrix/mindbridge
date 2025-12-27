@@ -8,8 +8,9 @@ import logger from '../config/winston.js';
 import CounselorDocumentsService from './counselorDocuments.js';
 import CounselorTargetOutcome from '../models/counselorTargetOutcome.js';
 import AppointmentEmailTracking from '../models/appointmentEmailTracking.js';
-import { newAppointmentEmail } from '../utils/emailTmplt.js';
+import { newAppointmentEmail, intakeFormEmail } from '../utils/emailTmplt.js';
 import { parsePhoneNumber } from '../utils/phoneUtils.js';
+import prisma from '../utils/prisma.js';
 
 export default class CounselorProfileService {
   constructor() {
@@ -417,6 +418,121 @@ export default class CounselorProfileService {
       };
     } catch (err) {
       logger.error('Error in getMyAppointments service:', err);
+      return { message: 'Internal server error', error: -1 };
+    }
+  }
+
+  async sendIntakeForm(data) {
+    const schema = joi.object({
+      appointment_id: joi.number().required(),
+      counselor_profile_id: joi.number().required(),
+    });
+    
+    const { error } = schema.validate(data);
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    try {
+      // Get appointment details
+      const appointment = await this.appointmentEmailTracking.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('*')
+        .from('appointment_email_tracking')
+        .where('id', data.appointment_id)
+        .where('counselor_profile_id', data.counselor_profile_id)
+        .first();
+
+      if (!appointment) {
+        return { message: 'Appointment not found', error: -1 };
+      }
+
+      // Check if intake form already sent
+      if (appointment.send_intake_form) {
+        return { message: 'Intake form has already been sent for this appointment', error: -1 };
+      }
+
+      // Get counselor profile details
+      const counselorProfile = await this.counselorProfile.getCounselorProfile({
+        counselor_profile_id: data.counselor_profile_id,
+      });
+
+      if (!counselorProfile.rec || counselorProfile.rec.length === 0) {
+        return { message: 'Counselor not found', error: -1 };
+      }
+
+      const counselor = counselorProfile.rec[0];
+      const counselorEmail = counselor.email;
+      const counselorName = `${counselor.user_first_name} ${counselor.user_last_name}`;
+      const counselorPhone = counselor.public_phone || null;
+
+      // Create intake form in database
+      const intakeForm = await prisma.client_intake_form.create({
+        data: {
+          full_name: appointment.customer_name,
+          email: appointment.customer_email || null,
+          phone: appointment.contact_number || null,
+          counselor_profile_id: data.counselor_profile_id,
+        },
+      });
+
+      const intakeFormId = intakeForm.id;
+
+      // Encode client name for URL parameter
+      const encodedClientName = encodeURIComponent(appointment.customer_name);
+
+      // Build intake form link with counselor_id, appointment_id, and intake_form_id
+      const intakeFormLink = `${process.env.BASE_URL}${process.env.FORMS || '/forms/'}intake?counselor_id=${data.counselor_profile_id}&appointment_id=${data.appointment_id}&intake_form_id=${intakeFormId}&client_name=${encodedClientName}`;
+
+      // Create and send email
+      const emailMsg = intakeFormEmail(
+        appointment.customer_email,
+        appointment.customer_name,
+        intakeFormLink,
+        data.counselor_profile_id,
+        data.appointment_id,
+        intakeFormId,
+        counselorEmail,
+        counselorName,
+        counselorPhone,
+      );
+
+      const emailResult = await this.sendEmail.sendMail(emailMsg);
+      
+      if (!emailResult || emailResult.error) {
+        const errorMessage = emailResult?.message || 'Failed to send intake form email';
+        logger.error('Error sending intake form email to client:', errorMessage);
+        return { message: 'Failed to send intake form email', error: -1 };
+      }
+
+      // Update appointment to mark send_intake_form as true
+      await this.appointmentEmailTracking.updateSendIntakeForm(data.appointment_id);
+
+      logger.info('Intake form email sent successfully to:', appointment.customer_email);
+      return { message: 'Intake form email sent successfully' };
+    } catch (err) {
+      logger.error('Error in sendIntakeForm service:', err);
+      return { message: 'Internal server error', error: -1 };
+    }
+  }
+
+  async getAppointmentById(appointment_id) {
+    try {
+      if (!appointment_id) {
+        return { message: 'Appointment ID is required', error: -1 };
+      }
+
+      const appointment = await this.appointmentEmailTracking.getAppointmentById(
+        parseInt(appointment_id)
+      );
+
+      if (!appointment) {
+        return { message: 'Appointment not found', error: -1 };
+      }
+
+      return { message: 'Appointment retrieved successfully', rec: appointment };
+    } catch (err) {
+      logger.error('Error in getAppointmentById service:', err);
       return { message: 'Internal server error', error: -1 };
     }
   }

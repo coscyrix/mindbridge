@@ -12,6 +12,7 @@ import IpfGraph from "./IpfGraph";
 import ConsentForm from "../../Forms/PatientForms/ConsentForm";
 import AttendanceGraph from "./AttendanceGraph";
 import WHODASDomainChart from "./WHODASDomainChart";
+import IntakeFormDetails from "./IntakeFormDetails";
 
 interface AssessmentResultsProps {
   assessmentResultsData: any[];
@@ -56,6 +57,7 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [tenant_id, setTenant_Id] = useState<number | null>(null);
   const [whodasDomainData, setWhodasDomainData] = useState<any[]>([]);
+  const [intakeFormData, setIntakeFormData] = useState<any>(null);
 
   const keyNameArr: KeyNameConfig[] = [
     {
@@ -163,6 +165,8 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
         ? setLoading("attendanceData")
         : row?.form_cde == "GAS"
         ? setLoading("graphData")
+        : row?.form_cde == "INTAKE"
+        ? setLoading("intakeData")
         : setLoading("graphData");
 
       setShowReportDetails(true);
@@ -171,7 +175,35 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
       setSeriesData([]);
       setGraphDataHeading("");
       setWhodasDomainData([]);
+      setIntakeFormData(null);
       // setConsentFormData("");
+
+      // Handle INTAKE form separately
+      if (row?.form_cde === "INTAKE") {
+        if (row.intake_form_id && row.counselor_profile_id) {
+          try {
+            const response = await CommonServices.getIntakeFormDetails({
+              intake_form_id: row.intake_form_id,
+              counselor_profile_id: row.counselor_profile_id,
+            });
+            if (response.status === 200 && response.data?.rec) {
+              setIntakeFormData(response.data.rec);
+              setGraphDataHeading(
+                `Intake Form - ${row.client_first_name} ${row.client_last_name}`
+              );
+            } else {
+              console.error("Failed to fetch intake form details:", response);
+            }
+          } catch (error) {
+            console.error("Error fetching intake form details:", error);
+          }
+        } else {
+          console.error("Missing intake_form_id or counselor_profile_id");
+        }
+        setLoading(null);
+        return;
+      }
+
       let payload: any;
       if (row?.form_cde === "CONSENT") {
         payload = { feedback_id: row.feedback_id };
@@ -498,6 +530,11 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
             <WHODASDomainChart
               whodasData={whodasDomainData}
               loading={loading === "graphData"}
+            />
+          ) : formName == "INTAKE" ? (
+            <IntakeFormDetails
+              intakeFormData={intakeFormData}
+              loading={loading === "intakeData"}
             />
           ) : (
             <BarGraph

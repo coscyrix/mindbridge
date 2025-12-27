@@ -15,6 +15,7 @@ export default class Report {
       let query;
       let consentFormsQuery;
       let tenantConsentFormsQuery; // Separate query for tenant consent forms
+      let intakeFormsQuery; // Query for client intake forms
 
       // Treatment target mode: query treatment target session forms
       query = db
@@ -323,12 +324,83 @@ export default class Report {
           .orderBy('date_sent', 'desc');
       }
 
+      // Query for client intake forms where client_enrollment_id is null
+      // Note: data.counselor_id is actually user_profile_id, so we need to join through counselor_profile
+      if (data.counselor_id) {
+        intakeFormsQuery = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('client_intake_form as cif')
+          .join('counselor_profile as cp', 'cif.counselor_profile_id', 'cp.counselor_profile_id')
+          .join('user_profile as counselor_up', 'cp.user_profile_id', 'counselor_up.user_profile_id')
+          .select(
+            db.raw("SUBSTRING_INDEX(cif.full_name, ' ', 1) as client_first_name"),
+            db.raw("SUBSTRING_INDEX(cif.full_name, ' ', -1) as client_last_name"),
+            db.raw('NULL as client_clam_num'), // Intake forms don't have clam_num
+            db.raw('NULL as client_id'), // client_intake_form doesn't have client_id directly
+            'counselor_up.user_profile_id as counselor_id', // Return user_profile_id as counselor_id to match expected format
+            'cp.counselor_profile_id as counselor_profile_id', // Include counselor_profile_id for fetching intake form details
+            db.raw('NULL as form_id'), // Intake form doesn't have a form_id
+            db.raw("'INTAKE' as form_cde"), // Use a constant form code for intake forms
+            db.raw('NULL as thrpy_req_id'), // Intake forms don't have thrpy_req_id
+            'counselor_up.tenant_id as tenant_id',
+            db.raw('NULL as feedback_id'), // Intake forms don't have feedback
+            'cif.id as intake_form_id', // Include intake form ID
+            'cif.created_at as date_sent',
+            db.raw(`
+                COALESCE(
+                  DATE_ADD(cif.created_at, INTERVAL 7 DAY),
+                  DATE_ADD(cif.updated_at, INTERVAL 7 DAY)
+                ) as due_date
+              `),
+          )
+          .whereNull('cif.client_enrollment_id')
+          .where('counselor_up.user_profile_id', Number(data.counselor_id)); // Filter by user_profile_id
+
+        // Apply tenant filtering if needed (similar to other queries)
+        if (data.role_id === 2) {
+          // Get tenant_id for the counselor and filter by it
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            intakeFormsQuery.where('counselor_up.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        } else if (data.role_id === 3) {
+          // For managers, filter by tenant_id if provided
+          if (data.tenant_id) {
+            intakeFormsQuery.where('counselor_up.tenant_id', Number(data.tenant_id));
+          }
+        } else if (data.role_id === 4 && data.counselor_id) {
+          // For admins with counselor_id, get tenant_id
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            intakeFormsQuery.where('counselor_up.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        } else if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
+          // For other roles with counselor_id
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            intakeFormsQuery.where('counselor_up.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        }
+
+        intakeFormsQuery.orderBy('date_sent', 'desc');
+      }
+
       // Execute queries
-      const [rec, consentForms, tenantConsentForms] = await Promise.all([
+      
+      const [rec, consentForms, tenantConsentForms, intakeForms] = await Promise.all([
         query,
         consentFormsQuery ? consentFormsQuery : Promise.resolve([]),
         tenantConsentFormsQuery ? tenantConsentFormsQuery : Promise.resolve([]),
+        intakeFormsQuery ? intakeFormsQuery : Promise.resolve([]),
       ]);
+
+      console.log('intakeForms ❤️ ❤️❤️❤️❤️❤️❤️', intakeForms, 'consentForms ❤️ ❤️❤️❤️❤️❤️❤️', consentForms);
 
       // Combine results if we have treatment target forms and consent forms
       let combinedResults = [...rec];
@@ -338,6 +410,10 @@ export default class Report {
       // Add tenant consent forms for admins
       if (tenantConsentForms && tenantConsentForms.length > 0) {
         combinedResults = [...combinedResults, ...tenantConsentForms];
+      }
+      // Add intake forms
+      if (intakeForms && intakeForms.length > 0) {
+        combinedResults = [...combinedResults, ...intakeForms];
       }
 
       // Remove duplicates across all form types
@@ -680,7 +756,6 @@ export default class Report {
   //////////////////////////////////////////
   async getSessionsWithHomeworkStats(data) {
 
-    console.log('data ❤️ ❤️❤️❤️❤️❤️❤️',{data});
     try {
       let query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)

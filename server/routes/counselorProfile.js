@@ -31,6 +31,11 @@ router.get('/appointments',
   AsyncWrapper(counselorProfileController.getMyAppointments.bind(counselorProfileController))
 );
 
+// Get appointment by id (MUST come before :counselor_profile_id route)
+router.get('/appointment',
+  AsyncWrapper(counselorProfileController.getAppointmentById.bind(counselorProfileController))
+);
+
 router.put('/:counselor_profile_id', AsyncWrapper(counselorProfileController.updateCounselorProfile.bind(counselorProfileController)));
 router.get('/:counselor_profile_id', AsyncWrapper(counselorProfileController.getCounselorProfile.bind(counselorProfileController)));
 router.post('/:counselor_profile_id/reviews', authenticate, AsyncWrapper(counselorProfileController.addReview.bind(counselorProfileController)));
@@ -59,6 +64,12 @@ router.post('/send-appointment-email',
 router.get('/:counselor_profile_id/email-history',
   authenticate,
   AsyncWrapper(counselorProfileController.getAppointmentEmailHistory.bind(counselorProfileController))
+);
+
+// Send intake form to client
+router.post('/send-intake-form',
+  authenticate,
+  AsyncWrapper(counselorProfileController.sendIntakeForm.bind(counselorProfileController))
 );
 
 export const counselorProfileRouter = { baseUrl: '/api/counselor-profile', router }; 
