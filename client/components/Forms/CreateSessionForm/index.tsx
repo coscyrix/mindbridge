@@ -4,12 +4,8 @@ import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { useReferenceContext } from "../../../context/ReferenceContext";
 import { AddIcon, SettingsIcon } from "../../../public/assets/icons";
-import {
-  CONDITIONAL_ROW_STYLES,
-} from "../../../utils/constants";
-import {
-  convertUTCToLocalTime
-} from "../../../utils/helper";
+import { CONDITIONAL_ROW_STYLES } from "../../../utils/constants";
+import { convertUTCToLocalTime } from "../../../utils/helper";
 import Spinner from "../../common/Spinner";
 import CustomButton from "../../CustomButton";
 import CustomTable from "../../CustomTable";
@@ -62,7 +58,7 @@ function CreateSessionForm({
   const methods = useForm();
   const { userObj, forms } = useReferenceContext();
   const router = useRouter();
-  
+
   // State
   const [formButton, setFormButton] = useState("Submit");
   const [editSessionModal, setEditSessionModal] = useState(false);
@@ -75,8 +71,10 @@ function CreateSessionForm({
   const [isDiscard, setIsDiscard] = useState(false);
   const [isValueChanged, setIsValueChanged] = useState("yes");
   const [pendingValueChange, setPendingValueChange] = useState(null);
-  const [showStatusConfirmationModal, setShowStatusConfirmationModal] = useState(false);
-  const [showResetConfirmationModal, setShowResetConfirmationModal] = useState(false);
+  const [showStatusConfirmationModal, setShowStatusConfirmationModal] =
+    useState(false);
+  const [showResetConfirmationModal, setShowResetConfirmationModal] =
+    useState(false);
   const [clientSerialNum, setClientSerialNum] = useState(null);
   const [user, setUser] = useState(null);
   const [sessionRange, setSessionRange] = useState({
@@ -87,10 +85,13 @@ function CreateSessionForm({
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
   const [assessmentOptions, setAssessmentOptions] = useState([]);
   const [selectedAssessment, setSelectedAssessment] = useState(null);
-  const [isProgressReportModalOpen, setIsProgressReportModalOpen] = useState(false);
+  const [isProgressReportModalOpen, setIsProgressReportModalOpen] =
+    useState(false);
   const [selectedReportRow, setSelectedReportRow] = useState(null);
-  const [isDischargeReportModalOpen, setIsDischargeReportModalOpen] = useState(false);
-  const [selectedDischargeReportRow, setSelectedDischargeReportRow] = useState(null);
+  const [isDischargeReportModalOpen, setIsDischargeReportModalOpen] =
+    useState(false);
+  const [selectedDischargeReportRow, setSelectedDischargeReportRow] =
+    useState(null);
 
   // Custom Hooks
   const {
@@ -226,7 +227,7 @@ function CreateSessionForm({
   // Reorder sessions: Remove INACTIVE from main list, then append them at the end
   const reorderSessions = (sessions) => {
     if (!sessions || !Array.isArray(sessions)) return sessions;
-    
+
     // Separate INACTIVE sessions from others
     const inactiveSessions = sessions.filter(
       (session) => session?.session_status?.toLowerCase() === "inactive"
@@ -234,7 +235,7 @@ function CreateSessionForm({
     const activeSessions = sessions.filter(
       (session) => session?.session_status?.toLowerCase() !== "inactive"
     );
-    
+
     // Return active sessions first, then INACTIVE sessions at the end
     return [...activeSessions, ...inactiveSessions];
   };
@@ -268,20 +269,21 @@ function CreateSessionForm({
         const list = initialData?.session_obj || [];
         setScheduledSession(list?.filter((s) => s?.is_additional === 0));
         setAddittionalSessions(list?.filter((s) => s?.is_additional === 1));
-        
+
         // Initialize countNotes from session_notes
-        const notes = list?.map((session) => {
-          let count = 0;
-          if (session?.session_notes) {
-            if (Array.isArray(session.session_notes)) {
-              count = session.session_notes.length;
+        const notes =
+          list?.map((session) => {
+            let count = 0;
+            if (session?.session_notes) {
+              if (Array.isArray(session.session_notes)) {
+                count = session.session_notes.length;
+              }
             }
-          }
-          return {
-            session_id: session?.session_id,
-            count: count,
-          };
-        }) || [];
+            return {
+              session_id: session?.session_id,
+              count: count,
+            };
+          }) || [];
         setCountNotes(notes);
       }
     } catch (error) {
@@ -477,7 +479,7 @@ function CreateSessionForm({
     <CreateSessionFormWrapper>
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(onSubmit)}>
-          <div className="form_fields_wrapper"> 
+          <div className="form_fields_wrapper">
             <div className="user-info-selects">
               <SessionScheduleHeader
                 initialData={initialData}
@@ -530,30 +532,28 @@ function CreateSessionForm({
                       : "Generate Session Schedule"}
                   </button>
                 )}
-<div className="button-group">
-
-
-              {isHomeworkUpload && initialData && counselor && (
-                <AssessmentButtonWrapper>
-                  <CustomButton
-                    onClick={handleOpenAssessmentModal}
-                    icon={<SettingsIcon />}
-                    title="Add Assessment"
-                    type="button"
+              <div className="button-group">
+                {isHomeworkUpload && initialData && counselor && (
+                  <AssessmentButtonWrapper>
+                    <CustomButton
+                      onClick={handleOpenAssessmentModal}
+                      icon={<SettingsIcon />}
+                      title="Add Assessment"
+                      type="button"
                     />
-                </AssessmentButtonWrapper>
-              )}
+                  </AssessmentButtonWrapper>
+                )}
 
-              {isHomeworkUpload && initialData && counselor && (
-                <HomeworkButtonWrapper>
-                  <CustomButton
-                    onClick={() => setIsWorkModalOpen(true)}
-                    icon={<SettingsIcon />}
-                    title="Upload and Send Homework"
-                    type="button"
+                {isHomeworkUpload && initialData && counselor && (
+                  <HomeworkButtonWrapper>
+                    <CustomButton
+                      onClick={() => setIsWorkModalOpen(true)}
+                      icon={<SettingsIcon />}
+                      title="Upload and Send Homework"
+                      type="button"
                     />
-                </HomeworkButtonWrapper>
-              )}
+                  </HomeworkButtonWrapper>
+                )}
               </div>
 
               {(initialData || sessionTableData) && (
@@ -664,7 +664,9 @@ function CreateSessionForm({
           title="Add Assessment"
         >
           <AssessmentModalWrapper>
-            <p style={{ marginBottom: '16px', color: '#666', fontSize: '14px' }}>
+            <p
+              style={{ marginBottom: "16px", color: "#666", fontSize: "14px" }}
+            >
               Select an assessment to add it to the latest scheduled session.
             </p>
             <div className="select-wrapper">
@@ -672,9 +674,11 @@ function CreateSessionForm({
               <Select
                 options={assessmentOptions}
                 placeholder="Select Assessment"
-                value={assessmentOptions.find(
-                  (opt) => opt.value === selectedAssessment
-                ) || null}
+                value={
+                  assessmentOptions.find(
+                    (opt) => opt.value === selectedAssessment
+                  ) || null
+                }
                 onChange={(option) =>
                   setSelectedAssessment(option ? option.value : null)
                 }
@@ -813,4 +817,3 @@ function CreateSessionForm({
 }
 
 export default CreateSessionForm;
-

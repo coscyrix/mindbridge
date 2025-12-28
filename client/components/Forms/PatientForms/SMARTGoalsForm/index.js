@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 import { api } from "../../../../utils/auth";
 import { useRouter } from "next/router";
 import CommonServices from "../../../../services/CommonServices";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CustomMultiSelect from "../../../CustomMultiSelect";
 import CustomTextArea from "../../../CustomTextArea";
 import FormHeader from "../../../FormsHeader";
@@ -37,6 +37,40 @@ const dropdownOptions = {
   ratings: ratings,
 };
 
+const goalThemes = [
+  {
+    id: "feeling_less_anxious_about_work",
+    label: "Feeling less anxious about work",
+    description: "This goal helps reduce distress linked to work situations.",
+  },
+  {
+    id: "sleeping_better",
+    label: "Sleeping better",
+    description: "This goal helps improve sleep quality and establish healthy sleep patterns.",
+  },
+  {
+    id: "managing_stress",
+    label: "Managing stress",
+    description: "This goal helps develop effective stress management strategies and coping skills.",
+  },
+  {
+    id: "return_to_work_readiness",
+    label: "Return to work readiness",
+    description: "This goal helps prepare for a successful return to the workplace.",
+  },
+  {
+    id: "something_else",
+    label: "Something else (please describe)",
+    description: "",
+  },
+];
+
+const timeframes = [
+  { id: "2_4_weeks", label: "2-4 weeks" },
+  { id: "6_8_weeks", label: "6-8 weeks" },
+  { id: "not_sure_yet", label: "Not sure yet" },
+];
+
 const SMARTGoalForms = ({ formData }) => {
   const methods = useForm({
     defaultValues: {
@@ -45,10 +79,25 @@ const SMARTGoalForms = ({ formData }) => {
       date: moment().format("DD/MM/YYYY"),
       intake_date: moment(formData?.intake_date).format("DD/MM/YYYY"),
       service_description: formData?.service_name,
+      client_goal_theme: "",
+      goal_theme_other: "",
+      timeframe: "",
     },
   });
   const [loading, setLoading] = useState(false);
+  const [selectedGoalTheme, setSelectedGoalTheme] = useState("");
   const router = useRouter();
+  
+  const watchedGoalTheme = methods.watch("client_goal_theme");
+  
+  useEffect(() => {
+    setSelectedGoalTheme(watchedGoalTheme || "");
+  }, [watchedGoalTheme]);
+  
+  const selectedThemeData = goalThemes.find(
+    (theme) => theme.id === selectedGoalTheme
+  );
+  
   const onSubmit = async (data) => {
     const { client_id, session_id } = router.query;
     const {
@@ -126,133 +175,93 @@ const SMARTGoalForms = ({ formData }) => {
               );
             })}
           </div>
-          <table className="SmartGoalClientTable">
-            <thead>
-              <tr>
-                <th>SMART Goal</th>
-                <th style={{ minWidth: "260px" }}>
-                  Goal Description: 1st Phase
-                </th>
-                <th>2nd Phase Review</th>
-                <th>3rd Phase Review</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                {
-                  id: "specific",
-                  label: "Specific",
-                  placeholder:
-                    "I want to feel more comfortable and less anxious during group meeting.",
-                },
-                {
-                  id: "measurable",
-                  label: "Measurable",
-                  placeholder:
-                    "I will rate my anxiety on a scale of 1 - 10 before and after each meeting.",
-                },
-                {
-                  id: "achievable",
-                  label: "Achievable",
-                  placeholder:
-                    "I will start with smaller meetings and gradually build upto larger ones.",
-                },
-                {
-                  id: "relevant",
-                  label: "Relevant",
-                  placeholder:
-                    "This will help me become more engaged at work and contribute more to projects.",
-                },
-                {
-                  id: "time_bound",
-                  label: "Time-Bound",
-                  placeholder:
-                    "I will achieve this within 8 weeks by attending at least 4 meetings.",
-                },
-              ]?.map((item, index) => {
-                return (
-                  <tr key={index}>
-                    <td>{item.label}</td>
-                    <td>
-                      <CustomInputField
-                        name={`${item.id}_1st_phase`}
-                        type="string"
-                        placeholder={item?.placeholder}
-                      />
-                    </td>
-                    <td>
-                      <Controller
-                        name={`${item.id}_2nd_phase`}
-                        control={methods.control}
-                        render={({ field }) => (
-                          <CustomMultiSelect
-                            {...field}
-                            options={
-                              item.id == "measurable"
-                                ? dropdownOptions?.ratings
-                                : dropdownOptions?.common
-                            }
-                            placeholder="Select 2nd Phase"
-                            isMulti={false}
-                            onChange={(selectedOption) =>
-                              field.onChange(selectedOption?.label)
-                            } // Store only the label
-                            value={
-                              field.value
-                                ? {
-                                    label: field.value, // Convert stored label back to an object
-                                    value:
-                                      item.id == "measurable"
-                                        ? field.value
-                                        : field.value
-                                            .toLowerCase()
-                                            .replace(/\s/g, "_"),
-                                  }
-                                : null
-                            }
-                          />
-                        )}
-                      />
-                    </td>
-                    <td>
-                      <Controller
-                        name={`${item.id}_3rd_phase`}
-                        control={methods.control}
-                        render={({ field }) => (
-                          <CustomMultiSelect
-                            {...field}
-                            options={
-                              item.id == "measurable"
-                                ? dropdownOptions?.ratings
-                                : dropdownOptions?.common
-                            }
-                            placeholder="Select 3rd Phase"
-                            isMulti={false}
-                            onChange={(selectedOption) =>
-                              field.onChange(selectedOption?.label)
-                            } // Store only the label
-                            value={
-                              field.value
-                                ? {
-                                    label: field.value, // Convert stored label back to an object
-                                    value:
-                                      item.id == "measurable"
-                                        ? field.value
-                                        : field.value
-                                            .toLowerCase()
-                                            .replace(/\s/g, "_"),
-                                  }
-                                : null
-                            }
-                          />
-                        )}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+
+          {/* Client Goal Theme Section */}
+          <div className="goal-theme-section">
+            <h3 className="section-title">Client Goal Theme</h3>
+            <p className="section-instruction">
+              Please select the goal that best fits what you want to work on right now.
+            </p>
+            <div className="goal-theme-options">
+              {goalThemes.map((theme) => (
+                <div key={theme.id} className="goal-theme-option">
+                  <Controller
+                    name="client_goal_theme"
+                    control={methods.control}
+                    render={({ field }) => (
+                      <>
+                        <input
+                          type="radio"
+                          id={theme.id}
+                          {...field}
+                          value={theme.id}
+                          checked={field.value === theme.id}
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            setSelectedGoalTheme(e.target.value);
+                          }}
+                          className="goal-theme-radio"
+                        />
+                        <label htmlFor={theme.id} className="goal-theme-label">
+                          {theme.label}
+                        </label>
+                      </>
+                    )}
+                  />
+                </div>
+              ))}
+            </div>
+            {selectedGoalTheme === "something_else" && (
+              <div className="goal-theme-other-input">
+                <CustomTextArea
+                  name="goal_theme_other"
+                  placeholder="Please describe your goal..."
+                  rows={4}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Description Section */}
+          {selectedGoalTheme && selectedThemeData?.description && (
+            <div className="description-section">
+              <h3 className="section-title">Description</h3>
+              <p className="description-text">
+                {selectedThemeData.description}
+              </p>
+            </div>
+          )}
+
+          {/* Timeframe Section */}
+          <div className="timeframe-section">
+            <h3 className="section-title">Timeframe</h3>
+            <div className="timeframe-options">
+              {timeframes.map((timeframe) => (
+                <div key={timeframe.id} className="timeframe-option">
+                  <Controller
+                    name="timeframe"
+                    control={methods.control}
+                    render={({ field }) => (
+                      <>
+                        <input
+                          type="radio"
+                          id={timeframe.id}
+                          {...field}
+                          value={timeframe.id}
+                          checked={field.value === timeframe.id}
+                          className="timeframe-radio"
+                        />
+                        <label htmlFor={timeframe.id} className="timeframe-label">
+                          {timeframe.label}
+                        </label>
+                      </>
+                    )}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
           <CustomButton title="Submit" type="submit" customClass="primary" />
         </form>
       </FormProvider>
