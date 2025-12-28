@@ -33,6 +33,8 @@ import SessionFormFields from "./SessionFormFields";
 import SessionModals from "./SessionModals";
 import SessionScheduleHeader from "./SessionScheduleHeader";
 import { getSessionTableColumns } from "./SessionTableColumns";
+import ProgressReportModal from "./ProgressReportModal";
+import DischargeReportModal from "./DischargeReportModal";
 import CommonServices from "../../../services/CommonServices";
 import { useQueryData } from "../../../utils/hooks/useQueryData";
 import { useMutationData } from "../../../utils/hooks/useMutationData";
@@ -85,6 +87,10 @@ function CreateSessionForm({
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
   const [assessmentOptions, setAssessmentOptions] = useState([]);
   const [selectedAssessment, setSelectedAssessment] = useState(null);
+  const [isProgressReportModalOpen, setIsProgressReportModalOpen] = useState(false);
+  const [selectedReportRow, setSelectedReportRow] = useState(null);
+  const [isDischargeReportModalOpen, setIsDischargeReportModalOpen] = useState(false);
+  const [selectedDischargeReportRow, setSelectedDischargeReportRow] = useState(null);
 
   // Custom Hooks
   const {
@@ -368,6 +374,15 @@ function CreateSessionForm({
     sessionTableData,
     setSessionRange,
     formatDate,
+    router,
+    onOpenProgressReport: (row) => {
+      setSelectedReportRow(row);
+      setIsProgressReportModalOpen(true);
+    },
+    onOpenDischargeReport: (row) => {
+      setSelectedDischargeReportRow(row);
+      setIsDischargeReportModalOpen(true);
+    },
   });
 
   // Effects
@@ -773,6 +788,25 @@ function CreateSessionForm({
         isWorkModalOpen={isWorkModalOpen}
         setIsWorkModalOpen={setIsWorkModalOpen}
         session={session}
+      />
+
+      <ProgressReportModal
+        isOpen={isProgressReportModalOpen}
+        onClose={() => {
+          setIsProgressReportModalOpen(false);
+          setSelectedReportRow(null);
+        }}
+        sessionRow={selectedReportRow}
+        initialData={initialData}
+      />
+      <DischargeReportModal
+        isOpen={isDischargeReportModalOpen}
+        onClose={() => {
+          setIsDischargeReportModalOpen(false);
+          setSelectedDischargeReportRow(null);
+        }}
+        sessionRow={selectedDischargeReportRow}
+        initialData={initialData}
       />
     </CreateSessionFormWrapper>
   );

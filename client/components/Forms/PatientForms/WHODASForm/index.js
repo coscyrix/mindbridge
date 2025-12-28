@@ -320,15 +320,19 @@ const WHODASForm = () => {
                       {questionCategory?.category}
                     </td>
                   </tr>
-                  <tr style={{ backgroundColor: "#f5f5f5", fontWeight: "bold" }}>
-                    <th></th>
-                    <th>Difficulties due to health conditions</th>
-                    <th>None</th>
-                    <th>Mild</th>
-                    <th>Moderate</th>
-                    <th>Severe</th>
-                    <th>Extreme or cannot do</th>
-                  </tr>
+                  {/* if last then dont show the table */}
+                  {index !== allQuestions.length - 1 && (
+                    <tr style={{ backgroundColor: "#f5f5f5", fontWeight: "bold" }}>
+                      <th></th>
+                      <th>Difficulties due to health conditions</th>
+                      <th>None</th>
+                      <th>Mild</th>
+                      <th>Moderate</th>
+                      <th>Severe</th>
+                      <th>Extreme or cannot do</th>
+                    </tr>
+                  )}
+                  
                   {questionCategory.questions.map((question) => (
                     <React.Fragment key={question.id}>
                       <tr>

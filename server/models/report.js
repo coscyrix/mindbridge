@@ -887,4 +887,503 @@ export default class Report {
       return { message: 'Error getting sessions with homework stats', error: -1 };
     }
   }
+
+  //////////////////////////////////////////
+
+  async getProgressReportData(data) {
+    try {
+      const { thrpy_req_id, session_id } = data;
+
+      if (!thrpy_req_id) {
+        return { message: 'thrpy_req_id is required', error: -1 };
+      }
+
+      // Get therapy request data (similar to emailTmplt.js logic)
+      const ThrpyReq = (await import('./thrpyReq.js')).default;
+      const thrpyReqModel = new ThrpyReq();
+      const recThrpy = await thrpyReqModel.getThrpyReqById({ req_id: thrpy_req_id });
+
+      if (!recThrpy || recThrpy.length === 0 || recThrpy.error) {
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
+      const therapyRequest = recThrpy[0];
+
+      // Get client information
+      const recUser = await this.common.getUserProfileByUserProfileId(
+        therapyRequest.client_id
+      );
+
+      if (!recUser || recUser.length === 0) {
+        return { message: 'Client not found', error: -1 };
+      }
+
+      // Get tenant information
+      const tenantId = therapyRequest.tenant_id;
+      let tenantName = 'N/A';
+      if (tenantId) {
+        const tenantQuery = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('tenant')
+          .where('tenant_id', tenantId)
+          .select('tenant_name')
+          .first();
+        
+        if (tenantQuery) {
+          tenantName = tenantQuery.tenant_name;
+        }
+      }
+
+      // Get counselor information
+      const counselorInfo = await this.common.getUserProfileByUserProfileId(
+        therapyRequest.counselor_id
+      );
+
+      if (!counselorInfo || counselorInfo.length === 0) {
+        return { message: 'Counselor not found', error: -1 };
+      }
+
+      // Get counselor designation (if available from counselor_profile)
+      let counselorDesignation = 'Therapist';
+      try {
+        const counselorProfileQuery = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('counselor_profile')
+          .where('user_profile_id', therapyRequest.counselor_id)
+          .select('profile_notes')
+          .first();
+        
+        // You might need to parse profile_notes or have a separate designation field
+        // For now, using default
+      } catch (error) {
+        logger.error('Error fetching counselor designation:', error);
+      }
+
+      // Find the progress report session
+      let progressReportSession = null;
+      if (session_id) {
+        // If session_id is provided, find that specific session
+        if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+          progressReportSession = therapyRequest.session_obj.find(
+            (s) => s.session_id === session_id && (s.is_report === 1 || s.service_code === 'PR')
+          );
+        }
+      } else {
+        // Otherwise, find the first progress report session
+        if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+          progressReportSession = therapyRequest.session_obj.find(
+            (s) => s.is_report === 1 && (s.service_code === 'PR' || s.service_code?.includes('PR'))
+          );
+        }
+      }
+
+      if (!progressReportSession) {
+        return { message: 'Progress report session not found', error: -1 };
+      }
+
+      // Calculate total sessions and completed sessions (similar to emailTmplt.js logic)
+      let totalSessions = 0;
+      let totalSessionsCompleted = 0;
+      
+      if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+        // Sort sessions by session_id
+        const sortedSessions = [...therapyRequest.session_obj].sort(
+          (a, b) => a.session_id - b.session_id
+        );
+
+        // Remove reports sessions and inactive sessions
+        const removeReportsSessions = sortedSessions.filter(
+          (session) => session.is_report !== 1 && session.session_status !== 'INACTIVE'
+        );
+
+        // Filter sessions up to the progress report session (if session_id is provided)
+        // Otherwise, count all sessions
+        let filteredSessions = removeReportsSessions;
+        if (session_id && progressReportSession.session_id) {
+          filteredSessions = removeReportsSessions.filter(
+            (session) => session.session_id <= progressReportSession.session_id
+          );
+        }
+
+        // Calculate total sessions (excluding reports and inactive)
+        totalSessions = filteredSessions.length;
+
+        // Count completed sessions (status === 'SHOW')
+        totalSessionsCompleted = filteredSessions.filter(
+          (session) => session.session_status === 'SHOW'
+        ).length;
+      }
+
+      // Get frequency from service
+      const serviceName = therapyRequest.service_name || '';
+      const frequency = serviceName.toLowerCase().includes('weekly')
+        ? 'Weekly'
+        : serviceName.toLowerCase().includes('biweekly')
+        ? 'Biweekly'
+        : 'Other';
+
+      // Get assessments/feedback from all sessions in the therapy request (excluding report sessions)
+      // Get the most recent assessments up to the progress report session
+      let assessments = [];
+      try {
+        // Get all session IDs from the therapy request (excluding report sessions and inactive)
+        const sessionIds = therapyRequest.session_obj
+          ? therapyRequest.session_obj
+              .filter(
+                (s) =>
+                  s.is_report !== 1 &&
+                  s.session_status !== 'INACTIVE' &&
+                  (!session_id || s.session_id <= progressReportSession.session_id)
+              )
+              .map((s) => s.session_id)
+          : [];
+
+        if (sessionIds.length > 0) {
+          const feedbackQuery = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('feedback as fb')
+            .leftJoin('forms as f', 'fb.form_id', 'f.form_id')
+            .leftJoin('session as s', 'fb.session_id', 's.session_id')
+            .leftJoin('feedback_phq9 as phq9', 'fb.feedback_id', 'phq9.feedback_id')
+            .leftJoin('feedback_gad as gad', 'fb.feedback_id', 'gad.feedback_id')
+            .leftJoin('feedback_pcl5 as pcl5', 'fb.feedback_id', 'pcl5.feedback_id')
+            .leftJoin('feedback_whodas as whodas', 'fb.feedback_id', 'whodas.feedback_id')
+            .whereIn('fb.session_id', sessionIds)
+            .andWhere('fb.status_yn', 'y')
+            .andWhere('s.is_report', 0) // Exclude report sessions
+            .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT') // Exclude attendance forms
+            .select(
+              'fb.feedback_id',
+              'fb.session_id',
+              'fb.form_id',
+              'f.form_cde',
+              'phq9.total_score as phq9_score',
+              'gad.total_points as gad_score',
+              'pcl5.total_score as pcl5_score',
+              'whodas.overallScore as whodas_score',
+              'fb.created_at'
+            )
+            .orderBy('fb.created_at', 'desc')
+            .limit(5);
+
+          assessments = feedbackQuery.map((fb) => {
+            let score = 'N/A';
+            if (fb.phq9_score !== null && fb.phq9_score !== undefined) {
+              score = fb.phq9_score.toString();
+            } else if (fb.gad_score !== null && fb.gad_score !== undefined) {
+              score = fb.gad_score.toString();
+            } else if (fb.pcl5_score !== null && fb.pcl5_score !== undefined) {
+              score = fb.pcl5_score.toString();
+            } else if (fb.whodas_score !== null && fb.whodas_score !== undefined) {
+              score = fb.whodas_score.toString();
+            }
+
+            return {
+              feedback_id: fb.feedback_id,
+              form_id: fb.form_id,
+              form_cde: fb.form_cde,
+              score: score,
+            };
+          });
+        }
+      } catch (error) {
+        logger.error('Error fetching assessments:', error);
+        assessments = [];
+      }
+
+      // Build response object with all data except therapist-filled fields
+      const response = {
+        // Practice information
+        tenant_name: tenantName,
+        tenant_id: tenantId,
+
+        // Therapist information
+        counselor_first_name: counselorInfo[0].user_first_name,
+        counselor_last_name: counselorInfo[0].user_last_name,
+        counselor_designation: counselorDesignation,
+        counselor_id: therapyRequest.counselor_id,
+
+        // Client information
+        client_first_name: recUser[0].user_first_name,
+        client_last_name: recUser[0].user_last_name,
+        client_clam_num: recUser[0].clam_num,
+        client_id: therapyRequest.client_id,
+
+        // Session information
+        session_id: progressReportSession.session_id,
+        session_number: progressReportSession.session_number,
+        session_date: progressReportSession.intake_date,
+        scheduled_time: progressReportSession.scheduled_time,
+
+        // Therapy request information
+        thrpy_req_id: thrpy_req_id,
+        treatment_target: therapyRequest.treatment_target,
+        service_name: therapyRequest.service_name,
+        service_code: progressReportSession.service_code,
+
+        // Calculated fields
+        total_sessions: totalSessions,
+        total_sessions_completed: totalSessionsCompleted,
+        frequency: frequency,
+
+        // Assessments
+        assessments: assessments,
+
+        // Note: The following fields are NOT included as they will be filled by therapist:
+        // - session_summary
+        // - progress_since_last_session
+        // - risk_screening_note
+        // - therapist_notes (for each assessment)
+      };
+
+      return response;
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error getting progress report data', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getDischargeReportData(data) {
+    try {
+      const { thrpy_req_id, session_id } = data;
+
+      if (!thrpy_req_id) {
+        return { message: 'thrpy_req_id is required', error: -1 };
+      }
+
+      // Get therapy request data (similar to progress report logic)
+      const ThrpyReq = (await import('./thrpyReq.js')).default;
+      const thrpyReqModel = new ThrpyReq();
+      const recThrpy = await thrpyReqModel.getThrpyReqById({ req_id: thrpy_req_id });
+
+      if (!recThrpy || recThrpy.length === 0 || recThrpy.error) {
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
+      const therapyRequest = recThrpy[0];
+
+      // Get client information
+      const recUser = await this.common.getUserProfileByUserProfileId(
+        therapyRequest.client_id
+      );
+
+      if (!recUser || recUser.length === 0) {
+        return { message: 'Client not found', error: -1 };
+      }
+
+      // Get tenant information
+      const tenantId = therapyRequest.tenant_id;
+      let tenantName = 'N/A';
+      if (tenantId) {
+        const tenantQuery = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('tenant')
+          .where('tenant_id', tenantId)
+          .select('tenant_name')
+          .first();
+        
+        if (tenantQuery) {
+          tenantName = tenantQuery.tenant_name;
+        }
+      }
+
+      // Get counselor information
+      const counselorInfo = await this.common.getUserProfileByUserProfileId(
+        therapyRequest.counselor_id
+      );
+
+      if (!counselorInfo || counselorInfo.length === 0) {
+        return { message: 'Counselor not found', error: -1 };
+      }
+
+      // Get counselor designation
+      let counselorDesignation = 'Therapist';
+      try {
+        const counselorProfileQuery = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('counselor_profile')
+          .where('user_profile_id', therapyRequest.counselor_id)
+          .select('profile_notes')
+          .first();
+      } catch (error) {
+        logger.error('Error fetching counselor designation:', error);
+      }
+
+      // Find the discharge report session
+      let dischargeReportSession = null;
+      if (session_id) {
+        if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+          dischargeReportSession = therapyRequest.session_obj.find(
+            (s) => s.session_id === session_id && (s.is_report === 1 || s.service_code === 'DR')
+          );
+        }
+      } else {
+        if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+          dischargeReportSession = therapyRequest.session_obj.find(
+            (s) => s.is_report === 1 && (s.service_code === 'DR' || s.service_code?.includes('DR'))
+          );
+        }
+      }
+
+      if (!dischargeReportSession) {
+        return { message: 'Discharge report session not found', error: -1 };
+      }
+
+      // Calculate total sessions and completed sessions
+      let totalSessions = 0;
+      let totalSessionsCompleted = 0;
+      
+      if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+        const sortedSessions = [...therapyRequest.session_obj].sort(
+          (a, b) => a.session_id - b.session_id
+        );
+
+        const removeReportsSessions = sortedSessions.filter(
+          (session) => session.is_report !== 1 && session.session_status !== 'INACTIVE'
+        );
+
+        let filteredSessions = removeReportsSessions;
+        if (session_id && dischargeReportSession.session_id) {
+          filteredSessions = removeReportsSessions.filter(
+            (session) => session.session_id <= dischargeReportSession.session_id
+          );
+        }
+
+        totalSessions = filteredSessions.length;
+        totalSessionsCompleted = filteredSessions.filter(
+          (session) => session.session_status === 'SHOW'
+        ).length;
+      }
+
+      // Get frequency from service
+      const serviceName = therapyRequest.service_name || '';
+      const frequency = serviceName.toLowerCase().includes('weekly')
+        ? 'Weekly'
+        : serviceName.toLowerCase().includes('biweekly')
+        ? 'Biweekly'
+        : 'Other';
+
+      // Get assessments/feedback from all sessions in the therapy request
+      let assessments = [];
+      try {
+        const sessionIds = therapyRequest.session_obj
+          ? therapyRequest.session_obj
+              .filter(
+                (s) =>
+                  s.is_report !== 1 &&
+                  s.session_status !== 'INACTIVE' &&
+                  (!session_id || s.session_id <= dischargeReportSession.session_id)
+              )
+              .map((s) => s.session_id)
+          : [];
+
+        if (sessionIds.length > 0) {
+          const feedbackQuery = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('feedback as fb')
+            .leftJoin('forms as f', 'fb.form_id', 'f.form_id')
+            .leftJoin('session as s', 'fb.session_id', 's.session_id')
+            .leftJoin('feedback_phq9 as phq9', 'fb.feedback_id', 'phq9.feedback_id')
+            .leftJoin('feedback_gad as gad', 'fb.feedback_id', 'gad.feedback_id')
+            .leftJoin('feedback_pcl5 as pcl5', 'fb.feedback_id', 'pcl5.feedback_id')
+            .leftJoin('feedback_whodas as whodas', 'fb.feedback_id', 'whodas.feedback_id')
+            .whereIn('fb.session_id', sessionIds)
+            .andWhere('fb.status_yn', 'y')
+            .andWhere('s.is_report', 0)
+            .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+            .select(
+              'fb.feedback_id',
+              'fb.session_id',
+              'fb.form_id',
+              'f.form_cde',
+              'phq9.total_score as phq9_score',
+              'gad.total_points as gad_score',
+              'pcl5.total_score as pcl5_score',
+              'whodas.overallScore as whodas_score',
+              'fb.created_at'
+            )
+            .orderBy('fb.created_at', 'desc')
+            .limit(5);
+
+          assessments = feedbackQuery.map((fb) => {
+            let score = 'N/A';
+            if (fb.phq9_score !== null && fb.phq9_score !== undefined) {
+              score = fb.phq9_score.toString();
+            } else if (fb.gad_score !== null && fb.gad_score !== undefined) {
+              score = fb.gad_score.toString();
+            } else if (fb.pcl5_score !== null && fb.pcl5_score !== undefined) {
+              score = fb.pcl5_score.toString();
+            } else if (fb.whodas_score !== null && fb.whodas_score !== undefined) {
+              score = fb.whodas_score.toString();
+            }
+
+            return {
+              feedback_id: fb.feedback_id,
+              form_id: fb.form_id,
+              form_cde: fb.form_cde,
+              score: score,
+            };
+          });
+        }
+      } catch (error) {
+        logger.error('Error fetching assessments:', error);
+        assessments = [];
+      }
+
+      // Build response object with all data except therapist-filled fields
+      const response = {
+        // Practice information
+        tenant_name: tenantName,
+        tenant_id: tenantId,
+
+        // Therapist information
+        counselor_first_name: counselorInfo[0].user_first_name,
+        counselor_last_name: counselorInfo[0].user_last_name,
+        counselor_designation: counselorDesignation,
+        counselor_id: therapyRequest.counselor_id,
+
+        // Client information
+        client_first_name: recUser[0].user_first_name,
+        client_last_name: recUser[0].user_last_name,
+        client_clam_num: recUser[0].clam_num,
+        client_id: therapyRequest.client_id,
+
+        // Session information
+        session_id: dischargeReportSession.session_id,
+        session_number: dischargeReportSession.session_number,
+        session_date: dischargeReportSession.intake_date,
+        scheduled_time: dischargeReportSession.scheduled_time,
+
+        // Therapy request information
+        thrpy_req_id: thrpy_req_id,
+        treatment_target: therapyRequest.treatment_target,
+        service_name: therapyRequest.service_name,
+        service_code: dischargeReportSession.service_code,
+
+        // Calculated fields
+        total_sessions: totalSessions,
+        total_sessions_completed: totalSessionsCompleted,
+        frequency: frequency,
+
+        // Assessments
+        assessments: assessments,
+
+        // Note: The following fields are NOT included as they will be filled by therapist:
+        // - treatment_summary
+        // - treatment_outcomes
+        // - discharge_reason
+        // - recommendations
+        // - therapist_notes (for each assessment)
+      };
+
+      return response;
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error getting discharge report data', error: -1 };
+    }
+  }
 }

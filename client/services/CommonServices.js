@@ -46,6 +46,12 @@ const CommonServices = {
   getReportsTableData(params) {
     return api.get(ApiConfig.dashboard.reportsData, { params });
   },
+  getProgressReportData(params) {
+    return api.get("/reports/progress-report", { params });
+  },
+  getDischargeReportData(params) {
+    return api.get("/reports/discharge-report", { params });
+  },
   getAssessmentResults(params) {
     return api.get(ApiConfig.dashboard.assessmentResultsData, { params });
   },

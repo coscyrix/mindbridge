@@ -23,6 +23,9 @@ export const getSessionTableColumns = ({
   sessionTableData,
   setSessionRange,
   formatDate,
+  router,
+  onOpenProgressReport,
+  onOpenDischargeReport,
 }) => {
   return [
     {
@@ -46,23 +49,26 @@ export const getSessionTableColumns = ({
             `${row.intake_date}T${row.req_time || "00:00:00"}`
           ).date;
         }
-        
+
         // Fallback to scheduled_time if intake_date is not available
         if (row?.scheduled_time) {
           const scheduledTimeStr = String(row.scheduled_time);
-          if (scheduledTimeStr.includes("T") || scheduledTimeStr.includes(" ")) {
+          if (
+            scheduledTimeStr.includes("T") ||
+            scheduledTimeStr.includes(" ")
+          ) {
             const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
             return convertUTCToLocalTime(normalizedDateTime).date;
           }
         }
-        
+
         // Last fallback to req_dte_not_formatted
         if (row?.req_dte_not_formatted) {
           return convertUTCToLocalTime(
             `${row.req_dte_not_formatted}T${row.req_time || "00:00:00"}`
           ).date;
         }
-        
+
         return "";
       },
       selectorId: "intake_date",
@@ -73,7 +79,10 @@ export const getSessionTableColumns = ({
       selector: (row) => {
         if (row?.scheduled_time) {
           const scheduledTimeStr = String(row.scheduled_time);
-          if (scheduledTimeStr.includes("T") || scheduledTimeStr.includes(" ")) {
+          if (
+            scheduledTimeStr.includes("T") ||
+            scheduledTimeStr.includes(" ")
+          ) {
             const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
             return convertUTCToLocalTime(normalizedDateTime).time;
           }
@@ -83,13 +92,12 @@ export const getSessionTableColumns = ({
             ).time;
           }
         }
-        
+
         if (row?.intake_date && row?.req_time) {
-          return convertUTCToLocalTime(
-            `${row.intake_date}T${row.req_time}`
-          ).time;
+          return convertUTCToLocalTime(`${row.intake_date}T${row.req_time}`)
+            .time;
         }
-        
+
         if (row?.intake_date) {
           const intakeTime = new Date(row.intake_date).toLocaleTimeString([], {
             hour: "2-digit",
@@ -98,7 +106,7 @@ export const getSessionTableColumns = ({
           });
           return intakeTime !== "Invalid Date" ? intakeTime : "N/A";
         }
-        
+
         return "N/A";
       },
       selectorId: "session_time",
@@ -174,20 +182,23 @@ export const getSessionTableColumns = ({
                     // Calculate minimum date: either today or previous session date (whichever is later)
                     const today = new Date();
                     const currentSessionDate = new Date(row.intake_date);
-                    const previousSessionDate = rowIndex > 0 ? new Date(tempData[rowIndex - 1].intake_date) : null;
-                    
+                    const previousSessionDate =
+                      rowIndex > 0
+                        ? new Date(tempData[rowIndex - 1].intake_date)
+                        : null;
+
                     // Min date should be the later of: today or previous session date
                     let minDate = today;
                     if (previousSessionDate && previousSessionDate > today) {
                       minDate = previousSessionDate;
                     }
-                    
+
                     // Calculate maximum date: next session date (if exists)
                     let maxDate = null;
                     if (rowIndex < tempData.length - 1) {
                       maxDate = new Date(tempData[rowIndex + 1].intake_date);
                     }
-                    
+
                     setSessionRange((prev) => ({
                       ...prev,
                       min: formatDate(minDate),
@@ -238,20 +249,23 @@ export const getSessionTableColumns = ({
                   // Calculate minimum date: either today or previous session date (whichever is later)
                   const today = new Date();
                   const currentSessionDate = new Date(row.intake_date);
-                  const previousSessionDate = rowIndex > 0 ? new Date(tempData[rowIndex - 1].intake_date) : null;
-                  
+                  const previousSessionDate =
+                    rowIndex > 0
+                      ? new Date(tempData[rowIndex - 1].intake_date)
+                      : null;
+
                   // Min date should be the later of: today or previous session date
                   let minDate = today;
                   if (previousSessionDate && previousSessionDate > today) {
                     minDate = previousSessionDate;
                   }
-                  
+
                   // Calculate maximum date: next session date (if exists)
                   let maxDate = null;
                   if (rowIndex < tempData.length - 1) {
                     maxDate = new Date(tempData[rowIndex + 1].intake_date);
                   }
-                  
+
                   setSessionRange((prev) => ({
                     ...prev,
                     min: formatDate(minDate),
@@ -410,9 +424,45 @@ export const getSessionTableColumns = ({
           ?.filter((code) => code)
           .join(", ");
 
-        return <span>{attachedFormCodes?.toLowerCase() || "--"}</span>;
+        // Check if this is a Progress Report (PR) or Discharge Report (DR)
+        // Check by service_code (exact match or contains PR/DR)
+        const serviceCode = row?.service_code?.toUpperCase() || "";
+        const isProgressReport =
+          serviceCode === "PR" || serviceCode.includes("PR");
+        const isDischargeReport =
+          serviceCode === "DR" || serviceCode.includes("DR");
+        const isReport = isProgressReport || isDischargeReport;
+
+        return (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
+            {!isReport && (
+              <span>{attachedFormCodes?.toLowerCase() || "--"}</span>
+            )}
+            {isReport && (
+              <CustomButton
+                type="button"
+                title="Open"
+                customClass="open-report-button"
+                icon={null}
+                onClick={() => {
+                  if (isProgressReport && onOpenProgressReport) {
+                    onOpenProgressReport(row);
+                  } else if (isDischargeReport && onOpenDischargeReport) {
+                    onOpenDischargeReport(row);
+                  }
+                }}
+              />
+            )}
+          </div>
+        );
       },
     },
   ];
 };
-
