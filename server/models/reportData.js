@@ -630,7 +630,6 @@ export default class ReportData {
         
         // If report is locked, fetch and return only metadata (skip all extra fetching)
         if (existingReport.is_locked === true) {
-          console.log('existingReport.is_locked ❤️❤️❤️❤️❤️❤️❤️', existingReport.is_locked);
           const progressReport = await db
             .withSchema(`${process.env.MYSQL_DATABASE}`)
             .from('report_progress')
@@ -841,7 +840,6 @@ export default class ReportData {
         logger.error('Error fetching assessments:', error);
         assessments = [];
       }
-      console.log('assessments ❤️❤️❤️❤️❤️❤️❤️', assessments);
 
       // Format date for metadata
       const formatDateForMeta = (date) => {

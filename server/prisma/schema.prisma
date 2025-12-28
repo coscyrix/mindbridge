@@ -360,10 +360,7 @@ model reports {
 model report_intake {
     id                  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
     report_id           BigInt    @db.UnsignedBigInt
-    intake_data         Json?
-    assessment_summary  String?   @db.Text
-    presenting_concerns String?   @db.Text
-    background_info     String?   @db.Text
+    metadata            Json?
     created_at          DateTime? @default(now()) @db.Timestamp(0)
     updated_at          DateTime? @default(now()) @db.Timestamp(0)
     tenant_id           Int?
@@ -375,11 +372,7 @@ model report_intake {
 model report_treatment_plan {
     id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
     report_id      BigInt    @db.UnsignedBigInt
-    treatment_data Json?
-    goals          String?   @db.Text
-    objectives     String?   @db.Text
-    interventions  String?   @db.Text
-    timeline       String?   @db.VarChar(255)
+    metadata       Json?
     created_at     DateTime? @default(now()) @db.Timestamp(0)
     updated_at     DateTime? @default(now()) @db.Timestamp(0)
     tenant_id      Int?
@@ -391,7 +384,7 @@ model report_treatment_plan {
 model report_progress {
     id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
     report_id  BigInt    @db.UnsignedBigInt
-    metadata   Json? // { session_summary, progress_since_last_session, risk_screening_note, risk_screening_flags, assessments, frequency }
+    metadata   Json?
     created_at DateTime? @default(now()) @db.Timestamp(0)
     updated_at DateTime? @default(now()) @db.Timestamp(0)
     tenant_id  Int?
@@ -403,15 +396,7 @@ model report_progress {
 model report_discharge {
     id                     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
     report_id              BigInt    @db.UnsignedBigInt
-    discharge_data         Json?
-    discharge_reason_flags Json? // { goals_met: boolean, client_withdrew: boolean, referral_made: boolean, other: boolean }
-    discharge_reason_other String?   @db.Text // Text when "Other" is selected
-    treatment_summary      String?   @db.Text
-    remaining_concerns     String?   @db.Text
-    recommendations        String?   @db.Text
-    client_understanding   String?   @db.Text
-    assessments            Json? // Array of { form_name: string, score: string|number, therapist_notes: string }
-    discharge_date         DateTime? @db.DateTime(0)
+    metadata               Json?
     created_at             DateTime? @default(now()) @db.Timestamp(0)
     updated_at             DateTime? @default(now()) @db.Timestamp(0)
     tenant_id              Int?

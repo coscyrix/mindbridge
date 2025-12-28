@@ -31,6 +31,8 @@ import SessionScheduleHeader from "./SessionScheduleHeader";
 import { getSessionTableColumns } from "./SessionTableColumns";
 import ProgressReportModal from "./ReportModals/ProgressReportModal";
 import DischargeReportModal from "./ReportModals/DischargeReportModal";
+import IntakeReportModal from "./ReportModals/IntakeReportModal";
+import TreatmentPlanReportModal from "./ReportModals/TreatmentPlanReportModal";
 import CommonServices from "../../../services/CommonServices";
 import { useQueryData } from "../../../utils/hooks/useQueryData";
 import { useMutationData } from "../../../utils/hooks/useMutationData";
@@ -91,6 +93,12 @@ function CreateSessionForm({
   const [isDischargeReportModalOpen, setIsDischargeReportModalOpen] =
     useState(false);
   const [selectedDischargeReportRow, setSelectedDischargeReportRow] =
+    useState(null);
+  const [isIntakeReportModalOpen, setIsIntakeReportModalOpen] = useState(false);
+  const [selectedIntakeReportRow, setSelectedIntakeReportRow] = useState(null);
+  const [isTreatmentPlanReportModalOpen, setIsTreatmentPlanReportModalOpen] =
+    useState(false);
+  const [selectedTreatmentPlanReportRow, setSelectedTreatmentPlanReportRow] =
     useState(null);
 
   // Custom Hooks
@@ -384,6 +392,14 @@ function CreateSessionForm({
     onOpenDischargeReport: (row) => {
       setSelectedDischargeReportRow(row);
       setIsDischargeReportModalOpen(true);
+    },
+    onOpenIntakeReport: (row) => {
+      setSelectedIntakeReportRow(row);
+      setIsIntakeReportModalOpen(true);
+    },
+    onOpenTreatmentPlanReport: (row) => {
+      setSelectedTreatmentPlanReportRow(row);
+      setIsTreatmentPlanReportModalOpen(true);
     },
   });
 
@@ -810,6 +826,24 @@ function CreateSessionForm({
           setSelectedDischargeReportRow(null);
         }}
         sessionRow={selectedDischargeReportRow}
+        initialData={initialData}
+      />
+      <IntakeReportModal
+        isOpen={isIntakeReportModalOpen}
+        onClose={() => {
+          setIsIntakeReportModalOpen(false);
+          setSelectedIntakeReportRow(null);
+        }}
+        sessionRow={selectedIntakeReportRow}
+        initialData={initialData}
+      />
+      <TreatmentPlanReportModal
+        isOpen={isTreatmentPlanReportModalOpen}
+        onClose={() => {
+          setIsTreatmentPlanReportModalOpen(false);
+          setSelectedTreatmentPlanReportRow(null);
+        }}
+        sessionRow={selectedTreatmentPlanReportRow}
         initialData={initialData}
       />
     </CreateSessionFormWrapper>

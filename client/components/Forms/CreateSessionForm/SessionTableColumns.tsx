@@ -26,6 +26,8 @@ export const getSessionTableColumns = ({
   router,
   onOpenProgressReport,
   onOpenDischargeReport,
+  onOpenIntakeReport,
+  onOpenTreatmentPlanReport,
 }) => {
   return [
     {
@@ -424,14 +426,22 @@ export const getSessionTableColumns = ({
           ?.filter((code) => code)
           .join(", ");
 
-        // Check if this is a Progress Report (PR) or Discharge Report (DR)
-        // Check by service_code (exact match or contains PR/DR)
+        // Check if this is a Progress Report (PR), Discharge Report (DR), Intake Report (IR), or Treatment Plan (TP)
+        // Check by service_code (exact match or contains PR/DR/IR/TP)
         const serviceCode = row?.service_code?.toUpperCase() || "";
         const isProgressReport =
           serviceCode === "PR" || serviceCode.includes("PR");
         const isDischargeReport =
           serviceCode === "DR" || serviceCode.includes("DR");
-        const isReport = isProgressReport || isDischargeReport;
+        const isIntakeReport =
+          serviceCode === "IR" || serviceCode.includes("IR");
+        const isTreatmentPlanReport =
+          serviceCode === "TP" || serviceCode.includes("TP");
+        const isReport =
+          isProgressReport ||
+          isDischargeReport ||
+          isIntakeReport ||
+          isTreatmentPlanReport;
 
         return (
           <div
@@ -456,6 +466,13 @@ export const getSessionTableColumns = ({
                     onOpenProgressReport(row);
                   } else if (isDischargeReport && onOpenDischargeReport) {
                     onOpenDischargeReport(row);
+                  } else if (isIntakeReport && onOpenIntakeReport) {
+                    onOpenIntakeReport(row);
+                  } else if (
+                    isTreatmentPlanReport &&
+                    onOpenTreatmentPlanReport
+                  ) {
+                    onOpenTreatmentPlanReport(row);
                   }
                 }}
               />
