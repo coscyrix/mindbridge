@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import CustomModal from "../../CustomModal";
-import Spinner from "../../common/Spinner";
+import CustomModal from "../../../CustomModal";
+import Spinner from "../../../common/Spinner";
 import moment from "moment";
-import CommonServices from "../../../services/CommonServices";
-import { useQueryData } from "../../../utils/hooks/useQueryData";
-import { capitalizeName } from "../../../utils/constants";
-import { DischargeReportModalWrapper } from "./style";
+import CommonServices from "../../../../services/CommonServices";
+import { useQueryData } from "../../../../utils/hooks/useQueryData";
+import { useMutationData } from "../../../../utils/hooks/useMutationData";
+import { capitalizeName } from "../../../../utils/constants";
+import { DischargeReportModalWrapper } from "../style";
+import { api } from "../../../../utils/auth";
 
 interface DischargeReportModalProps {
   isOpen: boolean;
@@ -41,6 +43,9 @@ const DischargeReportModal: React.FC<DischargeReportModalProps> = ({
     [key: number]: string;
   }>({});
 
+  // State for validation checkbox
+  const [isAccepted, setIsAccepted] = useState(false);
+
   // Reset form when modal closes or session changes
   useEffect(() => {
     if (!isOpen) {
@@ -54,6 +59,7 @@ const DischargeReportModal: React.FC<DischargeReportModalProps> = ({
       setRecommendations("");
       setClientUnderstanding("");
       setTherapistNotes({});
+      setIsAccepted(false);
     }
   }, [isOpen]);
 
@@ -113,6 +119,66 @@ const DischargeReportModal: React.FC<DischargeReportModalProps> = ({
   const totalSessionsCompleted = reportData?.total_sessions_completed || 0;
   const frequency = reportData?.frequency || "Other";
   const assessments = reportData?.assessments || [];
+
+  // Save discharge report mutation
+  const { mutate: saveDischargeReport, isPending: isSaving } = useMutationData(
+    ["saveDischargeReport"],
+    async () => {
+      // Prepare assessments with therapist notes
+      const assessmentsWithNotes = assessments.map(
+        (assessment: any, index: number) => ({
+          form_name: assessment?.form_cde || `Assessment ${index + 1}`,
+          score: assessment?.score || "N/A",
+          therapist_notes: therapistNotes[index] || "",
+        })
+      );
+
+      // Prepare discharge reason flags
+      const dischargeReasonFlags = {
+        goals_met: dischargeReasonGoalsMet,
+        client_withdrew: dischargeReasonClientWithdrew,
+        referral_made: dischargeReasonReferralMade,
+        other: dischargeReasonOther,
+      };
+
+      const payload = {
+        session_id: sessionId,
+        client_id: reportData?.client_id || sessionRow?.client_id,
+        counselor_id: reportData?.counselor_id || sessionRow?.counselor_id,
+        discharge_reason_flags: dischargeReasonFlags,
+        discharge_reason_other: dischargeReasonOtherText,
+        treatment_summary: treatmentSummary,
+        remaining_concerns: remainingConcerns,
+        recommendations: recommendations,
+        client_understanding: clientUnderstanding,
+        assessments: assessmentsWithNotes,
+        discharge_date:
+          reportData?.session_date ||
+          sessionRow?.intake_date ||
+          new Date().toISOString(),
+      };
+
+      return await CommonServices.saveDischargeReport(payload);
+    },
+    ["discharge-report-data"],
+    () => {
+      onClose();
+    }
+  );
+
+  const handleSave = () => {
+    if (!sessionId) {
+      alert("Session ID is required");
+      return;
+    }
+    if (!isAccepted) {
+      alert(
+        "Please confirm that you accept the above information before saving."
+      );
+      return;
+    }
+    saveDischargeReport(undefined);
+  };
 
   return (
     <CustomModal
@@ -324,6 +390,64 @@ const DischargeReportModal: React.FC<DischargeReportModalProps> = ({
               <strong>{therapistDesignation}</strong> on{" "}
               <strong>{reportDate}</strong> via MindBridge.
             </div>
+          </div>
+
+          {/* Validation Checkbox */}
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "15px",
+              backgroundColor: "#f8f9fa",
+              borderRadius: "4px",
+            }}
+          >
+            <label
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={isAccepted}
+                onChange={(e) => setIsAccepted(e.target.checked)}
+                style={{
+                  marginRight: "10px",
+                  marginTop: "3px",
+                  cursor: "pointer",
+                }}
+                required
+              />
+              <span style={{ fontSize: "14px", lineHeight: "1.5" }}>
+                I hereby confirm that I have reviewed and accept the accuracy of
+                all information provided in this discharge report. I understand
+                that this report will be submitted as an official record of the
+                client's discharge from treatment.
+              </span>
+            </label>
+          </div>
+
+          {/* Save Button */}
+          <div style={{ marginTop: "20px", textAlign: "right" }}>
+            <button
+              onClick={handleSave}
+              disabled={isSaving || !isAccepted}
+              style={{
+                padding: "10px 20px",
+                backgroundColor:
+                  isAccepted && !isSaving ? "#007bff" : "#6c757d",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: isSaving || !isAccepted ? "not-allowed" : "pointer",
+                fontSize: "16px",
+                fontWeight: "500",
+                opacity: isSaving || !isAccepted ? 0.6 : 1,
+              }}
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </button>
           </div>
         </DischargeReportModalWrapper>
       )}

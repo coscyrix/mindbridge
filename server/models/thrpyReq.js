@@ -23,6 +23,7 @@ import {
 import { formatDateTimeInTimezone, getTimezoneByCountryCode, getDefaultTimezone } from '../utils/timezone.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import UserTargetOutcome from './userTargetOutcome.js';
+import ReportData from './reportData.js';
 
 dotenv.config();
 // Database connection is handled by getDb() function above
@@ -39,6 +40,7 @@ export default class ThrpyReq {
     this.emailTmplt = new EmailTmplt();
     this.common = new Common();
     this.userTargetOutcome = new UserTargetOutcome();
+    this.reportData = new ReportData();
   }
 
 
@@ -808,6 +810,21 @@ export default class ThrpyReq {
         logger.info('Session forms loaded successfully:', loadForms.message);
       }
 
+      // Generate reports for report sessions
+      const generateReports = await this.generateReportsForReportSessions({
+        req_id: postThrpyReq.req_id,
+        client_id: data.client_id,
+        counselor_id: data.counselor_id,
+        tenant_id: data.tenant_id,
+      });
+
+      if (generateReports.error) {
+        logger.error('Error generating reports for report sessions:', generateReports.message);
+        // Don't return error - continue without reports
+      } else {
+        logger.info('Reports generated successfully for report sessions:', generateReports.message);
+      }
+
       const ThrpyReq = await this.getThrpyReqById({
         req_id: postThrpyReq.req_id,
       });
@@ -1346,6 +1363,25 @@ export default class ThrpyReq {
                 // If no treatment target forms exist, use empty array
                 session.forms_array = [];
                 session.form_mode = 'treatment_target';
+              }
+
+              // If this is a report session, get the report_id
+              if (session.is_report === 1 || session.is_report === true) {
+                try {
+                  const reportQuery = await db
+                    .withSchema(`${process.env.MYSQL_DATABASE}`)
+                    .from('reports')
+                    .where('session_id', session.session_id)
+                    .select('report_id', 'is_locked')
+                    .first();
+
+                  if (reportQuery) {
+                    session.report_id = reportQuery.report_id;
+                    session.is_locked = reportQuery.is_locked || false;
+                  }
+                } catch (error) {
+                  logger.error('Error fetching report_id for session:', error);
+                }
               }
             }
           }
@@ -2537,6 +2573,236 @@ export default class ThrpyReq {
       logger.error(error);
       return [];
     }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Generate reports for report sessions when therapy request is created
+   * @param {Object} data - Data containing req_id, client_id, counselor_id, tenant_id
+   * @returns {Promise<Object>} Result of report generation
+   */
+  async generateReportsForReportSessions(data) {
+    try {
+      const { req_id, client_id, counselor_id, tenant_id } = data;
+
+      if (!req_id) {
+        return { message: 'req_id is required', error: -1 };
+      }
+
+      // Get all sessions for this therapy request
+      const therapyRequest = await this.getThrpyReqById({ req_id });
+
+      if (!therapyRequest || !therapyRequest[0] || !therapyRequest[0].session_obj) {
+        logger.warn('No sessions found for therapy request');
+        return { message: 'No sessions found', error: -1 };
+      }
+
+      const sessions = therapyRequest[0].session_obj;
+      
+      // Filter only report sessions (is_report = 1)
+      const reportSessions = sessions.filter(session => session.is_report === 1);
+
+      if (reportSessions.length === 0) {
+        logger.info('No report sessions found, skipping report generation');
+        return { message: 'No report sessions found', error: 0 };
+      }
+
+      logger.info(`Found ${reportSessions.length} report session(s) to generate reports for`);
+
+      const generatedReports = [];
+
+      // Process each report session
+      for (const session of reportSessions) {
+        try {
+          // Determine report type based on service code or session description
+          let reportType = this.determineReportType(session);
+
+          if (!reportType) {
+            logger.warn(`Could not determine report type for session ${session.session_id}, skipping`);
+            continue;
+          }
+
+          // Create report in reports table
+          const reportData = {
+            session_id: session.session_id,
+            client_id: client_id || session.client_id,
+            counselor_id: counselor_id || session.counselor_id,
+            report_type: reportType,
+            report_json: {
+              session_id: session.session_id,
+              session_code: session.session_code,
+              session_description: session.session_description,
+              service_id: session.service_id,
+              created_at: new Date().toISOString(),
+            },
+            status_yn: 'y',
+            tenant_id: tenant_id || session.tenant_id,
+          };
+
+          const createReportResult = await this.reportData.postReport(reportData);
+
+          if (createReportResult.error) {
+            logger.error(`Error creating report for session ${session.session_id}:`, createReportResult.message);
+            continue;
+          }
+
+          const reportId = createReportResult.report_id;
+          logger.info(`✅ Created report ${reportId} (type: ${reportType}) for session ${session.session_id}`);
+
+          // Create type-specific report data based on report type
+          const typeSpecificData = {
+            report_id: reportId,
+            tenant_id: tenant_id || session.tenant_id,
+          };
+
+          let typeSpecificResult = null;
+
+          switch (reportType) {
+            case 'INTAKE':
+              typeSpecificResult = await this.reportData.postIntakeReport({
+                ...typeSpecificData,
+                intake_data: {
+                  session_id: session.session_id,
+                  session_code: session.session_code,
+                },
+              });
+              break;
+
+            case 'TREATMENT_PLAN':
+              typeSpecificResult = await this.reportData.postTreatmentPlanReport({
+                ...typeSpecificData,
+                treatment_data: {
+                  session_id: session.session_id,
+                  session_code: session.session_code,
+                },
+              });
+              break;
+
+            case 'PROGRESS':
+              typeSpecificResult = await this.reportData.postProgressReport({
+                ...typeSpecificData,
+              });
+              break;
+
+            case 'DISCHARGE':
+              typeSpecificResult = await this.reportData.postDischargeReport({
+                ...typeSpecificData,
+                discharge_data: {
+                  session_id: session.session_id,
+                  session_code: session.session_code,
+                },
+                discharge_date: session.intake_date ? new Date(session.intake_date) : new Date(),
+              });
+              break;
+
+            default:
+              logger.warn(`Unknown report type: ${reportType}, skipping type-specific data creation`);
+          }
+
+          if (typeSpecificResult && !typeSpecificResult.error) {
+            logger.info(`✅ Created type-specific data for report ${reportId} (type: ${reportType})`);
+          } else if (typeSpecificResult && typeSpecificResult.error) {
+            logger.warn(`⚠️ Error creating type-specific data for report ${reportId}:`, typeSpecificResult.message);
+          }
+
+          generatedReports.push({
+            report_id: reportId,
+            session_id: session.session_id,
+            report_type: reportType,
+          });
+        } catch (error) {
+          logger.error(`Error processing report session ${session.session_id}:`, error);
+          // Continue with next session
+        }
+      }
+
+      return {
+        message: `Successfully generated ${generatedReports.length} report(s) for report sessions`,
+        generated_reports: generatedReports,
+      };
+    } catch (error) {
+      logger.error('Error generating reports for report sessions:', error);
+      return {
+        message: 'Error generating reports for report sessions',
+        error: -1,
+      };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Determine report type based on session service code or description
+   * @param {Object} session - Session object
+   * @returns {string|null} Report type (INTAKE, TREATMENT_PLAN, PROGRESS, DISCHARGE) or null
+   */
+  determineReportType(session) {
+    if (!session) {
+      return null;
+    }
+
+    const sessionCode = (session.session_code || '').toUpperCase();
+    const sessionDescription = (session.session_description || '').toUpperCase();
+    const serviceCode = (session.service_code || '').toUpperCase();
+    const serviceName = (session.service_name || '').toUpperCase();
+
+    // Check for discharge report (highest priority - usually last session)
+    const dischargeCodes = ['DISCHARGE', 'DR', 'OTR_SUM_REP', 'OTR_TRNS_REP', 'DISCHARGE_REPORT', 'DISCHARGE REPORT'];
+    if (
+      dischargeCodes.some(code => 
+        sessionCode.includes(code) || 
+        sessionDescription.includes(code) || 
+        serviceCode.includes(code) ||
+        serviceName.includes(code)
+      )
+    ) {
+      return 'DISCHARGE';
+    }
+
+    // Check for intake report (usually first session)
+    const intakeCodes = ['INTAKE', 'INTAKE_REPORT', 'INTAKE_FORM', 'INTAKE REPORT', 'INTAKE FORM'];
+    if (
+      intakeCodes.some(code => 
+        sessionCode.includes(code) || 
+        sessionDescription.includes(code) || 
+        serviceCode.includes(code) ||
+        serviceName.includes(code)
+      )
+    ) {
+      return 'INTAKE';
+    }
+
+    // Check for treatment plan
+    const treatmentPlanCodes = ['TREATMENT_PLAN', 'TREATMENT PLAN', 'TP', 'TREATMENT', 'TREATMENT PLAN REPORT'];
+    if (
+      treatmentPlanCodes.some(code => 
+        sessionCode.includes(code) || 
+        sessionDescription.includes(code) || 
+        serviceCode.includes(code) ||
+        serviceName.includes(code)
+      )
+    ) {
+      return 'TREATMENT_PLAN';
+    }
+
+    // Check for progress report
+    const progressCodes = ['PROGRESS', 'PROGRESS_REPORT', 'PR', 'PROGRESS REPORT', 'PROGRESS REPORT'];
+    if (
+      progressCodes.some(code => 
+        sessionCode.includes(code) || 
+        sessionDescription.includes(code) || 
+        serviceCode.includes(code) ||
+        serviceName.includes(code)
+      )
+    ) {
+      return 'PROGRESS';
+    }
+
+    // Default: If it's a report session but type is unclear, default to PROGRESS
+    // This can be customized based on your business logic
+    logger.warn(`Could not determine report type for session ${session.session_id} (code: ${sessionCode}, desc: ${sessionDescription}), defaulting to PROGRESS`);
+    return 'PROGRESS';
   }
 
   //////////////////////////////////////////

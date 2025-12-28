@@ -101,8 +101,9 @@ export default class ReportService {
         return { message: error.details[0].message, error: -1 };
       }
 
-      const report = new Report();
-      const progressReportData = await report.getProgressReportData(data);
+      const ReportData = (await import('./reportData.js')).default;
+      const reportData = new ReportData();
+      const progressReportData = await reportData.getProgressReportData(data);
 
       if (progressReportData.error) {
         return progressReportData;

@@ -47,10 +47,26 @@ const CommonServices = {
     return api.get(ApiConfig.dashboard.reportsData, { params });
   },
   getProgressReportData(params) {
-    return api.get("/reports/progress-report", { params });
+    return api.get("/report-data/progress-report", { params });
   },
   getDischargeReportData(params) {
     return api.get("/reports/discharge-report", { params });
+  },
+  saveProgressReport: async (payload) => {
+    try {
+      const response = await api.post("/report-data/progress", payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  saveDischargeReport: async (payload) => {
+    try {
+      const response = await api.post("/report-data/discharge", payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
   },
   getAssessmentResults(params) {
     return api.get(ApiConfig.dashboard.assessmentResultsData, { params });

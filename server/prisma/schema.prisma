@@ -334,6 +334,92 @@ model feedback_whodas {
     @@index([feedback_id], map: "feedback_whodas_feedback_id_foreign")
 }
 
+model reports {
+    report_id             BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+    session_id            Int?
+    client_id             Int?
+    counselor_id          Int?
+    report_type           report_type_enum
+    report_json           Json?
+    is_locked             Boolean?                @default(false)
+    created_at            DateTime?               @default(now()) @db.Timestamp(0)
+    updated_at            DateTime?               @default(now()) @db.Timestamp(0)
+    tenant_id             Int?
+    report_intake         report_intake[]
+    report_treatment_plan report_treatment_plan[]
+    report_progress       report_progress[]
+    report_discharge      report_discharge[]
+    session               session?                @relation(fields: [session_id], references: [session_id], onDelete: Cascade, map: "reports_session_FK")
+
+    @@unique([session_id, report_type], map: "reports_unique")
+    @@index([client_id], map: "reports_client_id_index")
+    @@index([counselor_id], map: "reports_counselor_id_index")
+    @@index([session_id], map: "reports_session_FK")
+}
+
+model report_intake {
+    id                  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id           BigInt    @db.UnsignedBigInt
+    intake_data         Json?
+    assessment_summary  String?   @db.Text
+    presenting_concerns String?   @db.Text
+    background_info     String?   @db.Text
+    created_at          DateTime? @default(now()) @db.Timestamp(0)
+    updated_at          DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id           Int?
+    reports             reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_intake_reports_FK")
+
+    @@index([report_id], map: "report_intake_reports_FK")
+}
+
+model report_treatment_plan {
+    id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id      BigInt    @db.UnsignedBigInt
+    treatment_data Json?
+    goals          String?   @db.Text
+    objectives     String?   @db.Text
+    interventions  String?   @db.Text
+    timeline       String?   @db.VarChar(255)
+    created_at     DateTime? @default(now()) @db.Timestamp(0)
+    updated_at     DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id      Int?
+    reports        reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_treatment_plan_reports_FK")
+
+    @@index([report_id], map: "report_treatment_plan_reports_FK")
+}
+
+model report_progress {
+    id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id  BigInt    @db.UnsignedBigInt
+    metadata   Json? // { session_summary, progress_since_last_session, risk_screening_note, risk_screening_flags, assessments, frequency }
+    created_at DateTime? @default(now()) @db.Timestamp(0)
+    updated_at DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id  Int?
+    reports    reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_progress_reports_FK")
+
+    @@index([report_id], map: "report_progress_reports_FK")
+}
+
+model report_discharge {
+    id                     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id              BigInt    @db.UnsignedBigInt
+    discharge_data         Json?
+    discharge_reason_flags Json? // { goals_met: boolean, client_withdrew: boolean, referral_made: boolean, other: boolean }
+    discharge_reason_other String?   @db.Text // Text when "Other" is selected
+    treatment_summary      String?   @db.Text
+    remaining_concerns     String?   @db.Text
+    recommendations        String?   @db.Text
+    client_understanding   String?   @db.Text
+    assessments            Json? // Array of { form_name: string, score: string|number, therapist_notes: string }
+    discharge_date         DateTime? @db.DateTime(0)
+    created_at             DateTime? @default(now()) @db.Timestamp(0)
+    updated_at             DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id              Int?
+    reports                reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_discharge_reports_FK")
+
+    @@index([report_id], map: "report_discharge_reports_FK")
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model forms {
     form_id                        Int                              @id @default(autoincrement())
@@ -596,6 +682,7 @@ model session {
     feedback                       feedback[]
     homework                       homework[]
     invoice                        invoice[]
+    reports                        reports[]
     service                        service?                         @relation(fields: [service_id], references: [service_id], onDelete: Cascade, map: "session_service_FK")
     thrpy_req                      thrpy_req?                       @relation(fields: [thrpy_req_id], references: [req_id], onDelete: Cascade, map: "session_thrpy_req_FK")
     treatment_target_session_forms treatment_target_session_forms[]
@@ -1113,4 +1200,16 @@ enum client_intake_self_harm {
 enum client_intake_harming_others {
     no
     yes
+}
+
+enum report_type_enum {
+    INTAKE
+    TREATMENT_PLAN
+    PROGRESS
+    DISCHARGE
+}
+
+enum report_status_yn {
+    y
+    n
 }
