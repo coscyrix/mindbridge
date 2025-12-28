@@ -27,135 +27,146 @@ export const services = z.object({
     .min(1, "At least one service is required"),
 });
 
-export const ClientValidationSchema = z
-  .object({
-    clam_num: z
-      .preprocess(
-        (value) => value === "" || value === undefined ? undefined : Number(value),
-        z.number().min(1, { message: "Serial Number is required" }).optional()
-      )
-      .optional(),
-    tenant_name: z
-      .string()
-      .nullable()
-      //.min(2, { message: "At least 2 characters required" })
-      .optional(),
-    user_first_name: z
-      .string()
-      .min(2, { message: "At least 2 characters required" }),
-    user_last_name: z
-      .string()
-      .min(2, { message: "At least 2 characters required" }),
+// Function to create ClientValidationSchema with optional intakeId parameter
+export const createClientValidationSchema = (intakeId) => {
+  return z
+    .object({
+      clam_num: z
+        .preprocess(
+          (value) => value === "" || value === undefined ? undefined : Number(value),
+          z.number().min(1, { message: "Serial Number is required" }).optional()
+        )
+        .optional(),
+      tenant_name: z
+        .string()
+        .nullable()
+        //.min(2, { message: "At least 2 characters required" })
+        .optional(),
+      user_first_name: z
+        .string()
+        .min(2, { message: "At least 2 characters required" }),
+      user_last_name: z
+        .string()
+        .min(2, { message: "At least 2 characters required" }),
 
-    user_phone_nbr: z
-      .string({
-        required_error: "Phone number is required",
-        invalid_type_error: "Please enter a valid phone number",
-      })
-      .min(1, { message: "Phone number is required" })
-      .refine(
-        (value) => {
-          if (!value) return false;
-          // Basic validation for E.164 format (react-phone-number-input format)
-          return /^\+[1-9]\d{1,14}$/.test(value.replace(/\s/g, ""));
-        },
-        { message: "Please enter a valid phone number" }
-      ),
-    email: z
-      .string()
-      .nonempty("Email is required")
-      .email("Invalid email address"),
-    
-    role_id: z
-      .preprocess(
-        (value) => Number(value),
-        z.number().min(1, { message: "Role is required" })
-      )
-      .optional(),
-    target_outcome_id: z
-      .union([
-        z.object({
-          label: z.string().optional(),
-          value: z.preprocess(
-            (val) => Number(val),
-            z.number().min(1, { message: "Target Outcomes is required" })
-          ).optional()
-        }).optional(),
-        z.string().optional(),
-        z.number().optional()
-      ])
-      .optional()
-      .nullable(),
-    tax: z.preprocess((val) => {
-      const num = Number(val);
-      return isNaN(num) ? undefined : num;
-    }, z.number().nullable().optional()),
+      user_phone_nbr: z
+        .string({
+          required_error: "Phone number is required",
+          invalid_type_error: "Please enter a valid phone number",
+        })
+        .min(1, { message: "Phone number is required" })
+        .refine(
+          (value) => {
+            if (!value) return false;
+            // Basic validation for E.164 format (react-phone-number-input format)
+            return /^\+[1-9]\d{1,14}$/.test(value.replace(/\s/g, ""));
+          },
+          { message: "Please enter a valid phone number" }
+        ),
+      email: z
+        .string()
+        .nonempty("Email is required")
+        .email("Invalid email address"),
+      
+      role_id: z
+        .preprocess(
+          (value) => Number(value),
+          z.number().min(1, { message: "Role is required" })
+        )
+        .optional(),
+      target_outcome_id: z
+        .union([
+          z.object({
+            label: z.string().optional(),
+            value: z.preprocess(
+              (val) => Number(val),
+              z.number().min(1, { message: "Target Outcomes is required" })
+            ).optional()
+          }).optional(),
+          z.string().optional(),
+          z.number().optional()
+        ])
+        .optional()
+        .nullable(),
+      tax: z.preprocess((val) => {
+        const num = Number(val);
+        return isNaN(num) ? undefined : num;
+      }, z.number().nullable().optional()),
 
-    admin_fee: z.preprocess((val) => {
-      const num = Number(val);
-      return isNaN(num) ? undefined : num;
-    }, z.number().nullable().optional()),
-    description: z.string().nullable().optional(),
-    timezone: z.string().nullable().optional(),
-  })
-  .refine(
-    (data) => {
-      // Check if role_id is 1 (client) - require clam_num and target_outcome_id
-      if (data.role_id === 1) {
-        const clamNumValid = data.clam_num && data.clam_num > 0;
-        const targetOutcomeValid = data.target_outcome_id && (
-          (typeof data.target_outcome_id === 'object' && data.target_outcome_id.value) ||
-          (typeof data.target_outcome_id === 'string' && data.target_outcome_id.length > 0) ||
-          (typeof data.target_outcome_id === 'number' && data.target_outcome_id > 0)
-        );
-        return clamNumValid && targetOutcomeValid;
+      admin_fee: z.preprocess((val) => {
+        const num = Number(val);
+        return isNaN(num) ? undefined : num;
+      }, z.number().nullable().optional()),
+      description: z.string().nullable().optional(),
+      timezone: z.string().nullable().optional(),
+    })
+    .refine(
+      (data) => {
+        // Check if role_id is 1 (client) - require clam_num and target_outcome_id
+        // BUT: if intakeId is provided, clam_num is optional (will be auto-generated)
+        if (data.role_id === 1) {
+          const clamNumValid = intakeId ? true : (data.clam_num && data.clam_num > 0);
+          const targetOutcomeValid = data.target_outcome_id && (
+            (typeof data.target_outcome_id === 'object' && data.target_outcome_id.value) ||
+            (typeof data.target_outcome_id === 'string' && data.target_outcome_id.length > 0) ||
+            (typeof data.target_outcome_id === 'number' && data.target_outcome_id > 0)
+          );
+          return clamNumValid && targetOutcomeValid;
+        }
+        // If role_id is 3 (manager) - require admin_fee and tax
+        if (data.role_id === 3) {
+          const adminFeeValid = data.admin_fee && data.admin_fee > 0;
+          const taxValid = data.tax && data.tax >= 0;
+          return adminFeeValid && taxValid;
+        }
+        // For other roles, skip validation for clam_num and target_outcome_id
+        return true;
+      },
+      {
+        message: intakeId 
+          ? "Target Outcomes is required for clients, Admin Fees and Tax are required for managers"
+          : "Serial Number and Target Outcomes are required for clients, Admin Fees and Tax are required for managers",
+        path: intakeId 
+          ? ["target_outcome_id", "admin_fee", "tax"]
+          : ["clam_num", "target_outcome_id", "admin_fee", "tax"],
       }
-      // If role_id is 3 (manager) - require admin_fee and tax
-      if (data.role_id === 3) {
-        const adminFeeValid = data.admin_fee && data.admin_fee > 0;
-        const taxValid = data.tax && data.tax >= 0;
-        return adminFeeValid && taxValid;
-      }
-      // For other roles, skip validation for clam_num and target_outcome_id
-      return true;
-    },
-    {
-      message: "Serial Number and Target Outcomes are required for clients, Admin Fees and Tax are required for managers",
-      path: ["clam_num", "target_outcome_id", "admin_fee", "tax"],
-    }
-  )
-  .refine(
-    (data) => {
-      // Check if role_id is 2
-      if (data.role_id === 2) {
-        // Validate user_first_name, user_last_name, and email
-        const firstNameValid = z
-          .string()
-          .min(2, { message: "At least 2 characters required" })
-          .safeParse(data.user_first_name);
-        const lastNameValid = z
-          .string()
-          .min(2, { message: "At least 2 characters required" })
-          .safeParse(data.user_last_name);
-        const emailValid = z
-          .string()
-          .nonempty("Email is required")
-          .email("Invalid email address")
-          .safeParse(data.email);
+    )
+    .refine(
+      (data) => {
+        // Check if role_id is 2
+        if (data.role_id === 2) {
+          // Validate user_first_name, user_last_name, and email
+          const firstNameValid = z
+            .string()
+            .min(2, { message: "At least 2 characters required" })
+            .safeParse(data.user_first_name);
+          const lastNameValid = z
+            .string()
+            .min(2, { message: "At least 2 characters required" })
+            .safeParse(data.user_last_name);
+          const emailValid = z
+            .string()
+            .nonempty("Email is required")
+            .email("Invalid email address")
+            .safeParse(data.email);
 
-        return (
-          firstNameValid.success && lastNameValid.success && emailValid.success
-        );
+          return (
+            firstNameValid.success && lastNameValid.success && emailValid.success
+          );
+        }
+        // If role_id is not 2, skip validation for user_first_name, user_last_name, and email
+        return true;
+      },
+      {
+        message:
+          "user_first_name, user_last_name, and email are required when role_id is 2",
+        path: ["user_first_name", "user_last_name", "email"], // Indicate where the error is
       }
-      // If role_id is not 2, skip validation for user_first_name, user_last_name, and email
-      return true;
-    },
-    {
-      message:
-        "user_first_name, user_last_name, and email are required when role_id is 2",
-      path: ["user_first_name", "user_last_name", "email"], // Indicate where the error is
-    }
-  );
+    );
+};
+
+// Default export for backward compatibility
+export const ClientValidationSchema = createClientValidationSchema();
 
 // export const EditClientValidationSchema = z.object({
 //   clam_num: z.preprocess(

@@ -31,6 +31,7 @@ export default class UserProfileService {
       clam_num: joi.number().optional(),
       tenant_id: joi.number().required(),
       timezone: joi.string().optional(),
+      intake_form_id: joi.number().optional(),
     });
 
     // Validate the entire data object against the schema
@@ -108,6 +109,7 @@ export default class UserProfileService {
       admin_fee: joi.number().precision(2).optional(),
       tax_percent: joi.number().precision(2).optional(),
       timezone: joi.string().optional(),
+      intake_form_id: joi.number().optional(),
     });
 
     console.log('//////////////////////////////////////////');

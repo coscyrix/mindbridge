@@ -13,6 +13,7 @@ import Common from './common.js';
 import EmailTmplt from './emailTmplt.js';
 import UserForm from './userForm.js';
 import UserTargetOutcome from './userTargetOutcome.js';
+import prisma from '../utils/prisma.js';
 const require = createRequire(import.meta.url);
 
 export default class UserProfile {
@@ -230,7 +231,7 @@ export default class UserProfile {
         }
       }
 
-      const postClientEnrollment = this.common.postClientEnrollment({
+      const postClientEnrollment = await this.common.postClientEnrollment({
         user_id: data.user_profile_id, // This is the ID of the Counselor who is enrolling the client
         client_id: postUsrProfile[0], // i dont want this to be passed as an array but as a single value
         tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id,
@@ -238,6 +239,51 @@ export default class UserProfile {
 
       if (postClientEnrollment.error) {
         return postClientEnrollment;
+      }
+
+
+      // If intake_form_id is provided, update the intake form to link it to the client enrollment
+      if (data.intake_form_id && data.role_id === 1) {
+        let enrollmentId = postClientEnrollment.enrollment_id;
+        
+        // If enrollment_id is not available, query it from the database
+        if (!enrollmentId) {
+          try {
+            const enrollment = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('client_enrollments')
+              .where('user_id', data.user_profile_id)
+              .where('client_id', postUsrProfile[0])
+              .orderBy('id', 'desc')
+              .first();
+            
+            if (enrollment) {
+              enrollmentId = enrollment.id;
+              logger.info(`Retrieved enrollment_id ${enrollmentId} from database for intake form ${data.intake_form_id}`);
+            }
+          } catch (error) {
+            logger.error(`Error retrieving enrollment_id:`, error);
+          }
+        }
+        
+        if (enrollmentId) {
+          try {
+            await prisma.client_intake_form.update({
+              where: {
+                id: data.intake_form_id,
+              },
+              data: {
+                client_enrollment_id: enrollmentId,
+              },
+            });
+            logger.info(`Linked intake form ${data.intake_form_id} to client enrollment ${enrollmentId}`);
+          } catch (error) {
+            logger.error(`Error linking intake form ${data.intake_form_id} to client enrollment ${enrollmentId}:`, error);
+            // Continue with client creation even if intake form update fails
+          }
+        } else {
+          logger.warn(`Could not determine enrollment_id for intake form ${data.intake_form_id}`);
+        }
       }
 
       const recConselor = await this.getUserProfileById({

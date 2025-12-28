@@ -400,7 +400,6 @@ export default class Report {
         intakeFormsQuery ? intakeFormsQuery : Promise.resolve([]),
       ]);
 
-      console.log('intakeForms ❤️ ❤️❤️❤️❤️❤️❤️', intakeForms, 'consentForms ❤️ ❤️❤️❤️❤️❤️❤️', consentForms);
 
       // Combine results if we have treatment target forms and consent forms
       let combinedResults = [...rec];
@@ -419,10 +418,18 @@ export default class Report {
       // Remove duplicates across all form types
       // A form is considered duplicate if it has the same: client_id, counselor_id, form_id, thrpy_req_id
       // For consent forms, also check user_form_id to keep them unique
+      // INTAKE forms are excluded from duplicate checking since they don't have client_id yet
       const formMap = new Map();
+      const excludedIntakeForms = []; // Store INTAKE forms separately (excluded from duplicate check)
       
       // First pass: collect all forms and handle duplicates by keeping the most recent one
       combinedResults.forEach(form => {
+        // Skip duplicate checking for INTAKE forms - they should all be included
+        if (form.form_cde === 'INTAKE') {
+          excludedIntakeForms.push(form);
+          return;
+        }
+        
         // Create a unique key for each form
         // For consent forms, include user_form_id to keep them unique
         const uniqueKey = form.user_form_id 
@@ -446,8 +453,8 @@ export default class Report {
         }
       });
       
-      // Convert map values back to array
-      combinedResults = Array.from(formMap.values());
+      // Convert map values back to array and add INTAKE forms back (without duplicate checking)
+      combinedResults = [...Array.from(formMap.values()), ...excludedIntakeForms];
 
       // Filter out tenant consent forms for non-admin users
       // Tenant consent forms (where client has role_id = 3) should only be visible to admins (role_id = 4)

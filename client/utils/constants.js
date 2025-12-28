@@ -1372,7 +1372,7 @@ export const ASSESSMENT_DATA_COLUMNS = (handleTreatmentTools, handleClientClick)
   },
   {
     name: "Serial Number",
-    selector: (row) => row.client_clam_num || "NA",
+    selector: (row) => row.client_clam_num || "TBD",
     sortable: true,
     selectorId: "client_first_name",
   },

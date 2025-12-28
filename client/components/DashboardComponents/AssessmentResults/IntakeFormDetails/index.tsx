@@ -120,6 +120,7 @@ const IntakeFormDetails: React.FC<IntakeFormDetailsProps> = ({
       // Additional fields can be mapped if needed
     };
 
+    console.log("IntakeFormDetails - intakeFormData.id:", intakeFormData?.id);
     setClientFormData(mappedData);
     setShowCreateClientModal(true);
   };
@@ -325,6 +326,7 @@ const IntakeFormDetails: React.FC<IntakeFormDetailsProps> = ({
           setInitialData={setClientFormData}
           setTableData={() => {}}
           fetchClients={() => {}}
+          intakeId={intakeFormData?.id}
         />
       </CreateSessionLayout>
     </>
