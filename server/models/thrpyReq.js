@@ -2636,7 +2636,6 @@ export default class ThrpyReq {
               service_id: session.service_id,
               created_at: new Date().toISOString(),
             },
-            status_yn: 'y',
             tenant_id: tenant_id || session.tenant_id,
           };
 

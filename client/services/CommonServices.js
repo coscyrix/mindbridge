@@ -49,8 +49,11 @@ const CommonServices = {
   getProgressReportData(params) {
     return api.get("/report-data/progress-report", { params });
   },
+  getIntakeReportData(params) {
+    return api.get("/report-data/intake-report", { params });
+  },
   getDischargeReportData(params) {
-    return api.get("/reports/discharge-report", { params });
+    return api.get("/report-data/discharge-report", { params });
   },
   saveProgressReport: async (payload) => {
     try {

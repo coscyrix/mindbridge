@@ -21,7 +21,11 @@ export default class ReportDataController {
     this.postProgressReport = this.postProgressReport.bind(this);
     this.postDischargeReport = this.postDischargeReport.bind(this);
     this.getCompleteReport = this.getCompleteReport.bind(this);
+    this.getTreatmentPlanReportByReportId = this.getTreatmentPlanReportByReportId.bind(this);
+    this.putTreatmentPlanReportByReportId = this.putTreatmentPlanReportByReportId.bind(this);
     this.getProgressReportData = this.getProgressReportData.bind(this);
+    this.getIntakeReportData = this.getIntakeReportData.bind(this);
+    this.getDischargeReportData = this.getDischargeReportData.bind(this);
   }
 
   //////////////////////////////////////////
@@ -211,6 +215,63 @@ export default class ReportDataController {
   //////////////////////////////////////////
 
   /**
+   * Get treatment plan report data by report_id
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async getTreatmentPlanReportByReportId(req, res) {
+    const reportDataService = new ReportDataService();
+    const data = req.query;
+
+    if (!data.report_id) {
+      res.status(400).json({ message: 'Missing mandatory field: report_id' });
+      return;
+    }
+
+    // Convert to number if provided
+    if (data.report_id) {
+      data.report_id = Number(data.report_id);
+    }
+
+    const rec = await reportDataService.getTreatmentPlanReportByReportId(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Update treatment plan report data by report_id
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async putTreatmentPlanReportByReportId(req, res) {
+    const data = req.body;
+
+    if (!data.report_id) {
+      res.status(400).json({ message: 'Missing mandatory field: report_id' });
+      return;
+    }
+
+    const reportData = new ReportDataService();
+    const rec = await reportData.putTreatmentPlanReportByReportId(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
+  /**
    * Get progress report data
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
@@ -234,6 +295,76 @@ export default class ReportDataController {
     }
 
     const rec = await reportDataService.getProgressReportData(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json({ rec: rec });
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Get intake report data
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async getIntakeReportData(req, res) {
+    const reportDataService = new ReportDataService();
+    const data = req.query;
+
+    if (!data.thrpy_req_id) {
+      res.status(400).json({ message: 'Missing mandatory field: thrpy_req_id' });
+      return;
+    }
+
+    // Convert to number if provided
+    if (data.thrpy_req_id) {
+      data.thrpy_req_id = Number(data.thrpy_req_id);
+    }
+
+    if (data.session_id) {
+      data.session_id = Number(data.session_id);
+    }
+
+    const rec = await reportDataService.getIntakeReportData(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json({ rec: rec });
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Get discharge report data
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async getDischargeReportData(req, res) {
+    const reportDataService = new ReportDataService();
+    const data = req.query;
+
+    if (!data.thrpy_req_id) {
+      res.status(400).json({ message: 'Missing mandatory field: thrpy_req_id' });
+      return;
+    }
+
+    // Convert to number if provided
+    if (data.thrpy_req_id) {
+      data.thrpy_req_id = Number(data.thrpy_req_id);
+    }
+
+    if (data.session_id) {
+      data.session_id = Number(data.session_id);
+    }
+
+    const rec = await reportDataService.getDischargeReportData(data);
 
     if (rec.error) {
       res.status(400).json(rec);

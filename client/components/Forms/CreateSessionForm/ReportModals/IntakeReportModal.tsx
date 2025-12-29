@@ -1,117 +1,27 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { FormProvider, Controller } from "react-hook-form";
+import { toast } from "react-toastify";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import CustomModal from "../../../CustomModal";
 import Spinner from "../../../common/Spinner";
-import moment from "moment";
-import CommonServices from "../../../../services/CommonServices";
+import { ProgressReportModalWrapper } from "../style";
 import { useQueryData } from "../../../../utils/hooks/useQueryData";
 import { useMutationData } from "../../../../utils/hooks/useMutationData";
-import { capitalizeName } from "../../../../utils/constants";
-import { ProgressReportModalWrapper } from "../style";
+import useZodForm from "../../../../utils/hooks/useZodForm";
+import CustomInputField from "../../../CustomInputField";
+import CustomTextArea from "../../../CustomTextArea";
+import Button from "../../../Button";
+import ReportValidationCheckbox from "./ReportValidationCheckbox";
+import styles from "./styles.module.scss";
+import { intakeReportSchema } from "./intakeReportValidation";
 import { api } from "../../../../utils/auth";
-import { toast } from "react-toastify";
-import styled from "styled-components";
-
-const IntakeReportModalWrapper = styled(ProgressReportModalWrapper)`
-  .intake-form-section {
-    margin-bottom: 24px;
-  }
-
-  .section-heading {
-    color: #0066cc;
-    font-weight: bold;
-    font-size: 16px;
-    margin-bottom: 12px;
-  }
-
-  .form-field {
-    margin-bottom: 16px;
-  }
-
-  .form-field label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 500;
-  }
-
-  .form-field input[type="text"],
-  .form-field input[type="email"],
-  .form-field input[type="tel"],
-  .form-field textarea {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-    font-family: inherit;
-  }
-
-  .form-field textarea {
-    min-height: 80px;
-    resize: vertical;
-  }
-
-  .checkbox-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-top: 8px;
-  }
-
-  .checkbox-group label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    font-weight: normal;
-  }
-
-  .checkbox-group input[type="checkbox"] {
-    margin-right: 6px;
-    cursor: pointer;
-  }
-
-  .radio-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-top: 8px;
-  }
-
-  .radio-group label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    font-weight: normal;
-  }
-
-  .radio-group input[type="radio"] {
-    margin-right: 6px;
-    cursor: pointer;
-  }
-
-  .symptoms-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 8px;
-  }
-
-  .symptoms-grid label {
-    font-weight: normal;
-  }
-
-  .consent-text {
-    margin-top: 20px;
-    padding: 12px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-
-  .divider {
-    border-top: 1px solid #ddd;
-    margin: 20px 0;
-  }
-`;
+import CommonServices from "../../../../services/CommonServices";
+import {
+  IntakeReportDataResponse,
+  IntakeSymptomsFormState,
+  IntakeReportPayload,
+} from "./types";
 
 interface IntakeReportModalProps {
   isOpen: boolean;
@@ -129,18 +39,8 @@ const IntakeReportModal: React.FC<IntakeReportModalProps> = ({
   const reqId = sessionRow?.thrpy_req_id || initialData?.req_id;
   const sessionId = sessionRow?.session_id;
 
-  // Client Information
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [emergencyContact, setEmergencyContact] = useState("");
-
-  // Presenting Problem
-  const [reasonForTherapy, setReasonForTherapy] = useState("");
-  const [durationOfConcern, setDurationOfConcern] = useState("");
-
-  // Symptoms
-  const [symptoms, setSymptoms] = useState({
+  // State for symptoms checkboxes (not part of form schema)
+  const [symptoms, setSymptoms] = useState<IntakeSymptomsFormState>({
     anxiety: false,
     depression: false,
     stress: false,
@@ -148,33 +48,53 @@ const IntakeReportModal: React.FC<IntakeReportModalProps> = ({
     moodChanges: false,
     relationshipIssues: false,
   });
-  const [otherSymptoms, setOtherSymptoms] = useState("");
 
-  // Mental Health & Medical History
-  const [previousTherapy, setPreviousTherapy] = useState("");
-  const [currentMedications, setCurrentMedications] = useState("");
-  const [medicalConditions, setMedicalConditions] = useState("");
-
-  // Safety Assessment
-  const [thoughtsOfSelfHarm, setThoughtsOfSelfHarm] = useState("");
-  const [thoughtsOfHarmingOthers, setThoughtsOfHarmingOthers] = useState("");
-  const [immediateSafetyConcerns, setImmediateSafetyConcerns] = useState("");
-
-  // Initial Clinical Impression
-  const [clinicalImpression, setClinicalImpression] = useState("");
+  // State for radio button selections (not part of form schema)
+  const [previousTherapy, setPreviousTherapy] = useState<string>("");
+  const [thoughtsOfSelfHarm, setThoughtsOfSelfHarm] = useState<string>("");
+  const [thoughtsOfHarmingOthers, setThoughtsOfHarmingOthers] =
+    useState<string>("");
 
   // State for validation checkbox
   const [isAccepted, setIsAccepted] = useState(false);
 
+  // Initialize form with useZodForm
+  const defaultValues = {
+    fullName: "",
+    phone: "",
+    email: "",
+    emergencyContact: "",
+    reasonForTherapy: "",
+    durationOfConcern: "",
+    otherSymptoms: "",
+    currentMedications: "",
+    medicalConditions: "",
+    immediateSafetyConcerns: "",
+    clinicalImpression: "",
+  };
+
+  const methods = useZodForm(
+    intakeReportSchema,
+    undefined, // No mutation passed - we'll handle it manually
+    defaultValues
+  );
+
+  const {
+    reset,
+    control,
+    setValue,
+    getValues,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = methods;
+
+  const durationOfConcern = watch("durationOfConcern");
+
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setFullName("");
-      setPhone("");
-      setEmail("");
-      setEmergencyContact("");
-      setReasonForTherapy("");
-      setDurationOfConcern("");
+      reset(defaultValues);
       setSymptoms({
         anxiety: false,
         depression: false,
@@ -183,19 +103,14 @@ const IntakeReportModal: React.FC<IntakeReportModalProps> = ({
         moodChanges: false,
         relationshipIssues: false,
       });
-      setOtherSymptoms("");
       setPreviousTherapy("");
-      setCurrentMedications("");
-      setMedicalConditions("");
       setThoughtsOfSelfHarm("");
       setThoughtsOfHarmingOthers("");
-      setImmediateSafetyConcerns("");
-      setClinicalImpression("");
       setIsAccepted(false);
     }
-  }, [isOpen]);
+  }, [isOpen, reset]);
 
-  // Fetch intake report data - using the getReportById endpoint with filters
+  // Fetch intake report data - using the new getIntakeReportData endpoint
   const {
     data: intakeReportResponse,
     isPending: isLoadingReport,
@@ -204,24 +119,15 @@ const IntakeReportModal: React.FC<IntakeReportModalProps> = ({
     ["intake-report-data", reqId, sessionId],
     async () => {
       if (!reqId) return null;
-      const params: any = { thrpy_req_id: reqId, report_type: "INTAKE" };
+      const params: any = { thrpy_req_id: reqId };
       if (sessionId) {
         params.session_id = sessionId;
       }
-      // Using the report-data endpoint with filters
       try {
-        const response = await api.get("/report-data", { params });
-        if (response?.status === 200 && response?.data) {
-          // The response might be an array, get the first one if it's an intake report
-          const reports = Array.isArray(response.data)
-            ? response.data
-            : [response.data];
-          const intakeReport = reports.find(
-            (r: any) => r.report_type === "INTAKE"
-          );
-          return intakeReport || null;
-        }
-        return null;
+        const response = await CommonServices.getIntakeReportData(params);
+        return response?.status === 200 && response?.data?.rec
+          ? response.data.rec
+          : null;
       } catch (error) {
         console.error("Error fetching intake report:", error);
         return null;
@@ -230,146 +136,147 @@ const IntakeReportModal: React.FC<IntakeReportModalProps> = ({
     isOpen && !!reqId
   );
 
-  const reportData = intakeReportResponse as any;
+  const reportData = intakeReportResponse as IntakeReportDataResponse | null;
   const loading = isLoadingReport || isFetchingReport;
 
   // Populate form fields when data is loaded
   useEffect(() => {
     if (reportData && !loading) {
-      // Check if reportData has type_data (from getCompleteReport) or direct metadata
-      const intakeData = reportData.type_data || reportData;
+      // Handle new format (reportData.report contains the form data)
+      if (reportData.report) {
+        // Populate client information
+        // Use report.client_information if available, fallback to client header
+        const clientInfo = reportData.report.client_information;
+        const clientHeader = reportData.client;
 
-      // Populate client information
-      if (intakeData.metadata) {
-        const metadata =
-          typeof intakeData.metadata === "string"
-            ? JSON.parse(intakeData.metadata)
-            : intakeData.metadata;
+        setValue(
+          "fullName",
+          clientInfo?.full_name || clientHeader?.full_name || ""
+        );
+        setValue("phone", clientInfo?.phone || "");
+        setValue("email", clientInfo?.email || "");
+        setValue("emergencyContact", clientInfo?.emergency_contact || "");
 
-        if (metadata.client_information) {
-          setFullName(metadata.client_information.full_name || "");
-          setPhone(metadata.client_information.phone || "");
-          setEmail(metadata.client_information.email || "");
-          setEmergencyContact(
-            metadata.client_information.emergency_contact || ""
-          );
+        // Populate presenting problem
+        const presentingProblem = reportData.report.presenting_problem;
+        if (presentingProblem) {
+          setValue("reasonForTherapy", presentingProblem.reason || "");
+          if (presentingProblem.duration) {
+            setValue("durationOfConcern", presentingProblem.duration);
+          }
         }
 
-        if (metadata.presenting_problem) {
-          setReasonForTherapy(metadata.presenting_problem.reason || "");
-          setDurationOfConcern(metadata.presenting_problem.duration || "");
-        }
-
-        if (metadata.symptoms) {
+        // Populate symptoms
+        const symptomsData = reportData.report.symptoms;
+        if (symptomsData && Object.keys(symptomsData).length > 0) {
           setSymptoms({
-            anxiety: metadata.symptoms.anxiety || false,
-            depression: metadata.symptoms.depression || false,
-            stress: metadata.symptoms.stress || false,
-            sleepIssues: metadata.symptoms.sleep_issues || false,
-            moodChanges: metadata.symptoms.mood_changes || false,
-            relationshipIssues: metadata.symptoms.relationship_issues || false,
+            anxiety: symptomsData.anxiety === true,
+            depression: symptomsData.depression === true,
+            stress: symptomsData.stress === true,
+            sleepIssues: symptomsData.sleep_issues === true,
+            moodChanges: symptomsData.mood_changes === true,
+            relationshipIssues: symptomsData.relationship_issues === true,
           });
-          setOtherSymptoms(metadata.symptoms.other || "");
+          setValue("otherSymptoms", symptomsData.other || "");
         }
 
-        if (metadata.mental_health_history) {
-          setPreviousTherapy(
-            metadata.mental_health_history.previous_therapy || ""
+        // Populate mental health history
+        const mentalHealthHistory = reportData.report.mental_health_history;
+        if (mentalHealthHistory) {
+          setPreviousTherapy(mentalHealthHistory.previous_therapy || "");
+          setValue(
+            "currentMedications",
+            mentalHealthHistory.current_medications || ""
           );
-          setCurrentMedications(
-            metadata.mental_health_history.current_medications || ""
-          );
-          setMedicalConditions(
-            metadata.mental_health_history.medical_conditions || ""
+          setValue(
+            "medicalConditions",
+            mentalHealthHistory.medical_conditions || ""
           );
         }
 
-        if (metadata.safety_assessment) {
-          setThoughtsOfSelfHarm(
-            metadata.safety_assessment.thoughts_of_self_harm || ""
-          );
+        // Populate safety assessment
+        const safetyAssessment = reportData.report.safety_assessment;
+        if (safetyAssessment) {
+          setThoughtsOfSelfHarm(safetyAssessment.thoughts_of_self_harm || "");
           setThoughtsOfHarmingOthers(
-            metadata.safety_assessment.thoughts_of_harming_others || ""
+            safetyAssessment.thoughts_of_harming_others || ""
           );
-          setImmediateSafetyConcerns(
-            metadata.safety_assessment.immediate_safety_concerns || ""
+          setValue(
+            "immediateSafetyConcerns",
+            safetyAssessment.immediate_safety_concerns || ""
           );
         }
 
-        if (metadata.clinical_impression) {
-          setClinicalImpression(metadata.clinical_impression || "");
+        // Populate clinical impression
+        if (reportData.report.clinical_impression) {
+          setValue("clinicalImpression", reportData.report.clinical_impression);
         }
       }
     }
-  }, [reportData, loading]);
+  }, [reportData, loading, setValue]);
 
   // Save intake report mutation
   const { mutate: saveIntakeReport, isPending: isSaving } = useMutationData(
     ["saveIntakeReport"],
     async () => {
-      // Need report_id to save intake report data
-      // First, check if we have an existing report_id
+      const formValues = getValues();
+
+      // Get existing report_id if available
       const existingReportId = reportData?.report_id;
 
-      let reportId = existingReportId;
-
-      // If no report_id exists, we need to create a report first
-      if (!reportId) {
-        try {
-          const reportPayload = {
-            session_id: sessionId,
-            client_id: sessionRow?.client_id || initialData?.client_id,
-            counselor_id: sessionRow?.counselor_id || initialData?.counselor_id,
-            report_type: "INTAKE",
-          };
-          const reportResponse = await api.post("/report-data", reportPayload);
-          if (reportResponse?.status === 200 && reportResponse?.data?.id) {
-            reportId = reportResponse.data.id;
-          } else {
-            throw new Error("Failed to create report");
-          }
-        } catch (error) {
-          console.error("Error creating report:", error);
-          toast.error("Failed to create report. Please try again.");
-          throw error;
-        }
-      }
-
-      // The API expects report_id and may accept metadata
+      // The API now supports session_id and will auto-create report if needed
       // Based on the schema, metadata is stored as JSON
-      const payload: any = {
-        report_id: reportId,
+      const payload: IntakeReportPayload = {
+        // Pass report_id if exists, otherwise pass session_id for auto-creation
+        ...(existingReportId
+          ? { report_id: existingReportId }
+          : {
+              session_id: sessionId,
+              client_id: sessionRow?.client_id || initialData?.client_id,
+              counselor_id:
+                sessionRow?.counselor_id || initialData?.counselor_id,
+            }),
         metadata: {
-          client_information: {
-            full_name: fullName,
-            phone: phone,
-            email: email,
-            emergency_contact: emergencyContact,
+          report: {
+            client_information: {
+              full_name: formValues.fullName,
+              phone: formValues.phone || null,
+              email: formValues.email || null,
+              emergency_contact: formValues.emergencyContact || null,
+            },
+            presenting_problem: {
+              reason: formValues.reasonForTherapy || null,
+              duration:
+                (formValues.durationOfConcern as
+                  | "less_than_1_month"
+                  | "1_6_months"
+                  | "6_12_months"
+                  | "over_1_year") || null,
+            },
+            symptoms: {
+              anxiety: symptoms.anxiety,
+              depression: symptoms.depression,
+              stress: symptoms.stress,
+              sleep_issues: symptoms.sleepIssues,
+              mood_changes: symptoms.moodChanges,
+              relationship_issues: symptoms.relationshipIssues,
+              other: formValues.otherSymptoms || undefined,
+            },
+            mental_health_history: {
+              previous_therapy: (previousTherapy as "yes" | "no") || null,
+              current_medications: formValues.currentMedications || null,
+              medical_conditions: formValues.medicalConditions || null,
+            },
+            safety_assessment: {
+              thoughts_of_self_harm:
+                (thoughtsOfSelfHarm as "no" | "past" | "current") || null,
+              thoughts_of_harming_others:
+                (thoughtsOfHarmingOthers as "yes" | "no") || null,
+              immediate_safety_concerns:
+                formValues.immediateSafetyConcerns || null,
+            },
+            clinical_impression: formValues.clinicalImpression || null,
           },
-          presenting_problem: {
-            reason: reasonForTherapy,
-            duration: durationOfConcern,
-          },
-          symptoms: {
-            anxiety: symptoms.anxiety,
-            depression: symptoms.depression,
-            stress: symptoms.stress,
-            sleep_issues: symptoms.sleepIssues,
-            mood_changes: symptoms.moodChanges,
-            relationship_issues: symptoms.relationshipIssues,
-            other: otherSymptoms,
-          },
-          mental_health_history: {
-            previous_therapy: previousTherapy,
-            current_medications: currentMedications,
-            medical_conditions: medicalConditions,
-          },
-          safety_assessment: {
-            thoughts_of_self_harm: thoughtsOfSelfHarm,
-            thoughts_of_harming_others: thoughtsOfHarmingOthers,
-            immediate_safety_concerns: immediateSafetyConcerns,
-          },
-          clinical_impression: clinicalImpression,
         },
       };
 
@@ -390,14 +297,25 @@ const IntakeReportModal: React.FC<IntakeReportModalProps> = ({
       );
       return;
     }
-    saveIntakeReport(undefined);
+
+    handleSubmit(
+      (data) => {
+        saveIntakeReport({});
+      },
+      (validationErrors) => {
+        toast.error("Please fill in all required fields.");
+      }
+    )();
   };
 
-  const handleSymptomChange = (symptom: string, checked: boolean) => {
-    setSymptoms({
-      ...symptoms,
+  const handleSymptomChange = (
+    symptom: keyof IntakeSymptomsFormState,
+    checked: boolean
+  ) => {
+    setSymptoms((prev) => ({
+      ...prev,
       [symptom]: checked,
-    });
+    }));
   };
 
   return (
@@ -409,401 +327,495 @@ const IntakeReportModal: React.FC<IntakeReportModalProps> = ({
       customStyles={{ maxWidth: "800px" }}
     >
       {loading ? (
-        <IntakeReportModalWrapper>
+        <ProgressReportModalWrapper>
           <div className="loading-container">
             <Spinner color="#000" width="40px" height="40px" />
             <p className="loading-text">Loading intake report data...</p>
           </div>
-        </IntakeReportModalWrapper>
+        </ProgressReportModalWrapper>
       ) : (
-        <IntakeReportModalWrapper>
-          {/* Client Information */}
-          <div className="intake-form-section">
-            <h3 className="section-heading">Client Information</h3>
-            <div className="form-field">
-              <label>Full Name:</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Enter full name"
-              />
-            </div>
-            <div className="form-field">
-              <label>Phone:</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Enter phone number"
-              />
-            </div>
-            <div className="form-field">
-              <label>Email:</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter email address"
-              />
-            </div>
-            <div className="form-field">
-              <label>Emergency Contact:</label>
-              <input
-                type="text"
-                value={emergencyContact}
-                onChange={(e) => setEmergencyContact(e.target.value)}
-                placeholder="Enter emergency contact"
-              />
-            </div>
-          </div>
-
-          <div className="divider"></div>
-
-          {/* Presenting Problem */}
-          <div className="intake-form-section">
-            <h3 className="section-heading">Presenting Problem</h3>
-            <div className="form-field">
-              <label>Reason for seeking therapy:</label>
-              <textarea
-                value={reasonForTherapy}
-                onChange={(e) => setReasonForTherapy(e.target.value)}
-                placeholder="Enter reason for seeking therapy"
-              />
-            </div>
-            <div className="form-field">
-              <label>Duration of concern:</label>
-              <div className="radio-group">
-                <label>
-                  <input
-                    type="radio"
-                    name="duration"
-                    value="less_than_1_month"
-                    checked={durationOfConcern === "less_than_1_month"}
-                    onChange={(e) => setDurationOfConcern(e.target.value)}
+        <ProgressReportModalWrapper className={styles.reportModalWrapper}>
+          <FormProvider {...methods}>
+            {/* Client Information */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>Client Information</h3>
+              <div className={styles.formField}>
+                <CustomInputField
+                  name="fullName"
+                  label="Full Name:"
+                  type="text"
+                  placeholder="Enter full name"
+                  validationRules={{}}
+                  icon={undefined}
+                  helperText={undefined}
+                  handleShowPassword={undefined}
+                  value={undefined}
+                  prefix={undefined}
+                />
+              </div>
+              <div className={styles.formField}>
+                <label>Phone:</label>
+                <div className="phone-input-wrapper">
+                  <Controller
+                    name="phone"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <>
+                        <PhoneInput
+                          international
+                          defaultCountry="US"
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          className={
+                            fieldState.error ? "phone-input-error" : ""
+                          }
+                          inputProps={{
+                            name: "phone",
+                            placeholder: "Enter phone number",
+                          }}
+                        />
+                        {fieldState.error && (
+                          <span
+                            style={{
+                              color: "#d32f2f",
+                              fontSize: "12px",
+                              marginTop: "4px",
+                              display: "block",
+                            }}
+                          >
+                            {fieldState.error.message}
+                          </span>
+                        )}
+                      </>
+                    )}
                   />
-                  Less than 1 month
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="duration"
-                    value="1_6_months"
-                    checked={durationOfConcern === "1_6_months"}
-                    onChange={(e) => setDurationOfConcern(e.target.value)}
+                </div>
+              </div>
+              <div className={styles.formField}>
+                <CustomInputField
+                  name="email"
+                  label="Email:"
+                  type="email"
+                  placeholder="Enter email address"
+                  validationRules={{}}
+                  icon={undefined}
+                  helperText={undefined}
+                  handleShowPassword={undefined}
+                  value={undefined}
+                  prefix={undefined}
+                />
+              </div>
+              <div className={styles.formField}>
+                <label>Emergency Contact:</label>
+                <div className="phone-input-wrapper">
+                  <Controller
+                    name="emergencyContact"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <>
+                        <PhoneInput
+                          international
+                          defaultCountry="US"
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          className={
+                            fieldState.error ? "phone-input-error" : ""
+                          }
+                          inputProps={{
+                            name: "emergencyContact",
+                            placeholder: "Enter emergency contact phone",
+                          }}
+                        />
+                        {fieldState.error && (
+                          <span
+                            style={{
+                              color: "#d32f2f",
+                              fontSize: "12px",
+                              marginTop: "4px",
+                              display: "block",
+                            }}
+                          >
+                            {fieldState.error.message}
+                          </span>
+                        )}
+                      </>
+                    )}
                   />
-                  1-6 months
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="duration"
-                    value="6_12_months"
-                    checked={durationOfConcern === "6_12_months"}
-                    onChange={(e) => setDurationOfConcern(e.target.value)}
-                  />
-                  6-12 months
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="duration"
-                    value="over_1_year"
-                    checked={durationOfConcern === "over_1_year"}
-                    onChange={(e) => setDurationOfConcern(e.target.value)}
-                  />
-                  Over 1 year
-                </label>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="divider"></div>
+            <div className={styles.divider}></div>
 
-          {/* Symptoms */}
-          <div className="intake-form-section">
-            <h3 className="section-heading">Symptoms</h3>
-            <div className="symptoms-grid">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={symptoms.anxiety}
-                  onChange={(e) =>
-                    handleSymptomChange("anxiety", e.target.checked)
-                  }
+            {/* Presenting Problem */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>Presenting Problem</h3>
+              <div className={styles.formField}>
+                <CustomTextArea
+                  label="Reason for seeking therapy:"
+                  name="reasonForTherapy"
+                  control={control}
+                  isError={!!errors.reasonForTherapy}
+                  disabled={false}
+                  placeholder="Enter reason for seeking therapy"
+                  rows={4}
+                  helperText={undefined}
                 />
-                Anxiety
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={symptoms.depression}
-                  onChange={(e) =>
-                    handleSymptomChange("depression", e.target.checked)
-                  }
-                />
-                Depression
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={symptoms.stress}
-                  onChange={(e) =>
-                    handleSymptomChange("stress", e.target.checked)
-                  }
-                />
-                Stress
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={symptoms.sleepIssues}
-                  onChange={(e) =>
-                    handleSymptomChange("sleepIssues", e.target.checked)
-                  }
-                />
-                Sleep issues
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={symptoms.moodChanges}
-                  onChange={(e) =>
-                    handleSymptomChange("moodChanges", e.target.checked)
-                  }
-                />
-                Mood changes
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={symptoms.relationshipIssues}
-                  onChange={(e) =>
-                    handleSymptomChange("relationshipIssues", e.target.checked)
-                  }
-                />
-                Relationship issues
-              </label>
-            </div>
-            <div className="form-field" style={{ marginTop: "12px" }}>
-              <label>Other:</label>
-              <input
-                type="text"
-                value={otherSymptoms}
-                onChange={(e) => setOtherSymptoms(e.target.value)}
-                placeholder="Enter other symptoms"
-              />
-            </div>
-          </div>
-
-          <div className="divider"></div>
-
-          {/* Mental Health & Medical History */}
-          <div className="intake-form-section">
-            <h3 className="section-heading">Mental Health & Medical History</h3>
-            <div className="form-field">
-              <label>Previous therapy:</label>
-              <div className="radio-group">
-                <label>
-                  <input
-                    type="radio"
-                    name="previousTherapy"
-                    value="yes"
-                    checked={previousTherapy === "yes"}
-                    onChange={(e) => setPreviousTherapy(e.target.value)}
-                  />
-                  Yes
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="previousTherapy"
-                    value="no"
-                    checked={previousTherapy === "no"}
-                    onChange={(e) => setPreviousTherapy(e.target.value)}
-                  />
-                  No
-                </label>
+              </div>
+              <div className={styles.formField}>
+                <label>Duration of concern:</label>
+                <div className={styles.radioGroup}>
+                  <label>
+                    <input
+                      type="radio"
+                      name="duration"
+                      value="less_than_1_month"
+                      checked={durationOfConcern === "less_than_1_month"}
+                      onChange={(e) =>
+                        setValue("durationOfConcern", e.target.value)
+                      }
+                    />{" "}
+                    Less than 1 month
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="duration"
+                      value="1_6_months"
+                      checked={durationOfConcern === "1_6_months"}
+                      onChange={(e) =>
+                        setValue("durationOfConcern", e.target.value)
+                      }
+                    />{" "}
+                    1-6 months
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="duration"
+                      value="6_12_months"
+                      checked={durationOfConcern === "6_12_months"}
+                      onChange={(e) =>
+                        setValue("durationOfConcern", e.target.value)
+                      }
+                    />{" "}
+                    6-12 months
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="duration"
+                      value="over_1_year"
+                      checked={durationOfConcern === "over_1_year"}
+                      onChange={(e) =>
+                        setValue("durationOfConcern", e.target.value)
+                      }
+                    />{" "}
+                    Over 1 year
+                  </label>
+                </div>
+                {errors.durationOfConcern && (
+                  <span
+                    style={{
+                      color: "#d32f2f",
+                      fontSize: "12px",
+                      marginTop: "4px",
+                      display: "block",
+                    }}
+                  >
+                    {errors.durationOfConcern?.message?.toString() ||
+                      "Duration of concern is required"}
+                  </span>
+                )}
               </div>
             </div>
-            <div className="form-field">
-              <label>Current medications:</label>
-              <input
-                type="text"
-                value={currentMedications}
-                onChange={(e) => setCurrentMedications(e.target.value)}
-                placeholder="Enter current medications"
-              />
-            </div>
-            <div className="form-field">
-              <label>Medical conditions (if any):</label>
-              <input
-                type="text"
-                value={medicalConditions}
-                onChange={(e) => setMedicalConditions(e.target.value)}
-                placeholder="Enter medical conditions"
-              />
-            </div>
-          </div>
 
-          <div className="divider"></div>
+            <div className={styles.divider}></div>
 
-          {/* Safety Assessment */}
-          <div className="intake-form-section">
-            <h3 className="section-heading">Safety Assessment</h3>
-            <div className="form-field">
-              <label>Thoughts of self-harm:</label>
-              <div className="radio-group">
+            {/* Symptoms */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>Symptoms</h3>
+              <div className={styles.checkboxGroup}>
                 <label>
                   <input
-                    type="radio"
-                    name="selfHarm"
-                    value="no"
-                    checked={thoughtsOfSelfHarm === "no"}
-                    onChange={(e) => setThoughtsOfSelfHarm(e.target.value)}
-                  />
-                  No
+                    type="checkbox"
+                    checked={symptoms.anxiety}
+                    onChange={(e) =>
+                      handleSymptomChange("anxiety", e.target.checked)
+                    }
+                  />{" "}
+                  Anxiety
                 </label>
                 <label>
                   <input
-                    type="radio"
-                    name="selfHarm"
-                    value="past"
-                    checked={thoughtsOfSelfHarm === "past"}
-                    onChange={(e) => setThoughtsOfSelfHarm(e.target.value)}
-                  />
-                  Past
+                    type="checkbox"
+                    checked={symptoms.depression}
+                    onChange={(e) =>
+                      handleSymptomChange("depression", e.target.checked)
+                    }
+                  />{" "}
+                  Depression
                 </label>
                 <label>
                   <input
-                    type="radio"
-                    name="selfHarm"
-                    value="current"
-                    checked={thoughtsOfSelfHarm === "current"}
-                    onChange={(e) => setThoughtsOfSelfHarm(e.target.value)}
-                  />
-                  Current
-                </label>
-              </div>
-            </div>
-            <div className="form-field">
-              <label>Thoughts of harming others:</label>
-              <div className="radio-group">
-                <label>
-                  <input
-                    type="radio"
-                    name="harmingOthers"
-                    value="no"
-                    checked={thoughtsOfHarmingOthers === "no"}
-                    onChange={(e) => setThoughtsOfHarmingOthers(e.target.value)}
-                  />
-                  No
+                    type="checkbox"
+                    checked={symptoms.stress}
+                    onChange={(e) =>
+                      handleSymptomChange("stress", e.target.checked)
+                    }
+                  />{" "}
+                  Stress
                 </label>
                 <label>
                   <input
-                    type="radio"
-                    name="harmingOthers"
-                    value="yes"
-                    checked={thoughtsOfHarmingOthers === "yes"}
-                    onChange={(e) => setThoughtsOfHarmingOthers(e.target.value)}
-                  />
-                  Yes
+                    type="checkbox"
+                    checked={symptoms.sleepIssues}
+                    onChange={(e) =>
+                      handleSymptomChange("sleepIssues", e.target.checked)
+                    }
+                  />{" "}
+                  Sleep issues
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={symptoms.moodChanges}
+                    onChange={(e) =>
+                      handleSymptomChange("moodChanges", e.target.checked)
+                    }
+                  />{" "}
+                  Mood changes
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={symptoms.relationshipIssues}
+                    onChange={(e) =>
+                      handleSymptomChange(
+                        "relationshipIssues",
+                        e.target.checked
+                      )
+                    }
+                  />{" "}
+                  Relationship issues
                 </label>
               </div>
+              <div className={styles.formField} style={{ marginTop: "12px" }}>
+                <CustomInputField
+                  name="otherSymptoms"
+                  label="Other:"
+                  type="text"
+                  placeholder="Enter other symptoms"
+                  validationRules={{}}
+                  icon={undefined}
+                  helperText={undefined}
+                  handleShowPassword={undefined}
+                  value={undefined}
+                  prefix={undefined}
+                />
+              </div>
             </div>
-            <div className="form-field">
-              <label>Immediate safety concerns noted:</label>
-              <input
-                type="text"
-                value={immediateSafetyConcerns}
-                onChange={(e) => setImmediateSafetyConcerns(e.target.value)}
-                placeholder="Enter immediate safety concerns"
-              />
+
+            <div className={styles.divider}></div>
+
+            {/* Mental Health & Medical History */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>
+                Mental Health & Medical History
+              </h3>
+              <div className={styles.formField}>
+                <label>Previous therapy:</label>
+                <div className={styles.radioGroup}>
+                  <label>
+                    <input
+                      type="radio"
+                      name="previousTherapy"
+                      value="yes"
+                      checked={previousTherapy === "yes"}
+                      onChange={(e) => setPreviousTherapy(e.target.value)}
+                    />{" "}
+                    Yes
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="previousTherapy"
+                      value="no"
+                      checked={previousTherapy === "no"}
+                      onChange={(e) => setPreviousTherapy(e.target.value)}
+                    />{" "}
+                    No
+                  </label>
+                </div>
+              </div>
+              <div className={styles.formField}>
+                <CustomInputField
+                  name="currentMedications"
+                  label="Current medications:"
+                  type="text"
+                  placeholder="Enter current medications"
+                  validationRules={{}}
+                  icon={undefined}
+                  helperText={undefined}
+                  handleShowPassword={undefined}
+                  value={undefined}
+                  prefix={undefined}
+                />
+              </div>
+              <div className={styles.formField}>
+                <CustomInputField
+                  name="medicalConditions"
+                  label="Medical conditions (if any):"
+                  type="text"
+                  placeholder="Enter medical conditions"
+                  validationRules={{}}
+                  icon={undefined}
+                  helperText={undefined}
+                  handleShowPassword={undefined}
+                  value={undefined}
+                  prefix={undefined}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="divider"></div>
+            <div className={styles.divider}></div>
 
-          {/* Initial Clinical Impression */}
-          <div className="intake-form-section">
-            <h3 className="section-heading">Initial Clinical Impression</h3>
-            <div className="form-field">
-              <textarea
-                value={clinicalImpression}
-                onChange={(e) => setClinicalImpression(e.target.value)}
-                placeholder="Enter initial clinical impression"
-                style={{ minHeight: "120px" }}
-              />
+            {/* Safety Assessment */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>Safety Assessment</h3>
+              <div className={styles.formField}>
+                <label>Thoughts of self-harm:</label>
+                <div className={styles.radioGroup}>
+                  <label>
+                    <input
+                      type="radio"
+                      name="selfHarm"
+                      value="no"
+                      checked={thoughtsOfSelfHarm === "no"}
+                      onChange={(e) => setThoughtsOfSelfHarm(e.target.value)}
+                    />{" "}
+                    No
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="selfHarm"
+                      value="past"
+                      checked={thoughtsOfSelfHarm === "past"}
+                      onChange={(e) => setThoughtsOfSelfHarm(e.target.value)}
+                    />{" "}
+                    Past
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="selfHarm"
+                      value="current"
+                      checked={thoughtsOfSelfHarm === "current"}
+                      onChange={(e) => setThoughtsOfSelfHarm(e.target.value)}
+                    />{" "}
+                    Current
+                  </label>
+                </div>
+              </div>
+              <div className={styles.formField}>
+                <label>Thoughts of harming others:</label>
+                <div className={styles.radioGroup}>
+                  <label>
+                    <input
+                      type="radio"
+                      name="harmingOthers"
+                      value="no"
+                      checked={thoughtsOfHarmingOthers === "no"}
+                      onChange={(e) =>
+                        setThoughtsOfHarmingOthers(e.target.value)
+                      }
+                    />{" "}
+                    No
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="harmingOthers"
+                      value="yes"
+                      checked={thoughtsOfHarmingOthers === "yes"}
+                      onChange={(e) =>
+                        setThoughtsOfHarmingOthers(e.target.value)
+                      }
+                    />{" "}
+                    Yes
+                  </label>
+                </div>
+              </div>
+              <div className={styles.formField}>
+                <CustomInputField
+                  name="immediateSafetyConcerns"
+                  label="Immediate safety concerns noted:"
+                  type="text"
+                  placeholder="Enter immediate safety concerns"
+                  validationRules={{}}
+                  icon={undefined}
+                  helperText={undefined}
+                  handleShowPassword={undefined}
+                  value={undefined}
+                  prefix={undefined}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="divider"></div>
+            <div className={styles.divider}></div>
 
-          {/* Consent */}
-          <div className="intake-form-section">
-            <h3 className="section-heading">Consent</h3>
-            <div className="consent-text">
-              Client has provided informed consent to begin therapy services.
+            {/* Initial Clinical Impression */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>
+                Initial Clinical Impression
+              </h3>
+              <div className={styles.formField}>
+                <CustomTextArea
+                  label="Initial Clinical Impression:"
+                  name="clinicalImpression"
+                  control={control}
+                  isError={!!errors.clinicalImpression}
+                  disabled={false}
+                  placeholder="Enter initial clinical impression"
+                  rows={6}
+                  helperText={undefined}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Validation Checkbox */}
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "15px",
-              backgroundColor: "#f8f9fa",
-              borderRadius: "4px",
-            }}
-          >
-            <label
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={isAccepted}
-                onChange={(e) => setIsAccepted(e.target.checked)}
-                style={{
-                  marginRight: "10px",
-                  marginTop: "3px",
-                  cursor: "pointer",
-                }}
-                required
-              />
-              <span style={{ fontSize: "14px", lineHeight: "1.5" }}>
-                I hereby confirm that I have reviewed and accept the accuracy of
-                all information provided in this intake report. I understand
-                that this report will be submitted as an official record.
-              </span>
-            </label>
-          </div>
+            <div className={styles.divider}></div>
 
-          {/* Save Button */}
-          <div style={{ marginTop: "20px", textAlign: "right" }}>
-            <button
-              onClick={handleSave}
-              disabled={isSaving || !isAccepted}
-              style={{
-                padding: "10px 20px",
-                backgroundColor:
-                  isAccepted && !isSaving ? "#007bff" : "#6c757d",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: isSaving || !isAccepted ? "not-allowed" : "pointer",
-                fontSize: "16px",
-                fontWeight: "500",
-                opacity: isSaving || !isAccepted ? 0.6 : 1,
-              }}
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </button>
-          </div>
-        </IntakeReportModalWrapper>
+            {/* Consent */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>Consent</h3>
+              <div className={styles.consentText}>
+                Client has provided informed consent to begin therapy services.
+              </div>
+            </div>
+
+            {/* Validation Checkbox */}
+            <ReportValidationCheckbox
+              isAccepted={isAccepted}
+              onAcceptanceChange={setIsAccepted}
+              text="I hereby confirm that I have reviewed and accept the accuracy of all information provided in this intake report. I understand that this report will be submitted as an official record."
+            />
+
+            {/* Save Button */}
+            <div style={{ marginTop: "20px", textAlign: "right" }}>
+              <Button
+                variant="primary"
+                onClick={handleSave}
+                disabled={isSaving || !isAccepted}
+                loading={isSaving}
+              >
+                Save
+              </Button>
+            </div>
+          </FormProvider>
+        </ProgressReportModalWrapper>
       )}
     </CustomModal>
   );

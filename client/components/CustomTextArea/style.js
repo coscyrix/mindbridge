@@ -32,6 +32,19 @@ export const CustomTextAreaWrapper = styled.div`
     }
   }
 
+  .error-text {
+    color: var(--error-color);
+  }
+
+  .helper-text {
+    color: rgba(0, 0, 0, 0.4);
+    margin-left: 16px;
+  }
+
+  p {
+    margin-top: 0.5rem;
+  }
+
   .disabled {
     pointer-events: none;
     opacity: 0.7 !important;

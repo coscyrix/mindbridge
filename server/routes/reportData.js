@@ -21,7 +21,11 @@ router.post('/progress', authenticate, AsyncWrapper(reportDataController.postPro
 router.post('/discharge', authenticate, AsyncWrapper(reportDataController.postDischargeReport));
 
 // Get report data endpoints
+router.get('/treatment-plan-report', authenticate, AsyncWrapper(reportDataController.getTreatmentPlanReportByReportId));
+router.put('/treatment-plan-report', authenticate, AsyncWrapper(reportDataController.putTreatmentPlanReportByReportId));
+router.get('/intake-report', authenticate, AsyncWrapper(reportDataController.getIntakeReportData));
 router.get('/progress-report', authenticate, AsyncWrapper(reportDataController.getProgressReportData));
+router.get('/discharge-report', authenticate, AsyncWrapper(reportDataController.getDischargeReportData));
 
 export const reportDataRouter = { baseUrl: '/api/report-data', router };
 

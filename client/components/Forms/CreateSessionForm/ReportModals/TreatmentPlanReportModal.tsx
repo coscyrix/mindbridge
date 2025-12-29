@@ -1,59 +1,25 @@
-import React, { useState, useEffect } from "react";
-import CustomModal from "../../../CustomModal";
-import Spinner from "../../../common/Spinner";
 import moment from "moment";
-import CommonServices from "../../../../services/CommonServices";
-import { useQueryData } from "../../../../utils/hooks/useQueryData";
-import { useMutationData } from "../../../../utils/hooks/useMutationData";
-import { capitalizeName } from "../../../../utils/constants";
-import { ProgressReportModalWrapper } from "../style";
-import { api } from "../../../../utils/auth";
+import React, { useEffect, useRef, useState } from "react";
+import { FormProvider } from "react-hook-form";
+import SignatureCanvas from "react-signature-canvas";
 import { toast } from "react-toastify";
-import styled from "styled-components";
-
-const TreatmentPlanModalWrapper = styled(ProgressReportModalWrapper)`
-  .treatment-plan-section {
-    margin-bottom: 24px;
-  }
-
-  .section-heading {
-    color: #0066cc;
-    font-weight: bold;
-    font-size: 16px;
-    margin-bottom: 12px;
-  }
-
-  .form-field {
-    margin-bottom: 16px;
-  }
-
-  .form-field label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 500;
-  }
-
-  .form-field input[type="text"],
-  .form-field input[type="date"],
-  .form-field textarea {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-    font-family: inherit;
-  }
-
-  .form-field textarea {
-    min-height: 100px;
-    resize: vertical;
-  }
-
-  .divider {
-    border-top: 1px solid #ddd;
-    margin: 20px 0;
-  }
-`;
+import { api } from "../../../../utils/auth";
+import { useMutationData } from "../../../../utils/hooks/useMutationData";
+import { useQueryData } from "../../../../utils/hooks/useQueryData";
+import useZodForm from "../../../../utils/hooks/useZodForm";
+import Button from "../../../Button";
+import CustomInputField from "../../../CustomInputField";
+import CustomModal from "../../../CustomModal";
+import CustomTextArea from "../../../CustomTextArea";
+import Spinner from "../../../common/Spinner";
+import { ProgressReportModalWrapper } from "../style";
+import ReportValidationCheckbox from "./ReportValidationCheckbox";
+import styles from "./styles.module.scss";
+import {
+  TreatmentPlanReportPayload,
+  TreatmentPlanReportResponse,
+} from "./types";
+import { treatmentPlanSchema } from "./treatmentPlanValidation";
 
 interface TreatmentPlanReportModalProps {
   isOpen: boolean;
@@ -70,67 +36,82 @@ const TreatmentPlanReportModal: React.FC<TreatmentPlanReportModalProps> = ({
 }) => {
   const reqId = sessionRow?.thrpy_req_id || initialData?.req_id;
   const sessionId = sessionRow?.session_id;
+  const reportId = sessionRow?.report_id;
 
-  // Client Information
-  const [clientName, setClientName] = useState("");
-  const [dateTreatmentPlanCreated, setDateTreatmentPlanCreated] = useState("");
-
-  // Clinical Assessment & Diagnosis
-  const [clinicalImpressions, setClinicalImpressions] = useState("");
-
-  // Treatment Goals
-  const [longTermGoals, setLongTermGoals] = useState("");
-  const [shortTermGoals, setShortTermGoals] = useState("");
-
-  // Planned Interventions
-  const [therapeuticApproaches, setTherapeuticApproaches] = useState("");
-  const [sessionFrequency, setSessionFrequency] = useState("");
-
-  // Progress Measurement
-  const [progressMeasurement, setProgressMeasurement] = useState("");
-
-  // Review & Updates
-  const [planReviewDate, setPlanReviewDate] = useState("");
-  const [updatesRevisions, setUpdatesRevisions] = useState("");
-
-  // Therapist Acknowledgment
-  const [therapistName, setTherapistName] = useState("");
-  const [signature, setSignature] = useState("");
-  const [therapistDate, setTherapistDate] = useState("");
+  // Therapist Acknowledgment - signature only (therapist name and date are display-only)
+  const signaturePadRef = useRef<any>(null);
 
   // State for validation checkbox
   const [isAccepted, setIsAccepted] = useState(false);
 
+  // Initialize form with useZodForm
+  const defaultValues = {
+    clinicalImpressions: "",
+    longTermGoals: "",
+    shortTermGoals: "",
+    therapeuticApproaches: "",
+    sessionFrequency: "",
+    progressMeasurement: "",
+    planReviewDate: "",
+    updatesRevisions: "",
+    signature: "",
+  };
+
+  const methods = useZodForm(
+    treatmentPlanSchema,
+    undefined, // No mutation passed - we'll handle it manually
+    defaultValues
+  );
+
+  const {
+    reset,
+    control,
+    setValue,
+    getValues,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = methods;
+  const signature = watch("signature");
+
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setClientName("");
-      setDateTreatmentPlanCreated("");
-      setClinicalImpressions("");
-      setLongTermGoals("");
-      setShortTermGoals("");
-      setTherapeuticApproaches("");
-      setSessionFrequency("");
-      setProgressMeasurement("");
-      setPlanReviewDate("");
-      setUpdatesRevisions("");
-      setTherapistName("");
-      setSignature("");
-      setTherapistDate("");
+      reset(defaultValues);
       setIsAccepted(false);
     }
-  }, [isOpen]);
+  }, [isOpen, reset]);
 
-  // Fetch treatment plan report data
+  // Fetch treatment plan report data using report_id
   const {
     data: treatmentPlanReportResponse,
     isPending: isLoadingReport,
     isFetching: isFetchingReport,
   } = useQueryData(
-    ["treatment-plan-report-data", reqId, sessionId],
+    ["treatment-plan-report-data", reportId],
     async () => {
+      // If we have reportId, fetch directly using getTreatmentPlanReportByReportId
+      if (reportId) {
+        try {
+          const response = await api.get("/report-data/treatment-plan-report", {
+            params: { report_id: reportId },
+          });
+          if (response?.status === 200 && response?.data) {
+            return response.data;
+          }
+          return null;
+        } catch (error) {
+          console.error("Error fetching treatment plan report:", error);
+          return null;
+        }
+      }
+
+      // Fallback: if no reportId, try to get report first
       if (!reqId) return null;
-      const params: any = { thrpy_req_id: reqId, report_type: "TREATMENT_PLAN" };
+      const params: any = {
+        thrpy_req_id: reqId,
+        report_type: "TREATMENT_PLAN",
+      };
       if (sessionId) {
         params.session_id = sessionId;
       }
@@ -151,138 +132,209 @@ const TreatmentPlanReportModal: React.FC<TreatmentPlanReportModalProps> = ({
         return null;
       }
     },
-    isOpen && !!reqId
+    isOpen && (!!reportId || !!reqId)
   );
 
-  const reportData = treatmentPlanReportResponse as any;
+  const reportData =
+    treatmentPlanReportResponse as TreatmentPlanReportResponse | null;
   const loading = isLoadingReport || isFetchingReport;
+
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return "N/A";
+    return moment(date).format("MMMM DD, YYYY");
+  };
+
+  // Extract client information from sessionRow/initialData
+  const getClientInfo = () => {
+    // Get client name from sessionRow or initialData
+    const clientFirstName =
+      sessionRow?.client_first_name || initialData?.client_first_name;
+    const clientLastName =
+      sessionRow?.client_last_name || initialData?.client_last_name;
+    const clientName =
+      clientFirstName && clientLastName
+        ? `${clientFirstName} ${clientLastName}`
+        : "N/A";
+
+    // Get date from sessionRow or initialData, or use current date
+    const dateSource =
+      sessionRow?.intake_date ||
+      initialData?.req_dte_not_formatted ||
+      moment().format("YYYY-MM-DD");
+    const dateCreated = formatDate(dateSource);
+
+    return { clientName, dateCreated };
+  };
+
+  const { clientName, dateCreated } = getClientInfo();
+
+  // Extract therapist information from sessionRow/initialData
+  const getTherapistInfo = () => {
+    // Get therapist/counselor name from sessionRow or initialData
+    const counselorFirstName =
+      sessionRow?.counselor_first_name || initialData?.counselor_first_name;
+    const counselorLastName =
+      sessionRow?.counselor_last_name || initialData?.counselor_last_name;
+    const therapistName =
+      counselorFirstName && counselorLastName
+        ? `${counselorFirstName} ${counselorLastName}`
+        : "N/A";
+
+    // Use current date for therapist acknowledgment date
+    const therapistDate = formatDate(moment().format("YYYY-MM-DD"));
+
+    return { therapistName, therapistDate };
+  };
+
+  const { therapistName, therapistDate } = getTherapistInfo();
 
   // Populate form fields when data is loaded
   useEffect(() => {
     if (reportData && !loading) {
-      const treatmentPlanData = reportData.type_data || reportData;
+      // Data structure: reportData.metadata contains the treatment plan data
+      const metadata =
+        typeof reportData.metadata === "string"
+          ? JSON.parse(reportData.metadata)
+          : reportData.metadata;
 
-      if (treatmentPlanData.metadata) {
-        const metadata =
-          typeof treatmentPlanData.metadata === "string"
-            ? JSON.parse(treatmentPlanData.metadata)
-            : treatmentPlanData.metadata;
-
-        if (metadata.client_information) {
-          setClientName(metadata.client_information.client_name || "");
-          setDateTreatmentPlanCreated(
-            metadata.client_information.date_created || ""
+      if (metadata) {
+        if (metadata.report?.clinical_assessment) {
+          setValue(
+            "clinicalImpressions",
+            metadata.report.clinical_assessment.clinical_impressions || ""
           );
         }
 
-        if (metadata.clinical_assessment) {
-          setClinicalImpressions(
-            metadata.clinical_assessment.clinical_impressions || ""
+        if (metadata.report?.treatment_goals) {
+          setValue(
+            "longTermGoals",
+            metadata.report.treatment_goals.long_term || ""
+          );
+          setValue(
+            "shortTermGoals",
+            metadata.report.treatment_goals.short_term || ""
           );
         }
 
-        if (metadata.treatment_goals) {
-          setLongTermGoals(metadata.treatment_goals.long_term || "");
-          setShortTermGoals(metadata.treatment_goals.short_term || "");
-        }
-
-        if (metadata.planned_interventions) {
-          setTherapeuticApproaches(
-            metadata.planned_interventions.therapeutic_approaches || ""
+        if (metadata.report?.planned_interventions) {
+          setValue(
+            "therapeuticApproaches",
+            metadata.report.planned_interventions.therapeutic_approaches || ""
           );
-          setSessionFrequency(
-            metadata.planned_interventions.session_frequency || ""
+          setValue(
+            "sessionFrequency",
+            metadata.report.planned_interventions.session_frequency || ""
           );
         }
 
-        if (metadata.progress_measurement) {
-          setProgressMeasurement(
-            metadata.progress_measurement.how_measured || ""
+        if (metadata.report?.progress_measurement) {
+          setValue(
+            "progressMeasurement",
+            metadata.report.progress_measurement.how_measured || ""
           );
         }
 
-        if (metadata.review_updates) {
-          setPlanReviewDate(metadata.review_updates.review_date || "");
-          setUpdatesRevisions(metadata.review_updates.updates || "");
+        if (metadata.report?.review_updates) {
+          setValue(
+            "planReviewDate",
+            metadata.report.review_updates.review_date || ""
+          );
+          setValue(
+            "updatesRevisions",
+            metadata.report.review_updates.updates || ""
+          );
         }
 
         if (metadata.therapist_acknowledgment) {
-          setTherapistName(
-            metadata.therapist_acknowledgment.therapist_name || ""
+          setValue(
+            "signature",
+            metadata.therapist_acknowledgment.signature || ""
           );
-          setSignature(metadata.therapist_acknowledgment.signature || "");
-          setTherapistDate(metadata.therapist_acknowledgment.date || "");
         }
       }
     }
-  }, [reportData, loading]);
+  }, [reportData, loading, setValue]);
 
   // Save treatment plan report mutation
   const { mutate: saveTreatmentPlanReport, isPending: isSaving } =
     useMutationData(
       ["saveTreatmentPlanReport"],
       async () => {
-        const existingReportId = reportData?.report_id;
+        // Use reportId from sessionRow if available, otherwise from reportData
+        const existingReportId = reportId || reportData?.report_id;
 
-        let reportId = existingReportId;
-
-        // If no report_id exists, we need to create a report first
-        if (!reportId) {
-          try {
-            const reportPayload = {
-              session_id: sessionId,
-              client_id: sessionRow?.client_id || initialData?.client_id,
-              counselor_id:
-                sessionRow?.counselor_id || initialData?.counselor_id,
-              report_type: "TREATMENT_PLAN",
-            };
-            const reportResponse = await api.post("/report-data", reportPayload);
-            if (reportResponse?.status === 200 && reportResponse?.data?.id) {
-              reportId = reportResponse.data.id;
-            } else {
-              throw new Error("Failed to create report");
-            }
-          } catch (error) {
-            console.error("Error creating report:", error);
-            toast.error("Failed to create report. Please try again.");
-            throw error;
-          }
+        if (!existingReportId) {
+          toast.error("Report ID is required. Please try again.");
+          throw new Error("Report ID is missing");
         }
 
-        const payload: any = {
-          report_id: reportId,
+        let reportIdToUse = existingReportId;
+
+        const formValues = getValues();
+
+        // Get client name for client_information section (already extracted from sessionRow/initialData)
+        const clientFullName = clientName !== "N/A" ? clientName : "N/A";
+
+        // Get date for treatment plan (already extracted from sessionRow/initialData)
+        // Format as ISO timestamp (e.g., 2025-12-28T19:18:50.000Z)
+        let dateCreatedFormatted = moment().toISOString();
+        if (dateCreated !== "N/A") {
+          // Try parsing the formatted date, if it fails, use current timestamp
+          const parsed = moment(dateCreated, "MMMM DD, YYYY");
+          dateCreatedFormatted = parsed.isValid()
+            ? parsed.toISOString()
+            : moment().toISOString();
+        } else {
+          // If dateCreated is N/A, try to get from sessionRow/initialData directly
+          const dateSource =
+            sessionRow?.intake_date ||
+            initialData?.req_dte_not_formatted ||
+            moment().toISOString();
+          dateCreatedFormatted = moment(dateSource).isValid()
+            ? moment(dateSource).toISOString()
+            : moment().toISOString();
+        }
+
+        // Structure payload with only necessary data from frontend
+        const payload: TreatmentPlanReportPayload = {
+          report_id: reportIdToUse,
           metadata: {
             client_information: {
-              client_name: clientName,
-              date_created: dateTreatmentPlanCreated,
+              client_name: clientFullName,
+              treatment_plan_date: dateCreatedFormatted,
             },
-            clinical_assessment: {
-              clinical_impressions: clinicalImpressions,
-            },
-            treatment_goals: {
-              long_term: longTermGoals,
-              short_term: shortTermGoals,
-            },
-            planned_interventions: {
-              therapeutic_approaches: therapeuticApproaches,
-              session_frequency: sessionFrequency,
-            },
-            progress_measurement: {
-              how_measured: progressMeasurement,
-            },
-            review_updates: {
-              review_date: planReviewDate,
-              updates: updatesRevisions,
+            report: {
+              clinical_assessment: {
+                clinical_impressions: formValues.clinicalImpressions,
+              },
+              treatment_goals: {
+                long_term: formValues.longTermGoals,
+                short_term: formValues.shortTermGoals,
+              },
+              planned_interventions: {
+                therapeutic_approaches: formValues.therapeuticApproaches,
+                session_frequency: formValues.sessionFrequency,
+              },
+              progress_measurement: {
+                how_measured: formValues.progressMeasurement,
+              },
+              review_updates: {
+                review_date: formValues.planReviewDate,
+                updates: formValues.updatesRevisions,
+              },
             },
             therapist_acknowledgment: {
-              therapist_name: therapistName,
-              signature: signature,
-              date: therapistDate,
+              therapist_name: therapistName !== "N/A" ? therapistName : "N/A",
+              signature: formValues.signature,
+              date: moment().toISOString(),
             },
           },
         };
 
-        const response = await api.post("/report-data/treatment-plan", payload);
+        // Use PUT to update if reportId exists, otherwise POST to create
+        const response = reportIdToUse
+          ? await api.put("/report-data/treatment-plan-report", payload)
+          : await api.post("/report-data/treatment-plan", payload);
         return response;
       },
       ["treatment-plan-report-data"],
@@ -299,12 +351,15 @@ const TreatmentPlanReportModal: React.FC<TreatmentPlanReportModalProps> = ({
       );
       return;
     }
-    saveTreatmentPlanReport(undefined);
-  };
 
-  const formatDate = (date: string | null | undefined) => {
-    if (!date) return "";
-    return moment(date).format("YYYY-MM-DD");
+    handleSubmit(
+      () => {
+        saveTreatmentPlanReport({});
+      },
+      () => {
+        toast.error("Please fill in all required fields.");
+      }
+    )();
   };
 
   return (
@@ -316,236 +371,262 @@ const TreatmentPlanReportModal: React.FC<TreatmentPlanReportModalProps> = ({
       customStyles={{ maxWidth: "800px" }}
     >
       {loading ? (
-        <TreatmentPlanModalWrapper>
+        <ProgressReportModalWrapper>
           <div className="loading-container">
             <Spinner color="#000" width="40px" height="40px" />
             <p className="loading-text">Loading treatment plan data...</p>
           </div>
-        </TreatmentPlanModalWrapper>
+        </ProgressReportModalWrapper>
       ) : (
-        <TreatmentPlanModalWrapper>
-          {/* Client Information */}
-          <div className="treatment-plan-section">
-            <h3 className="section-heading">Client Information</h3>
-            <div className="form-field">
-              <label>Client Name:</label>
-              <input
-                type="text"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="Enter client name"
-              />
+        <ProgressReportModalWrapper className={styles.reportModalWrapper}>
+          <FormProvider {...methods}>
+            {/* Client Information */}
+            <div className="client-information">
+              <h3 className="client-info-title">CLIENT INFORMATION</h3>
+              <div className="client-info-field">
+                <strong>Client Name:</strong> {clientName}
+              </div>
+              <div className="client-info-field">
+                <strong>Date Treatment Plan Created:</strong> {dateCreated}
+              </div>
             </div>
-            <div className="form-field">
-              <label>Date Treatment Plan Created:</label>
-              <input
-                type="date"
-                value={dateTreatmentPlanCreated}
-                onChange={(e) => setDateTreatmentPlanCreated(e.target.value)}
-              />
+
+            <div className={styles.divider}></div>
+
+            {/* Clinical Assessment & Diagnosis */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>
+                Clinical Assessment & Diagnosis
+              </h3>
+              <div className={styles.formField}>
+                <CustomTextArea
+                  label="Clinical impressions / diagnosis (if applicable):"
+                  name="clinicalImpressions"
+                  control={control}
+                  isError={!!errors.clinicalImpressions}
+                  disabled={false}
+                  placeholder="Enter clinical impressions or diagnosis"
+                  rows={4}
+                  helperText={undefined}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="divider"></div>
+            <div className={styles.divider}></div>
 
-          {/* Clinical Assessment & Diagnosis */}
-          <div className="treatment-plan-section">
-            <h3 className="section-heading">Clinical Assessment & Diagnosis</h3>
-            <div className="form-field">
-              <label>
-                Clinical impressions / diagnosis (if applicable):
-              </label>
-              <textarea
-                value={clinicalImpressions}
-                onChange={(e) => setClinicalImpressions(e.target.value)}
-                placeholder="Enter clinical impressions or diagnosis"
-              />
+            {/* Treatment Goals */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>Treatment Goals</h3>
+              <div className={styles.formField}>
+                <CustomTextArea
+                  label="Long-term goals:"
+                  name="longTermGoals"
+                  control={control}
+                  isError={!!errors.longTermGoals}
+                  disabled={false}
+                  placeholder="Enter long-term goals"
+                  rows={4}
+                  helperText={undefined}
+                />
+              </div>
+              <div className={styles.formField}>
+                <CustomTextArea
+                  label="Short-term goals:"
+                  name="shortTermGoals"
+                  control={control}
+                  isError={!!errors.shortTermGoals}
+                  disabled={false}
+                  placeholder="Enter short-term goals"
+                  rows={4}
+                  helperText={undefined}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="divider"></div>
+            <div className={styles.divider}></div>
 
-          {/* Treatment Goals */}
-          <div className="treatment-plan-section">
-            <h3 className="section-heading">Treatment Goals</h3>
-            <div className="form-field">
-              <label>Long-term goals:</label>
-              <textarea
-                value={longTermGoals}
-                onChange={(e) => setLongTermGoals(e.target.value)}
-                placeholder="Enter long-term goals"
-              />
+            {/* Planned Interventions */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>Planned Interventions</h3>
+              <div className={styles.formField}>
+                <CustomTextArea
+                  label="Therapeutic approaches (e.g., CBT, DBT, EMDR):"
+                  name="therapeuticApproaches"
+                  control={control}
+                  isError={!!errors.therapeuticApproaches}
+                  disabled={false}
+                  placeholder="Enter therapeutic approaches"
+                  rows={4}
+                  helperText={undefined}
+                />
+              </div>
+              <div className={styles.formField}>
+                <CustomInputField
+                  name="sessionFrequency"
+                  label="Session frequency:"
+                  type="text"
+                  placeholder="Enter session frequency"
+                  validationRules={{}}
+                  icon={undefined}
+                  helperText={undefined}
+                  handleShowPassword={undefined}
+                  value={undefined}
+                  prefix={undefined}
+                />
+              </div>
             </div>
-            <div className="form-field">
-              <label>Short-term goals:</label>
-              <textarea
-                value={shortTermGoals}
-                onChange={(e) => setShortTermGoals(e.target.value)}
-                placeholder="Enter short-term goals"
-              />
+
+            <div className={styles.divider}></div>
+
+            {/* Progress Measurement */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>Progress Measurement</h3>
+              <div className={styles.formField}>
+                <CustomTextArea
+                  label="How progress will be measured:"
+                  name="progressMeasurement"
+                  control={control}
+                  isError={!!errors.progressMeasurement}
+                  disabled={false}
+                  placeholder="Enter how progress will be measured"
+                  rows={4}
+                  helperText={undefined}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="divider"></div>
+            <div className={styles.divider}></div>
 
-          {/* Planned Interventions */}
-          <div className="treatment-plan-section">
-            <h3 className="section-heading">Planned Interventions</h3>
-            <div className="form-field">
-              <label>
-                Therapeutic approaches (e.g., CBT, DBT, EMDR):
-              </label>
-              <textarea
-                value={therapeuticApproaches}
-                onChange={(e) => setTherapeuticApproaches(e.target.value)}
-                placeholder="Enter therapeutic approaches"
-              />
+            {/* Review & Updates */}
+            <div className={styles.treatmentPlanSection}>
+              <h3 className={styles.sectionHeading}>Review & Updates</h3>
+              <div className={styles.formField}>
+                <CustomInputField
+                  name="planReviewDate"
+                  label="Plan review date(s):"
+                  type="text"
+                  placeholder="Enter plan review date(s)"
+                  validationRules={{}}
+                  icon={undefined}
+                  helperText={undefined}
+                  handleShowPassword={undefined}
+                  value={undefined}
+                  prefix={undefined}
+                />
+              </div>
+              <div className={styles.formField}>
+                <CustomTextArea
+                  label="Updates / revisions:"
+                  name="updatesRevisions"
+                  control={control}
+                  isError={!!errors.updatesRevisions}
+                  disabled={false}
+                  placeholder="Enter updates or revisions"
+                  rows={4}
+                  helperText={undefined}
+                />
+              </div>
             </div>
-            <div className="form-field">
-              <label>Session frequency:</label>
-              <input
-                type="text"
-                value={sessionFrequency}
-                onChange={(e) => setSessionFrequency(e.target.value)}
-                placeholder="Enter session frequency"
-              />
+
+            <div className={styles.divider}></div>
+
+            {/* Therapist Acknowledgment */}
+            <div className="client-information">
+              <h3 className="client-info-title">THERAPIST ACKNOWLEDGMENT</h3>
+              <div className="client-info-field">
+                <strong>Therapist Name:</strong> {therapistName}
+              </div>
+              <div className={styles.formField} style={{ marginTop: "16px" }}>
+                <label>Signature:</label>
+                <div className={styles.signatureContainer}>
+                  {!signature ? (
+                    <>
+                      <SignatureCanvas
+                        canvasProps={{
+                          className: styles.signatureCanvas,
+                        }}
+                        ref={signaturePadRef}
+                        penColor="black"
+                      />
+                      <div className={styles.signatureActions}>
+                        <Button
+                          variant="primary"
+                          size="small"
+                          onClick={() => {
+                            if (!signaturePadRef.current?.isEmpty()) {
+                              const base64 = signaturePadRef.current
+                                .getTrimmedCanvas()
+                                .toDataURL("image/png");
+                              setValue("signature", base64);
+                            } else {
+                              toast.error("Please provide a signature.");
+                            }
+                          }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="small"
+                          onClick={() => {
+                            signaturePadRef.current?.clear();
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <img
+                        src={signature}
+                        alt="Therapist Signature"
+                        className={styles.signatureImage}
+                      />
+                      <div className={styles.signatureActions}>
+                        <Button
+                          variant="secondary"
+                          size="small"
+                          onClick={() => {
+                            setValue("signature", "");
+                            signaturePadRef.current?.clear();
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="client-info-field" style={{ marginTop: "16px" }}>
+                <strong>Date:</strong> {therapistDate}
+              </div>
             </div>
-          </div>
 
-          <div className="divider"></div>
+            {/* Validation Checkbox */}
+            <ReportValidationCheckbox
+              isAccepted={isAccepted}
+              onAcceptanceChange={setIsAccepted}
+              text="I hereby confirm that I have reviewed and accept the accuracy of all information provided in this treatment plan report. I understand that this report will be submitted as an official record."
+            />
 
-          {/* Progress Measurement */}
-          <div className="treatment-plan-section">
-            <h3 className="section-heading">Progress Measurement</h3>
-            <div className="form-field">
-              <label>How progress will be measured:</label>
-              <textarea
-                value={progressMeasurement}
-                onChange={(e) => setProgressMeasurement(e.target.value)}
-                placeholder="Enter how progress will be measured"
-              />
+            {/* Save Button */}
+            <div style={{ marginTop: "20px", textAlign: "right" }}>
+              <Button
+                variant="primary"
+                onClick={handleSave}
+                disabled={isSaving || !isAccepted}
+                loading={isSaving}
+              >
+                Save
+              </Button>
             </div>
-          </div>
-
-          <div className="divider"></div>
-
-          {/* Review & Updates */}
-          <div className="treatment-plan-section">
-            <h3 className="section-heading">Review & Updates</h3>
-            <div className="form-field">
-              <label>Plan review date(s):</label>
-              <input
-                type="text"
-                value={planReviewDate}
-                onChange={(e) => setPlanReviewDate(e.target.value)}
-                placeholder="Enter plan review date(s)"
-              />
-            </div>
-            <div className="form-field">
-              <label>Updates / revisions:</label>
-              <textarea
-                value={updatesRevisions}
-                onChange={(e) => setUpdatesRevisions(e.target.value)}
-                placeholder="Enter updates or revisions"
-              />
-            </div>
-          </div>
-
-          <div className="divider"></div>
-
-          {/* Therapist Acknowledgment */}
-          <div className="treatment-plan-section">
-            <h3 className="section-heading">Therapist Acknowledgment</h3>
-            <div className="form-field">
-              <label>Therapist Name:</label>
-              <input
-                type="text"
-                value={therapistName}
-                onChange={(e) => setTherapistName(e.target.value)}
-                placeholder="Enter therapist name"
-              />
-            </div>
-            <div className="form-field">
-              <label>Signature:</label>
-              <input
-                type="text"
-                value={signature}
-                onChange={(e) => setSignature(e.target.value)}
-                placeholder="Enter signature"
-              />
-            </div>
-            <div className="form-field">
-              <label>Date:</label>
-              <input
-                type="date"
-                value={therapistDate}
-                onChange={(e) => setTherapistDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Validation Checkbox */}
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "15px",
-              backgroundColor: "#f8f9fa",
-              borderRadius: "4px",
-            }}
-          >
-            <label
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={isAccepted}
-                onChange={(e) => setIsAccepted(e.target.checked)}
-                style={{
-                  marginRight: "10px",
-                  marginTop: "3px",
-                  cursor: "pointer",
-                }}
-                required
-              />
-              <span style={{ fontSize: "14px", lineHeight: "1.5" }}>
-                I hereby confirm that I have reviewed and accept the accuracy of
-                all information provided in this treatment plan report. I
-                understand that this report will be submitted as an official
-                record.
-              </span>
-            </label>
-          </div>
-
-          {/* Save Button */}
-          <div style={{ marginTop: "20px", textAlign: "right" }}>
-            <button
-              onClick={handleSave}
-              disabled={isSaving || !isAccepted}
-              style={{
-                padding: "10px 20px",
-                backgroundColor:
-                  isAccepted && !isSaving ? "#007bff" : "#6c757d",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: isSaving || !isAccepted ? "not-allowed" : "pointer",
-                fontSize: "16px",
-                fontWeight: "500",
-                opacity: isSaving || !isAccepted ? 0.6 : 1,
-              }}
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </button>
-          </div>
-        </TreatmentPlanModalWrapper>
+          </FormProvider>
+        </ProgressReportModalWrapper>
       )}
     </CustomModal>
   );
 };
 
 export default TreatmentPlanReportModal;
-

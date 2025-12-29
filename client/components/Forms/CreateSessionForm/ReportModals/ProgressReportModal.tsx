@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from "react";
 import CustomModal from "../../../CustomModal";
-import Spinner from "../../../common/Spinner";
 import moment from "moment";
 import CommonServices from "../../../../services/CommonServices";
 import { useQueryData } from "../../../../utils/hooks/useQueryData";
 import { useMutationData } from "../../../../utils/hooks/useMutationData";
-import { capitalizeName } from "../../../../utils/constants";
 import { ProgressReportModalWrapper } from "../style";
-import { api } from "../../../../utils/auth";
 import { toast } from "react-toastify";
+import {
+  ReportHeader,
+  ClientInfoSection,
+  CheckboxGroup,
+  TherapistSignOff,
+  LoadingState,
+} from "./components";
+import ReportValidationCheckbox from "./ReportValidationCheckbox";
+import Button from "../../../Button";
+import { RISK_SCREENING_OPTIONS, DEFAULT_RISK_FLAGS } from "./constants";
+import type { RiskScreeningFlags } from "./types";
 
 interface ProgressReportModalProps {
   isOpen: boolean;
@@ -30,39 +38,26 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   const [sessionSummary, setSessionSummary] = useState("");
   const [progressSinceLastSession, setProgressSinceLastSession] = useState("");
   const [riskScreeningNote, setRiskScreeningNote] = useState("");
-  const [therapistNotes, setTherapistNotes] = useState<{
-    [key: number]: string;
-  }>({});
-
-  // State for risk screening checkboxes
-  const [riskScreeningFlags, setRiskScreeningFlags] = useState({
-    no_risk: false,
-    suicidal_ideation: false,
-    self_harm: false,
-    substance_concerns: false,
-  });
-
-  // State for validation checkbox
+  const [therapistNotes, setTherapistNotes] = useState<Record<number, string>>(
+    {}
+  );
+  const [riskScreeningFlags, setRiskScreeningFlags] =
+    useState<RiskScreeningFlags>({ ...DEFAULT_RISK_FLAGS });
   const [isAccepted, setIsAccepted] = useState(false);
 
-  // Reset form when modal closes or session changes
+  // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
       setSessionSummary("");
       setProgressSinceLastSession("");
       setRiskScreeningNote("");
       setTherapistNotes({});
-      setRiskScreeningFlags({
-        no_risk: false,
-        suicidal_ideation: false,
-        self_harm: false,
-        substance_concerns: false,
-      });
+      setRiskScreeningFlags({ ...DEFAULT_RISK_FLAGS });
       setIsAccepted(false);
     }
   }, [isOpen]);
 
-  // Fetch progress report data using the new API
+  // Fetch progress report data
   const {
     data: progressReportResponse,
     isPending: isLoadingReport,
@@ -91,19 +86,16 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
     return moment(date).format("MMMM DD, YYYY");
   };
 
-  // Extract data for the report (from new nested API response structure)
+  // Extract data for the report
   const practiceName = reportData?.practice?.practice_name || "N/A";
   const therapistName = reportData?.therapist?.name || "N/A";
   const therapistDesignation =
     reportData?.therapist?.designation || "Therapist";
-  // Get raw date for saving (YYYY-MM-DD format)
   const rawReportDate =
     reportData?.meta?.report_date ||
     reportData?.sign_off?.approved_on ||
     sessionRow?.intake_date ||
     sessionRow?.scheduled_time;
-
-  // Format date for display
   const reportDate = formatDate(rawReportDate);
   const treatmentBlockName =
     reportData?.practice?.treatment_block_name || "N/A";
@@ -111,8 +103,6 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   const clientID =
     reportData?.client?.client_id_reference || reportData?.meta?.client_id;
   const sessionNumber = reportData?.meta?.session_id ?? "N/A";
-
-  // Get calculated fields from API
   const totalSessionsCompleted =
     reportData?.meta?.total_sessions_completed || 0;
   const frequency = reportData?.practice?.frequency || "Other";
@@ -121,24 +111,17 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   // Populate form fields when data is loaded
   useEffect(() => {
     if (reportData && !loading) {
-      // Populate session summary
       if (reportData.report?.session_summary) {
         setSessionSummary(reportData.report.session_summary);
       }
-
-      // Populate progress since last session
       if (reportData.report?.progress_since_last_session) {
         setProgressSinceLastSession(
           reportData.report.progress_since_last_session
         );
       }
-
-      // Populate risk screening note
       if (reportData.report?.risk_screening?.note) {
         setRiskScreeningNote(reportData.report.risk_screening.note);
       }
-
-      // Populate risk screening flags
       if (reportData.report?.risk_screening?.flags) {
         setRiskScreeningFlags({
           no_risk: reportData.report.risk_screening.flags.no_risk || false,
@@ -149,13 +132,11 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
             reportData.report.risk_screening.flags.substance_concerns || false,
         });
       }
-
-      // Populate therapist notes for assessments
       if (
         reportData.report?.assessments &&
         Array.isArray(reportData.report.assessments)
       ) {
-        const notes: { [key: number]: string } = {};
+        const notes: Record<number, string> = {};
         reportData.report.assessments.forEach(
           (assessment: any, index: number) => {
             if (assessment.therapist_notes) {
@@ -172,7 +153,6 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   const { mutate: saveProgressReport, isPending: isSaving } = useMutationData(
     ["saveProgressReport"],
     async () => {
-      // Prepare assessments with therapist notes
       const assessmentsWithNotes = assessments.map(
         (assessment: any, index: number) => ({
           form_name:
@@ -194,7 +174,6 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
         risk_screening_flags: riskScreeningFlags,
         assessments: assessmentsWithNotes,
         frequency: frequency,
-        // Header and client information
         practice_name: practiceName,
         therapist_name: therapistName,
         therapist_designation: therapistDesignation,
@@ -216,20 +195,29 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
 
   const handleSave = () => {
     if (!sessionId) {
-      // Use toast instead of alert
-      if (!sessionId) {
-        toast.error("Session ID is required");
-        return;
-      }
-      if (!isAccepted) {
-        toast.error(
-          "Please confirm that you accept the above information before saving."
-        );
-        return;
-      }
+      toast.error("Session ID is required");
+      return;
+    }
+    if (!isAccepted) {
+      toast.error(
+        "Please confirm that you accept the above information before saving."
+      );
+      return;
     }
     saveProgressReport(undefined);
   };
+
+  const handleRiskFlagChange = (key: string, checked: boolean) => {
+    setRiskScreeningFlags((prev) => ({ ...prev, [key]: checked }));
+  };
+
+  // Client info fields for the shared component
+  const clientInfoFields = [
+    { label: "Full Name", value: clientFullName },
+    { label: "Client ID / Reference", value: clientID },
+    { label: "Session Number", value: sessionNumber },
+    { label: "Total Sessions Completed", value: totalSessionsCompleted },
+  ];
 
   return (
     <CustomModal
@@ -240,48 +228,21 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
       customStyles={{ maxWidth: "800px" }}
     >
       {loading ? (
-        <ProgressReportModalWrapper>
-          <div className="loading-container">
-            <Spinner color="#000" width="40px" height="40px" />
-            <p className="loading-text">Loading progress report data...</p>
-          </div>
-        </ProgressReportModalWrapper>
+        <LoadingState message="Loading progress report data..." />
       ) : (
         <ProgressReportModalWrapper>
           {/* Header */}
-          <div className="header-section">
-            <div className="header-field">
-              <strong>Name of Practice:</strong> {practiceName}
-            </div>
-            <div className="header-field">
-              <strong>Therapist Name:</strong> {therapistName}{" "}
-              <strong>Designation:</strong> {therapistDesignation}
-            </div>
-            <div className="header-field">
-              <strong>Date of Progress Report:</strong> {reportDate}
-            </div>
-            <div>
-              <strong>Treatment Block:</strong> {treatmentBlockName}
-            </div>
-          </div>
+          <ReportHeader
+            practiceName={practiceName}
+            therapistName={therapistName}
+            therapistDesignation={therapistDesignation}
+            reportDate={reportDate}
+            treatmentBlockName={treatmentBlockName}
+            reportTitle="Progress Report"
+          />
 
           {/* Client Information */}
-          <div className="client-information">
-            <h3 className="client-info-title">CLIENT INFORMATION</h3>
-            <div className="client-info-field">
-              <strong>Full Name:</strong> {clientFullName}
-            </div>
-            <div className="client-info-field">
-              <strong>Client ID / Reference:</strong> {clientID}
-            </div>
-            <div className="client-info-field">
-              <strong>Session Number:</strong> {sessionNumber}
-            </div>
-            <div>
-              <strong>Total Sessions Completed:</strong>{" "}
-              {totalSessionsCompleted}
-            </div>
-          </div>
+          <ClientInfoSection fields={clientInfoFields} />
 
           {/* Session Summary */}
           <div className="form-section">
@@ -314,61 +275,12 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
             <div className="section-title">
               <strong>3. Risk Screening</strong>
             </div>
-            <div className="checkbox-group">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={riskScreeningFlags.no_risk}
-                  onChange={(e) =>
-                    setRiskScreeningFlags({
-                      ...riskScreeningFlags,
-                      no_risk: e.target.checked,
-                    })
-                  }
-                />{" "}
-                No risk
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={riskScreeningFlags.suicidal_ideation}
-                  onChange={(e) =>
-                    setRiskScreeningFlags({
-                      ...riskScreeningFlags,
-                      suicidal_ideation: e.target.checked,
-                    })
-                  }
-                />{" "}
-                Suicidal ideation
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={riskScreeningFlags.self_harm}
-                  onChange={(e) =>
-                    setRiskScreeningFlags({
-                      ...riskScreeningFlags,
-                      self_harm: e.target.checked,
-                    })
-                  }
-                />{" "}
-                Self-harm
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={riskScreeningFlags.substance_concerns}
-                  onChange={(e) =>
-                    setRiskScreeningFlags({
-                      ...riskScreeningFlags,
-                      substance_concerns: e.target.checked,
-                    })
-                  }
-                />{" "}
-                Substance concerns
-              </label>
-            </div>
-            <div className="section-title">
+            <CheckboxGroup
+              options={RISK_SCREENING_OPTIONS}
+              values={riskScreeningFlags as unknown as Record<string, boolean>}
+              onChange={handleRiskFlagChange}
+            />
+            <div className="section-title" style={{ marginTop: "12px" }}>
               <strong>Note:</strong>
             </div>
             <textarea
@@ -464,71 +376,29 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
           </div>
 
           {/* Therapist Sign-Off */}
-          <div className="therapist-signoff">
-            <h3 className="signoff-title">THERAPIST SIGN-OFF</h3>
-            <div className="signoff-text">
-              Electronically approved by <strong>{therapistName}</strong>,{" "}
-              <strong>{therapistDesignation}</strong> on{" "}
-              <strong>{reportDate}</strong> via MindBridge.
-            </div>
-          </div>
+          <TherapistSignOff
+            therapistName={therapistName}
+            therapistDesignation={therapistDesignation}
+            reportDate={reportDate}
+          />
 
           {/* Validation Checkbox */}
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "15px",
-              backgroundColor: "#f8f9fa",
-              borderRadius: "4px",
-            }}
-          >
-            <label
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={isAccepted}
-                onChange={(e) => setIsAccepted(e.target.checked)}
-                style={{
-                  marginRight: "10px",
-                  marginTop: "3px",
-                  cursor: "pointer",
-                }}
-                required
-              />
-              <span style={{ fontSize: "14px", lineHeight: "1.5" }}>
-                I hereby confirm that I have reviewed and accept the accuracy of
-                all information provided in this progress report. I understand
-                that this report will be submitted as an official record of the
-                treatment session.
-              </span>
-            </label>
-          </div>
+          <ReportValidationCheckbox
+            isAccepted={isAccepted}
+            onAcceptanceChange={setIsAccepted}
+            text="I hereby confirm that I have reviewed and accept the accuracy of all information provided in this progress report. I understand that this report will be submitted as an official record of the treatment session."
+          />
 
           {/* Save Button */}
           <div style={{ marginTop: "20px", textAlign: "right" }}>
-            <button
+            <Button
+              variant="primary"
               onClick={handleSave}
-              disabled={isSaving || !isAccepted}
-              style={{
-                padding: "10px 20px",
-                backgroundColor:
-                  isAccepted && !isSaving ? "#007bff" : "#6c757d",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: isSaving || !isAccepted ? "not-allowed" : "pointer",
-                fontSize: "16px",
-                fontWeight: "500",
-                opacity: isSaving || !isAccepted ? 0.6 : 1,
-              }}
+              disabled={!isAccepted}
+              loading={isSaving}
             >
-              {isSaving ? "Saving..." : "Save"}
-            </button>
+              Save
+            </Button>
           </div>
         </ProgressReportModalWrapper>
       )}
