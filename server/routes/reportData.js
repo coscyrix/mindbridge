@@ -27,5 +27,8 @@ router.get('/intake-report', authenticate, AsyncWrapper(reportDataController.get
 router.get('/progress-report', authenticate, AsyncWrapper(reportDataController.getProgressReportData));
 router.get('/discharge-report', authenticate, AsyncWrapper(reportDataController.getDischargeReportData));
 
+// PDF generation endpoint
+router.get('/pdf/:report_id', authenticate, AsyncWrapper(reportDataController.generateReportPDF));
+
 export const reportDataRouter = { baseUrl: '/api/report-data', router };
 

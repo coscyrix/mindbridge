@@ -1599,6 +1599,7 @@ export default class ReportData {
             .leftJoin('feedback_gad as gad', 'fb.feedback_id', 'gad.feedback_id')
             .leftJoin('feedback_pcl5 as pcl5', 'fb.feedback_id', 'pcl5.feedback_id')
             .leftJoin('feedback_whodas as whodas', 'fb.feedback_id', 'whodas.feedback_id')
+            .leftJoin('feedback_gas as gas', db.raw('CAST(fb.feedback_id AS SIGNED)', []), 'gas.feedback_id')
             .whereIn('fb.session_id', sessionIds)
             .andWhere('fb.status_yn', 'y')
             .andWhere('s.is_report', 0)
@@ -1612,6 +1613,7 @@ export default class ReportData {
               'gad.total_points as gad_score',
               'pcl5.total_score as pcl5_score',
               'whodas.overallScore as whodas_score',
+              'gas.total_score as gas_score',
               'fb.created_at'
             )
             .orderBy('fb.created_at', 'desc')
@@ -1627,6 +1629,8 @@ export default class ReportData {
               score = fb.pcl5_score.toString();
             } else if (fb.whodas_score !== null && fb.whodas_score !== undefined) {
               score = fb.whodas_score.toString();
+            } else if (fb.gas_score !== null && fb.gas_score !== undefined) {
+              score = fb.gas_score.toString();
             }
 
             return {
@@ -1745,6 +1749,221 @@ export default class ReportData {
       console.error(error);
       logger.error(error);
       return { message: 'Error getting discharge report data', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Generate PDF for a report by report_id
+   * @param {Object} data - Query data
+   * @param {number} data.report_id - Report ID
+   * @returns {Promise<Object>} PDF buffer or error
+   */
+  async generateReportPDF(data) {
+    try {
+      const { report_id } = data;
+
+      if (!report_id) {
+        return { message: 'report_id is required', error: -1 };
+      }
+
+      // Get the report to determine report type
+      const report = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('reports')
+        .where('report_id', report_id)
+        .first();
+
+      if (!report) {
+        return { message: 'Report not found', error: -1 };
+      }
+
+      const { report_type, session_id } = report;
+
+      // Get thrpy_req_id from session
+      const session = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('session')
+        .where('session_id', session_id)
+        .first();
+
+      if (!session) {
+        return { message: 'Session not found', error: -1 };
+      }
+
+      const thrpy_req_id = session.thrpy_req_id;
+
+      if (!thrpy_req_id) {
+        return { message: 'Therapy request ID not found for this session', error: -1 };
+      }
+
+      // Import PDF templates
+      const { ProgressReportPDF, DischargeReportPDF, IntakeReportPDF, TreatmentPlanReportPDF } = await import('../utils/reportPdfTemplates.js');
+      const PDFGenerator = (await import('../middlewares/pdf.js')).default;
+
+      let pdfData = null;
+      let pdfBuffer = null;
+
+      switch (report_type) {
+        case 'PROGRESS':
+          // Get progress report data
+          const progressData = await this.getProgressReportData({
+            thrpy_req_id,
+            session_id,
+          });
+
+          if (progressData.error) {
+            return progressData;
+          }
+
+          // Transform the data structure for PDF template
+          pdfData = {
+            practice_name: progressData.practice?.practice_name || 'N/A',
+            therapist_name: progressData.therapist?.name || 'N/A',
+            therapist_designation: progressData.therapist?.designation || 'Therapist',
+            report_date: progressData.meta?.report_date || progressData.sign_off?.approved_on || 'N/A',
+            treatment_block_name: progressData.practice?.treatment_block_name || 'N/A',
+            client_full_name: progressData.client?.full_name || 'N/A',
+            client_id: progressData.client?.client_id_reference || progressData.meta?.client_id || 'N/A',
+            session_number: progressData.meta?.session_number || 'N/A',
+            total_sessions_completed: progressData.meta?.total_sessions_completed || 'N/A',
+            session_summary: progressData.report?.session_summary || '',
+            progress_since_last_session: progressData.report?.progress_since_last_session || '',
+            risk_screening: progressData.report?.risk_screening || {},
+            assessments: progressData.report?.assessments || [],
+            frequency: progressData.practice?.frequency || 'Other',
+          };
+
+          // Generate PDF with appropriate filename
+          const pdfFilename = `progress_report_${report_id}_${Date.now()}.pdf`;
+          pdfBuffer = await PDFGenerator(ProgressReportPDF(pdfData), pdfFilename);
+          break;
+
+        case 'INTAKE':
+          // Get intake report data
+          const intakeData = await this.getIntakeReportData({
+            thrpy_req_id,
+            session_id,
+          });
+
+          if (intakeData.error) {
+            return intakeData;
+          }
+
+          // Transform the data structure for PDF template
+          pdfData = {
+            practice_name: intakeData.practice?.practice_name || 'N/A',
+            therapist_name: intakeData.therapist?.name || 'N/A',
+            therapist_designation: intakeData.therapist?.designation || 'Therapist',
+            report_date: intakeData.meta?.report_date || intakeData.sign_off?.approved_on || 'N/A',
+            treatment_block_name: intakeData.practice?.treatment_block_name || 'N/A',
+            client_full_name: intakeData.client?.full_name || 'N/A',
+            client_id: intakeData.client?.client_id_reference || intakeData.meta?.client_id || 'N/A',
+            client_information: intakeData.report?.client_information || {},
+            presenting_problem: intakeData.report?.presenting_problem || {},
+            symptoms: intakeData.report?.symptoms || {},
+            mental_health_history: intakeData.report?.mental_health_history || {},
+            safety_assessment: intakeData.report?.safety_assessment || {},
+            clinical_impression: intakeData.report?.clinical_impression || '',
+          };
+
+          // Generate PDF with appropriate filename
+          const intakePdfFilename = `intake_report_${report_id}_${Date.now()}.pdf`;
+          pdfBuffer = await PDFGenerator(IntakeReportPDF(pdfData), intakePdfFilename);
+          break;
+
+        case 'TREATMENT_PLAN':
+          // Get treatment plan report data from report_treatment_plan table
+          const treatmentPlanReport = await this.getTreatmentPlanReportByReportId(report_id);
+
+          if (!treatmentPlanReport) {
+            return { message: 'Treatment plan report data not found', error: -1 };
+          }
+
+          // Parse metadata if it's a string
+          let treatmentPlanMetadata = treatmentPlanReport.metadata;
+          if (typeof treatmentPlanMetadata === 'string') {
+            try {
+              treatmentPlanMetadata = JSON.parse(treatmentPlanMetadata);
+            } catch (e) {
+              logger.error('Error parsing treatment plan metadata:', e);
+              return { message: 'Error parsing treatment plan metadata', error: -1 };
+            }
+          }
+
+          // Transform the data structure for PDF template
+          pdfData = {
+            client_name: treatmentPlanMetadata?.client_information?.client_name || 'N/A',
+            treatment_plan_date: treatmentPlanMetadata?.client_information?.treatment_plan_date || 'N/A',
+            clinical_impressions: treatmentPlanMetadata?.report?.clinical_assessment?.clinical_impressions || '',
+            long_term_goals: treatmentPlanMetadata?.report?.treatment_goals?.long_term || '',
+            short_term_goals: treatmentPlanMetadata?.report?.treatment_goals?.short_term || '',
+            therapeutic_approaches: treatmentPlanMetadata?.report?.planned_interventions?.therapeutic_approaches || '',
+            session_frequency: treatmentPlanMetadata?.report?.planned_interventions?.session_frequency || '',
+            how_measured: treatmentPlanMetadata?.report?.progress_measurement?.how_measured || '',
+            review_date: treatmentPlanMetadata?.report?.review_updates?.review_date || '',
+            updates: treatmentPlanMetadata?.report?.review_updates?.updates || '',
+            therapist_name: treatmentPlanMetadata?.therapist_acknowledgment?.therapist_name || 'N/A',
+            therapist_signature: treatmentPlanMetadata?.therapist_acknowledgment?.signature || '',
+            signature_date: treatmentPlanMetadata?.therapist_acknowledgment?.date || 'N/A',
+          };
+
+          // Generate PDF with appropriate filename
+          const treatmentPlanPdfFilename = `treatment_plan_report_${report_id}_${Date.now()}.pdf`;
+          pdfBuffer = await PDFGenerator(TreatmentPlanReportPDF(pdfData), treatmentPlanPdfFilename);
+          break;
+
+        case 'DISCHARGE':
+          // Get discharge report data
+          const dischargeData = await this.getDischargeReportData({
+            thrpy_req_id,
+            session_id,
+          });
+
+          if (dischargeData.error) {
+            return dischargeData;
+          }
+
+          // Transform the data structure for PDF template
+          pdfData = {
+            practice_name: dischargeData.practice?.practice_name || 'N/A',
+            therapist_name: dischargeData.therapist?.name || 'N/A',
+            therapist_designation: dischargeData.therapist?.designation || 'Therapist',
+            report_date: dischargeData.meta?.report_date || dischargeData.sign_off?.approved_on || 'N/A',
+            treatment_block_name: dischargeData.practice?.treatment_block_name || 'N/A',
+            client_full_name: dischargeData.client?.full_name || 'N/A',
+            client_id: dischargeData.client?.client_id_reference || dischargeData.meta?.client_id || 'N/A',
+            discharge_date: dischargeData.meta?.report_date || 'N/A',
+            total_sessions_completed: dischargeData.meta?.total_sessions_completed || 'N/A',
+            discharge_reason_flags: dischargeData.report?.discharge_reason_flags || {},
+            discharge_reason_other: dischargeData.report?.discharge_reason_other || '',
+            treatment_summary: dischargeData.report?.treatment_summary || '',
+            assessments: dischargeData.report?.assessments || [],
+            remaining_concerns: dischargeData.report?.remaining_concerns || '',
+            recommendations: dischargeData.report?.recommendations || '',
+            client_understanding: dischargeData.report?.client_understanding || '',
+          };
+
+          // Generate PDF with appropriate filename
+          const dischargePdfFilename = `discharge_report_${report_id}_${Date.now()}.pdf`;
+          pdfBuffer = await PDFGenerator(DischargeReportPDF(pdfData), dischargePdfFilename);
+          break;
+
+        default:
+          return { message: `Unknown report type: ${report_type}`, error: -1 };
+      }
+
+      return {
+        message: 'PDF generated successfully',
+        buffer: pdfBuffer,
+        filename: `${report_type.toLowerCase()}_report_${report_id}.pdf`,
+        contentType: 'application/pdf',
+      };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error generating report PDF', error: -1 };
     }
   }
 }

@@ -26,6 +26,7 @@ export default class ReportDataController {
     this.getProgressReportData = this.getProgressReportData.bind(this);
     this.getIntakeReportData = this.getIntakeReportData.bind(this);
     this.getDischargeReportData = this.getDischargeReportData.bind(this);
+    this.generateReportPDF = this.generateReportPDF.bind(this);
   }
 
   //////////////////////////////////////////
@@ -372,6 +373,39 @@ export default class ReportDataController {
     }
 
     res.status(200).json({ rec: rec });
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Generate PDF for a report
+   * GET /report-data/pdf/:report_id
+   */
+  async generateReportPDF(req, res) {
+    const reportDataService = new ReportDataService();
+    const { report_id } = req.params;
+
+    if (!report_id) {
+      res.status(400).json({ message: 'Missing mandatory field: report_id' });
+      return;
+    }
+
+    const result = await reportDataService.generateReportPDF({
+      report_id: Number(report_id),
+    });
+
+    if (result.error) {
+      res.status(400).json(result);
+      return;
+    }
+
+    // Set response headers for PDF download
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.setHeader('Content-Length', result.buffer.length);
+
+    // Send the PDF buffer
+    res.send(result.buffer);
   }
 }
 

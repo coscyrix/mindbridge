@@ -669,5 +669,30 @@ export default class ReportDataService {
       return { message: 'Error getting discharge report data', error: -1 };
     }
   }
+
+  //////////////////////////////////////////
+
+  /**
+   * Generate PDF for a report
+   * @param {Object} data - Query data
+   * @param {number} data.report_id - Report ID
+   * @returns {Promise<Object>} PDF buffer or error
+   */
+  async generateReportPDF(data) {
+    const schema = joi.object({
+      report_id: joi.number().required(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const reportData = new ReportData();
+    const result = await reportData.generateReportPDF(data);
+
+    return result;
+  }
 }
 

@@ -18,7 +18,7 @@ const ensureDirectoryExistence = (filePath) => {
   fs.mkdirSync(dirname);
 };
 
-const PDFGenerator = (buildPDF) => {
+const PDFGenerator = (buildPDF, filename = null) => {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument();
     const buffers = [];
@@ -26,10 +26,12 @@ const PDFGenerator = (buildPDF) => {
     doc.pipe(pass);
     // Pipe PDF output to ../public folder using __dirname to build an absolute path with a unique timestamp.
     const timestamp = Date.now();
+    // Use provided filename or default to attendance-record
+    const pdfFilename = filename || `attendance-record-${timestamp}.pdf`;
     const pdfPath = path.join(
       __dirname,
       '../public',
-      `attendance-record-${timestamp}.pdf`,
+      pdfFilename,
     );
     ensureDirectoryExistence(pdfPath);
     doc.pipe(fs.createWriteStream(pdfPath));
