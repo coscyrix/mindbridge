@@ -82,49 +82,30 @@ const TreatmentPlanReportModal: React.FC<TreatmentPlanReportModalProps> = ({
     }
   }, [isOpen, reset]);
 
-  // Fetch treatment plan report data using report_id
+  // Fetch treatment plan report data using thrpy_req_id and session_id (similar to progress report)
   const {
     data: treatmentPlanReportResponse,
     isPending: isLoadingReport,
     isFetching: isFetchingReport,
   } = useQueryData(
-    ["treatment-plan-report-data", reportId],
+    ["treatment-plan-report-data", reqId, sessionId],
     async () => {
-      // If we have reportId, fetch directly using getTreatmentPlanReportByReportId
-      if (reportId) {
-        try {
-          const response = await api.get("/report-data/treatment-plan-report", {
-            params: { report_id: reportId },
-          });
-          if (response?.status === 200 && response?.data) {
-            return response.data;
-          }
-          return null;
-        } catch (error) {
-          console.error("Error fetching treatment plan report:", error);
-          return null;
-        }
-      }
-
-      // Fallback: if no reportId, try to get report first
       if (!reqId) return null;
+
       const params: any = {
         thrpy_req_id: reqId,
-        report_type: "TREATMENT_PLAN",
       };
       if (sessionId) {
         params.session_id = sessionId;
       }
+
       try {
-        const response = await api.get("/report-data", { params });
-        if (response?.status === 200 && response?.data) {
-          const reports = Array.isArray(response.data)
-            ? response.data
-            : [response.data];
-          const treatmentPlanReport = reports.find(
-            (r: any) => r.report_type === "TREATMENT_PLAN"
-          );
-          return treatmentPlanReport || null;
+        const response = await api.get(
+          "/report-data/treatment-plan-report-data",
+          { params }
+        );
+        if (response?.status === 200 && response?.data?.rec) {
+          return response.data.rec;
         }
         return null;
       } catch (error) {
@@ -132,11 +113,10 @@ const TreatmentPlanReportModal: React.FC<TreatmentPlanReportModalProps> = ({
         return null;
       }
     },
-    isOpen && (!!reportId || !!reqId)
+    isOpen && !!reqId
   );
 
-  const reportData =
-    treatmentPlanReportResponse as TreatmentPlanReportResponse | null;
+  const reportData = treatmentPlanReportResponse as any | null;
   const loading = isLoadingReport || isFetchingReport;
 
   const formatDate = (date: string | null | undefined) => {
@@ -144,20 +124,20 @@ const TreatmentPlanReportModal: React.FC<TreatmentPlanReportModalProps> = ({
     return moment(date).format("MMMM DD, YYYY");
   };
 
-  // Extract client information from sessionRow/initialData
+  // Extract client information from reportData or sessionRow/initialData
   const getClientInfo = () => {
-    // Get client name from sessionRow or initialData
-    const clientFirstName =
-      sessionRow?.client_first_name || initialData?.client_first_name;
-    const clientLastName =
-      sessionRow?.client_last_name || initialData?.client_last_name;
+    // Get client name from reportData first, then fallback to sessionRow/initialData
     const clientName =
-      clientFirstName && clientLastName
-        ? `${clientFirstName} ${clientLastName}`
-        : "N/A";
+      reportData?.client_information?.client_name ||
+      (sessionRow?.client_first_name && sessionRow?.client_last_name
+        ? `${sessionRow.client_first_name} ${sessionRow.client_last_name}`
+        : initialData?.client_first_name && initialData?.client_last_name
+        ? `${initialData.client_first_name} ${initialData.client_last_name}`
+        : "N/A");
 
-    // Get date from sessionRow or initialData, or use current date
+    // Get date from reportData first, then fallback to sessionRow/initialData
     const dateSource =
+      reportData?.client_information?.treatment_plan_date ||
       sessionRow?.intake_date ||
       initialData?.req_dte_not_formatted ||
       moment().format("YYYY-MM-DD");
@@ -168,17 +148,16 @@ const TreatmentPlanReportModal: React.FC<TreatmentPlanReportModalProps> = ({
 
   const { clientName, dateCreated } = getClientInfo();
 
-  // Extract therapist information from sessionRow/initialData
+  // Extract therapist information from reportData or sessionRow/initialData
   const getTherapistInfo = () => {
-    // Get therapist/counselor name from sessionRow or initialData
-    const counselorFirstName =
-      sessionRow?.counselor_first_name || initialData?.counselor_first_name;
-    const counselorLastName =
-      sessionRow?.counselor_last_name || initialData?.counselor_last_name;
+    // Get therapist name from reportData first, then fallback to sessionRow/initialData
     const therapistName =
-      counselorFirstName && counselorLastName
-        ? `${counselorFirstName} ${counselorLastName}`
-        : "N/A";
+      reportData?.therapist_acknowledgment?.therapist_name ||
+      (sessionRow?.counselor_first_name && sessionRow?.counselor_last_name
+        ? `${sessionRow.counselor_first_name} ${sessionRow.counselor_last_name}`
+        : initialData?.counselor_first_name && initialData?.counselor_last_name
+        ? `${initialData.counselor_first_name} ${initialData.counselor_last_name}`
+        : "N/A");
 
     // Use current date for therapist acknowledgment date
     const therapistDate = formatDate(moment().format("YYYY-MM-DD"));
@@ -191,66 +170,59 @@ const TreatmentPlanReportModal: React.FC<TreatmentPlanReportModalProps> = ({
   // Populate form fields when data is loaded
   useEffect(() => {
     if (reportData && !loading) {
-      // Data structure: reportData.metadata contains the treatment plan data
-      const metadata =
-        typeof reportData.metadata === "string"
-          ? JSON.parse(reportData.metadata)
-          : reportData.metadata;
+      // New data structure: reportData directly contains the treatment plan data (no nested metadata)
+      if (reportData.report?.clinical_assessment) {
+        setValue(
+          "clinicalImpressions",
+          reportData.report.clinical_assessment.clinical_impressions || ""
+        );
+      }
 
-      if (metadata) {
-        if (metadata.report?.clinical_assessment) {
-          setValue(
-            "clinicalImpressions",
-            metadata.report.clinical_assessment.clinical_impressions || ""
-          );
-        }
+      if (reportData.report?.treatment_goals) {
+        setValue(
+          "longTermGoals",
+          reportData.report.treatment_goals.long_term || ""
+        );
+        setValue(
+          "shortTermGoals",
+          reportData.report.treatment_goals.short_term || ""
+        );
+      }
 
-        if (metadata.report?.treatment_goals) {
-          setValue(
-            "longTermGoals",
-            metadata.report.treatment_goals.long_term || ""
-          );
-          setValue(
-            "shortTermGoals",
-            metadata.report.treatment_goals.short_term || ""
-          );
-        }
+      if (reportData.report?.planned_interventions) {
+        setValue(
+          "therapeuticApproaches",
+          reportData.report.planned_interventions.therapeutic_approaches || ""
+        );
+        setValue(
+          "sessionFrequency",
+          reportData.report.planned_interventions.session_frequency || ""
+        );
+      }
 
-        if (metadata.report?.planned_interventions) {
-          setValue(
-            "therapeuticApproaches",
-            metadata.report.planned_interventions.therapeutic_approaches || ""
-          );
-          setValue(
-            "sessionFrequency",
-            metadata.report.planned_interventions.session_frequency || ""
-          );
-        }
+      if (reportData.report?.progress_measurement) {
+        setValue(
+          "progressMeasurement",
+          reportData.report.progress_measurement.how_measured || ""
+        );
+      }
 
-        if (metadata.report?.progress_measurement) {
-          setValue(
-            "progressMeasurement",
-            metadata.report.progress_measurement.how_measured || ""
-          );
-        }
+      if (reportData.report?.review_updates) {
+        setValue(
+          "planReviewDate",
+          reportData.report.review_updates.review_date || ""
+        );
+        setValue(
+          "updatesRevisions",
+          reportData.report.review_updates.updates || ""
+        );
+      }
 
-        if (metadata.report?.review_updates) {
-          setValue(
-            "planReviewDate",
-            metadata.report.review_updates.review_date || ""
-          );
-          setValue(
-            "updatesRevisions",
-            metadata.report.review_updates.updates || ""
-          );
-        }
-
-        if (metadata.therapist_acknowledgment) {
-          setValue(
-            "signature",
-            metadata.therapist_acknowledgment.signature || ""
-          );
-        }
+      if (reportData.therapist_acknowledgment) {
+        setValue(
+          "signature",
+          reportData.therapist_acknowledgment.signature || ""
+        );
       }
     }
   }, [reportData, loading, setValue]);
@@ -260,8 +232,9 @@ const TreatmentPlanReportModal: React.FC<TreatmentPlanReportModalProps> = ({
     useMutationData(
       ["saveTreatmentPlanReport"],
       async () => {
-        // Use reportId from sessionRow if available, otherwise from reportData
-        const existingReportId = reportId || reportData?.report_id;
+        // Use reportId from reportData first, then from sessionRow, then from initialData
+        const existingReportId =
+          reportData?.report_id || reportId || initialData?.report_id;
 
         if (!existingReportId) {
           toast.error("Report ID is required. Please try again.");

@@ -65,6 +65,7 @@ export default class FeedbackService {
       session_id: joi.number().optional(),
       form_id: joi.number().optional(),
       client_id: joi.number().optional(),
+      thrpy_req_id: joi.number().optional(),
       is_submitted: joi.string().valid('y', 'n').optional(),
       tenant_id: joi.number().optional(),
     });
@@ -366,21 +367,19 @@ export default class FeedbackService {
     const schema = joi.object({
       session_id: joi.number().required(),
       client_id: joi.number().required(),
-      specific_1st_phase: joi.string().optional(),
-      specific_2nd_phase: joi.string().optional(),
-      specific_3rd_phase: joi.string().optional(),
-      measurable_1st_phase: joi.string().optional(),
-      measurable_2nd_phase: joi.string().optional(),
-      measurable_3rd_phase: joi.string().optional(),
-      achievable_1st_phase: joi.string().optional(),
-      achievable_2nd_phase: joi.string().optional(),
-      achievable_3rd_phase: joi.string().optional(),
-      relevant_1st_phase: joi.string().optional(),
-      relevant_2nd_phase: joi.string().optional(),
-      relevant_3rd_phase: joi.string().optional(),
-      time_bound_1st_phase: joi.string().optional(),
-      time_bound_2nd_phase: joi.string().optional(),
-      time_bound_3rd_phase: joi.string().optional(),
+      // Client submission fields (optional - only needed for client submissions)
+      client_goal_theme: joi.string().allow('').optional(),
+      goal_theme_other: joi.string().allow('').optional(),
+      timeframe: joi.string().allow('').optional(),
+      // Counselor fields (optional, can be filled in later)
+      goal_source: joi.string().valid('library', 'client_defined').allow('').optional(),
+      library_goal_id: joi.string().allow('').optional(),
+      library_goal: joi.string().allow('').optional(),
+      goal_wording: joi.string().allow('').optional(),
+      measurement_method: joi.string().valid('selfReport', 'symptomScale', 'functionalTolerance', 'sessionObservation').allow('').optional(),
+      clinician_action: joi.string().valid('editWording', 'approveAndLock').allow('').optional(),
+      program_alignment: joi.string().allow('').optional(),
+      is_locked: joi.boolean().optional(),
       tenant_id: joi.number().required(),
     });
 
@@ -392,6 +391,39 @@ export default class FeedbackService {
 
     const feedback = new Feedback();
     return feedback.postSMARTGOALFeedback(data);
+  }
+
+  //////////////////////////////////////////
+
+  async putSMARTGOALFeedback(data) {
+    const schema = joi.object({
+      feedback_id: joi.number().required(),
+      session_id: joi.number().optional(),
+      client_id: joi.number().optional(),
+      // Client submission fields (optional)
+      client_goal_theme: joi.string().allow('').optional(),
+      goal_theme_other: joi.string().allow('').optional(),
+      timeframe: joi.string().allow('').optional(),
+      // Counselor fields (optional)
+      goal_source: joi.string().valid('library', 'client_defined').allow('').optional(),
+      library_goal_id: joi.string().allow('').optional(),
+      library_goal: joi.string().allow('').optional(),
+      goal_wording: joi.string().allow('').optional(),
+      measurement_method: joi.string().valid('selfReport', 'symptomScale', 'functionalTolerance', 'sessionObservation').allow('').optional(),
+      clinician_action: joi.string().valid('editWording', 'approveAndLock').allow('').optional(),
+      program_alignment: joi.string().allow('').optional(),
+      is_locked: joi.boolean().optional(),
+      tenant_id: joi.number().optional(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const feedback = new Feedback();
+    return feedback.putSMARTGOALFeedback(data);
   }
 
   //////////////////////////////////////////
@@ -491,5 +523,24 @@ export default class FeedbackService {
 
     const feedback = new Feedback();
     return feedback.checkAttendanceFeedbackExists(thrpy_req_id, session_count);
+  }
+
+  //////////////////////////////////////////
+
+  async getUserInfoAndFormStatus(data) {
+    const schema = joi.object({
+      client_id: joi.number().required(),
+      session_id: joi.number().required(),
+      form_id: joi.number().optional(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const feedback = new Feedback();
+    return feedback.getUserInfoAndFormStatus(data);
   }
 }

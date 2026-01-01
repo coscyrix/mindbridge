@@ -96,6 +96,12 @@ async function main() {
       await therapistAbsence.resumeExpiredAbsences();
     }, { timezone: 'America/Los_Angeles' });
 
+    // Schedule cron job to send 24-hour session reminders (runs every hour)
+    cron.schedule('0 * * * *', async () => {
+      logger.info('Running 24-hour session reminder cronjob...');
+      await session.send24HourSessionReminders();
+    });
+
     await server.listen();
   } catch (error) {
     console.error(`Failed to start the server: ${error.message}`);

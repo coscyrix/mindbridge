@@ -12,8 +12,11 @@ import Invoice from './invoice.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import EmailTmplt from './emailTmplt.js';
 import { splitIsoDatetime } from '../utils/common.js';
-import { clientSessionRescheduleEmail } from '../utils/emailTmplt.js';
-import { formatDateTimeInTimezone } from '../utils/timezone.js';
+import { clientSessionRescheduleEmail, sessionReminderEmail } from '../utils/emailTmplt.js';
+import { formatDateTimeInTimezone, getFriendlyTimezoneName, getDefaultTimezone } from '../utils/timezone.js';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 export default class Session {
   constructor() {
@@ -151,6 +154,7 @@ export default class Session {
         session_taxes: taxAmount,
         session_counselor_amt: counselorAmount,
         session_system_amt: systemAmount,
+        video_link: data.video_link || null, // Add video link for online sessions
       };
       
       // Preserve session_status if provided (e.g., INACTIVE)
@@ -1417,6 +1421,305 @@ export default class Session {
       console.log(error);
       logger.error(error);
       return { message: 'Error getting assessment stats', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Get the path to the session reminder tracking file
+   */
+  getReminderTrackingFilePath() {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    return path.join(__dirname, '../logs', 'session_reminders_sent.json');
+  }
+
+  /**
+   * Load sent reminders tracking data from JSON file
+   */
+  async loadSentReminders() {
+    try {
+      const filePath = this.getReminderTrackingFilePath();
+      const data = await fs.readFile(filePath, 'utf8');
+      return JSON.parse(data);
+    } catch (error) {
+      // File doesn't exist yet, return empty object
+      if (error.code === 'ENOENT') {
+        return {};
+      }
+      logger.error('Error loading sent reminders:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Save sent reminders tracking data to JSON file
+   */
+  async saveSentReminders(data) {
+    try {
+      const filePath = this.getReminderTrackingFilePath();
+      const dir = path.dirname(filePath);
+      
+      // Ensure directory exists
+      await fs.mkdir(dir, { recursive: true });
+      
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+      return true;
+    } catch (error) {
+      logger.error('Error saving sent reminders:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if reminder has already been sent for a session
+   */
+  async hasReminderBeenSent(sessionId) {
+    const tracking = await this.loadSentReminders();
+    return tracking[sessionId] === true;
+  }
+
+  /**
+   * Mark reminder as sent for a session
+   */
+  async markReminderAsSent(sessionId) {
+    const tracking = await this.loadSentReminders();
+    tracking[sessionId] = true;
+    await this.saveSentReminders(tracking);
+  }
+
+  /**
+   * Send 24-hour session reminders to clients
+   * Runs hourly and checks for sessions scheduled 23-25 hours in the future
+   */
+  async send24HourSessionReminders() {
+    try {
+      logger.info('Running 24-hour session reminder cron job...');
+      
+      const now = new Date();
+      const hours23 = new Date(now.getTime() + 23 * 60 * 60 * 1000);
+      const hours25 = new Date(now.getTime() + 25 * 60 * 60 * 1000);
+
+      // Format dates for query (YYYY-MM-DD)
+      const formatDate = (date) => date.toISOString().split('T')[0];
+      
+      // Get all sessions scheduled between 23-25 hours from now
+      // We need to check sessions that have intake_date and scheduled_time
+      const sessions = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select(
+          'session.*',
+          'thrpy_req.client_id',
+          'thrpy_req.counselor_id',
+          'thrpy_req.session_format_id',
+          'thrpy_req.cancel_hash',
+          'thrpy_req.video_link as thrpy_req_video_link'
+        )
+        .from('session')
+        .join('thrpy_req', 'session.thrpy_req_id', 'thrpy_req.req_id')
+        .where('session.session_status', 'SCHEDULED')
+        .where('session.status_yn', 'y')
+        .whereNotNull('session.intake_date')
+        .whereNotNull('session.scheduled_time')
+        .where(function() {
+          // Check if session date falls within the 23-25 hour window
+          this.whereBetween('session.intake_date', [formatDate(hours23), formatDate(hours25)]);
+        });
+
+      logger.info(`Found ${sessions.length} sessions scheduled 23-25 hours from now`);
+
+      let remindersSent = 0;
+      let errors = 0;
+      let skippedCount = 0;
+      const skipReasons = {
+        alreadySent: 0,
+        timeWindow: 0,
+        clientProfile: 0,
+        clientEmail: 0,
+        counselorProfile: 0
+      };
+
+      for (const session of sessions) {
+        try {
+          logger.info(`Processing session ${session.session_id}...`);
+          
+          // Check if reminder already sent
+          if (await this.hasReminderBeenSent(session.session_id)) {
+            logger.info(`Reminder already sent for session ${session.session_id}, skipping`);
+            skipReasons.alreadySent++;
+            skippedCount++;
+            continue;
+          }
+
+          // Parse session date and time
+          const sessionDate = session.intake_date; // YYYY-MM-DD
+          const sessionTime = session.scheduled_time; // HH:mm:ss.SSSZ or HH:mm:ss
+
+          // Create full datetime for comparison
+          const sessionDateTime = new Date(`${sessionDate}T${sessionTime}`);
+          
+          // Check if session is actually in the 23-25 hour range
+          const hoursUntilSession = (sessionDateTime - now) / (1000 * 60 * 60);
+          logger.info(`Session ${session.session_id}: ${hoursUntilSession.toFixed(2)} hours until session (date: ${sessionDate}, time: ${sessionTime})`);
+          
+          // Use environment variable to allow wider window for testing (default: 23-25 hours)
+          const MIN_HOURS = parseInt(process.env.SESSION_REMINDER_MIN_HOURS || '23', 10);
+          const MAX_HOURS = parseInt(process.env.SESSION_REMINDER_MAX_HOURS || '25', 10);
+          
+          if (hoursUntilSession < MIN_HOURS || hoursUntilSession > MAX_HOURS) {
+            logger.info(`Session ${session.session_id} outside ${MIN_HOURS}-${MAX_HOURS} hour window (${hoursUntilSession.toFixed(2)} hours), skipping`);
+            skipReasons.timeWindow++;
+            skippedCount++;
+            continue;
+          }
+
+          // Get client profile and email
+          const clientProfile = await this.common.getUserProfileByUserProfileId(session.client_id);
+          if (!clientProfile || clientProfile.length === 0) {
+            logger.warn(`Client profile not found for client_id ${session.client_id}, session ${session.session_id}`);
+            skipReasons.clientProfile++;
+            skippedCount++;
+            continue;
+          }
+
+          const clientUser = await this.common.getUserById(clientProfile[0].user_id);
+          if (!clientUser || clientUser.length === 0 || !clientUser[0].email) {
+            logger.warn(`Client email not found for session ${session.session_id}`);
+            skipReasons.clientEmail++;
+            skippedCount++;
+            continue;
+          }
+
+          const clientEmail = clientUser[0].email;
+          const clientName = `${clientProfile[0].user_first_name} ${clientProfile[0].user_last_name || ''}`.trim();
+
+          // Get counselor/therapist profile and email
+          const counselorProfile = await this.common.getUserProfileByUserProfileId(session.counselor_id);
+          if (!counselorProfile || counselorProfile.length === 0) {
+            logger.warn(`Counselor profile not found for counselor_id ${session.counselor_id}, session ${session.session_id}`);
+            skipReasons.counselorProfile++;
+            skippedCount++;
+            continue;
+          }
+
+          const counselorUser = await this.common.getUserById(counselorProfile[0].user_id);
+          const counselorEmail = counselorUser && counselorUser.length > 0 ? counselorUser[0].email : null;
+          const therapistName = `${counselorProfile[0].user_first_name} ${counselorProfile[0].user_last_name || ''}`.trim();
+
+          // Get timezone (prefer client, fallback to counselor, then default)
+          let timezone = clientProfile[0].timezone || counselorProfile[0].timezone;
+          if (!timezone) {
+            // Try to get tenant timezone
+            const tenantId = session.tenant_id || counselorProfile[0].tenant_id;
+            if (tenantId) {
+              const tenant = await this.common.getTenantByTenantId(tenantId);
+              if (!tenant.error && tenant.length > 0 && tenant[0].timezone) {
+                timezone = tenant[0].timezone;
+              }
+            }
+          }
+          timezone = timezone || getDefaultTimezone();
+          const timezoneDisplay = getFriendlyTimezoneName(timezone);
+
+          // Format session date and time in client's timezone
+          const { localDate, localTime } = formatDateTimeInTimezone(sessionDate, sessionTime, timezone);
+
+          // Get session format (ONLINE or IN-PERSON)
+          // Prefer session.session_format, fallback to thrpy_req.session_format_id
+          const sessionFormat = session.session_format || session.session_format_id || 'ONLINE';
+
+          // Get location or video link based on session format
+          let locationOrLink = null;
+          if (sessionFormat === 'ONLINE') {
+            // For online sessions, use video_link from session or therapy request
+            locationOrLink = session.video_link || session.thrpy_req_video_link || null;
+          } else {
+            // For in-person sessions, try to get address from onboarding_requests first
+            // Then fallback to counselor_profile.location
+            let address = null;
+            
+            // Try to get address from onboarding_requests by matching counselor email
+            if (counselorEmail) {
+              try {
+                const onboardingResult = await db
+                  .withSchema(`${process.env.MYSQL_DATABASE}`)
+                  .select('address')
+                  .from('onboarding_requests')
+                  .where('email', counselorEmail)
+                  .orderBy('created_at', 'desc')
+                  .limit(1)
+                  .first();
+                
+                if (onboardingResult && onboardingResult.address) {
+                  address = onboardingResult.address;
+                }
+              } catch (error) {
+                logger.warn(`Error fetching onboarding address for counselor ${session.counselor_id}:`, error);
+              }
+            }
+            
+            // If no address from onboarding_requests, get from counselor profile
+            if (!address) {
+              const CounselorProfile = (await import('./counselorProfile.js')).default;
+              const counselorProfileModel = new CounselorProfile();
+              const counselorProfileData = await counselorProfileModel.getCounselorProfile({
+                user_profile_id: session.counselor_id
+              });
+              if (counselorProfileData.rec && counselorProfileData.rec.length > 0) {
+                address = counselorProfileData.rec[0].location || null;
+              }
+            }
+            
+            locationOrLink = address;
+          }
+
+          // Generate secure link for cancel/reschedule
+          const secureLink = session.cancel_hash 
+            ? `${process.env.BASE_URL || 'https://mindapp.mindbridge.solutions/'}session-management?hash=${encodeURIComponent(session.cancel_hash)}`
+            : `${process.env.BASE_URL || 'https://mindapp.mindbridge.solutions/'}session-management`;
+
+          // Create and send email
+          const emailTemplate = sessionReminderEmail(
+            clientEmail,
+            clientName,
+            therapistName,
+            localDate,
+            localTime,
+            timezoneDisplay,
+            sessionFormat,
+            locationOrLink,
+            secureLink,
+            counselorEmail
+          );
+
+          const emailResult = await this.sendEmail.sendMail(emailTemplate);
+          
+          if (emailResult && !emailResult.error) {
+            // Mark reminder as sent
+            await this.markReminderAsSent(session.session_id);
+            remindersSent++;
+            logger.info(`✅ Session reminder sent successfully for session ${session.session_id} to ${clientEmail}`);
+          } else {
+            errors++;
+            logger.error(`❌ Failed to send reminder for session ${session.session_id}:`, emailResult?.message || 'Unknown error');
+          }
+
+          // Small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+        } catch (error) {
+          errors++;
+          logger.error(`Error processing session reminder for session ${session.session_id}:`, error);
+        }
+      }
+
+      logger.info(`Session reminder cron job completed. Sent: ${remindersSent}, Errors: ${errors}, Skipped: ${skippedCount}`);
+      logger.info(`Skip reasons: ${JSON.stringify(skipReasons)}`);
+      return { remindersSent, errors, skipped: skippedCount, skipReasons, totalChecked: sessions.length };
+    } catch (error) {
+      logger.error('Error in send24HourSessionReminders:', error);
+      return { message: 'Error sending session reminders', error: -1 };
     }
   }
 }

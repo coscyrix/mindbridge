@@ -110,6 +110,23 @@ export default class ThrpyReq {
         };
       }
 
+      // Check for session time collision before proceeding
+      const collisionCheck = await this.common.checkSessionTimeCollision(
+        data.counselor_id,
+        req_dte,
+        req_time,
+        null, // No session to exclude for new therapy requests
+      );
+
+      if (collisionCheck.error) {
+        logger.warn('Session time collision detected, preventing double booking', {
+          counselor_id: data.counselor_id,
+          intake_date: req_dte,
+          scheduled_time: req_time,
+        });
+        return collisionCheck;
+      }
+
       // Check if counselor in data role is for a counselor
       const recCounselor = await this.userProfile.getUserProfileById({
         user_profile_id: data.counselor_id,
@@ -304,6 +321,7 @@ export default class ThrpyReq {
         tenant_id: data.tenant_id,
         treatment_target: treatmentTarget, // Add treatment target to therapy request
         cancel_hash: cancelHash, // Add cancel/reschedule hash
+        video_link: data.video_link || null, // Add video link for online sessions
       };
 
       // Insert the therapy request into the database using Prisma
@@ -368,6 +386,7 @@ export default class ThrpyReq {
             session_code: svc.service_code,
             session_description: svc.service_code,
             tenant_id: data.tenant_id,
+            video_link: data.video_link || null, // Add video link for online sessions
             ...sessionAmounts
           };
 
@@ -458,6 +477,7 @@ export default class ThrpyReq {
                 session_description: `${svc.service_code} ${reportService.rec[0].service_name}`,
                 is_report: 1,
                 tenant_id: data.tenant_id,
+                video_link: data.video_link || null, // Add video link for online sessions
                 ...reportSessionAmounts
               };
               
@@ -506,6 +526,7 @@ export default class ThrpyReq {
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
           tenant_id: data.tenant_id,
+          video_link: data.video_link || null, // Add video link for online sessions
           ...dischargeSessionAmounts
         };
 
@@ -609,6 +630,7 @@ export default class ThrpyReq {
             session_code: svc.service_code,
             session_description: svc.service_code,
             tenant_id: data.tenant_id,
+            video_link: data.video_link || null, // Add video link for online sessions
             ...sessionAmounts
           };
 
@@ -692,6 +714,7 @@ export default class ThrpyReq {
                 session_description: `${svc.service_code} ${reportService.rec[0].service_name}`,
                 is_report: 1,
                 tenant_id: data.tenant_id,
+                video_link: data.video_link || null, // Add video link for online sessions
                 ...reportSessionAmounts
               };
               
@@ -738,6 +761,7 @@ export default class ThrpyReq {
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
           tenant_id: data.tenant_id,
+          video_link: data.video_link || null, // Add video link for online sessions
           ...dischargeSessionAmounts
         };
 
@@ -1020,6 +1044,7 @@ export default class ThrpyReq {
             tenant_id: data.tenant_id,
             treatment_target: treatmentTarget,
             cancel_hash: cancelHash,
+            video_link: data.video_link || null, // Add video link for online sessions
           };
 
           const postThrpyReq = await prisma.thrpy_req.create({
@@ -1072,6 +1097,7 @@ export default class ThrpyReq {
                 session_code: svc.service_code,
                 session_description: groupMetadataJson, // Store group metadata in session_description
                 tenant_id: data.tenant_id,
+                video_link: data.video_link || null, // Add video link for online sessions
                 ...sessionAmounts
               };
 
@@ -1128,6 +1154,7 @@ export default class ThrpyReq {
                     session_description: `${svc.service_code} ${reportService.rec[0].service_name}`,
                     is_report: true,
                     tenant_id: data.tenant_id,
+                    video_link: data.video_link || null, // Add video link for online sessions
                     ...reportSessionAmounts
                   };
                   
@@ -1163,6 +1190,7 @@ export default class ThrpyReq {
                 session_description: `${svc.service_code} ${drSvc.service_name}`,
                 is_report: true,
                 tenant_id: data.tenant_id,
+                video_link: data.video_link || null, // Add video link for online sessions
                 ...dischargeSessionAmounts
               };
 

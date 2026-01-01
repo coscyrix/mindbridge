@@ -38,6 +38,7 @@ export default class ThrpyReqService {
       intake_dte: joi.date().required(),
       tenant_id: joi.number().required(),
       number_of_sessions: joi.number().optional(),
+      video_link: joi.string().allow('', null).optional(),
     });
 
     const { error } = schema.validate(data);
@@ -80,6 +81,7 @@ export default class ThrpyReqService {
       max_participants: joi.number().optional(),
       number_of_sessions: joi.number().optional(),
       is_group_session: joi.boolean().optional(), // Allow but not required
+      video_link: joi.string().allow('', null).optional(),
     }).unknown(true); // Allow additional fields that aren't validated
 
     const { error } = schema.validate(data);

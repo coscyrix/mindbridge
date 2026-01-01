@@ -168,25 +168,26 @@ model fee_split_management {
 }
 
 model feedback {
-    feedback_id         BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
-    session_id          Int?
-    form_id             Int?
-    client_id           Int?
-    feedback_json       Json?
-    is_discharged       feedback_is_discharged
-    status_yn           feedback_status_yn     @default(y)
-    created_at          DateTime?              @default(now()) @db.Timestamp(0)
-    updated_at          DateTime?              @default(now()) @db.Timestamp(0)
-    tenant_id           Int?
-    forms               forms?                 @relation(fields: [form_id], references: [form_id], onDelete: Cascade, map: "feedback_forms_FK")
-    session             session?               @relation(fields: [session_id], references: [session_id], onDelete: Cascade, map: "feedback_session_FK")
-    feedback_consent    feedback_consent[]
-    feedback_gad        feedback_gad[]
-    feedback_ipf        feedback_ipf[]
-    feedback_pcl5       feedback_pcl5[]
-    feedback_phq9       feedback_phq9[]
-    feedback_smart_goal feedback_smart_goal[]
-    feedback_whodas     feedback_whodas[]
+    feedback_id                BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+    session_id                 Int?
+    form_id                    Int?
+    client_id                  Int?
+    feedback_json              Json?
+    is_discharged              feedback_is_discharged
+    status_yn                  feedback_status_yn           @default(y)
+    created_at                 DateTime?                    @default(now()) @db.Timestamp(0)
+    updated_at                 DateTime?                    @default(now()) @db.Timestamp(0)
+    tenant_id                  Int?
+    forms                      forms?                       @relation(fields: [form_id], references: [form_id], onDelete: Cascade, map: "feedback_forms_FK")
+    session                    session?                     @relation(fields: [session_id], references: [session_id], onDelete: Cascade, map: "feedback_session_FK")
+    feedback_consent           feedback_consent[]
+    feedback_gad               feedback_gad[]
+    feedback_ipf               feedback_ipf[]
+    feedback_pcl5              feedback_pcl5[]
+    feedback_phq9              feedback_phq9[]
+    feedback_smart_goal        feedback_smart_goal[]
+    feedback_smart_client_goal feedback_smart_client_goal[]
+    feedback_whodas            feedback_whodas[]
 
     @@unique([session_id, form_id], map: "feedback_unique")
     @@index([form_id], map: "feedback_forms_FK")
@@ -287,28 +288,36 @@ model feedback_phq9 {
     @@index([feedback_id], map: "feedback_phq9_feedback_id_foreign")
 }
 
+model feedback_smart_client_goal {
+    id                BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    feedback_id       BigInt    @db.UnsignedBigInt
+    client_goal_theme String    @db.VarChar(255)
+    goal_theme_other  String?   @db.Text
+    timeframe         String    @db.VarChar(100)
+    created_at        DateTime? @default(now()) @db.Timestamp(0)
+    updated_at        DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id         Int?
+    feedback          feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_smart_client_goal_feedback_FK")
+
+    @@index([feedback_id], map: "feedback_smart_client_goal_feedback_FK")
+}
+
 model feedback_smart_goal {
-    id                   Int       @id @default(autoincrement())
-    feedback_id          BigInt    @db.UnsignedBigInt
-    specific_1st_phase   String?   @db.VarChar(250)
-    specific_2nd_phase   String?   @db.VarChar(250)
-    specific_3rd_phase   String?   @db.VarChar(250)
-    measurable_1st_phase String?   @db.VarChar(250)
-    measurable_2nd_phase String?   @db.VarChar(250)
-    measurable_3rd_phase String?   @db.VarChar(250)
-    achievable_1st_phase String?   @db.VarChar(250)
-    achievable_2nd_phase String?   @db.VarChar(250)
-    achievable_3rd_phase String?   @db.VarChar(250)
-    relevant_1st_phase   String?   @db.VarChar(250)
-    relevant_2nd_phase   String?   @db.VarChar(250)
-    relevant_3rd_phase   String?   @db.VarChar(250)
-    time_bound_1st_phase String?   @db.VarChar(250)
-    time_bound_2nd_phase String?   @db.VarChar(250)
-    time_bound_3rd_phase String?   @db.VarChar(250)
-    created_at           DateTime? @default(now()) @db.Timestamp(0)
-    updated_at           DateTime? @default(now()) @db.Timestamp(0)
-    tenant_id            Int?
-    feedback             feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_smart_goal_feedback_FK")
+    id                 BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    feedback_id        BigInt    @db.UnsignedBigInt
+    goal_source        String?   @db.VarChar(50)
+    library_goal_id    String?   @db.VarChar(255)
+    library_goal       String?   @db.Text
+    timeframe          String?   @db.VarChar(100)
+    goal_wording       String?   @db.Text
+    measurement_method String?   @db.VarChar(50)
+    clinician_action   String?   @db.VarChar(50)
+    program_alignment  String?   @default("locked") @db.VarChar(50)
+    is_locked          Boolean?  @default(false)
+    created_at         DateTime? @default(now()) @db.Timestamp(0)
+    updated_at         DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id          Int?
+    feedback           feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_smart_goal_feedback_FK")
 
     @@index([feedback_id], map: "feedback_smart_goal_feedback_FK")
 }
@@ -656,6 +665,7 @@ model session {
     scheduled_time                 String?                          @db.Text
     session_code                   String?                          @db.VarChar(100)
     session_description            String?                          @db.VarChar(255)
+    video_link                     String?                          @db.VarChar(500)
     forms_array                    Json?
     session_status                 session_session_status           @default(SCHEDULED)
     status_yn                      session_status_yn                @default(y)
@@ -728,6 +738,7 @@ model thrpy_req {
     tenant_id                                         Int?
     treatment_target                                  String?                          @db.VarChar(255)
     cancel_hash                                       String?                          @db.VarChar(255)
+    video_link                                        String?                          @db.VarChar(500)
     session                                           session[]
     service                                           service                          @relation(fields: [service_id], references: [service_id], onDelete: Cascade, map: "thrpy_req_service_FK")
     user_profile_thrpy_req_counselor_idTouser_profile user_profile                     @relation("thrpy_req_counselor_idTouser_profile", fields: [counselor_id], references: [user_profile_id], onDelete: Cascade, map: "thrpy_req_user_profile_FK")

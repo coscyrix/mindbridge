@@ -185,14 +185,16 @@ function CreateSessionForm({
       user_target_outcome: client.user_target_outcome,
     }));
 
-  // All clients dropdown for group sessions (includes clients with existing schedules)
-  const allClientsDropdown = clients?.map((client) => ({
-    label: `${client.user_first_name} ${client.user_last_name}`,
-    value: client.user_profile_id,
-    serialNumber: client.clam_num || "N/A",
-    has_schedule: client.has_schedule,
-    user_target_outcome: client.user_target_outcome,
-  }));
+  // All clients dropdown for group sessions (excludes clients with existing schedules)
+  const allClientsDropdown = clients
+    ?.filter((client) => !client?.has_schedule)
+    .map((client) => ({
+      label: `${client.user_first_name} ${client.user_last_name}`,
+      value: client.user_profile_id,
+      serialNumber: client.clam_num || "N/A",
+      has_schedule: client.has_schedule,
+      user_target_outcome: client.user_target_outcome,
+    }));
 
   const servicesDropdown = servicesData
     ?.filter((service) => service.is_report == 0)
@@ -435,12 +437,16 @@ function CreateSessionForm({
       async (payload) => {
         return await CommonServices.sendManualAssessment(payload);
       },
-      undefined,
-      () => {
-        // On success: close modal and reset selection
+      ["sessions", "overall-sessions"],
+      async () => {
+        // On success: close modal, reset selection, and refetch session data
         toast.success("Assessment sent successfully");
         setIsAssessmentModalOpen(false);
         setSelectedAssessment(null);
+        // Refetch therapy session data
+        if (initialData) {
+          await getAllSessionOfClients();
+        }
       }
     );
 
@@ -535,6 +541,7 @@ function CreateSessionForm({
           value: initialData?.client_id,
           serialNumber: initialData?.client_clam_num || "N/A",
         },
+        video_link: initialData?.video_link || "",
       };
       setClientId(initialData?.client_id);
       methods.reset(formattedData);
@@ -548,6 +555,7 @@ function CreateSessionForm({
         session_desc: "",
         req_time: "",
         req_dte: "",
+        video_link: "",
       });
       setFormButton("Submit");
       setShowGeneratedSession(false);

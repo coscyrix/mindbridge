@@ -5,15 +5,17 @@ import CustomInputField from "../../CustomInputField";
 import CustomTextArea from "../../CustomTextArea";
 import { SmartGoalDataContainer } from "./style";
 import Spinner from "../../common/Spinner";
+import { getGoalsForService } from "./smartGoalsConstants";
 
-const SmartGoals = ({ smartGoalsData, loading }) => {
+const SmartGoals = ({ smartGoalsData, loading, serviceCode, serviceName }) => {
   const methods = useForm({
     defaultValues: {
       goalSource: "library", // "library" or "client_defined"
-      libraryGoal: "Reduce anxiety related to workplace trauma",
-      smartGoalDraft: "Within 6-8 weeks, the client will reduce trauma-related anxiety so it interferes less with daily functioning, as measured by self-report.",
-      timeframe: "6-8 weeks",
-      goalWording: "Within 6-8 weeks, the client will reduce trauma-related anxiety so it interferes less with daily functioning, as measured by self-report.",
+      libraryGoalId: "",
+      libraryGoal: "",
+      smartGoalDraft: "",
+      timeframe: "",
+      goalWording: "",
       measurementMethod: {
         selfReport: true,
         symptomScale: false,
@@ -31,6 +33,34 @@ const SmartGoals = ({ smartGoalsData, loading }) => {
 
   const watchedValues = methods.watch();
   const isLocked = watchedValues.approveAndLock;
+
+  // Get filtered goals based on service
+  const availableGoals = useMemo(() => {
+    const serviceIdentifier = serviceCode || serviceName;
+    return getGoalsForService(serviceIdentifier);
+  }, [serviceCode, serviceName]);
+
+  // When library goal is selected, update the draft
+  useEffect(() => {
+    if (watchedValues.goalSource === "library" && watchedValues.libraryGoalId) {
+      const selectedGoal = availableGoals.find(
+        (goal) => goal.id === watchedValues.libraryGoalId
+      );
+      if (selectedGoal) {
+        methods.setValue("libraryGoal", selectedGoal.text);
+        methods.setValue("smartGoalDraft", selectedGoal.text);
+        methods.setValue("goalWording", selectedGoal.text);
+        if (selectedGoal.timeframe) {
+          methods.setValue("timeframe", selectedGoal.timeframe);
+        }
+      }
+    } else if (watchedValues.goalSource === "library" && !watchedValues.libraryGoalId) {
+      // Clear values if library is selected but no goal is chosen
+      methods.setValue("libraryGoal", "");
+      methods.setValue("smartGoalDraft", "");
+      methods.setValue("goalWording", "");
+    }
+  }, [watchedValues.libraryGoalId, watchedValues.goalSource, availableGoals, methods]);
 
   const measurementMethods = [
     { id: "selfReport", label: "Self-report" },
@@ -54,18 +84,11 @@ const SmartGoals = ({ smartGoalsData, loading }) => {
   // Generate final goal text based on current values
   const finalGoalText = useMemo(() => {
     if (isLocked) {
-      return watchedValues.goalWording;
+      return watchedValues.goalWording || watchedValues.smartGoalDraft || "";
     }
-    const measurement = Object.entries(watchedValues.measurementMethod)
-      .filter(([_, checked]) => checked)
-      .map(([key, _]) => {
-        const method = measurementMethods.find((m) => m.id === key);
-        return method ? method.label.toLowerCase() : "";
-      })
-      .join(", ");
-    
-    return `Within ${watchedValues.timeframe}, the client will reduce trauma-related anxiety so it interferes less with daily functioning, as measured by ${measurement || "self-report"}.`;
-  }, [watchedValues, isLocked, measurementMethods]);
+    // If goal wording is set, use it; otherwise use the draft
+    return watchedValues.goalWording || watchedValues.smartGoalDraft || "";
+  }, [watchedValues, isLocked]);
 
   return (
     <SmartGoalDataContainer>
@@ -125,9 +148,48 @@ const SmartGoals = ({ smartGoalsData, loading }) => {
                 </div>
               </div>
               {watchedValues.goalSource === "library" && (
-                <div className="library-goal-selected">
-                  <strong>Library goal selected:</strong>{" "}
-                  {watchedValues.libraryGoal}
+                <div className="library-goal-section" style={{ marginTop: "15px" }}>
+                  <label htmlFor="library-goal-dropdown" style={{ display: "block", marginBottom: "8px", fontWeight: "500" }}>
+                    Select Library Goal:
+                  </label>
+                  <Controller
+                    name="libraryGoalId"
+                    control={methods.control}
+                    render={({ field }) => (
+                      <select
+                        {...field}
+                        id="library-goal-dropdown"
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          border: "1px solid #ccc",
+                          borderRadius: "4px",
+                          fontSize: "14px",
+                          backgroundColor: "#fff",
+                          cursor: "pointer",
+                        }}
+                        disabled={isLocked}
+                      >
+                        <option value="">-- Select a goal --</option>
+                        {availableGoals.map((goal) => (
+                          <option key={goal.id} value={goal.id}>
+                            {goal.text}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  />
+                  {availableGoals.length === 0 && (
+                    <p style={{ marginTop: "8px", color: "#666", fontSize: "14px" }}>
+                      No goals available for this service type. Please select "Client-defined goal" instead.
+                    </p>
+                  )}
+                  {watchedValues.libraryGoalId && (
+                    <div className="library-goal-selected" style={{ marginTop: "12px", padding: "8px", backgroundColor: "#f5f5f5", borderRadius: "4px" }}>
+                      <strong>Selected goal:</strong>{" "}
+                      {availableGoals.find((g) => g.id === watchedValues.libraryGoalId)?.text || watchedValues.libraryGoal}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

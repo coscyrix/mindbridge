@@ -94,6 +94,7 @@ export const useSessionActions = (
             participant_client_ids: selectedGroupClients.map(client => 
               typeof client === 'object' ? client.value : client
             ),
+            video_link: formData?.video_link || null, // Add video link for online sessions
           };
 
           // Add number_of_sessions if limit_sessions toggle is on
@@ -133,6 +134,7 @@ export const useSessionActions = (
             service_id: Number(formData?.service_id?.value),
             session_format_id: Number(formData?.session_format_id?.value),
             intake_dte: payloadDate,
+            video_link: formData?.video_link || null, // Add video link for online sessions
           };
 
           // Add number_of_sessions if limit_sessions toggle is on

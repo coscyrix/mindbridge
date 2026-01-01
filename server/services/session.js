@@ -19,6 +19,7 @@ export default class SessionService {
       session_format: joi.number().required(),
       intake_date: joi.date().required(),
       session_description: joi.string().optional(),
+      video_link: joi.string().allow('', null).optional(),
     });
 
     const { error } = schema.validate(data);
@@ -49,6 +50,7 @@ export default class SessionService {
       invoice_nbr: joi.string().optional(),
       role_id: joi.number().optional(),
       user_profile_id: joi.number().optional(),
+      video_link: joi.string().allow('', null).optional(),
     });
 
     const { error } = schema.validate(data);

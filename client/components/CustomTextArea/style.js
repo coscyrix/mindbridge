@@ -12,6 +12,7 @@ export const CustomTextAreaWrapper = styled.div`
       font-family: Alegreya Sans;
       font-size: 16px;
       resize: none;
+      padding: 12px;
 
       &.error {
         border-radius: 6px;

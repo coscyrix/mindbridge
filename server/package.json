@@ -12,7 +12,8 @@
     "prisma:studio": "prisma studio",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:format": "prisma format"
+    "prisma:format": "prisma format",
+    "test:reminders": "node debug_session_reminders.js"
   },
   "author": "Your Name",
   "license": "ISC",

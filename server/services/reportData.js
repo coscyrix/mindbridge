@@ -605,6 +605,43 @@ export default class ReportDataService {
   //////////////////////////////////////////
 
   /**
+   * Get treatment plan report data for a therapy request
+   * @param {Object} data - Query data
+   * @param {number} data.thrpy_req_id - Therapy request ID (required)
+   * @param {number} data.session_id - Session ID (optional)
+   * @returns {Promise<Object>} Treatment plan report data
+   */
+  async getTreatmentPlanReportData(data) {
+    try {
+      const schema = joi.object({
+        thrpy_req_id: joi.number().required(),
+        session_id: joi.number().optional(),
+      });
+
+      const { error } = schema.validate(data);
+
+      if (error) {
+        return { message: error.details[0].message, error: -1 };
+      }
+
+      const reportDataModel = new ReportData();
+      const treatmentPlanReportData = await reportDataModel.getTreatmentPlanReportData(data);
+
+      if (treatmentPlanReportData.error) {
+        return treatmentPlanReportData;
+      }
+
+      return treatmentPlanReportData;
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error getting treatment plan report data', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
    * Get intake report data for a therapy request
    * @param {Object} data - Query data
    * @param {number} data.thrpy_req_id - Therapy request ID (required)

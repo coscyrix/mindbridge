@@ -1755,6 +1755,333 @@ export default class ReportData {
   //////////////////////////////////////////
 
   /**
+   * Get treatment plan report data for a therapy request
+   * @param {Object} data - Query data
+   * @param {number} data.thrpy_req_id - Therapy request ID (required)
+   * @param {number} data.session_id - Session ID (optional)
+   * @returns {Promise<Object>} Treatment plan report data
+   */
+  async getTreatmentPlanReportData(data) {
+    try {
+      const { thrpy_req_id, session_id } = data;
+
+      if (!thrpy_req_id) {
+        return { message: 'thrpy_req_id is required', error: -1 };
+      }
+
+      // Get therapy request data first to find the treatment plan report session
+      const ThrpyReq = (await import('./thrpyReq.js')).default;
+      const thrpyReqModel = new ThrpyReq();
+      const recThrpy = await thrpyReqModel.getThrpyReqById({ req_id: thrpy_req_id });
+
+      if (!recThrpy || recThrpy.length === 0 || recThrpy.error) {
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
+      const therapyRequest = recThrpy[0];
+
+      // Find the treatment plan report session
+      let treatmentPlanReportSession = null;
+      if (session_id) {
+        // If session_id is provided, find that specific session
+        if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+          treatmentPlanReportSession = therapyRequest.session_obj.find(
+            (s) => s.session_id === session_id && (s.is_report === 1 || s.service_code === 'TP' || s.service_code?.includes('TREATMENT_PLAN'))
+          );
+        }
+      } else {
+        // Otherwise, find the first treatment plan report session
+        if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+          treatmentPlanReportSession = therapyRequest.session_obj.find(
+            (s) => s.is_report === 1 && (s.service_code === 'TP' || s.service_code?.includes('TREATMENT_PLAN'))
+          );
+        }
+      }
+
+      if (!treatmentPlanReportSession) {
+        return { message: 'Treatment plan report session not found', error: -1 };
+      }
+
+      // Check if a report exists for this session
+      let existingReport = null;
+      let metadata = null;
+      const reportQuery = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('reports as r')
+        .where('r.session_id', treatmentPlanReportSession.session_id)
+        .andWhere('r.report_type', 'TREATMENT_PLAN')
+        .first();
+
+      if (reportQuery) {
+        existingReport = reportQuery;
+        
+        // If report is locked, fetch and return only metadata (skip all extra fetching)
+        if (existingReport.is_locked === true) {
+          const treatmentPlanReport = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('report_treatment_plan')
+            .where('report_id', existingReport.report_id)
+            .first();
+
+          if (treatmentPlanReport && treatmentPlanReport.metadata) {
+            // Parse metadata if it's a string
+            metadata = treatmentPlanReport.metadata;
+            if (typeof metadata === 'string') {
+              try {
+                metadata = JSON.parse(metadata);
+              } catch (e) {
+                logger.error('Error parsing metadata:', e);
+                return { message: 'Error parsing locked report metadata', error: -1 };
+              }
+            }
+
+            // Return metadata directly without any extra fetching
+            return metadata;
+          } else {
+            return { message: 'Locked report found but metadata is missing', error: -1 };
+          }
+        } else {
+          // Report exists but is not locked - fetch metadata for merging later
+          const treatmentPlanReport = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('report_treatment_plan')
+            .where('report_id', existingReport.report_id)
+            .first();
+
+          if (treatmentPlanReport && treatmentPlanReport.metadata) {
+            // Parse metadata if it's a string
+            metadata = treatmentPlanReport.metadata;
+            if (typeof metadata === 'string') {
+              try {
+                metadata = JSON.parse(metadata);
+              } catch (e) {
+                logger.error('Error parsing metadata:', e);
+                metadata = null;
+              }
+            }
+          }
+        }
+      }
+
+      // Get client information
+      const recUser = await this.common.getUserProfileByUserProfileId(
+        therapyRequest.client_id
+      );
+
+      if (!recUser || recUser.length === 0) {
+        return { message: 'Client not found', error: -1 };
+      }
+
+      // Get counselor information
+      const counselorInfo = await this.common.getUserProfileByUserProfileId(
+        therapyRequest.counselor_id
+      );
+
+      if (!counselorInfo || counselorInfo.length === 0) {
+        return { message: 'Counselor not found', error: -1 };
+      }
+
+      // Format date for metadata
+      const formatDateForMeta = (date) => {
+        if (!date) return null;
+        try {
+          const dateObj = new Date(date);
+          if (!isNaN(dateObj.getTime())) {
+            return dateObj.toISOString();
+          }
+        } catch (e) {
+          // If date is already in ISO format, return as is
+          if (typeof date === 'string') {
+            return date;
+          }
+        }
+        return null;
+      };
+
+      // Get client name
+      const clientFullName = 
+        (recUser[0].user_first_name && recUser[0].user_last_name 
+          ? `${recUser[0].user_first_name} ${recUser[0].user_last_name}` 
+          : null);
+
+      // Get therapist name
+      const therapistName = 
+        (counselorInfo[0].user_first_name && counselorInfo[0].user_last_name
+          ? `${counselorInfo[0].user_first_name} ${counselorInfo[0].user_last_name}`
+          : null);
+
+      // Use intake date or current date for treatment plan date
+      const treatmentPlanDate = formatDateForMeta(
+        treatmentPlanReportSession.intake_date || therapyRequest.req_dte_not_formatted || new Date()
+      );
+
+      // Fetch latest smart goal from feedback_smart_goal related to this therapy request
+      let latestSmartGoalWording = null;
+      try {
+        // Use innerJoin since we need the feedback and session to exist
+        const smartGoalQuery = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('feedback_smart_goal as fsg')
+          .innerJoin('feedback as fb', 'fsg.feedback_id', 'fb.feedback_id')
+          .innerJoin('session as s', 'fb.session_id', 's.session_id')
+          .where('s.thrpy_req_id', thrpy_req_id)
+          .andWhere('fb.status_yn', 'y')
+          .andWhere('fb.form_id', 16) // Smart goal form_id
+          .whereNotNull('fsg.goal_wording')
+          .select('fsg.goal_wording', 'fsg.created_at', 'fsg.updated_at', 'fb.session_id', 's.thrpy_req_id')
+          .orderBy('fsg.created_at', 'desc')
+          .orderBy('fsg.updated_at', 'desc')
+          .first();
+
+        console.log('Smart goal query result:', smartGoalQuery);
+
+        if (smartGoalQuery && smartGoalQuery.goal_wording) {
+          latestSmartGoalWording = smartGoalQuery.goal_wording;
+        } else {
+          // Debug: check if there are any smart goals without the filters
+          const debugQuery = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('feedback_smart_goal as fsg')
+            .innerJoin('feedback as fb', 'fsg.feedback_id', 'fb.feedback_id')
+            .innerJoin('session as s', 'fb.session_id', 's.session_id')
+            .where('s.thrpy_req_id', thrpy_req_id)
+            .select('fsg.id', 'fsg.feedback_id', 'fsg.goal_wording', 'fb.session_id', 'fb.form_id', 'fb.status_yn', 's.thrpy_req_id')
+            .limit(5);
+          
+          console.log('Debug query (all smart goals for thrpy_req_id):', debugQuery);
+        }
+      } catch (error) {
+        console.error('Error fetching smart goal:', error);
+        logger.error('Error fetching smart goal:', error);
+        // Continue with default value if error occurs
+      }
+
+      // Build response in metadata format, merging saved metadata with prefilled defaults
+      const response = {
+        report_id: existingReport ? existingReport.report_id : null,
+        client_information: {
+          client_name: metadata?.client_information?.client_name || clientFullName || 'N/A',
+          treatment_plan_date: metadata?.client_information?.treatment_plan_date || treatmentPlanDate || new Date().toISOString(),
+        },
+        report: {
+          clinical_assessment: {
+            clinical_impressions: metadata?.report?.clinical_assessment?.clinical_impressions || '',
+          },
+          treatment_goals: {
+            long_term: metadata?.report?.treatment_goals?.long_term || latestSmartGoalWording || 'No Smart-goal data found',
+            short_term: metadata?.report?.treatment_goals?.short_term || '',
+          },
+          planned_interventions: {
+            therapeutic_approaches: metadata?.report?.planned_interventions?.therapeutic_approaches || '',
+            session_frequency: metadata?.report?.planned_interventions?.session_frequency || '',
+          },
+          progress_measurement: {
+            how_measured: metadata?.report?.progress_measurement?.how_measured || '',
+          },
+          review_updates: {
+            review_date: metadata?.report?.review_updates?.review_date || '',
+            updates: metadata?.report?.review_updates?.updates || '',
+          },
+        },
+        therapist_acknowledgment: metadata?.therapist_acknowledgment || {
+          therapist_name: therapistName || 'N/A',
+          signature: '',
+          date: new Date().toISOString(),
+        },
+      };
+
+      console.log('latestSmartGoalWording ❤️❤️❤️', latestSmartGoalWording, thrpy_req_id);
+
+      return response;
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error getting treatment plan report data', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Update treatment plan report data by report_id
+   * @param {Object} data - Treatment plan report data
+   * @returns {Promise<Object>} Updated treatment plan report result
+   */
+  async putTreatmentPlanReportByReportId(data) {
+    try {
+      // Check if a treatment plan report already exists for this report_id
+      const existingReport = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('report_treatment_plan')
+        .where('report_id', data.report_id)
+        .first();
+
+      // Prepare metadata - if provided, use it directly
+      let metadata = null;
+      if (data.metadata && typeof data.metadata === 'object') {
+        metadata = data.metadata;
+      }
+
+      const updateData = {
+        updated_at: new Date(),
+      };
+
+      // Store metadata in JSON field if provided
+      if (metadata && Object.keys(metadata).length > 0) {
+        updateData.metadata = db.raw('?', [JSON.stringify(metadata)]);
+      }
+
+      let treatmentPlanReportId;
+
+      if (existingReport) {
+        // Update existing record
+        await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('report_treatment_plan')
+          .where('report_id', data.report_id)
+          .update(updateData);
+
+        treatmentPlanReportId = existingReport.id;
+      } else {
+        // Insert new record
+        const insertData = {
+          report_id: data.report_id,
+          ...updateData,
+          tenant_id: data.tenant_id || null,
+        };
+
+        const postTreatmentPlanReport = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('report_treatment_plan')
+          .insert(insertData);
+
+        if (!postTreatmentPlanReport) {
+          logger.error('Error creating treatment plan report');
+          return { message: 'Error creating treatment plan report', error: -1 };
+        }
+
+        treatmentPlanReportId = Array.isArray(postTreatmentPlanReport) 
+          ? postTreatmentPlanReport[0] 
+          : postTreatmentPlanReport;
+      }
+
+      return {
+        message: existingReport 
+          ? 'Treatment plan report updated successfully' 
+          : 'Treatment plan report created successfully',
+        id: treatmentPlanReportId,
+        report_id: data.report_id,
+      };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error creating/updating treatment plan report', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
    * Generate PDF for a report by report_id
    * @param {Object} data - Query data
    * @param {number} data.report_id - Report ID

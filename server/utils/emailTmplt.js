@@ -1054,6 +1054,85 @@ export const newAppointmentEmail = (
   };
 };
 
+export const sessionReminderEmail = (
+  clientEmail,
+  clientName,
+  therapistName,
+  sessionDate,
+  sessionTime,
+  timezone,
+  sessionFormat,
+  locationOrLink,
+  secureLink,
+  counselorEmail = null
+) => {
+  const formatDisplay = sessionFormat === 'ONLINE' ? 'Video' : 
+                        (sessionFormat === 'IN-PERSON' || sessionFormat === 'IN_PERSON') ? 'In-Person' : 'Phone';
+  
+  const locationSection = sessionFormat === 'ONLINE' 
+    ? `
+      <tr style="background-color: #ffffff; color: #333; text-align: left;">
+        <th style="padding: 12px 8px;">Video Link</th>
+        <td style="padding: 8px;">
+          ${locationOrLink ? `<a href="${locationOrLink}" style="color: #007bff; text-decoration: underline;">${locationOrLink}</a>` : 'Will be provided before the session'}
+        </td>
+      </tr>
+    `
+    : `
+      <tr style="background-color: #ffffff; color: #333; text-align: left;">
+        <th style="padding: 12px 8px;">Location</th>
+        <td style="padding: 8px;">${locationOrLink || 'Please contact your therapist for location details'}</td>
+      </tr>
+    `;
+
+  const emailObj = {
+    to: clientEmail,
+    subject: 'Session Reminder - Your appointment is tomorrow',
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+        <p>Hello ${capitalizeFirstLetter(clientName)},</p>
+        <p>This is a friendly reminder that you have a therapy session scheduled for tomorrow.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd; border-radius: 8px; background-color: #ffffff;">
+          <tbody>
+            <tr style="background-color: #f9f9f9; color: #333; text-align: left;">
+              <th style="padding: 12px 8px;">Therapist</th>
+              <td style="padding: 8px;">${therapistName}</td>
+            </tr>
+            <tr style="background-color: #ffffff; color: #333; text-align: left;">
+              <th style="padding: 12px 8px;">Date & Time</th>
+              <td style="padding: 8px;">${sessionDate} at ${sessionTime} (${timezone})</td>
+            </tr>
+            <tr style="background-color: #f9f9f9; color: #333; text-align: left;">
+              <th style="padding: 12px 8px;">Session Type</th>
+              <td style="padding: 8px;">${formatDisplay}</td>
+            </tr>
+            ${locationSection}
+          </tbody>
+        </table>
+        <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin: 20px 0;">
+          <p style="margin: 0; font-weight: bold; color: #856404;">Need to cancel or reschedule?</p>
+          <p style="margin: 10px 0 0 0;">
+            ${secureLink 
+              ? `<a href="${secureLink}" style="color: #007bff; text-decoration: underline;">Click here to manage your session</a>`
+              : 'Please contact your therapist directly to cancel or reschedule your appointment.'}
+          </p>
+        </div>
+        <p>We look forward to seeing you!</p>
+        <p style="margin-top: 30px;">Thank you,</p>
+        <p><strong>The MindBridge Team</strong></p>
+        ${EMAIL_DISCLAIMER}
+      </div>
+    `,
+  };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
+};
+
 export const onboardingAdminEmail = (data) => {
   // Check if signature is a base64 string (starts with 'data:image')
   let signatureHtml = '';

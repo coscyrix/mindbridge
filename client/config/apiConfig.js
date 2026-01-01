@@ -25,13 +25,15 @@ const ApiConfig = {
     submissionDetails: "/userForm",
   },
   feedback: {
-    getFeedbackFormDetails: "/feedback",
+    getFeedbackFormDetails: "/feedback", // Will be depriciated in future
+    getUserInfoAndFormStatus: "/feedback/user-info-form-status",
     submitPCL5Form: "/feedback/pcl5",
     submitPHQ9Form: "/feedback/phq9",
     submitGAD7Form: "/feedback/gad7",
     submitIPFForm: "/feedback/ipf",
     submitWHODASForm: "/feedback/whodas",
     submitSMARTGoalForm: "/feedback/smart-goal",
+    updateSMARTGoalForm: "/feedback/smart-goal",
     submitConsentForm: "/feedback/consent",
     submitGASForm: "/feedback/gas",
   },

@@ -23,6 +23,7 @@ export default class ReportDataController {
     this.getCompleteReport = this.getCompleteReport.bind(this);
     this.getTreatmentPlanReportByReportId = this.getTreatmentPlanReportByReportId.bind(this);
     this.putTreatmentPlanReportByReportId = this.putTreatmentPlanReportByReportId.bind(this);
+    this.getTreatmentPlanReportData = this.getTreatmentPlanReportData.bind(this);
     this.getProgressReportData = this.getProgressReportData.bind(this);
     this.getIntakeReportData = this.getIntakeReportData.bind(this);
     this.getDischargeReportData = this.getDischargeReportData.bind(this);
@@ -268,6 +269,41 @@ export default class ReportDataController {
     }
 
     res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Get treatment plan report data
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async getTreatmentPlanReportData(req, res) {
+    const reportDataService = new ReportDataService();
+    const data = req.query;
+
+    if (!data.thrpy_req_id) {
+      res.status(400).json({ message: 'Missing mandatory field: thrpy_req_id' });
+      return;
+    }
+
+    // Convert to number if provided
+    if (data.thrpy_req_id) {
+      data.thrpy_req_id = Number(data.thrpy_req_id);
+    }
+
+    if (data.session_id) {
+      data.session_id = Number(data.session_id);
+    }
+
+    const rec = await reportDataService.getTreatmentPlanReportData(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json({ rec: rec });
   }
 
   //////////////////////////////////////////

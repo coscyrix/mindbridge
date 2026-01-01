@@ -23,6 +23,7 @@ router.post('/discharge', authenticate, AsyncWrapper(reportDataController.postDi
 // Get report data endpoints
 router.get('/treatment-plan-report', authenticate, AsyncWrapper(reportDataController.getTreatmentPlanReportByReportId));
 router.put('/treatment-plan-report', authenticate, AsyncWrapper(reportDataController.putTreatmentPlanReportByReportId));
+router.get('/treatment-plan-report-data', authenticate, AsyncWrapper(reportDataController.getTreatmentPlanReportData));
 router.get('/intake-report', authenticate, AsyncWrapper(reportDataController.getIntakeReportData));
 router.get('/progress-report', authenticate, AsyncWrapper(reportDataController.getProgressReportData));
 router.get('/discharge-report', authenticate, AsyncWrapper(reportDataController.getDischargeReportData));

@@ -861,7 +861,7 @@ export const IntakeReportPDF = (data) => (doc) => {
   doc.fillColor(headerColor)
      .fontSize(18)
      .font('Helvetica-Bold')
-     .text('CLIENT INTAKE REPORT', margin, margin, { align: 'center', width: contentWidth });
+     .text('CLIENT INTAKE FORM', margin, margin, { align: 'center', width: contentWidth });
 
   // Confidential subtitle
   doc.fillColor('#7f8c8d')
@@ -1145,8 +1145,8 @@ export const IntakeReportPDF = (data) => (doc) => {
 
   doc.moveDown(1);
 
-  // ========== INITIAL CLINICAL IMPRESSION ==========
-  currentY = drawSectionHeader('Initial Clinical Impression', doc.y);
+  // ========== Initial Assessment (Preliminary) ==========
+  currentY = drawSectionHeader('Initial Assessment (Preliminary)', doc.y);
 
   doc.fillColor(textColor)
      .fontSize(10)
@@ -1163,10 +1163,17 @@ export const IntakeReportPDF = (data) => (doc) => {
   // ========== CONSENT ==========
   currentY = drawSectionHeader('Consent', doc.y);
 
+  // Draw checked checkbox
+  const checkboxX = margin;
+  const checkboxY = currentY;
+  doc.rect(checkboxX, checkboxY, checkboxSize, checkboxSize).stroke();
+  drawCheckmark(checkboxX, checkboxY, checkboxSize);
+
+  // Draw text after checkbox
   doc.fillColor(textColor)
      .fontSize(10)
      .font('Helvetica')
-     .text('Client has provided informed consent to begin therapy services.', margin, currentY);
+     .text('Client has provided informed consent to begin therapy services.', checkboxX + checkboxSize + 5, checkboxY + 2);
 
   doc.moveDown(2);
 

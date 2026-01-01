@@ -7,7 +7,7 @@ import { capitalizeName } from "../../../utils/constants";
 import CustomModal from "../../CustomModal";
 import BarGraph from "../../CustomGraphs/BarGraph";
 import CommonServices from "../../../services/CommonServices";
-import SmartGoals from "./SmartGoals";
+import SmartGoals from "./SmartGoals/SmartGoals";
 import IpfGraph from "./IpfGraph";
 import ConsentForm from "../../Forms/PatientForms/ConsentForm";
 import AttendanceGraph from "./AttendanceGraph";
@@ -58,6 +58,9 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
   const [tenant_id, setTenant_Id] = useState<number | null>(null);
   const [whodasDomainData, setWhodasDomainData] = useState<any[]>([]);
   const [intakeFormData, setIntakeFormData] = useState<any>(null);
+  const [serviceCode, setServiceCode] = useState<string | null>(null);
+  const [serviceName, setServiceName] = useState<string | null>(null);
+  const [currentRow, setCurrentRow] = useState<any>(null);
 
   const keyNameArr: KeyNameConfig[] = [
     {
@@ -153,6 +156,7 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
     if (row.form_cde === "CONSENT") {
       setTenant_Id(row.tenant_id);
     }
+    setCurrentRow(row); // Store row data for use in components
     try {
       setFormName(row.form_cde);
       row.form_cde == "SMART-GOAL"
@@ -176,6 +180,8 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
       setGraphDataHeading("");
       setWhodasDomainData([]);
       setIntakeFormData(null);
+      setServiceCode(null);
+      setServiceName(null);
       // setConsentFormData("");
 
       // Handle INTAKE form separately
@@ -207,6 +213,12 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
       let payload: any;
       if (row?.form_cde === "CONSENT") {
         payload = { feedback_id: row.feedback_id };
+      } else if (row?.form_cde === "SMART-GOAL") {
+        // Use thrpy_req_id for SMART-GOAL to fetch all SMART goals for that therapy request
+        payload = {
+          form_id: row.form_id,
+          thrpy_req_id: row.thrpy_req_id,
+        };
       } else {
         payload = {
           form_id: row.form_id,
@@ -219,6 +231,13 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
         if (row.form_cde == "SMART-GOAL") {
           setSmartGoalsData(data);
           setGraphDataHeading("Smart Goal Assessment Results");
+          // Set service information for goal filtering
+          // Prefer service info from feedback response, fallback to row data
+          const feedbackRec = Array.isArray(data?.rec)
+            ? data.rec[0]
+            : data?.rec;
+          setServiceCode(feedbackRec?.service_code || row.service_code || null);
+          setServiceName(feedbackRec?.service_name || row.service_name || null);
         } else if (row.form_cde == "IPF") {
           const ipfEntries = Array.isArray(response?.data?.rec)
             ? response.data.rec
@@ -477,6 +496,12 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
             <SmartGoals
               smartGoalsData={smartGoalsData}
               loading={loading == "smartGoalsData"}
+              serviceCode={serviceCode}
+              serviceName={serviceName}
+              session_id={currentRow?.session_id || currentRow?.feedback?.session_id}
+              client_id={currentRow?.client_id}
+              feedback_id={currentRow?.feedback_id}
+              onClose={() => setShowReportDetails(false)}
             />
           ) : formName == "IPF" ? (
             <IpfGraph ipfData={ipfData} loading={loading == "ipfData"} />

@@ -258,6 +258,24 @@ const CommonServices = {
       throw error;
     }
   },
+  updateSMARTGoalForm: async (payload) => {
+    try {
+      const response = await api.put(ApiConfig.feedback.updateSMARTGoalForm, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  getUserInfoAndFormStatus: async (params) => {
+    try {
+      const response = await api.get(ApiConfig.feedback.getUserInfoAndFormStatus, {
+        params,
+      });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
   submitConsentForm: async (payload) => {
     try {
       const response = await api.post(ApiConfig.feedback.submitConsentForm, payload);
