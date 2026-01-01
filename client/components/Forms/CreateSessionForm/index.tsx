@@ -33,6 +33,7 @@ import ProgressReportModal from "./ReportModals/ProgressReportModal";
 import DischargeReportModal from "./ReportModals/DischargeReportModal";
 import IntakeReportModal from "./ReportModals/IntakeReportModal";
 import TreatmentPlanReportModal from "./ReportModals/TreatmentPlanReportModal";
+import GroupSessionFields from "./GroupSessionFields";
 import CommonServices from "../../../services/CommonServices";
 import { useQueryData } from "../../../utils/hooks/useQueryData";
 import { useMutationData } from "../../../utils/hooks/useMutationData";
@@ -100,6 +101,12 @@ function CreateSessionForm({
     useState(false);
   const [selectedTreatmentPlanReportRow, setSelectedTreatmentPlanReportRow] =
     useState(null);
+
+  // Group Session State
+  const [selectedGroupClients, setSelectedGroupClients] = useState<any[]>([]);
+  const [groupName, setGroupName] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
+  const [maxParticipants, setMaxParticipants] = useState(10);
 
   // Custom Hooks
   const {
@@ -178,12 +185,32 @@ function CreateSessionForm({
       user_target_outcome: client.user_target_outcome,
     }));
 
+  // All clients dropdown for group sessions (includes clients with existing schedules)
+  const allClientsDropdown = clients?.map((client) => ({
+    label: `${client.user_first_name} ${client.user_last_name}`,
+    value: client.user_profile_id,
+    serialNumber: client.clam_num || "N/A",
+    has_schedule: client.has_schedule,
+    user_target_outcome: client.user_target_outcome,
+  }));
+
   const servicesDropdown = servicesData
     ?.filter((service) => service.is_report == 0)
     .map((service) => ({
       label: service.service_name,
       value: service.service_id,
     }));
+
+  // Check if selected service is a group service (auto-enable group session)
+  const selectedServiceId = methods.watch("service_id")?.value;
+  const selectedService = servicesData?.find(
+    (service) => service.service_id === selectedServiceId
+  );
+  const isGroupSession =
+    selectedService?.is_group === 1 || selectedService?.is_group === true;
+
+  // Get the selected client from "Client Name" dropdown
+  const selectedClientFromDropdown = methods.watch("client_first_name");
 
   const sessionFormatDropdown = [
     { label: "Online", value: "1" },
@@ -343,6 +370,60 @@ function CreateSessionForm({
     }
   }, [assessmentFormNames]);
 
+  // Auto-populate group name when a group service is selected
+  useEffect(() => {
+    if (isGroupSession && selectedService?.service_name) {
+      // Set group name to service name if empty or not yet set
+      if (!groupName) {
+        setGroupName(selectedService.service_name);
+      }
+    }
+    // Clear group session data when switching to non-group service
+    if (!isGroupSession) {
+      setSelectedGroupClients([]);
+      setGroupName("");
+      setGroupDescription("");
+      setMaxParticipants(10);
+    }
+  }, [isGroupSession, selectedService?.service_name]);
+
+  // Auto-add/update selected client from "Client Name" dropdown as primary client in group participants
+  // This ensures the client from "Client Name" is always first and replaces the previous primary client when changed
+  useEffect(() => {
+    if (!isGroupSession) return;
+
+    if (selectedClientFromDropdown?.value && allClientsDropdown) {
+      // Find the full client object from allClientsDropdown
+      const primaryClient = allClientsDropdown.find(
+        (client) => client.value === selectedClientFromDropdown.value
+      );
+
+      if (primaryClient) {
+        setSelectedGroupClients((prevClients) => {
+          // Check if primary client is already the only client (no change needed)
+          if (
+            prevClients.length === 1 &&
+            prevClients[0].value === primaryClient.value
+          ) {
+            return prevClients; // No update needed
+          }
+
+          // When "Client Name" changes, replace all participants with only the new primary client
+          return [primaryClient];
+        });
+      }
+    } else if (!selectedClientFromDropdown?.value) {
+      // If no client is selected from "Client Name", clear all participants
+      setSelectedGroupClients((prevClients) => {
+        if (prevClients.length === 0) {
+          return prevClients; // Already empty, no update needed
+        }
+        return [];
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGroupSession, selectedClientFromDropdown?.value]);
+
   const handleOpenAssessmentModal = () => {
     setSelectedAssessment(null);
     setIsAssessmentModalOpen(true);
@@ -411,6 +492,11 @@ function CreateSessionForm({
       setScheduledSession([]);
       setAddittionalSessions([]);
       methods.reset();
+      // Reset group session state
+      setSelectedGroupClients([]);
+      setGroupName("");
+      setGroupDescription("");
+      setMaxParticipants(10);
       return;
     }
 
@@ -525,6 +611,23 @@ function CreateSessionForm({
                 infoTooltipContent={infoTooltipContent}
               />
 
+              {/* Group Session Fields - Auto-enabled when service has is_group=true */}
+              {!initialData && isGroupSession && (
+                <GroupSessionFields
+                  selectedClients={selectedGroupClients}
+                  setSelectedClients={setSelectedGroupClients}
+                  groupName={groupName}
+                  setGroupName={setGroupName}
+                  groupDescription={groupDescription}
+                  setGroupDescription={setGroupDescription}
+                  maxParticipants={maxParticipants}
+                  setMaxParticipants={setMaxParticipants}
+                  availableClients={allClientsDropdown || []}
+                  serviceName={selectedService?.service_name}
+                  disabled={!!initialData}
+                />
+              )}
+
               {![3, 4].includes(userObj?.role_id) &&
                 allSessionsStatusScheduled &&
                 !showGeneratedSession && (
@@ -535,7 +638,13 @@ function CreateSessionForm({
                         allSessionsStatusScheduled,
                         setSessionTableData,
                         setScheduledSession,
-                        fetchAllSplit
+                        fetchAllSplit,
+                        isGroupSession,
+                        selectedGroupClients,
+                        groupName,
+                        groupDescription,
+                        maxParticipants,
+                        servicesData
                       )
                     }
                     className={`generate-session-button ${

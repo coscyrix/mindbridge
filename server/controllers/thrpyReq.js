@@ -39,6 +39,46 @@ export default class ThrpyReqController {
 
   //////////////////////////////////////////
 
+  async postGroupThrpyReq(req, res) {
+    const data = req.body;
+    // Inject tenant_id from token if available
+    if (req.decoded && req.decoded.tenant_id) {
+      data.tenant_id = req.decoded.tenant_id;
+    }
+
+    if (
+      !data.counselor_id ||
+      !data.client_id ||
+      !data.service_id ||
+      !data.session_format_id ||
+      !data.intake_dte ||
+      !data.participant_client_ids ||
+      !Array.isArray(data.participant_client_ids) ||
+      data.participant_client_ids.length === 0
+    ) {
+      res.status(400).json({ message: 'Missing mandatory fields' });
+      return;
+    }
+
+    // Validate that primary client is in participant list
+    if (!data.participant_client_ids.includes(data.client_id)) {
+      res.status(400).json({ message: 'Primary client must be included in participants' });
+      return;
+    }
+
+    const thrpyReq = new ThrpyReqService();
+    const rec = await thrpyReq.postGroupThrpyReq(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
   async putThrpyReqById(req, res) {
     const req_id = req.query.req_id;
     const role_id = req.query.role_id;

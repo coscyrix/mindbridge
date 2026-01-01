@@ -11,6 +11,7 @@ const router = Router();
 const thrpyReqController = new ThrpyReqController();
 
 router.post('/', authenticate, AsyncWrapper(thrpyReqController.postThrpyReq));
+router.post('/group', authenticate, AsyncWrapper(thrpyReqController.postGroupThrpyReq));
 
 router.put('/', authenticate, AsyncWrapper(thrpyReqController.putThrpyReqById));
 

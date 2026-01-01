@@ -52,6 +52,48 @@ export default class ThrpyReqService {
 
   //////////////////////////////////////////
 
+  async postGroupThrpyReq(data) {
+    // Use tenant_id from data if present (from token)
+    if (!data.tenant_id) {
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+      if (!Array.isArray(tenantId) || !tenantId[0] || !tenantId[0].tenant_id) {
+        return { message: 'Counselor not found or missing tenant_id', error: -1 };
+      }
+      data.tenant_id = Number(tenantId[0].tenant_id);
+    }
+
+    const schema = joi.object({
+      counselor_id: joi.number().required(),
+      client_id: joi.number().required(), // Primary client
+      service_id: joi.number().required(),
+      session_format_id: joi
+        .alternatives()
+        .try(joi.string(), joi.number())
+        .required(),
+      intake_dte: joi.date().required(),
+      tenant_id: joi.number().required(),
+      participant_client_ids: joi.array().items(joi.number()).min(1).required(),
+      group_name: joi.string().optional().allow('', null),
+      group_description: joi.string().optional().allow('', null),
+      max_participants: joi.number().optional(),
+      number_of_sessions: joi.number().optional(),
+      is_group_session: joi.boolean().optional(), // Allow but not required
+    }).unknown(true); // Allow additional fields that aren't validated
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const thrpyReq = new ThrpyReq();
+    return thrpyReq.postGroupThrpyReq(data);
+  }
+
+  //////////////////////////////////////////
+
   async putThrpyReqById(data) {
     const checkThrpyReq = await this.common.getThrpyReqById(data.req_id);
     if (checkThrpyReq.error) {

@@ -24,7 +24,13 @@ export const useSessionActions = (
     allSessionsStatusScheduled,
     setSessionTableData,
     setScheduledSession,
-    fetchAllSplit
+    fetchAllSplit,
+    isGroupSession = false,
+    selectedGroupClients = [],
+    groupName = "",
+    groupDescription = "",
+    maxParticipants = 10,
+    servicesData = null
   ) => {
     fetchAllSplit();
     const formData = methods.getValues();
@@ -55,38 +61,105 @@ export const useSessionActions = (
           formData?.req_dte,
           formData?.req_time
         );
-        const payload = {
-          counselor_id: userObj?.user_profile_id,
-          client_id: Number(formData?.client_first_name?.value),
-          service_id: Number(formData?.service_id?.value),
-          session_format_id: Number(formData?.session_format_id?.value),
-          intake_dte: payloadDate,
-        };
 
-        // Add number_of_sessions if limit_sessions toggle is on
-        if (formData?.limit_sessions && formData?.number_of_sessions) {
-          payload.number_of_sessions = Number(formData.number_of_sessions);
-        }
-
-        const response = await api.post("/thrpyReq", payload);
-        if (response.status === 200) {
-          const { data } = response;
-          const { req_dte_not_formatted, ...sessionPayload } = data?.rec[0];
-          setCreateSessionPayload(sessionPayload);
-          setThrpyReqId(data?.rec[0]?.req_id);
-          if (initialData) {
-            setScheduledSession(data?.rec[0]?.session_obj);
-            await fetchCounselorClient();
-          } else {
-            setSessionTableData(data?.rec[0]?.session_obj);
+        // Check if this is a group session
+        const selectedServiceId = formData?.service_id?.value;
+        let selectedServiceName = "Group Session";
+        if (servicesData) {
+          const selectedService = servicesData.find(
+            (service) => service.service_id === selectedServiceId
+          );
+          if (selectedService) {
+            selectedServiceName = selectedService.service_name;
           }
-          setShowGeneratedSession(true);
-          
-          // Invalidate clients cache since has_schedule status changed
-          await queryClient.invalidateQueries({
-            predicate: (query) => query.queryKey[0] === "clients",
-            refetchType: "all",
-          });
+        }
+        const isGroup = isGroupSession || false;
+
+        if (isGroup) {
+          // Group session payload
+          if (!selectedGroupClients || selectedGroupClients.length === 0) {
+            toast.error("Please select at least one participant for the group session");
+            return;
+          }
+
+          const payload = {
+            counselor_id: userObj?.user_profile_id,
+            client_id: Number(formData?.client_first_name?.value), // Primary client
+            service_id: Number(formData?.service_id?.value),
+            session_format_id: Number(formData?.session_format_id?.value),
+            intake_dte: payloadDate,
+            group_name: groupName || selectedServiceName,
+            group_description: groupDescription || null,
+            max_participants: maxParticipants || 10,
+            participant_client_ids: selectedGroupClients.map(client => 
+              typeof client === 'object' ? client.value : client
+            ),
+          };
+
+          // Add number_of_sessions if limit_sessions toggle is on
+          if (formData?.limit_sessions && formData?.number_of_sessions) {
+            payload.number_of_sessions = Number(formData.number_of_sessions);
+          }
+
+          const response = await api.post("/thrpyReq/group", payload);
+          if (response.status === 200) {
+            const { data } = response;
+            // For group sessions, use the primary client's therapy request (first in array)
+            if (data?.rec && data.rec.length > 0) {
+              const primaryReq = data.rec[0];
+              const { req_dte_not_formatted, ...sessionPayload } = primaryReq;
+              setCreateSessionPayload(sessionPayload);
+              setThrpyReqId(primaryReq?.req_id);
+              if (initialData) {
+                setScheduledSession(primaryReq?.session_obj);
+                await fetchCounselorClient();
+              } else {
+                setSessionTableData(primaryReq?.session_obj);
+              }
+              setShowGeneratedSession(true);
+              
+              // Invalidate clients cache since has_schedule status changed
+              await queryClient.invalidateQueries({
+                predicate: (query) => query.queryKey[0] === "clients",
+                refetchType: "all",
+              });
+            }
+          }
+        } else {
+          // Regular session payload
+          const payload = {
+            counselor_id: userObj?.user_profile_id,
+            client_id: Number(formData?.client_first_name?.value),
+            service_id: Number(formData?.service_id?.value),
+            session_format_id: Number(formData?.session_format_id?.value),
+            intake_dte: payloadDate,
+          };
+
+          // Add number_of_sessions if limit_sessions toggle is on
+          if (formData?.limit_sessions && formData?.number_of_sessions) {
+            payload.number_of_sessions = Number(formData.number_of_sessions);
+          }
+
+          const response = await api.post("/thrpyReq", payload);
+          if (response.status === 200) {
+            const { data } = response;
+            const { req_dte_not_formatted, ...sessionPayload } = data?.rec[0];
+            setCreateSessionPayload(sessionPayload);
+            setThrpyReqId(data?.rec[0]?.req_id);
+            if (initialData) {
+              setScheduledSession(data?.rec[0]?.session_obj);
+              await fetchCounselorClient();
+            } else {
+              setSessionTableData(data?.rec[0]?.session_obj);
+            }
+            setShowGeneratedSession(true);
+            
+            // Invalidate clients cache since has_schedule status changed
+            await queryClient.invalidateQueries({
+              predicate: (query) => query.queryKey[0] === "clients",
+              refetchType: "all",
+            });
+          }
         }
       }
     } catch (error) {

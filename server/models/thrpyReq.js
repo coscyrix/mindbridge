@@ -858,6 +858,411 @@ export default class ThrpyReq {
 
   //////////////////////////////////////////
 
+  async postGroupThrpyReq(data) {
+    try {
+      const crypto = require('crypto');
+      const { participant_client_ids, group_name, group_description, max_participants } = data;
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+
+      if (!tenantId || !tenantId[0] || !tenantId[0].tenant_id) {
+        logger.error('Tenant not found');
+        return { message: 'Tenant not found', error: -1 };
+      }
+
+      // Parse the intake date and time from the ISO string
+      let req_dte, req_time;
+      
+      if (data.intake_dte && data.intake_dte.includes('T')) {
+        const parts = data.intake_dte.split('T');
+        req_dte = parts[0]; // 'YYYY-MM-DD'
+        req_time = parts[1]; // 'HH:mm:ss.sssZ'
+      } else if (data.intake_dte) {
+        req_dte = data.intake_dte;
+        req_time = '09:00:00.000Z';
+      } else {
+        req_dte = new Date().toISOString().split('T')[0];
+        req_time = '09:00:00.000Z';
+      }
+
+      // Validate date/time
+      if (!req_dte || !req_time) {
+        logger.error('Invalid date/time format provided');
+        return { message: 'Invalid date/time format provided', error: -1 };
+      }
+
+      // Get service details
+      const servc = await this.service.getServiceById({
+        service_id: data.service_id,
+      });
+
+      if (!servc || !servc.rec || !servc.rec[0]) {
+        logger.error(`Service not found for service_id: ${data.service_id}`);
+        return { message: `Service not found for service_id: ${data.service_id}`, error: -1 };
+      }
+
+      const svc = servc.rec[0];
+      const dischargeReportCodeMap = {
+        OTR_ST: 'OTR_SUM_REP',
+        OTR_TS: 'OTR_Trns_REP',
+      };
+      const dischargeReportCode =
+        dischargeReportCodeMap[svc.service_code] || 'DR';
+
+      // Get tenant-specific discharge service
+      let drService = await this.service.getServiceById({
+        service_code: dischargeReportCode,
+        tenant_id: tenantId[0].tenant_generated_id,
+        is_report: 1,
+      });
+
+      // If not found, try to find by the same code using tenant_generated_id
+      if (!drService || !drService.rec || !drService.rec[0]) {
+        drService = await this.service.getServiceById({
+          service_code: dischargeReportCode,
+          tenant_id: tenantId[0].tenant_generated_id,
+        });
+      }
+
+      // If still not found, use a default or skip discharge report
+      if (!drService || !drService.rec || !drService.rec[0]) {
+        logger.warn(`Discharge report service not found for code: ${dischargeReportCode}, tenant: ${tenantId[0].tenant_generated_id}`);
+        // Continue without discharge report - it's optional
+      }
+
+      const drSvc = drService && drService.rec && drService.rec[0] ? drService.rec[0] : null;
+
+      // Get reference fees
+      const ref_fees = await this.common.getRefFeesByTenantId(tenantId[0].tenant_id);
+      if (!ref_fees || ref_fees.error || !ref_fees[0]) {
+        logger.error('Error getting reference fees');
+        return { message: 'Error getting reference fees', error: -1 };
+      }
+
+      // Generate a group identifier for linking all participants
+      const groupIdentifier = `GROUP_${Date.now()}_${data.counselor_id}`;
+
+      // Create group metadata to store in session_description
+      const groupMetadata = {
+        is_group: true,
+        group_name: group_name || svc.service_name,
+        group_description: group_description || null,
+        max_participants: max_participants || 10,
+        group_identifier: groupIdentifier,
+        participant_count: participant_client_ids.length,
+        participant_client_ids: participant_client_ids,
+      };
+
+      const groupMetadataJson = JSON.stringify(groupMetadata);
+
+      // Store results for all participants
+      const groupTherapyRequests = [];
+      const errors = [];
+
+      // Create therapy request and sessions for each participant
+      for (const client_id of participant_client_ids) {
+        try {
+          // Verify client exists and has client role
+          const recClient = await this.userProfile.getUserProfileById({
+            user_profile_id: client_id,
+          });
+
+          if (!recClient || !recClient.rec || !recClient.rec[0]) {
+            logger.error(`Client profile not found for client_id: ${client_id}`);
+            errors.push({ client_id, error: 'Client profile not found' });
+            continue;
+          }
+
+          if (recClient.rec[0].role_id !== 1) {
+            logger.error(`User ${client_id} does not have the client role`);
+            errors.push({ client_id, error: 'User does not have the client role' });
+            continue;
+          }
+
+          // Get client's target outcome
+          let treatmentTarget = null;
+          try {
+            const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
+              user_profile_id: client_id,
+            });
+
+            if (clientTargetOutcome && clientTargetOutcome.length > 0) {
+              const targetOutcomeId = clientTargetOutcome[0].target_outcome_id;
+              const targetOutcome = await this.common.getTargetOutcomeById(targetOutcomeId);
+              if (targetOutcome && targetOutcome.length > 0) {
+                treatmentTarget = targetOutcome[0].target_name;
+              }
+            }
+          } catch (error) {
+            logger.warn(`Could not determine treatment target for client ${client_id}:`, error);
+          }
+
+          // Generate cancel hash for this client
+          const hashData = `${client_id}_${data.counselor_id}_${Date.now()}_${Math.random()}`;
+          const cancelHash = crypto.createHash('sha256').update(hashData).digest('base64url');
+
+          // Determine session format
+          let sessionFormatId = 'ONLINE';
+          if (data.session_format_id === 2 || data.session_format_id === '2' || data.session_format_id === 'IN-PERSON') {
+            sessionFormatId = 'IN-PERSON';
+          }
+
+          // Create therapy request for this participant
+          const tmpThrpyReq = {
+            counselor_id: data.counselor_id,
+            client_id: client_id,
+            service_id: data.service_id,
+            session_format_id: sessionFormatId,
+            req_dte: req_dte,
+            req_time: req_time,
+            session_desc: `${svc.service_code} [GROUP: ${group_name || svc.service_name}]`,
+            tenant_id: data.tenant_id,
+            treatment_target: treatmentTarget,
+            cancel_hash: cancelHash,
+          };
+
+          const postThrpyReq = await prisma.thrpy_req.create({
+            data: tmpThrpyReq,
+          });
+
+          if (!postThrpyReq || !postThrpyReq.req_id) {
+            logger.error(`Error creating therapy request for client_id: ${client_id}`);
+            errors.push({ client_id, error: 'Error creating therapy request' });
+            continue;
+          }
+
+          // Create sessions for this participant (reuse logic from postThrpyReq)
+          // For simplicity, we'll create sessions the same way but with group metadata
+          const tmpSessionObj = [];
+          
+          if (svc.svc_formula_typ === 's') {
+            let svcFormula = svc.svc_formula;
+            if (!Array.isArray(svcFormula) || svcFormula.length !== 1) {
+              logger.error('Unexpected formula format for service');
+              errors.push({ client_id, error: 'Unexpected formula format' });
+              continue;
+            }
+
+            let currentDate = new Date(`${req_dte}T00:00:00Z`);
+            const activeSessionLimit = data.number_of_sessions ? Number(data.number_of_sessions) : svc.nbr_of_sessions;
+
+            // Skip weekends for first session
+            while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
+              currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+            }
+
+            for (let i = 0; i < svc.nbr_of_sessions; i++) {
+              if (i !== 0) {
+                currentDate.setUTCDate(currentDate.getUTCDate() + svcFormula[0]);
+                while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
+                  currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                }
+              }
+
+              const intakeDate = currentDate.toISOString().split('T')[0];
+              const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
+              
+              const tmpSession = {
+                thrpy_req_id: postThrpyReq.req_id,
+                service_id: data.service_id,
+                intake_date: intakeDate,
+                scheduled_time: req_time,
+                session_format: sessionFormatId, // Use the enum value (ONLINE or IN-PERSON)
+                session_code: svc.service_code,
+                session_description: groupMetadataJson, // Store group metadata in session_description
+                tenant_id: data.tenant_id,
+                ...sessionAmounts
+              };
+
+              if (i + 1 > activeSessionLimit) {
+                tmpSession.session_status = 'INACTIVE';
+              }
+
+              // Handle reports based on svc_report_formula
+              if (
+                svc.svc_report_formula &&
+                Array.isArray(svc.svc_report_formula.position) &&
+                svc.svc_report_formula.position.includes(i + 1)
+              ) {
+                const reportIndex = svc.svc_report_formula.position.indexOf(i + 1);
+                const reportServiceId = svc.svc_report_formula.service_id[reportIndex];
+                
+                // First try to find the report service in the current tenant
+                let reportService = await this.service.getServiceById({
+                  service_id: reportServiceId,
+                  tenant_id: data.tenant_id,
+                  is_report: 1,
+                });
+
+                // If not found in current tenant, try to find by service_code in current tenant
+                if (!reportService || !reportService.rec || !reportService.rec[0]) {
+                  // Get the service details to find its service_code
+                  const originalService = await this.service.getServiceById({
+                    service_id: reportServiceId,
+                    tenant_id: svc.tenant_id,
+                    is_report: 1,
+                  });
+
+                  if (originalService && originalService.rec && originalService.rec[0]) {
+                    const serviceCode = originalService.rec[0].service_code;
+                    // Look for service with same code in current tenant
+                    reportService = await this.service.getServiceById({
+                      service_code: serviceCode,
+                      tenant_id: tenantId[0].tenant_generated_id,
+                      is_report: 1,
+                    });
+                  }
+                }
+
+                if (reportService && reportService.rec && reportService.rec[0]) {
+                  // Create a report session object
+                  const reportSessionAmounts = this.calculateSessionAmounts(Number(reportService.rec[0].total_invoice), ref_fees[0], Number(reportService.rec[0].gst));
+                  const reportSession = {
+                    thrpy_req_id: postThrpyReq.req_id,
+                    service_id: reportService.rec[0].service_id,
+                    intake_date: intakeDate,
+                    scheduled_time: req_time,
+                    session_format: sessionFormatId,
+                    session_code: `${svc.service_code}_${reportService.rec[0].service_code}`,
+                    session_description: `${svc.service_code} ${reportService.rec[0].service_name}`,
+                    is_report: true,
+                    tenant_id: data.tenant_id,
+                    ...reportSessionAmounts
+                  };
+                  
+                  // Add the report session to the array
+                  tmpSessionObj.push(reportSession);
+                } else {
+                  logger.warn(`Report service not found for service_id: ${reportServiceId}, tenant_id: ${tenantId[0].tenant_generated_id}`);
+                }
+              }
+
+              // Add the regular session to the array
+              tmpSessionObj.push(tmpSession);
+            }
+
+            // Add the discharge report session after the last interval (if drSvc exists)
+            if (drSvc) {
+              currentDate.setUTCDate(currentDate.getUTCDate() + svcFormula[0]);
+              
+              // Skip weekends for the discharge report
+              while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
+                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+              }
+
+              const dischargeDate = currentDate.toISOString().split('T')[0];
+              const dischargeSessionAmounts = this.calculateSessionAmounts(Number(drSvc.total_invoice), ref_fees[0], Number(drSvc.gst));
+              const dischargeSession = {
+                thrpy_req_id: postThrpyReq.req_id,
+                service_id: drSvc.service_id,
+                intake_date: dischargeDate,
+                scheduled_time: req_time,
+                session_format: sessionFormatId,
+                session_code: `${svc.service_code}_${drSvc.service_code}`,
+                session_description: `${svc.service_code} ${drSvc.service_name}`,
+                is_report: true,
+                tenant_id: data.tenant_id,
+                ...dischargeSessionAmounts
+              };
+
+              // Add the discharge session to the array
+              tmpSessionObj.push(dischargeSession);
+            }
+
+            // Insert all sessions for this participant
+            if (tmpSessionObj.length > 0) {
+              await prisma.session.createMany({
+                data: tmpSessionObj,
+              });
+            }
+
+            // Load forms for this participant (if applicable)
+            if (treatmentTarget) {
+              await this.loadSessionFormsWithMode({
+                req_id: postThrpyReq.req_id,
+                client_id: client_id,
+                counselor_id: data.counselor_id,
+                tenant_id: data.tenant_id,
+                mode: "treatment_target",
+                number_of_sessions: data.number_of_sessions,
+                treatment_target: treatmentTarget,
+              });
+            }
+
+            // Generate reports for report sessions
+            const generateReports = await this.generateReportsForReportSessions({
+              req_id: postThrpyReq.req_id,
+              client_id: client_id,
+              counselor_id: data.counselor_id,
+              tenant_id: data.tenant_id,
+            });
+
+            if (generateReports.error) {
+              logger.error(`Error generating reports for report sessions (client ${client_id}):`, generateReports.message);
+              // Don't fail the entire operation if reports fail
+            } else {
+              logger.info(`Reports generated successfully for report sessions (client ${client_id})`);
+            }
+
+            // Get the created therapy request with sessions
+            const ThrpyReq = await this.getThrpyReqById({
+              req_id: postThrpyReq.req_id,
+            });
+
+            if (ThrpyReq && ThrpyReq[0]) {
+              groupTherapyRequests.push(ThrpyReq[0]);
+              
+              // Send an email to this client with the therapy request details
+              try {
+                await this.emailTmplt.sendThrpyReqDetailsEmail({
+                  email: recClient.rec[0].email,
+                  big_thrpy_req_obj: ThrpyReq[0],
+                  cancel_hash: postThrpyReq.cancel_hash,
+                });
+              } catch (emailError) {
+                logger.warn(`Failed to send email to client ${client_id}:`, emailError);
+                // Don't fail the entire operation if email fails
+              }
+            }
+          } else {
+            logger.error(`Unsupported formula type: ${svc.svc_formula_typ} for group sessions`);
+            errors.push({ client_id, error: 'Unsupported formula type for group sessions' });
+          }
+        } catch (error) {
+          logger.error(`Error processing participant ${client_id}:`, error);
+          errors.push({ client_id, error: error.message });
+        }
+      }
+
+      // Return results - primary client's therapy request first, then others
+      const primaryClientIndex = groupTherapyRequests.findIndex(
+        req => req.client_id === data.client_id
+      );
+      
+      if (primaryClientIndex > 0) {
+        const primaryReq = groupTherapyRequests.splice(primaryClientIndex, 1)[0];
+        groupTherapyRequests.unshift(primaryReq);
+      }
+
+      return {
+        message: 'Group therapy requests created successfully',
+        rec: groupTherapyRequests,
+        errors: errors.length > 0 ? errors : undefined,
+        group_metadata: groupMetadata,
+      };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return {
+        message: `Error creating group therapy requests: ${error.message}`,
+        error: -1,
+      };
+    }
+  }
+
+  //////////////////////////////////////////
+
   async putThrpyReqById(data) {
     try {
       if (data.session_obj) {
