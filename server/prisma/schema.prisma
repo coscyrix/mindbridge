@@ -358,25 +358,25 @@ model reports {
 }
 
 model report_intake {
-    id                  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-    report_id           BigInt    @db.UnsignedBigInt
-    metadata            Json?
-    created_at          DateTime? @default(now()) @db.Timestamp(0)
-    updated_at          DateTime? @default(now()) @db.Timestamp(0)
-    tenant_id           Int?
-    reports             reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_intake_reports_FK")
+    id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id  BigInt    @db.UnsignedBigInt
+    metadata   Json?
+    created_at DateTime? @default(now()) @db.Timestamp(0)
+    updated_at DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id  Int?
+    reports    reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_intake_reports_FK")
 
     @@index([report_id], map: "report_intake_reports_FK")
 }
 
 model report_treatment_plan {
-    id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-    report_id      BigInt    @db.UnsignedBigInt
-    metadata       Json?
-    created_at     DateTime? @default(now()) @db.Timestamp(0)
-    updated_at     DateTime? @default(now()) @db.Timestamp(0)
-    tenant_id      Int?
-    reports        reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_treatment_plan_reports_FK")
+    id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id  BigInt    @db.UnsignedBigInt
+    metadata   Json?
+    created_at DateTime? @default(now()) @db.Timestamp(0)
+    updated_at DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id  Int?
+    reports    reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_treatment_plan_reports_FK")
 
     @@index([report_id], map: "report_treatment_plan_reports_FK")
 }
@@ -394,13 +394,13 @@ model report_progress {
 }
 
 model report_discharge {
-    id                     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-    report_id              BigInt    @db.UnsignedBigInt
-    metadata               Json?
-    created_at             DateTime? @default(now()) @db.Timestamp(0)
-    updated_at             DateTime? @default(now()) @db.Timestamp(0)
-    tenant_id              Int?
-    reports                reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_discharge_reports_FK")
+    id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id  BigInt    @db.UnsignedBigInt
+    metadata   Json?
+    created_at DateTime? @default(now()) @db.Timestamp(0)
+    updated_at DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id  Int?
+    reports    reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_discharge_reports_FK")
 
     @@index([report_id], map: "report_discharge_reports_FK")
 }
@@ -598,6 +598,7 @@ model service {
     service_code       String                   @db.VarChar(255)
     is_report          Boolean                  @default(false)
     is_additional      Boolean                  @default(false)
+    is_group           Boolean                  @default(false)
     total_invoice      Decimal                  @db.Decimal(10, 4)
     discount_pcnt      Int                      @default(0)
     nbr_of_sessions    Int
@@ -624,6 +625,7 @@ model service_templates {
     service_code        String                             @unique(map: "service_templates_service_code_IDX") @db.VarChar(255)
     is_report           Boolean                            @default(false)
     is_additional       Boolean                            @default(false)
+    is_group            Boolean                            @default(false)
     total_invoice       Decimal                            @db.Decimal(10, 4)
     discount_pcnt       Int                                @default(0)
     nbr_of_sessions     Int
