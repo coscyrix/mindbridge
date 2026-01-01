@@ -181,6 +181,7 @@ export default class Feedback {
               });
           })
           .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+          .leftJoin('thrpy_req as tr', 'tt.req_id', 'tr.req_id')
           .select(
             'f.feedback_id',
             'f.session_id',
@@ -204,7 +205,11 @@ export default class Feedback {
             'f.updated_at',
             'tt.tenant_id'
           )
-          .where('tt.is_sent', 1);
+          .where('tt.is_sent', 1)
+          .andWhere(function() {
+            // Only include feedback from ongoing therapy requests, or if no therapy request is linked
+            this.where('tr.thrpy_status', 'ONGOING').orWhereNull('tr.thrpy_status');
+          });
 
         // Apply filters for treatment target mode
         if (data.feedback_id) {
@@ -236,6 +241,7 @@ export default class Feedback {
           .from('feedback_consent as fc')
           .join('feedback as f', 'fc.feedback_id', 'f.feedback_id')
           .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+          .leftJoin('thrpy_req as tr', 'vs.thrpy_req_id', 'tr.req_id')
           .select(
             'f.feedback_id',
             'f.session_id',
@@ -259,7 +265,11 @@ export default class Feedback {
             'f.updated_at',
             db.raw('NULL as tenant_id')
           )
-          .where('fc.status_yn', 'y');
+          .where('fc.status_yn', 'y')
+          .andWhere(function() {
+            // Only include feedback from ongoing therapy requests, or if no therapy request is linked
+            this.where('tr.thrpy_status', 'ONGOING').orWhereNull('tr.thrpy_status');
+          });
 
         // Apply filters for consent query
         if (data.feedback_id) {
@@ -312,6 +322,7 @@ export default class Feedback {
             .from('feedback as f')
             .leftJoin('forms as fm', 'f.form_id', 'fm.form_id')
             .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+            .leftJoin('thrpy_req as tr', 'vs.thrpy_req_id', 'tr.req_id')
             .select(
               'f.feedback_id',
               'f.session_id',
@@ -334,7 +345,11 @@ export default class Feedback {
               'f.tenant_id'
             )
             .where('f.feedback_id', data.feedback_id)
-            .andWhere('f.status_yn', 'y');
+            .andWhere('f.status_yn', 'y')
+            .andWhere(function() {
+              // Only include feedback from ongoing therapy requests, or if no therapy request is linked
+              this.where('tr.thrpy_status', 'ONGOING').orWhereNull('tr.thrpy_status');
+            });
 
           standaloneFeedbackResults = await standaloneQuery;
         }
@@ -374,6 +389,7 @@ export default class Feedback {
           .from('feedback as f')
           .leftJoin('forms as fm', 'f.form_id', 'fm.form_id')
           .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+          .leftJoin('thrpy_req as tr', 'vs.thrpy_req_id', 'tr.req_id')
           .select(
             'f.feedback_id',
             'f.session_id',
@@ -397,7 +413,11 @@ export default class Feedback {
             'f.updated_at',
             'f.tenant_id'
           )
-          .where('f.status_yn', 'y');
+          .where('f.status_yn', 'y')
+          .andWhere(function() {
+            // Only include feedback from ongoing therapy requests, or if no therapy request is linked
+            this.where('tr.thrpy_status', 'ONGOING').orWhereNull('tr.thrpy_status');
+          });
 
         // Check if feedback already exists for this session
         if (data.is_submitted) {
