@@ -243,13 +243,15 @@ function OverallScore({ filterCounselorId }) {
       onChange={handleClientChange}
       placeholder="Select a client"
     >
-      <ReactECharts
-        notMerge={true}
-        lazyUpdate={true}
-        theme={"theme_name"}
-        option={chartOption}
-        style={{ height: "400px", width: "100%"}}
-      />
+      <div style={{ position: "relative", width: "100%", height: "400px" }}>
+        <ReactECharts
+          notMerge={true}
+          lazyUpdate={true}
+          theme={"theme_name"}
+          option={chartOption}
+          style={{ width: "100%", height: "355px" }}
+        />
+      </div>
     </CustomCard>
   );
 }

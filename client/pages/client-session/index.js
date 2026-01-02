@@ -759,6 +759,7 @@ function ClientSession() {
                   dateFormat="yyyy-MM-dd"
                   placeholderText="Select start date"
                   isClearable
+                  minDate={new Date()}
                 />
               </div>
             </div>

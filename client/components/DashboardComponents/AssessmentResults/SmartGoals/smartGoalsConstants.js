@@ -358,18 +358,6 @@ export const MODALITY_GOAL_LIBRARIES = {
       timeframe: "4-6 weeks",
     },
   ],
-  Supplemental_Treatment: [
-    {
-      id: "supplemental_targeted_goals",
-      text: "Within the approved timeframe, the client will address targeted supplemental goals.",
-      timeframe: "approved timeframe",
-    },
-    {
-      id: "supplemental_primary_goals",
-      text: "Within the service period, the client will support progress toward primary treatment goals.",
-      timeframe: "service period",
-    },
-  ],
   TF_CBT: [
     {
       id: "tf_cbt_reduce_symptoms",
@@ -385,87 +373,50 @@ export const MODALITY_GOAL_LIBRARIES = {
 };
 
 /**
- * Maps service codes/names to goal library keys
- * Supports pattern matching (e.g., "OTR_%" matches OTR_ST, OTR_TS)
+ * Maps service codes to goal library keys
+ * Only includes service codes that are actively used in the system
  */
 export const SERVICE_TO_GOAL_LIBRARY_MAP = {
-  // OTR Program
-  OTR_ST: "OTR",
-  OTR_TS: "OTR_Transition",
-  "OTR-ST": "OTR",
-  "OTR-TS": "OTR_Transition",
+  // Program-Based Services
+  OTR_ST: "OTR",                      // OTR Standard Treatment
+  OTR_TS: "OTR_Transition",           // OTR Transition Session
+  RTW: "RTW",                         // RTW Int Treatment Session
+  RWT_EXTNS: "RTW_Extension",         // RTW Extns Treatment
+  RS: "Resiliency",                   // Resiliency Session
+  STT: "Transition",                  // Short Transition Treatment
+  ST: "Supplemental",                 // Supplemental Treatment
   
-  // RTW Program
-  RTW: "RTW",
-  RTW_EXT: "RTW_Extension",
-  "RTW-EXT": "RTW_Extension",
+  // Pre-Therapy Consultation (no specific goal library)
+  PTC: null,
   
-  // Resiliency Program
-  RES: "Resiliency",
-  RESILIENCY: "Resiliency",
-  RS: "Resiliency",
-  RESILIENCY_SESSION: "Resiliency",
-  "RESILIENCY-SESSION": "Resiliency",
-  
-  // Transition Program
-  TRANSITION: "Transition",
-  TRANS: "Transition",
-  
-  // Supplemental
-  SUPPLEMENTAL: "Supplemental",
-  SUPP: "Supplemental",
-  
-  // Modalities
-  ACT: "ACT",
-  ART: "Art_Therapy",
-  ART_THERAPY: "Art_Therapy",
-  "ART-THERAPY": "Art_Therapy",
-  BA: "Behavioral_Activation",
-  BEHAVIORAL_ACTIVATION: "Behavioral_Activation",
-  "BEHAVIORAL-ACTIVATION": "Behavioral_Activation",
-  CBT: "CBT",
-  CT: "Cognitive_Therapy",
-  COGNITIVE_THERAPY: "Cognitive_Therapy",
-  "COGNITIVE-THERAPY": "Cognitive_Therapy",
-  DBT: "DBT",
-  EFT: "EFT",
-  EMDR: "EMDR",
-  FAMILY_SYSTEMS: "Family_Systems",
-  "FAMILY-SYSTEMS": "Family_Systems",
-  GROUP_CBT: "Group_CBT",
-  "GROUP-CBT": "Group_CBT",
-  GOTTMAN: "Gottman_Method",
-  GOTTMAN_METHOD: "Gottman_Method",
-  "GOTTMAN-METHOD": "Gottman_Method",
-  IPT: "IPT",
-  MBCT: "MBCT",
-  NARRATIVE: "Narrative_Therapy",
-  NARRATIVE_THERAPY: "Narrative_Therapy",
-  "NARRATIVE-THERAPY": "Narrative_Therapy",
-  OT: "Occupational_Therapy",
-  OCCUPATIONAL_THERAPY: "Occupational_Therapy",
-  "OCCUPATIONAL-THERAPY": "Occupational_Therapy",
-  PSYCHOED: "Psychoeducational_Groups",
-  PSYCHOEDUCATIONAL: "Psychoeducational_Groups",
-  "PSYCHOEDUCATIONAL-GROUPS": "Psychoeducational_Groups",
-  PSYCHODYNAMIC: "Psychodynamic_Therapy",
-  PSYCHODYNAMIC_THERAPY: "Psychodynamic_Therapy",
-  "PSYCHODYNAMIC-THERAPY": "Psychodynamic_Therapy",
-  PLAY: "Play_Therapy",
-  PLAY_THERAPY: "Play_Therapy",
-  "PLAY-THERAPY": "Play_Therapy",
-  SFBT: "SFBT",
-  SUPPORT_GROUP: "Support_Group",
-  "SUPPORT-GROUP": "Support_Group",
-  SUPPLEMENTAL_TREATMENT: "Supplemental_Treatment",
-  "SUPPLEMENTAL-TREATMENT": "Supplemental_Treatment",
-  TF_CBT: "TF_CBT",
-  "TF-CBT": "TF_CBT",
+  // Modality/Treatment-Based Services
+  ACT: "ACT",                         // Acceptance And Commitment Therapy
+  AT: "Art_Therapy",                  // Art Therapy
+  BA: "Behavioral_Activation",        // Behavioral Activation
+  CBT: "CBT",                         // Cognitive Behavioural Therapy
+  CT: "Cognitive_Therapy",            // Cognitive Therapy
+  DBT: "DBT",                         // Dialectical Behavior Therapy
+  EFT: "EFT",                         // Emotionally Focused Therapy
+  EMDR: "EMDR",                       // Eye Movement Desensitization And Reprocessing
+  FST: "Family_Systems",              // Family Systems Therapy
+  GCBT: "Group_CBT",                  // Group CBT
+  GM: "Gottman_Method",               // Gottman Method
+  IPT: "IPT",                         // Interpersonal Psychotherapy
+  MBCT: "MBCT",                       // Mindfulness-Based Cognitive Therapy
+  NT: "Narrative_Therapy",            // Narrative Therapy
+  OT: "Occupational_Therapy",         // Occupational Therapy
+  PG: "Psychoeducational_Groups",     // Psychoeducational Groups
+  PST: "Psychodynamic_Therapy",       // Psychodynamic Therapy
+  PT: "Play_Therapy",                 // Play Therapy
+  SFBT: "SFBT",                       // Solution Focused Brief Therapy
+  SG: "Support_Group",                // Support Group
+  TF_CBT: "TF_CBT",                   // Trauma-Focused CBT
 };
 
 /**
- * Get goals for a service code/name
- * Supports pattern matching for service codes like "OTR_ST", "OTR_TS" → "OTR"
+ * Get goals for a service code
+ * @param {string} serviceCodeOrName - The service code (e.g., "OTR_ST", "CBT", "PT")
+ * @returns {Array} Array of goal objects with id, text, and timeframe
  */
 export const getGoalsForService = (serviceCodeOrName) => {
   if (!serviceCodeOrName) return [];
@@ -476,31 +427,21 @@ export const getGoalsForService = (serviceCodeOrName) => {
     .replace(/[\s-]/g, "_")
     .trim();
 
-  // Direct match
-  if (SERVICE_TO_GOAL_LIBRARY_MAP[normalized]) {
+  // Check if service code exists in the map
+  if (normalized in SERVICE_TO_GOAL_LIBRARY_MAP) {
     const libraryKey = SERVICE_TO_GOAL_LIBRARY_MAP[normalized];
+    
+    // Handle service codes with no goal library (e.g., PTC)
+    if (libraryKey === null) {
+      return [];
+    }
+    
+    // Get goals from either program-based or modality-based libraries
     const goals = PROGRAM_GOAL_LIBRARIES[libraryKey] || MODALITY_GOAL_LIBRARIES[libraryKey];
     return goals || [];
   }
 
-  // Pattern matching for service codes like "OTR_ST", "OTR_TS" → "OTR"
-  const patterns = {
-    "^OTR_": "OTR",
-    "^RTW": "RTW",
-    "^RES": "Resiliency",
-    "^RS": "Resiliency",
-    "^TRANS": "Transition",
-    "^SUPP": "Supplemental",
-  };
-
-  for (const [pattern, libraryKey] of Object.entries(patterns)) {
-    if (new RegExp(pattern).test(normalized)) {
-      const goals = PROGRAM_GOAL_LIBRARIES[libraryKey];
-      if (goals) return goals;
-    }
-  }
-
-  // Fallback: return empty array if no match found
+  // No match found
   return [];
 };
 

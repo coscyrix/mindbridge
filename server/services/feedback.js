@@ -380,6 +380,7 @@ export default class FeedbackService {
       clinician_action: joi.string().valid('editWording', 'approveAndLock').allow('').optional(),
       program_alignment: joi.string().allow('').optional(),
       is_locked: joi.boolean().optional(),
+      expectation_met: joi.boolean().allow(null).optional(),
       tenant_id: joi.number().required(),
     });
 
@@ -413,6 +414,7 @@ export default class FeedbackService {
       clinician_action: joi.string().valid('editWording', 'approveAndLock').allow('').optional(),
       program_alignment: joi.string().allow('').optional(),
       is_locked: joi.boolean().optional(),
+      expectation_met: joi.boolean().allow(null).optional(),
       tenant_id: joi.number().optional(),
     });
 
