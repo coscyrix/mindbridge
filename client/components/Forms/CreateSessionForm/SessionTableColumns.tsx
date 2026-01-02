@@ -45,29 +45,10 @@ export const getSessionTableColumns = ({
     {
       name: "Session Date",
       selector: (row) => {
-        // Always prioritize intake_date
-        if (row?.intake_date) {
+        // Merge intake_date and scheduled_time to form UTC datetime, then convert to local time
+        if (row?.intake_date && row?.scheduled_time) {
           return convertUTCToLocalTime(
-            `${row.intake_date}T${row.req_time || "00:00:00"}`
-          ).date;
-        }
-
-        // Fallback to scheduled_time if intake_date is not available
-        if (row?.scheduled_time) {
-          const scheduledTimeStr = String(row.scheduled_time);
-          if (
-            scheduledTimeStr.includes("T") ||
-            scheduledTimeStr.includes(" ")
-          ) {
-            const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
-            return convertUTCToLocalTime(normalizedDateTime).date;
-          }
-        }
-
-        // Last fallback to req_dte_not_formatted
-        if (row?.req_dte_not_formatted) {
-          return convertUTCToLocalTime(
-            `${row.req_dte_not_formatted}T${row.req_time || "00:00:00"}`
+            `${row.intake_date}T${row.scheduled_time}`
           ).date;
         }
 
@@ -79,34 +60,11 @@ export const getSessionTableColumns = ({
     {
       name: "Session Time",
       selector: (row) => {
-        if (row?.scheduled_time) {
-          const scheduledTimeStr = String(row.scheduled_time);
-          if (
-            scheduledTimeStr.includes("T") ||
-            scheduledTimeStr.includes(" ")
-          ) {
-            const normalizedDateTime = scheduledTimeStr.replace(" ", "T");
-            return convertUTCToLocalTime(normalizedDateTime).time;
-          }
-          if (row?.intake_date) {
-            return convertUTCToLocalTime(
-              `${row.intake_date}T${row.scheduled_time}`
-            ).time;
-          }
-        }
-
-        if (row?.intake_date && row?.req_time) {
-          return convertUTCToLocalTime(`${row.intake_date}T${row.req_time}`)
-            .time;
-        }
-
-        if (row?.intake_date) {
-          const intakeTime = new Date(row.intake_date).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          });
-          return intakeTime !== "Invalid Date" ? intakeTime : "N/A";
+        // Merge intake_date and scheduled_time to form UTC datetime, then convert to local time
+        if (row?.intake_date && row?.scheduled_time) {
+          return convertUTCToLocalTime(
+            `${row.intake_date}T${row.scheduled_time}`
+          ).time;
         }
 
         return "N/A";

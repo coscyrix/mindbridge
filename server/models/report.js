@@ -781,6 +781,8 @@ export default class Report {
           db.raw('MAX(s.intake_date) as last_session_date')
         )
         .where('s.status_yn', 'y')
+        .where('s.is_report', 0)
+        .whereNot('s.session_status', 'INACTIVE')
         .whereIn('s.thrpy_status', ['ONGOING', 'PAUSED', 1, 3]) // Include ONGOING and PAUSED (string and numeric)
         .groupBy(
           's.thrpy_req_id',
@@ -886,6 +888,8 @@ export default class Report {
         logger.error('Error getting sessions with homework stats');
         return { message: 'Error getting sessions with homework stats', error: -1 };
       }
+
+      console.log('❤️❤️❤️❤️❤️');
 
       return rec;
     } catch (error) {

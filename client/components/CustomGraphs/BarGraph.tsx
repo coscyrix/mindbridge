@@ -124,6 +124,7 @@ const BarGraph: React.FC<BarGraphProps> = ({
         interval: 0,
         rotate: xAxisLabels.length > 5 ? 30 : 0,
       },
+      
       nameGap: 0,
     },
     yAxis: {

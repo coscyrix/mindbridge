@@ -227,7 +227,7 @@ function Appointments() {
           selectableRows={false}
           loading={loading}
         >
-          <div className="user-info-selects">
+          {/* <div className="user-info-selects">
             <div className="custom-search-wrapper">
               <CustomSearch
                 onFilter={(e) => setFilterText(e.target.value)}
@@ -235,7 +235,7 @@ function Appointments() {
                 placeholder="Search by client name, email, or service..."
               />
             </div>
-          </div>
+          </div> */}
         </CustomClientDetails>
       )}
     </SessionHistoryContainer>

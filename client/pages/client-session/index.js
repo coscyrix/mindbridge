@@ -525,7 +525,7 @@ function ClientSession() {
               value={moment().format("dddd, D MMMM YYYY")}
             /> */}
             <CustomTab
-              heading="Total Amount For A Month"
+              heading="Monthly Total Amount"
               value={
                 summaryLoading ? (
                   <Skeleton width={120} height={40} />
@@ -568,7 +568,7 @@ function ClientSession() {
 
             {userObj?.role_id !== 4 && (
               <CustomTab
-                heading="Monthly Associate Total:"
+                heading="Monthly Associate Total"
                 value={
                   summaryLoading ? (
                     <Skeleton width={120} height={40} />
@@ -588,8 +588,8 @@ function ClientSession() {
             )}
 
             <CustomTab
-              heading="Detail breakdown"
-              className="detail-breakdown-tab"
+              heading={userObj?.role_id === 3 ? "Total Amt For Tenant" : "Detail breakdown"}
+              className="no-shrink-tab"
               value={
                 summaryLoading ? (
                   <Skeleton width={200} height={40} />

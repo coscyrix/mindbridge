@@ -58,22 +58,14 @@ const SessionScheduleHeader = ({
                   <strong>Intake Date : </strong>
                   <span>
                     {convertUTCToLocalTime(
-                      `${
-                        initialData.req_dte_not_formatted ||
-                        initialData?.intake_date
-                      }T${initialData.req_time || initialData?.scheduled_time}`
+                      initialData?.created_at?.replace(" ", "T") || ""
                     ).date || "N/A"}
                   </span>
                 </label>
                 <label>
                   <strong>Session Time : </strong>
                   <span>
-                    {convertUTCToLocalTime(
-                      `${
-                        initialData.req_dte_not_formatted ||
-                        initialData?.intake_date
-                      }T${initialData.req_time || initialData?.scheduled_time}`
-                    ).time || "N/A"}
+                    {convertUTCToLocalTime(initialData.req_time).time || "N/A"}
                   </span>
                 </label>
               </>
@@ -92,15 +84,13 @@ const SessionScheduleHeader = ({
                 type="button"
                 title={dischargeOrDelete}
                 customClass={
-                  !allSessionsStatusShowNoShow &&
-                  dischargeOrDelete != "Delete"
+                  !allSessionsStatusShowNoShow && dischargeOrDelete != "Delete"
                     ? "discharge-delete-button_disabled"
                     : "discharge-delete-button"
                 }
                 onClick={() => setDeleteConfirmationModal(true)}
                 disabled={
-                  !allSessionsStatusShowNoShow &&
-                  dischargeOrDelete != "Delete"
+                  !allSessionsStatusShowNoShow && dischargeOrDelete != "Delete"
                 }
               />
             )}
@@ -114,4 +104,3 @@ const SessionScheduleHeader = ({
 };
 
 export default SessionScheduleHeader;
-

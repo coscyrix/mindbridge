@@ -617,14 +617,14 @@ const Invoice = () => {
                   ).toFixed(4)}`
                 ) : userObj?.role_id === 3 ? (
                   <>
-                    Total Amount :{" $"}
+                    {" $"}
                     {Number(
                       invoices?.summary?.sum_session_total_amount
                     ).toFixed(4)}
                   </>
                 ) : userObj?.role_id === 4 ? (
                   <>
-                    Total Amount :{" $"}
+                    {" $"}
                     {Number(
                       invoices?.summary?.sum_session_total_amount
                     ).toFixed(4)}
@@ -655,7 +655,7 @@ const Invoice = () => {
               />
             )}
             <CustomTab
-              heading="Detail breakdown"
+              heading={userObj?.role_id === 3 ? "Monthly Tenant Total:" : "Detail breakdown"}
               value={
                 loading ? (
                   <Skeleton width={200} height={40} />
@@ -690,7 +690,7 @@ const Invoice = () => {
                     {/* Counsellor Share:{" "}
                     {Number(invoices?.summary?.sum_session_counselor_amt).toFixed(4)}
                     <br /> */}
-                    Your Share:{" $"}
+                    {" $"}
                     {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(
                       4
                     )}

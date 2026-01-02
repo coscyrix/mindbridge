@@ -74,6 +74,7 @@ export default class TreatmentTargetRequestFormsService {
           thrpy_req_id: req_id,
           session_status: 'SCHEDULED',
           is_additional: false,
+          is_report: false,
         },
         orderBy: [
           { session_number: 'asc' },
