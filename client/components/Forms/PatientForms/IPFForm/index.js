@@ -55,7 +55,8 @@ const IPFForm = () => {
         router.push("/patient-forms/form-submission");
       }
     } catch (error) {
-      toast.error("Failed to submit the form!");
+      console.error("Error submitting IPF form:", error);
+      toast.error(error?.response?.data?.message || "Failed to submit the form!");
     } finally {
       setLoading(false);
     }

@@ -7,7 +7,10 @@ import { api } from "../../../utils/auth";
 import CustomSelect from "../../CustomSelect";
 import { ArrowIcon } from "../../../public/assets/icons";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createClientValidationSchema } from "../../../utils/validationSchema/validationSchema";
+import {
+  createClientValidationSchema,
+  EditClientValidationSchema,
+} from "../../../utils/validationSchema/validationSchema";
 import { useReferenceContext } from "../../../context/ReferenceContext";
 import Spinner from "../../common/Spinner";
 import CustomMultiSelect from "../../CustomMultiSelect";
@@ -153,7 +156,11 @@ function CreateClientForm({
 
   const methods = useForm<FormData>({
     mode: "onSubmit",
-    resolver: zodResolver(createClientValidationSchema(intakeId)),
+    resolver: zodResolver(
+      initialData && !intakeId
+        ? EditClientValidationSchema
+        : createClientValidationSchema(intakeId)
+    ),
     defaultValues: defaultValues,
   });
 

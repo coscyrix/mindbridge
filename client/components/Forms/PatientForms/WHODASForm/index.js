@@ -296,7 +296,8 @@ const WHODASForm = () => {
         reset();
       }
     } catch (error) {
-      console.log(":: Error in WHODAS Form", error);
+      console.error("Error submitting WHODAS form:", error);
+      toast.error(error?.response?.data?.message || "Error submitting the form");
     }
   };
   return (

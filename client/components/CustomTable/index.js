@@ -10,6 +10,7 @@ function CustomTable({
   defaultSortFieldId,
   loading,
   loaderBackground = "var(--background-color)",
+  conditionalRowStyles,
   ...props
 }) {
   const customStyles = {
@@ -18,7 +19,7 @@ function CustomTable({
         background: "transparent",
         "&:hover": {
           background: "white",
-          cursor: "pointer",
+          cursor: onRowclick ? "pointer" : "default",
         },
       },
     },
@@ -33,6 +34,7 @@ function CustomTable({
           sortIcon={<TableDownArrowIcon />}
           defaultSortFieldId={defaultSortFieldId ? defaultSortFieldId : null}
           customStyles={customStyles}
+          conditionalRowStyles={conditionalRowStyles}
           progressComponent={
             <div
               style={{

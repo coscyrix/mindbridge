@@ -168,6 +168,94 @@ export const createClientValidationSchema = (intakeId) => {
 // Default export for backward compatibility
 export const ClientValidationSchema = createClientValidationSchema();
 
+// Edit/Update Client Validation Schema - less strict than create
+export const EditClientValidationSchema = z
+  .object({
+    clam_num: z
+      .preprocess(
+        (value) => value === "" || value === undefined ? undefined : Number(value),
+        z.number().min(1, { message: "Serial Number is required" }).optional()
+      )
+      .optional(),
+    tenant_name: z
+      .string()
+      .nullable()
+      .optional(),
+    user_first_name: z
+      .string()
+      .min(2, { message: "At least 2 characters required" }),
+    user_last_name: z
+      .string()
+      .min(2, { message: "At least 2 characters required" }),
+
+    user_phone_nbr: z
+      .string({
+        required_error: "Phone number is required",
+        invalid_type_error: "Please enter a valid phone number",
+      })
+      .min(1, { message: "Phone number is required" })
+      .refine(
+        (value) => {
+          if (!value) return false;
+          // Basic validation for E.164 format (react-phone-number-input format)
+          return /^\+[1-9]\d{1,14}$/.test(value.replace(/\s/g, ""));
+        },
+        { message: "Please enter a valid phone number" }
+      ),
+    email: z
+      .string()
+      .nonempty("Email is required")
+      .email("Invalid email address"),
+    
+    role_id: z
+      .preprocess(
+        (value) => Number(value),
+        z.number().min(1, { message: "Role is required" })
+      )
+      .optional(),
+    target_outcome_id: z
+      .union([
+        z.object({
+          label: z.string().optional(),
+          value: z.preprocess(
+            (val) => val === "" || val === null || val === undefined ? undefined : Number(val),
+            z.number().optional()
+          ).optional()
+        }).optional(),
+        z.string().optional(),
+        z.number().optional()
+      ])
+      .optional()
+      .nullable(),
+    tax: z.preprocess((val) => {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }, z.number().nullable().optional()),
+
+    admin_fee: z.preprocess((val) => {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }, z.number().nullable().optional()),
+    description: z.string().nullable().optional(),
+    timezone: z.string().nullable().optional(),
+  })
+  .refine(
+    (data) => {
+      // For managers (role_id === 3), require admin_fee and tax
+      if (data.role_id === 3) {
+        const adminFeeValid = data.admin_fee !== undefined && data.admin_fee !== null && data.admin_fee >= 0;
+        const taxValid = data.tax !== undefined && data.tax !== null && data.tax >= 0;
+        return adminFeeValid && taxValid;
+      }
+      // For clients and other roles, no strict validation on update
+      return true;
+    },
+    {
+      message: "Admin Fees and Tax are required for managers",
+      path: ["admin_fee", "tax"],
+    }
+  );
+
 // export const EditClientValidationSchema = z.object({
 //   clam_num: z.preprocess(
 //     (value) => Number(value),

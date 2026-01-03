@@ -692,7 +692,13 @@ export default class ServiceTemplateService {
     
     if (serviceData.is_additional === undefined) serviceData.is_additional = 0;
     
+    // Ensure is_group is copied from template
+    if (serviceData.is_group === undefined || serviceData.is_group === null) {
+      serviceData.is_group = template.is_group || false;
+    }
+    
     console.log('🔍 Service data is_report after override:', serviceData.is_report);
+    console.log('🔍 Service data is_group:', serviceData.is_group);
     
     console.log('Service data to be created:', serviceData);
 

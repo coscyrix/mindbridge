@@ -83,7 +83,7 @@ const AnxietyDisorderForm = () => {
       }
     } catch (error) {
       console.error("Error:", error);
-      toast.error("Error submitting the form");
+      toast.error(error?.response?.data?.message || "Error submitting the form");
     } finally {
       setLoading(false);
     }

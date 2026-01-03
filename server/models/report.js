@@ -489,57 +489,63 @@ export default class Report {
     try {
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('v_session')
+        .from('v_session as vs')
+        .leftJoin('reports as r', 'vs.session_id', 'r.session_id')
         .select(
-          'client_id',
-          'client_first_name',
-          'client_last_name',
-          'counselor_id',
-          'tenant_id',
-          'thrpy_req_id',
-          'session_id',
-          db.raw('intake_date as due_date'),
-          db.raw('service_name as report_name'),
+          'vs.client_id',
+          'vs.client_first_name',
+          'vs.client_last_name',
+          'vs.counselor_id',
+          'vs.tenant_id',
+          'vs.thrpy_req_id',
+          'vs.session_id',
+          'r.report_id',
+          db.raw('vs.intake_date as due_date'),
+          db.raw('vs.service_name as report_name'),
           db.raw(`
             CASE 
-              WHEN intake_date < CURRENT_DATE() THEN 'Past Due Date'
-              WHEN intake_date > CURRENT_DATE() THEN 'Future Due Date'
+              WHEN vs.intake_date < CURRENT_DATE() THEN 'Past Due Date'
+              WHEN vs.intake_date > CURRENT_DATE() THEN 'Future Due Date'
               ELSE 'Current Due Date'
             END as report_status
           `),
         )
-        .where('is_report', 1)
-        .where('status_yn', 'y')
-        .andWhere('thrpy_status', '!=', 2) // Exclude DISCHARGED
-        .whereNot('session_status', 'SHOW');
+        .where('vs.is_report', 1)
+        .where('vs.status_yn', 'y')
+        .andWhere('vs.thrpy_status', '!=', 2) // Exclude DISCHARGED
+        .whereNot('vs.session_status', 'SHOW');
 
       if (data.role_id === 2) {
         if (data.counselor_id) {
-          query.andWhere('counselor_id', data.counselor_id);
+          query.andWhere('vs.counselor_id', data.counselor_id);
           
           // Get tenant_id for the counselor and filter by it
           const tenantId = await this.common.getUserTenantId({
             user_profile_id: data.counselor_id,
           });
           if (tenantId && !tenantId.error && tenantId.length > 0) {
-            query.where('tenant_id', Number(tenantId[0].tenant_id));
+            query.where('vs.tenant_id', Number(tenantId[0].tenant_id));
           }
         }
 
         if (data.client_id) {
-          query.andWhere('client_id', data.client_id);
+          query.andWhere('vs.client_id', data.client_id);
         }
 
         if (data.session_id) {
-          query.andWhere('session_id', data.session_id);
+          query.andWhere('vs.session_id', data.session_id);
+        }
+
+        if (data.report_id) {
+          query.andWhere('r.report_id', data.report_id);
         }
 
         if (data.start_date) {
-          query.andWhere('intake_date', '>=', data.start_date);
+          query.andWhere('vs.intake_date', '>=', data.start_date);
         }
 
         if (data.end_date) {
-          query.andWhere('intake_date', '<=', data.end_date);
+          query.andWhere('vs.intake_date', '<=', data.end_date);
         }
       }
 
@@ -547,28 +553,32 @@ export default class Report {
         // If the user is a manager, filter by tenant_id
         if (data.tenant_id) {
           // Use the provided tenant_id directly
-          query.where('tenant_id', Number(data.tenant_id));
+          query.where('vs.tenant_id', Number(data.tenant_id));
         } else if (data.counselor_id) {
           // If no tenant_id provided but counselor_id is, get tenant_id from counselor
           const tenantId = await this.common.getUserTenantId({
             user_profile_id: data.counselor_id,
           });
           if (tenantId && !tenantId.error && tenantId.length > 0) {
-            query.where('tenant_id', Number(tenantId[0].tenant_id));
+            query.where('vs.tenant_id', Number(tenantId[0].tenant_id));
           }
         }
         
         // If counselor_id is provided, also filter by specific counselor
         if (data.counselor_id) {
-          query.where('counselor_id', data.counselor_id);
+          query.where('vs.counselor_id', data.counselor_id);
+        }
+        
+        if (data.report_id) {
+          query.andWhere('r.report_id', data.report_id);
         }
         
         if (data.start_date) {
-          query.andWhere('intake_date', '>=', data.start_date);
+          query.andWhere('vs.intake_date', '>=', data.start_date);
         }
 
         if (data.end_date) {
-          query.andWhere('intake_date', '<=', data.end_date);
+          query.andWhere('vs.intake_date', '<=', data.end_date);
         }
       }
 
@@ -578,31 +588,35 @@ export default class Report {
           user_profile_id: data.counselor_id,
         });
         if (tenantId && !tenantId.error && tenantId.length > 0) {
-          query.where('tenant_id', Number(tenantId[0].tenant_id));
+          query.where('vs.tenant_id', Number(tenantId[0].tenant_id));
         } else {
           // If we can't get tenant_id for the counselor, return an error
           return { message: 'Invalid counselor_id or counselor not found', error: -1 };
         }
-        query.where('counselor_id', data.counselor_id);
+        query.where('vs.counselor_id', data.counselor_id);
+        
+        if (data.report_id) {
+          query.andWhere('r.report_id', data.report_id);
+        }
         
         if (data.start_date) {
-          query.andWhere('intake_date', '>=', data.start_date);
+          query.andWhere('vs.intake_date', '>=', data.start_date);
         }
 
         if (data.end_date) {
-          query.andWhere('intake_date', '<=', data.end_date);
+          query.andWhere('vs.intake_date', '<=', data.end_date);
         }
       }
 
       // Order results: Past Due Date, then Current Due Date, then Future Due Date
       query.orderByRaw(`
         CASE 
-          WHEN intake_date < CURRENT_DATE() THEN 1
-          WHEN intake_date = CURRENT_DATE() THEN 2
+          WHEN vs.intake_date < CURRENT_DATE() THEN 1
+          WHEN vs.intake_date = CURRENT_DATE() THEN 2
           ELSE 3
         END
       `);
-      query.orderBy('intake_date');
+      query.orderBy('vs.intake_date');
 
       const rec = await query;
       return rec;

@@ -132,6 +132,7 @@ export default class Service {
         service_code: data.service_code.toUpperCase(),
         is_report: data.is_report !== undefined ? data.is_report : (isReportValid ? 1 : 0),
         is_additional: data.is_additional || 0,
+        is_group: data.is_group !== undefined ? data.is_group : false,
         total_invoice: data.total_invoice || 0,
         nbr_of_sessions: data.nbr_of_sessions || 0,
         svc_formula_typ: data.svc_formula_typ || 's',
@@ -143,8 +144,10 @@ export default class Service {
       
       console.log('🔍 DEBUG: Service creation data:');
       console.log('  - data.is_report:', data.is_report);
+      console.log('  - data.is_group:', data.is_group);
       console.log('  - data.service_code:', data.service_code);
       console.log('  - tmpSvc.is_report:', tmpSvc.is_report);
+      console.log('  - tmpSvc.is_group:', tmpSvc.is_group);
       console.log('  - data.svc_report_formula:', data.svc_report_formula);
       console.log('  - data.svc_report_formula type:', typeof data.svc_report_formula);
       console.log('  - tmpSvc.svc_report_formula:', tmpSvc.svc_report_formula);

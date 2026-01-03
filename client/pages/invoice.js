@@ -207,7 +207,10 @@ const Invoice = () => {
                 alignItems: "center",
                 background: "transparent",
               }}
-              onClick={() => handleAddInvoiceNumber(row)}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent row click event from firing
+                handleAddInvoiceNumber(row);
+              }}
             >
               <AddIcon />
               Add invoice
@@ -871,7 +874,32 @@ const Invoice = () => {
       <CustomTable
         columns={columns}
         data={paginatedData || []}
-        onRowclick={(row) => handleEdit(row)}
+        onRowclick={(row) => {
+          // Only allow row click for rows that already have an invoice number
+          if (row?.invoice_nbr) {
+            handleEdit(row);
+          }
+        }}
+        conditionalRowStyles={[
+          {
+            when: (row) => !row?.invoice_nbr,
+            style: {
+              cursor: "default !important",
+              "&:hover": {
+                cursor: "default !important",
+              },
+            },
+          },
+          {
+            when: (row) => !!row?.invoice_nbr,
+            style: {
+              cursor: "pointer",
+              "&:hover": {
+                cursor: "pointer",
+              },
+            },
+          },
+        ]}
         loading={loading === "tableData"}
         selectableRows={false}
         fixedHeaderScrollHeight="500px"

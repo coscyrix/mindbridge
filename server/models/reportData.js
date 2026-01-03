@@ -319,7 +319,28 @@ export default class ReportData {
       // Practice section
       if (data.practice_name !== undefined || data.treatment_block_name !== undefined || data.frequency !== undefined) {
         metadata.practice = {};
-        if (data.practice_name !== undefined) metadata.practice.practice_name = data.practice_name;
+        // If practice_name is provided, fetch tenant_name from tenant table
+        if (data.practice_name !== undefined) {
+          let tenantName = data.practice_name; // Default to provided value
+          if (data.tenant_id) {
+            try {
+              const tenantQuery = await db
+                .withSchema(`${process.env.MYSQL_DATABASE}`)
+                .from('tenant')
+                .where('tenant_id', data.tenant_id)
+                .select('tenant_name')
+                .first();
+              
+              if (tenantQuery && tenantQuery.tenant_name) {
+                tenantName = tenantQuery.tenant_name;
+              }
+            } catch (error) {
+              logger.error('Error fetching tenant_name:', error);
+              // Keep the provided practice_name if query fails
+            }
+          }
+          metadata.practice.practice_name = tenantName;
+        }
         if (data.treatment_block_name !== undefined) metadata.practice.treatment_block_name = data.treatment_block_name;
         if (data.frequency !== undefined) metadata.practice.frequency = data.frequency;
       }
@@ -817,6 +838,22 @@ export default class ReportData {
         logger.error('Error fetching counselor designation:', error);
       }
 
+      // Get tenant information
+      const tenantId = therapyRequest.tenant_id;
+      let tenantName = null;
+      if (tenantId) {
+        const tenantQuery = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('tenant')
+          .where('tenant_id', tenantId)
+          .select('tenant_name')
+          .first();
+        
+        if (tenantQuery) {
+          tenantName = tenantQuery.tenant_name;
+        }
+      }
+
       // Format date for metadata
       const formatDateForMeta = (date) => {
         if (!date) return null;
@@ -857,6 +894,58 @@ export default class ReportData {
         return value; // Already matches: 'no', 'yes'
       };
 
+      // Normalize symptoms to object format with boolean values
+      const normalizeSymptoms = (symptoms) => {
+        if (!symptoms) return {};
+        
+        // If already an object with boolean values, return it (but ensure all keys exist)
+        if (typeof symptoms === 'object' && !Array.isArray(symptoms)) {
+          return {
+            stress: symptoms.stress === true,
+            anxiety: symptoms.anxiety === true,
+            depression: symptoms.depression === true,
+            mood_changes: symptoms.mood_changes === true,
+            sleep_issues: symptoms.sleep_issues === true,
+            relationship_issues: symptoms.relationship_issues === true,
+          };
+        }
+        
+        // If it's an array of strings, convert to object format
+        if (Array.isArray(symptoms)) {
+          const symptomMap = {
+            'Anxiety': 'anxiety',
+            'Depression': 'depression',
+            'Stress': 'stress',
+            'Sleep issues': 'sleep_issues',
+            'Mood changes': 'mood_changes',
+            'Relationship issues': 'relationship_issues',
+          };
+          
+          const normalized = {
+            stress: false,
+            anxiety: false,
+            depression: false,
+            mood_changes: false,
+            sleep_issues: false,
+            relationship_issues: false,
+          };
+          
+          symptoms.forEach(symptom => {
+            // Handle both exact matches and "Other: ..." format
+            if (typeof symptom === 'string') {
+              const key = symptomMap[symptom];
+              if (key) {
+                normalized[key] = true;
+              }
+            }
+          });
+          
+          return normalized;
+        }
+        
+        return {};
+      };
+
       // Build response in metadata format, merging intake form data with saved metadata
       const response = {
         // Include report_id if report exists so frontend can use PUT instead of POST
@@ -878,7 +967,7 @@ export default class ReportData {
         },
         practice: {
           frequency: 'Other', // Default for intake
-          practice_name: therapyRequest.service_name || null,
+          practice_name: tenantName || null,
           treatment_block_name: therapyRequest.treatment_target || null,
         },
         therapist: {
@@ -894,20 +983,18 @@ export default class ReportData {
             phone: metadata?.report?.client_information?.phone || clientIntakeForm?.phone || null,
             email: metadata?.report?.client_information?.email || clientIntakeForm?.email || null,
             emergency_contact: metadata?.report?.client_information?.emergency_contact || 
-              (clientIntakeForm?.emergency_contact_name 
-                ? `${clientIntakeForm.emergency_contact_name}${clientIntakeForm.emergency_contact_phone ? ` - ${clientIntakeForm.emergency_contact_phone}` : ''}`
-                : null),
+              (clientIntakeForm?.emergency_contact_phone
+                ? clientIntakeForm.emergency_contact_phone : null),
           },
           presenting_problem: {
             reason: metadata?.report?.presenting_problem?.reason || clientIntakeForm?.reason_for_therapy || null,
             duration: metadata?.report?.presenting_problem?.duration || mapDurationToFrontend(clientIntakeForm?.concern_duration) || null,
           },
           symptoms: {
-            ...(metadata?.report?.symptoms || {}),
-            // Merge with intake form symptoms if available
-            ...(clientIntakeForm?.current_symptoms && typeof clientIntakeForm.current_symptoms === 'object'
-              ? clientIntakeForm.current_symptoms
-              : {}),
+            // Start with normalized intake form symptoms (base values)
+            ...normalizeSymptoms(clientIntakeForm?.current_symptoms),
+            // Override with normalized metadata symptoms (metadata takes precedence)
+            ...normalizeSymptoms(metadata?.report?.symptoms),
           },
           mental_health_history: {
             previous_therapy: metadata?.report?.mental_health_history?.previous_therapy || null,
@@ -1270,7 +1357,7 @@ export default class ReportData {
               score = fb.whodas_score.toString();
             } else if (fb.gas_score !== null && fb.gas_score !== undefined) {
               score = fb.gas_score.toString();
-            }
+            } 
 
             return {
               feedback_id: fb.feedback_id,
@@ -1320,7 +1407,7 @@ export default class ReportData {
         },
         practice: {
           frequency:  frequency || 'Other',
-          practice_name:  therapyRequest.service_name  || null,
+          practice_name:  tenantName || null,
           treatment_block_name: therapyRequest.treatment_target || null,
         },
         therapist: {
@@ -1541,6 +1628,22 @@ export default class ReportData {
         logger.error('Error fetching counselor designation:', error);
       }
 
+      // Get tenant information
+      const tenantId = therapyRequest.tenant_id;
+      let tenantName = null;
+      if (tenantId) {
+        const tenantQuery = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('tenant')
+          .where('tenant_id', tenantId)
+          .select('tenant_name')
+          .first();
+        
+        if (tenantQuery) {
+          tenantName = tenantQuery.tenant_name;
+        }
+      }
+
       // Calculate total sessions and completed sessions
       let totalSessions = 0;
       let totalSessionsCompleted = 0;
@@ -1662,6 +1765,8 @@ export default class ReportData {
         return null;
       };
 
+
+
       // Build response in metadata format, merging original data with saved metadata
       const response = {
         meta: {
@@ -1680,7 +1785,7 @@ export default class ReportData {
         },
         practice: {
           frequency: frequency || 'Other',
-          practice_name: therapyRequest.service_name || null,
+          practice_name: tenantName || null,
           treatment_block_name: therapyRequest.treatment_target || null,
         },
         therapist: {
