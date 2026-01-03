@@ -108,24 +108,7 @@ export default class ThrpyReq {
           message: 'Invalid date/time format provided',
           error: -1,
         };
-      }
-
-      // Check for session time collision before proceeding
-      const collisionCheck = await this.common.checkSessionTimeCollision(
-        data.counselor_id,
-        req_dte,
-        req_time,
-        null, // No session to exclude for new therapy requests
-      );
-
-      if (collisionCheck.error) {
-        logger.warn('Session time collision detected, preventing double booking', {
-          counselor_id: data.counselor_id,
-          intake_date: req_dte,
-          scheduled_time: req_time,
-        });
-        return collisionCheck;
-      }
+      }   
 
       // Check if counselor in data role is for a counselor
       const recCounselor = await this.userProfile.getUserProfileById({
@@ -304,6 +287,36 @@ export default class ThrpyReq {
           ? data.session_format_id === "IN-PERSON" ? "IN_PERSON" : data.session_format_id
           : "ONLINE"; // Default to ONLINE
 
+      // Calculate finalized first session date (after weekend adjustment)
+      let finalizedFirstSessionDate = new Date(`${req_dte}T00:00:00Z`);
+      while (
+        finalizedFirstSessionDate.getUTCDay() === 0 || // Sunday
+        finalizedFirstSessionDate.getUTCDay() === 6 // Saturday
+      ) {
+        finalizedFirstSessionDate.setUTCDate(finalizedFirstSessionDate.getUTCDate() + 1);
+      }
+      const finalizedDate = finalizedFirstSessionDate.toISOString().split('T')[0];
+
+      // Check for session time collision on the finalized date (after weekend adjustment)
+      console.log('Checking Collision ', finalizedDate, req_time, data.counselor_id);
+      const collisionCheck = await this.common.checkSessionTimeCollision(
+        data.counselor_id,
+        finalizedDate,
+        req_time,
+        null, // No session to exclude for new therapy requests
+      );
+
+      if (collisionCheck.error) {
+        logger.warn('Session time collision detected on finalized date, preventing double booking', {
+          counselor_id: data.counselor_id,
+          original_intake_date: req_dte,
+          finalized_intake_date: finalizedDate,
+          scheduled_time: req_time,
+        });
+
+        return collisionCheck;
+      }
+
       // Generate a unique hash for cancel/reschedule functionality
       const crypto = require('crypto');
       const hashData = `${data.counselor_id}-${data.client_id}-${data.service_id}-${Date.now()}`;
@@ -397,13 +410,13 @@ export default class ThrpyReq {
           }
 
           // Debug logging for session creation
-          console.log(`🔍 DEBUG: Creating session ${i + 1}/${svc.nbr_of_sessions}:`, {
-            session_id: 'new',
-            intake_date: tmpSession.intake_date,
-            scheduled_time: tmpSession.scheduled_time,
-            service_name: svc.service_name,
-            is_report: 0
-          });
+          // console.log(`🔍 DEBUG: Creating session ${i + 1}/${svc.nbr_of_sessions}:`, {
+          //   session_id: 'new',
+          //   intake_date: tmpSession.intake_date,
+          //   scheduled_time: tmpSession.scheduled_time,
+          //   service_name: svc.service_name,
+          //   is_report: 0
+          // });
 
           console.log('session_system_amt--------->1', {
             total_invoice: Number(svc.total_invoice),
@@ -459,7 +472,7 @@ export default class ThrpyReq {
               }
             }
 
-            console.log('🔍 DEBUG: Final reportService result:', reportService);
+            // console.log('🔍 DEBUG: Final reportService result:', reportService);
 
             if (reportService && reportService.rec && reportService.rec[0]) {
               console.log('reportService.rec[0].total_invoice', reportService.rec[0].total_invoice);
@@ -811,10 +824,16 @@ export default class ThrpyReq {
         if (!postSessionResult || postSessionResult.error) {
           logger.error('Error posting session:', postSessionResult?.message || 'Unknown error');
           console.error('Error posting session:', postSessionResult?.colliding_session || 'Unknown error');
+          
+          // Make sure to delete the therapy request if it was created
+          await this.deleteThrpyReqById(postThrpyReq.req_id);
+          
           return {
             message: postSessionResult?.message || 'Unknown error',
             error: -1,
           };
+
+
         }
       }
 
@@ -980,6 +999,38 @@ export default class ThrpyReq {
 
       const groupMetadataJson = JSON.stringify(groupMetadata);
 
+      // Calculate finalized first session date (after weekend adjustment)
+      let finalizedFirstSessionDate = new Date(`${req_dte}T00:00:00Z`);
+      while (
+        finalizedFirstSessionDate.getUTCDay() === 0 || // Sunday
+        finalizedFirstSessionDate.getUTCDay() === 6 // Saturday
+      ) {
+        finalizedFirstSessionDate.setUTCDate(finalizedFirstSessionDate.getUTCDate() + 1);
+      }
+      const finalizedDate = finalizedFirstSessionDate.toISOString().split('T')[0];
+
+
+      console.log('Checking Collision ', finalizedDate, req_time, data.counselor_id);
+
+      // Check for session time collision on the finalized date (after weekend adjustment)
+      const collisionCheck = await this.common.checkSessionTimeCollision(
+        data.counselor_id,
+        finalizedDate,
+        req_time,
+        null, // No session to exclude for new therapy requests
+      );
+
+      if (collisionCheck.error) {
+        logger.warn('Session time collision detected on finalized date for group therapy, preventing double booking', {
+          counselor_id: data.counselor_id,
+          original_intake_date: req_dte,
+          finalized_intake_date: finalizedDate,
+          scheduled_time: req_time,
+        });
+
+        return collisionCheck;
+      }
+
       // Store results for all participants
       const groupTherapyRequests = [];
       const errors = [];
@@ -1026,11 +1077,13 @@ export default class ThrpyReq {
           const hashData = `${client_id}_${data.counselor_id}_${Date.now()}_${Math.random()}`;
           const cancelHash = crypto.createHash('sha256').update(hashData).digest('base64url');
 
-          // Determine session format
-          let sessionFormatId = 'ONLINE';
-          if (data.session_format_id === 2 || data.session_format_id === '2' || data.session_format_id === 'IN-PERSON') {
-            sessionFormatId = 'IN-PERSON';
-          }
+          // Determine session format - Convert session_format_id from string/number to Prisma enum values
+          const sessionFormatId = 
+            data.session_format_id === "1" || data.session_format_id === 1 ? "ONLINE" :
+            data.session_format_id === "2" || data.session_format_id === 2 ? "IN_PERSON" :
+            data.session_format_id === "ONLINE" || data.session_format_id === "IN_PERSON" || data.session_format_id === "IN-PERSON" 
+              ? data.session_format_id === "IN-PERSON" ? "IN_PERSON" : data.session_format_id
+              : "ONLINE"; // Default to ONLINE
 
           // Create therapy request for this participant
           const tmpThrpyReq = {
@@ -1069,13 +1122,9 @@ export default class ThrpyReq {
               continue;
             }
 
-            let currentDate = new Date(`${req_dte}T00:00:00Z`);
+            // Use the finalizedDate that was already calculated and checked for collisions
+            let currentDate = new Date(`${finalizedDate}T00:00:00Z`);
             const activeSessionLimit = data.number_of_sessions ? Number(data.number_of_sessions) : svc.nbr_of_sessions;
-
-            // Skip weekends for first session
-            while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
-              currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-            }
 
             for (let i = 0; i < svc.nbr_of_sessions; i++) {
               if (i !== 0) {
@@ -1093,7 +1142,7 @@ export default class ThrpyReq {
                 service_id: data.service_id,
                 intake_date: intakeDate,
                 scheduled_time: req_time,
-                session_format: sessionFormatId, // Use the enum value (ONLINE or IN-PERSON)
+                session_format: sessionFormatId, // Use the enum value (ONLINE or IN_PERSON)
                 session_code: svc.service_code,
                 session_description: groupMetadataJson, // Store group metadata in session_description
                 tenant_id: data.tenant_id,
@@ -1615,13 +1664,6 @@ export default class ThrpyReq {
         .where('thrpy_req_id', req_id)
         .del();
 
-      if (!deletedSessions) {
-        logger.error('Error deleting therapy sessions');
-        return {
-          message: 'Error deleting therapy sessions',
-          error: -1,
-        };
-      }
 
       const delThrpyReq = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)

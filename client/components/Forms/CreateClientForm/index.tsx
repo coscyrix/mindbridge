@@ -714,6 +714,7 @@ function CreateClientForm({
                 formButton === "Create" || intakeId ? "create-button" : ""
               }
               type="submit"
+              disabled={loading}
               style={{ padding: loading ? "5.75px 12px" : "10.5px 12px" }}
             >
               {loading ? (

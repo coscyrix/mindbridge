@@ -57,9 +57,17 @@ const SessionScheduleHeader = ({
                 <label>
                   <strong>Intake Date : </strong>
                   <span>
-                    {convertUTCToLocalTime(
-                      initialData?.created_at?.replace(" ", "T") || ""
-                    ).date || "N/A"}
+                    {(() => {
+                      const firstSession = initialData?.session_obj?.[0];
+                      const dateTime =
+                        firstSession?.intake_date &&
+                        firstSession?.scheduled_time
+                          ? `${firstSession.intake_date}T${firstSession.scheduled_time}`
+                          : null;
+                      return dateTime
+                        ? convertUTCToLocalTime(dateTime).date || "N/A"
+                        : "N/A";
+                    })()}
                   </span>
                 </label>
                 <label>

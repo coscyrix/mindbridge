@@ -1,20 +1,28 @@
-import React, { useEffect, useState } from "react";
-import { SessionHistoryContainer } from "../styles/session-history";
+import React, { useState, useRef, useEffect } from "react";
+import { SessionHistoryContainer } from "../../styles/session-history";
 import { useRouter } from "next/router";
-import CustomSearch from "../components/CustomSearch";
-import CustomClientDetails from "../components/CustomClientDetails";
-import CommonServices from "../services/CommonServices";
-import { useReferenceContext } from "../context/ReferenceContext";
+import CustomSearch from "../../components/CustomSearch";
+import CustomClientDetails from "../../components/CustomClientDetails";
+import CommonServices from "../../services/CommonServices";
+import { useReferenceContext } from "../../context/ReferenceContext";
 import { toast } from "react-toastify";
-import CustomLoader from "../components/Loader/CustomLoader";
+import CustomLoader from "../../components/Loader/CustomLoader";
 import moment from "moment";
-import { useQueryData } from "../utils/hooks/useQueryData";
-import { useMutationData } from "../utils/hooks/useMutationData";
-import { QUERY_KEYS } from "../utils/constants";
+import { useQueryData } from "../../utils/hooks/useQueryData";
+import { useMutationData } from "../../utils/hooks/useMutationData";
+import { QUERY_KEYS } from "../../utils/constants";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 function Appointments() {
   const [appointmentsToDisplay, setAppointmentsToDisplay] = useState([]);
   const [filterText, setFilterText] = useState("");
+  const [sendingAppointmentId, setSendingAppointmentId] = useState<
+    number | null
+  >(null);
+  // Use ref to track sending state synchronously (prevents double-clicks)
+  const sendingAppointmentIdRef = useRef<number | null>(null);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const { userObj } = useReferenceContext();
 
   // Fetch appointments using React Query (same key as Sidebar for cache sharing)
@@ -53,8 +61,38 @@ function Appointments() {
         }
         return response;
       },
-      QUERY_KEYS.APPOINTMENTS(userObj?.user_profile_id)[0] // Invalidate appointments query after success
+      QUERY_KEYS.APPOINTMENTS(userObj?.user_profile_id)[0], // Invalidate appointments query after success
+      () => {
+        setSendingAppointmentId(null);
+        sendingAppointmentIdRef.current = null;
+        setShowConfirmationModal(false);
+        setSelectedAppointment(null);
+      }
     );
+
+  // Clear sending state when mutation completes (success or error)
+  useEffect(() => {
+    if (!isSendingIntakeForm && sendingAppointmentId !== null) {
+      setSendingAppointmentId(null);
+      sendingAppointmentIdRef.current = null;
+    }
+  }, [isSendingIntakeForm, sendingAppointmentId]);
+
+  // Handle confirmation to send intake form
+  const handleConfirmSendIntakeForm = () => {
+    if (!selectedAppointment) return;
+
+    // Prevent double-click
+    if (sendingAppointmentIdRef.current === selectedAppointment.id) return;
+
+    sendingAppointmentIdRef.current = selectedAppointment.id;
+    setSendingAppointmentId(selectedAppointment.id);
+    sendIntakeForm({
+      appointment_id: selectedAppointment.id,
+      counselor_profile_id: selectedAppointment.counselor_profile_id,
+    });
+    // Modal will close automatically on success via onSuccess callback
+  };
 
   // Define table columns
   const appointmentColumns = [
@@ -101,62 +139,60 @@ function Appointments() {
     {
       name: "Action",
       cell: (row: any) => {
-        const handleSendIntakeForm = () => {
+        const handleOpenModal = () => {
           const profileId = row.counselor_profile_id || counselorProfileId;
-
           if (!profileId) {
             toast.error(
               "Counselor profile ID not found. Please refresh the page."
             );
             return;
           }
-
           if (!row.id) {
             toast.error("Appointment ID not found");
             return;
           }
-
-          sendIntakeForm({
-            appointment_id: row.id,
-            counselor_profile_id: profileId,
-          });
+          setSelectedAppointment({ ...row, counselor_profile_id: profileId });
+          setShowConfirmationModal(true);
         };
+
+        const isThisRowSending =
+          sendingAppointmentId === row.id && isSendingIntakeForm;
 
         return (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              handleSendIntakeForm();
+              handleOpenModal();
             }}
-            disabled={isSendingIntakeForm}
+            disabled={isThisRowSending}
             style={{
               padding: "6px 12px",
               borderRadius: "6px",
               border: "1px solid #1a73e8",
               background: "#fff",
               color: "#1a73e8",
-              cursor: isSendingIntakeForm ? "not-allowed" : "pointer",
+              cursor: isThisRowSending ? "not-allowed" : "pointer",
               fontSize: "14px",
               fontWeight: 500,
               transition: "all 0.2s ease",
-              opacity: isSendingIntakeForm ? 0.6 : 1,
+              opacity: isThisRowSending ? 0.6 : 1,
             }}
             onMouseEnter={(e) => {
-              if (!isSendingIntakeForm) {
+              if (!isThisRowSending) {
                 const target = e.target as HTMLButtonElement;
                 target.style.background = "#1a73e8";
                 target.style.color = "#fff";
               }
             }}
             onMouseLeave={(e) => {
-              if (!isSendingIntakeForm) {
+              if (!isThisRowSending) {
                 const target = e.target as HTMLButtonElement;
                 target.style.background = "#fff";
                 target.style.color = "#1a73e8";
               }
             }}
           >
-            {isSendingIntakeForm ? "Sending..." : "Send Intake Form"}
+            {isThisRowSending ? "Sending..." : "Send Intake Form"}
           </button>
         );
       },
@@ -238,6 +274,20 @@ function Appointments() {
           </div> */}
         </CustomClientDetails>
       )}
+      <ConfirmationModal
+        isOpen={showConfirmationModal}
+        onClose={() => {
+          setShowConfirmationModal(false);
+          setSelectedAppointment(null);
+        }}
+        content={`Are you sure you want to send the intake form to ${
+          selectedAppointment?.customer_name || "this client"
+        }?`}
+        affirmativeAction="Send"
+        discardAction="Cancel"
+        handleAffirmativeAction={handleConfirmSendIntakeForm}
+        loading={isSendingIntakeForm}
+      />
     </SessionHistoryContainer>
   );
 }
