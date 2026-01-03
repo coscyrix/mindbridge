@@ -339,7 +339,6 @@ export default class Session {
 
   async putSessionById(data) {
     try {
-      console.log('data', data);
       // Check if session is ongoing
       const checkSessionIfOngoing = await this.checkSessionONGOING(
         data.session_id,

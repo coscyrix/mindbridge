@@ -362,8 +362,6 @@ function CreateClientForm({
       };
     }
 
-    console.log("Final processedData before API call:", processedData);
-    console.log("intakeId value:", intakeId);
     createClientMutation.mutate(processedData);
   };
 

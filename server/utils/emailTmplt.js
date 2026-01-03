@@ -100,7 +100,6 @@ export const accountRestoredEmail = (email, newPassword) => {
 export const absenceNotificationEmail = (email, counselorName, absencePeriod, cancelledSessionsCount, adminName, rescheduledSessions) => {
   // Ensure rescheduledSessions is an array
 
-  console.log('rescheduledSessions ❤️❤️❤️❤️❤️', rescheduledSessions);
   const sessions = Array.isArray(rescheduledSessions) ? rescheduledSessions : [];
   
   // Format rescheduled sessions table with error handling
@@ -210,7 +209,6 @@ export const clientAbsenceRescheduleEmail = (email, clientName, counselorName, r
   // Ensure rescheduledSessions is an array
   const sessions = Array.isArray(rescheduledSessions) ? rescheduledSessions : [];
   
-  console.log('rescheduledSessions ❤️❤️❤️❤️❤️', rescheduledSessions);
   // Format rescheduled sessions table with error handling
   let sessionDetails = '';
   

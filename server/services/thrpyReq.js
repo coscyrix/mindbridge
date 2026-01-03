@@ -378,7 +378,6 @@ export default class ThrpyReqService {
       return { message: error.details[0].message, error: -1 };
     }
 
-    console.log('data----->',data);
 
     const thrpyReq = new ThrpyReq();
     return thrpyReq.getThrpyReqById(data);

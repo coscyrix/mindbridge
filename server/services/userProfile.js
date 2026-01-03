@@ -199,8 +199,6 @@ export default class UserProfileService {
       timezone: joi.string().optional(),
     });
 
-    console.log(data.admin_fee, 'data.admin_fee');
-    console.log(data.tax_percent, 'data.tax_percent');
     // Validate the entire data object against the schema
     const { error } = userProfileSchema.validate(data);
 

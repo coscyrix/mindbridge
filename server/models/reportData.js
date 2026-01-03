@@ -2095,7 +2095,6 @@ export default class ReportData {
         },
       };
 
-      console.log('latestSmartGoalWording ❤️❤️❤️', latestSmartGoalWording, thrpy_req_id);
 
       return response;
     } catch (error) {

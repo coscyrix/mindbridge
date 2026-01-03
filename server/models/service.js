@@ -333,7 +333,6 @@ export default class Service {
         .leftJoin('tenant', 'service.tenant_id', 'tenant.tenant_generated_id')
         .where('service.status_yn', 1);
 
-        console.log('data', data);
         
 
       if (data.service_id) {

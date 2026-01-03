@@ -90,7 +90,6 @@ export default class UserProfile {
       if (checkEmail.length > 0) {
         logger.error('Email already exists');
 
-        console.log('checkEmail', checkEmail);
         // Check if account is deactivated and restore account
         if (checkEmail[0].status_yn == 'n') {
           logger.warn('Account is deactivated, restoring account');
@@ -525,8 +524,6 @@ export default class UserProfile {
           user_profile_id: user_profile_id,
         });
 
-        // console.log('getUsr', getUsr);
-
         const putUsr = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('users')
@@ -640,7 +637,6 @@ export default class UserProfile {
           }
         }
       }
-      console.log('query', query.toQuery());
       
 
       const rec = await query;

@@ -25,7 +25,6 @@ export const ProgressReportPDF = (data) => (doc) => {
     frequency = 'Other',
   } = data;
 
-  console.log('❤️❤️❤️❤️❤️❤️', data);
 
   const pageWidth = doc.page.width;
   const margin = 50;

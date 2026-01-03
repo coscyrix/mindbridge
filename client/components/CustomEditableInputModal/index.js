@@ -29,7 +29,6 @@ const CustomEditableInputModal = ({
   loading = false,
 }) => {
   const { userObj } = useReferenceContext();
-  console.log(userObj);
   const [activeServices, setActiveServices] = useState(() =>
     initialTemplates.map(sanitizeService)
   );

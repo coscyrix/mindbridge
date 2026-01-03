@@ -41,7 +41,6 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
   assessmentResultsData,
   onClientClick,
 }) => {
-  console.log(assessmentResultsData, "assessmentResultsData");
 
   const [loading, setLoading] = useState<string | null>(
     "assessmentResultsData"
@@ -345,7 +344,6 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({
             row.form_cde === "WHODAS" ||
             row.form_cde?.toLowerCase() === "whodas";
 
-          console.log(isWHODAS, "isWHODAS");
 
           if (isWHODAS) {
             setWhodasDomainData(records);

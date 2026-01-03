@@ -679,7 +679,6 @@ export default class EmailTmplt {
     try {
       const { req_id, client_id, counselor_id, form_codes } = data;
 
-      console.log('data', data)
 
       if (!Array.isArray(form_codes) || form_codes.length === 0) {
         logger.warn('sendManualTreatmentToolEmailForRequest called with no form_codes', {

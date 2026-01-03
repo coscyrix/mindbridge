@@ -522,8 +522,6 @@ export default class Feedback {
         tenant_id: data.tenant_id,
       });
 
-      console.log('recFeedback');
-      console.log(recFeedback);
 
       if (recFeedback.error) {
         return recFeedback;

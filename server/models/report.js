@@ -903,7 +903,6 @@ export default class Report {
         return { message: 'Error getting sessions with homework stats', error: -1 };
       }
 
-      console.log('❤️❤️❤️❤️❤️');
 
       return rec;
     } catch (error) {

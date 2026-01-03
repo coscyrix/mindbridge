@@ -510,7 +510,6 @@ export default class TherapistAbsence {
       
       try {
 
-        console.log('🫵🫵🫵🫵🫵🫵🫵🫵🫵🫵🫵🫵', )
         // Fetch all affected sessions with client contact information
         const clientSessions = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -579,7 +578,6 @@ export default class TherapistAbsence {
           const clientCount = Object.keys(sessionsByClient).length;
           logger.info(`Sending reschedule notifications to ${clientCount} client(s)`);
 
-          console.log('🫵🫵🫵🫵🫵🫵🫵🫵🫵🫵🫵🫵', sessionsByClient);
 
           for (const [clientId, clientData] of Object.entries(sessionsByClient)) {
             try {
