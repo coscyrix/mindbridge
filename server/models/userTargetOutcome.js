@@ -96,9 +96,6 @@ export default class UserTargetOutcome {
 
       const rec = await query;
 
-      console.log('////////////////////////1//////////////////////');
-      console.log('rec', rec);
-
       if (!rec.length) {
         logger.error('Error fetching user target outcome');
         return { message: 'Error fetching user target outcome', error: -1 };
@@ -138,9 +135,6 @@ export default class UserTargetOutcome {
       }
 
       const rec = await query;
-
-      console.log('////////////////////////2//////////////////////');
-      console.log('rec', rec);
 
       if (!rec.length) {
         logger.error('Error fetching user target outcome');

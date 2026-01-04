@@ -36,7 +36,7 @@ function getDb() {
     // This prevents exhausting MySQL's connection limit
     const poolConfig = {
       ...DBconn.dbConn[env].pool,
-      max: 10, // Reduced from 50 to account for Prisma's 12 connections
+      max: 100, // Reduced from 50 to account for Prisma's 12 connections
     };
     
     dbInstance = knex({

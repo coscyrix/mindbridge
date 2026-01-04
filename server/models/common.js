@@ -166,8 +166,10 @@ export default class Common {
         return { message: 'Error creating client enrollment', error: -1 };
       }
 
-      return { message: 'Client enrollment created successfully' };
+      const enrollmentId = postClient[0];
+      return { message: 'Client enrollment created successfully', enrollment_id: enrollmentId };
     } catch (error) {
+      console.error('Error in postClientEnrollment:', error);
       return { message: 'Error creating client enrollment', error: -1 };
     }
   }

@@ -465,3 +465,159 @@ export const DataTimeModalWrapper = styled.div`
     }
   }
 `;
+
+export const ProgressReportModalWrapper = styled.div`
+  padding: 20px;
+  font-family: Arial, sans-serif;
+
+  .header-section {
+    margin-bottom: 30px;
+  }
+
+  .header-field {
+    margin-bottom: 10px;
+  }
+
+  .client-information {
+    margin-bottom: 30px;
+    border-top: 2px solid #000;
+    padding-top: 20px;
+  }
+
+  .client-info-title {
+    margin-bottom: 15px;
+    text-transform: uppercase;
+  }
+
+  .client-info-field {
+    margin-bottom: 8px;
+  }
+
+  .form-section {
+    margin-bottom: 30px;
+  }
+
+  .section-title {
+    margin-bottom: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    resize: vertical;
+    box-sizing: border-box;
+
+    &.session-summary,
+    &.progress-summary {
+      min-height: 120px;
+    }
+
+    &.risk-screening-note {
+      min-height: 80px;
+    }
+
+    &.therapist-notes {
+      min-height: 60px;
+    }
+  }
+
+  .risk-screening {
+    margin-bottom: 30px;
+  }
+
+  .checkbox-group {
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+
+    label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+
+      input[type="checkbox"] {
+        margin-right: 5px;
+        cursor: pointer;
+      }
+    }
+  }
+
+  .assessment-item {
+    margin-bottom: 15px;
+  }
+
+  .assessment-header {
+    margin-bottom: 5px;
+  }
+
+  .assessment-notes-label {
+    margin-bottom: 5px;
+  }
+
+  .frequency-section {
+    margin-bottom: 30px;
+  }
+
+  .frequency-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+
+    label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+
+      input[type="checkbox"] {
+        margin-right: 5px;
+        cursor: pointer;
+      }
+    }
+  }
+
+  .frequency-note {
+    margin-top: 5px;
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  .therapist-signoff {
+    border-top: 2px solid #000;
+    padding-top: 20px;
+    margin-top: 30px;
+  }
+
+  .signoff-title {
+    margin-bottom: 10px;
+  }
+
+  .signoff-text {
+    font-size: 14px;
+  }
+
+  .loading-container {
+    padding: 60px 40px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+
+    .loading-text {
+      margin-top: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+  }
+`;
+
+export const DischargeReportModalWrapper = styled(ProgressReportModalWrapper)`
+  // Inherits all styles from ProgressReportModalWrapper
+  // Can add discharge-specific styles here if needed
+`;

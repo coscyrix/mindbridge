@@ -17,6 +17,7 @@ function Reports({ reportsData, onClientClick }) {
             columns: REPORTS_TABLE_DATA_COLUMNS(onClientClick),
             data: reportsData,
           }}
+          itemsPerPage={10000}
           defaultSortFieldId={false}
           fixedHeaderScrollHeight="230px"
           loading={loading}

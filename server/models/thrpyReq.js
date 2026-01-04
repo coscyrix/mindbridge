@@ -23,6 +23,7 @@ import {
 import { formatDateTimeInTimezone, getTimezoneByCountryCode, getDefaultTimezone } from '../utils/timezone.js';
 import SendEmail from '../middlewares/sendEmail.js';
 import UserTargetOutcome from './userTargetOutcome.js';
+import ReportData from './reportData.js';
 
 dotenv.config();
 // Database connection is handled by getDb() function above
@@ -39,6 +40,7 @@ export default class ThrpyReq {
     this.emailTmplt = new EmailTmplt();
     this.common = new Common();
     this.userTargetOutcome = new UserTargetOutcome();
+    this.reportData = new ReportData();
   }
 
 
@@ -106,7 +108,7 @@ export default class ThrpyReq {
           message: 'Invalid date/time format provided',
           error: -1,
         };
-      }
+      }   
 
       // Check if counselor in data role is for a counselor
       const recCounselor = await this.userProfile.getUserProfileById({
@@ -285,6 +287,36 @@ export default class ThrpyReq {
           ? data.session_format_id === "IN-PERSON" ? "IN_PERSON" : data.session_format_id
           : "ONLINE"; // Default to ONLINE
 
+      // Calculate finalized first session date (after weekend adjustment)
+      let finalizedFirstSessionDate = new Date(`${req_dte}T00:00:00Z`);
+      while (
+        finalizedFirstSessionDate.getUTCDay() === 0 || // Sunday
+        finalizedFirstSessionDate.getUTCDay() === 6 // Saturday
+      ) {
+        finalizedFirstSessionDate.setUTCDate(finalizedFirstSessionDate.getUTCDate() + 1);
+      }
+      const finalizedDate = finalizedFirstSessionDate.toISOString().split('T')[0];
+
+      // Check for session time collision on the finalized date (after weekend adjustment)
+      console.log('Checking Collision ', finalizedDate, req_time, data.counselor_id);
+      const collisionCheck = await this.common.checkSessionTimeCollision(
+        data.counselor_id,
+        finalizedDate,
+        req_time,
+        null, // No session to exclude for new therapy requests
+      );
+
+      if (collisionCheck.error) {
+        logger.warn('Session time collision detected on finalized date, preventing double booking', {
+          counselor_id: data.counselor_id,
+          original_intake_date: req_dte,
+          finalized_intake_date: finalizedDate,
+          scheduled_time: req_time,
+        });
+
+        return collisionCheck;
+      }
+
       // Generate a unique hash for cancel/reschedule functionality
       const crypto = require('crypto');
       const hashData = `${data.counselor_id}-${data.client_id}-${data.service_id}-${Date.now()}`;
@@ -302,6 +334,7 @@ export default class ThrpyReq {
         tenant_id: data.tenant_id,
         treatment_target: treatmentTarget, // Add treatment target to therapy request
         cancel_hash: cancelHash, // Add cancel/reschedule hash
+        video_link: data.video_link || null, // Add video link for online sessions
       };
 
       // Insert the therapy request into the database using Prisma
@@ -366,6 +399,7 @@ export default class ThrpyReq {
             session_code: svc.service_code,
             session_description: svc.service_code,
             tenant_id: data.tenant_id,
+            video_link: data.video_link || null, // Add video link for online sessions
             ...sessionAmounts
           };
 
@@ -376,13 +410,13 @@ export default class ThrpyReq {
           }
 
           // Debug logging for session creation
-          console.log(`🔍 DEBUG: Creating session ${i + 1}/${svc.nbr_of_sessions}:`, {
-            session_id: 'new',
-            intake_date: tmpSession.intake_date,
-            scheduled_time: tmpSession.scheduled_time,
-            service_name: svc.service_name,
-            is_report: 0
-          });
+          // console.log(`🔍 DEBUG: Creating session ${i + 1}/${svc.nbr_of_sessions}:`, {
+          //   session_id: 'new',
+          //   intake_date: tmpSession.intake_date,
+          //   scheduled_time: tmpSession.scheduled_time,
+          //   service_name: svc.service_name,
+          //   is_report: 0
+          // });
 
           console.log('session_system_amt--------->1', {
             total_invoice: Number(svc.total_invoice),
@@ -438,7 +472,7 @@ export default class ThrpyReq {
               }
             }
 
-            console.log('🔍 DEBUG: Final reportService result:', reportService);
+            // console.log('🔍 DEBUG: Final reportService result:', reportService);
 
             if (reportService && reportService.rec && reportService.rec[0]) {
               console.log('reportService.rec[0].total_invoice', reportService.rec[0].total_invoice);
@@ -456,6 +490,7 @@ export default class ThrpyReq {
                 session_description: `${svc.service_code} ${reportService.rec[0].service_name}`,
                 is_report: 1,
                 tenant_id: data.tenant_id,
+                video_link: data.video_link || null, // Add video link for online sessions
                 ...reportSessionAmounts
               };
               
@@ -504,6 +539,7 @@ export default class ThrpyReq {
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
           tenant_id: data.tenant_id,
+          video_link: data.video_link || null, // Add video link for online sessions
           ...dischargeSessionAmounts
         };
 
@@ -607,6 +643,7 @@ export default class ThrpyReq {
             session_code: svc.service_code,
             session_description: svc.service_code,
             tenant_id: data.tenant_id,
+            video_link: data.video_link || null, // Add video link for online sessions
             ...sessionAmounts
           };
 
@@ -690,6 +727,7 @@ export default class ThrpyReq {
                 session_description: `${svc.service_code} ${reportService.rec[0].service_name}`,
                 is_report: 1,
                 tenant_id: data.tenant_id,
+                video_link: data.video_link || null, // Add video link for online sessions
                 ...reportSessionAmounts
               };
               
@@ -736,6 +774,7 @@ export default class ThrpyReq {
           session_description: `${svc.service_code} ${drSvc.service_name}`,
           is_report: 1,
           tenant_id: data.tenant_id,
+          video_link: data.video_link || null, // Add video link for online sessions
           ...dischargeSessionAmounts
         };
 
@@ -785,10 +824,16 @@ export default class ThrpyReq {
         if (!postSessionResult || postSessionResult.error) {
           logger.error('Error posting session:', postSessionResult?.message || 'Unknown error');
           console.error('Error posting session:', postSessionResult?.colliding_session || 'Unknown error');
+          
+          // Make sure to delete the therapy request if it was created
+          await this.deleteThrpyReqById(postThrpyReq.req_id);
+          
           return {
             message: postSessionResult?.message || 'Unknown error',
             error: -1,
           };
+
+
         }
       }
 
@@ -806,6 +851,21 @@ export default class ThrpyReq {
         // Don't return error - continue without forms
       } else {
         logger.info('Session forms loaded successfully:', loadForms.message);
+      }
+
+      // Generate reports for report sessions
+      const generateReports = await this.generateReportsForReportSessions({
+        req_id: postThrpyReq.req_id,
+        client_id: data.client_id,
+        counselor_id: data.counselor_id,
+        tenant_id: data.tenant_id,
+      });
+
+      if (generateReports.error) {
+        logger.error('Error generating reports for report sessions:', generateReports.message);
+        // Don't return error - continue without reports
+      } else {
+        logger.info('Reports generated successfully for report sessions:', generateReports.message);
       }
 
       const ThrpyReq = await this.getThrpyReqById({
@@ -834,6 +894,445 @@ export default class ThrpyReq {
       logger.error(error);
       return {
         message: `Error creating therapy request, sessions, and reports: ${error}`,
+        error: -1,
+      };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async postGroupThrpyReq(data) {
+    try {
+      const crypto = require('crypto');
+      const { participant_client_ids, group_name, group_description, max_participants } = data;
+      const tenantId = await this.common.getUserTenantId({
+        user_profile_id: data.counselor_id,
+      });
+
+      if (!tenantId || !tenantId[0] || !tenantId[0].tenant_id) {
+        logger.error('Tenant not found');
+        return { message: 'Tenant not found', error: -1 };
+      }
+
+      // Parse the intake date and time from the ISO string
+      let req_dte, req_time;
+      
+      if (data.intake_dte && data.intake_dte.includes('T')) {
+        const parts = data.intake_dte.split('T');
+        req_dte = parts[0]; // 'YYYY-MM-DD'
+        req_time = parts[1]; // 'HH:mm:ss.sssZ'
+      } else if (data.intake_dte) {
+        req_dte = data.intake_dte;
+        req_time = '09:00:00.000Z';
+      } else {
+        req_dte = new Date().toISOString().split('T')[0];
+        req_time = '09:00:00.000Z';
+      }
+
+      // Validate date/time
+      if (!req_dte || !req_time) {
+        logger.error('Invalid date/time format provided');
+        return { message: 'Invalid date/time format provided', error: -1 };
+      }
+
+      // Get service details
+      const servc = await this.service.getServiceById({
+        service_id: data.service_id,
+      });
+
+      if (!servc || !servc.rec || !servc.rec[0]) {
+        logger.error(`Service not found for service_id: ${data.service_id}`);
+        return { message: `Service not found for service_id: ${data.service_id}`, error: -1 };
+      }
+
+      const svc = servc.rec[0];
+      const dischargeReportCodeMap = {
+        OTR_ST: 'OTR_SUM_REP',
+        OTR_TS: 'OTR_Trns_REP',
+      };
+      const dischargeReportCode =
+        dischargeReportCodeMap[svc.service_code] || 'DR';
+
+      // Get tenant-specific discharge service
+      let drService = await this.service.getServiceById({
+        service_code: dischargeReportCode,
+        tenant_id: tenantId[0].tenant_generated_id,
+        is_report: 1,
+      });
+
+      // If not found, try to find by the same code using tenant_generated_id
+      if (!drService || !drService.rec || !drService.rec[0]) {
+        drService = await this.service.getServiceById({
+          service_code: dischargeReportCode,
+          tenant_id: tenantId[0].tenant_generated_id,
+        });
+      }
+
+      // If still not found, use a default or skip discharge report
+      if (!drService || !drService.rec || !drService.rec[0]) {
+        logger.warn(`Discharge report service not found for code: ${dischargeReportCode}, tenant: ${tenantId[0].tenant_generated_id}`);
+        // Continue without discharge report - it's optional
+      }
+
+      const drSvc = drService && drService.rec && drService.rec[0] ? drService.rec[0] : null;
+
+      // Get reference fees
+      const ref_fees = await this.common.getRefFeesByTenantId(tenantId[0].tenant_id);
+      if (!ref_fees || ref_fees.error || !ref_fees[0]) {
+        logger.error('Error getting reference fees');
+        return { message: 'Error getting reference fees', error: -1 };
+      }
+
+      // Generate a group identifier for linking all participants
+      const groupIdentifier = `GROUP_${Date.now()}_${data.counselor_id}`;
+
+      // Create group metadata to store in session_description
+      const groupMetadata = {
+        is_group: true,
+        group_name: group_name || svc.service_name,
+        group_description: group_description || null,
+        max_participants: max_participants || 10,
+        group_identifier: groupIdentifier,
+        participant_count: participant_client_ids.length,
+        participant_client_ids: participant_client_ids,
+      };
+
+      const groupMetadataJson = JSON.stringify(groupMetadata);
+
+      // Calculate finalized first session date (after weekend adjustment)
+      let finalizedFirstSessionDate = new Date(`${req_dte}T00:00:00Z`);
+      while (
+        finalizedFirstSessionDate.getUTCDay() === 0 || // Sunday
+        finalizedFirstSessionDate.getUTCDay() === 6 // Saturday
+      ) {
+        finalizedFirstSessionDate.setUTCDate(finalizedFirstSessionDate.getUTCDate() + 1);
+      }
+      const finalizedDate = finalizedFirstSessionDate.toISOString().split('T')[0];
+
+
+      console.log('Checking Collision ', finalizedDate, req_time, data.counselor_id);
+
+      // Check for session time collision on the finalized date (after weekend adjustment)
+      const collisionCheck = await this.common.checkSessionTimeCollision(
+        data.counselor_id,
+        finalizedDate,
+        req_time,
+        null, // No session to exclude for new therapy requests
+      );
+
+      if (collisionCheck.error) {
+        logger.warn('Session time collision detected on finalized date for group therapy, preventing double booking', {
+          counselor_id: data.counselor_id,
+          original_intake_date: req_dte,
+          finalized_intake_date: finalizedDate,
+          scheduled_time: req_time,
+        });
+
+        return collisionCheck;
+      }
+
+      // Store results for all participants
+      const groupTherapyRequests = [];
+      const errors = [];
+
+      // Create therapy request and sessions for each participant
+      for (const client_id of participant_client_ids) {
+        try {
+          // Verify client exists and has client role
+          const recClient = await this.userProfile.getUserProfileById({
+            user_profile_id: client_id,
+          });
+
+          if (!recClient || !recClient.rec || !recClient.rec[0]) {
+            logger.error(`Client profile not found for client_id: ${client_id}`);
+            errors.push({ client_id, error: 'Client profile not found' });
+            continue;
+          }
+
+          if (recClient.rec[0].role_id !== 1) {
+            logger.error(`User ${client_id} does not have the client role`);
+            errors.push({ client_id, error: 'User does not have the client role' });
+            continue;
+          }
+
+          // Get client's target outcome
+          let treatmentTarget = null;
+          try {
+            const clientTargetOutcome = await this.userTargetOutcome.getUserTargetOutcomeLatest({
+              user_profile_id: client_id,
+            });
+
+            if (clientTargetOutcome && clientTargetOutcome.length > 0) {
+              const targetOutcomeId = clientTargetOutcome[0].target_outcome_id;
+              const targetOutcome = await this.common.getTargetOutcomeById(targetOutcomeId);
+              if (targetOutcome && targetOutcome.length > 0) {
+                treatmentTarget = targetOutcome[0].target_name;
+              }
+            }
+          } catch (error) {
+            logger.warn(`Could not determine treatment target for client ${client_id}:`, error);
+          }
+
+          // Generate cancel hash for this client
+          const hashData = `${client_id}_${data.counselor_id}_${Date.now()}_${Math.random()}`;
+          const cancelHash = crypto.createHash('sha256').update(hashData).digest('base64url');
+
+          // Determine session format - Convert session_format_id from string/number to Prisma enum values
+          const sessionFormatId = 
+            data.session_format_id === "1" || data.session_format_id === 1 ? "ONLINE" :
+            data.session_format_id === "2" || data.session_format_id === 2 ? "IN_PERSON" :
+            data.session_format_id === "ONLINE" || data.session_format_id === "IN_PERSON" || data.session_format_id === "IN-PERSON" 
+              ? data.session_format_id === "IN-PERSON" ? "IN_PERSON" : data.session_format_id
+              : "ONLINE"; // Default to ONLINE
+
+          // Create therapy request for this participant
+          const tmpThrpyReq = {
+            counselor_id: data.counselor_id,
+            client_id: client_id,
+            service_id: data.service_id,
+            session_format_id: sessionFormatId,
+            req_dte: req_dte,
+            req_time: req_time,
+            session_desc: `${svc.service_code} [GROUP: ${group_name || svc.service_name}]`,
+            tenant_id: data.tenant_id,
+            treatment_target: treatmentTarget,
+            cancel_hash: cancelHash,
+            video_link: data.video_link || null, // Add video link for online sessions
+          };
+
+          const postThrpyReq = await prisma.thrpy_req.create({
+            data: tmpThrpyReq,
+          });
+
+          if (!postThrpyReq || !postThrpyReq.req_id) {
+            logger.error(`Error creating therapy request for client_id: ${client_id}`);
+            errors.push({ client_id, error: 'Error creating therapy request' });
+            continue;
+          }
+
+          // Create sessions for this participant (reuse logic from postThrpyReq)
+          // For simplicity, we'll create sessions the same way but with group metadata
+          const tmpSessionObj = [];
+          
+          if (svc.svc_formula_typ === 's') {
+            let svcFormula = svc.svc_formula;
+            if (!Array.isArray(svcFormula) || svcFormula.length !== 1) {
+              logger.error('Unexpected formula format for service');
+              errors.push({ client_id, error: 'Unexpected formula format' });
+              continue;
+            }
+
+            // Use the finalizedDate that was already calculated and checked for collisions
+            let currentDate = new Date(`${finalizedDate}T00:00:00Z`);
+            const activeSessionLimit = data.number_of_sessions ? Number(data.number_of_sessions) : svc.nbr_of_sessions;
+
+            for (let i = 0; i < svc.nbr_of_sessions; i++) {
+              if (i !== 0) {
+                currentDate.setUTCDate(currentDate.getUTCDate() + svcFormula[0]);
+                while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
+                  currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                }
+              }
+
+              const intakeDate = currentDate.toISOString().split('T')[0];
+              const sessionAmounts = this.calculateSessionAmounts(Number(svc.total_invoice), ref_fees[0], Number(svc.gst));
+              
+              const tmpSession = {
+                thrpy_req_id: postThrpyReq.req_id,
+                service_id: data.service_id,
+                intake_date: intakeDate,
+                scheduled_time: req_time,
+                session_format: sessionFormatId, // Use the enum value (ONLINE or IN_PERSON)
+                session_code: svc.service_code,
+                session_description: groupMetadataJson, // Store group metadata in session_description
+                tenant_id: data.tenant_id,
+                video_link: data.video_link || null, // Add video link for online sessions
+                ...sessionAmounts
+              };
+
+              if (i + 1 > activeSessionLimit) {
+                tmpSession.session_status = 'INACTIVE';
+              }
+
+              // Handle reports based on svc_report_formula
+              if (
+                svc.svc_report_formula &&
+                Array.isArray(svc.svc_report_formula.position) &&
+                svc.svc_report_formula.position.includes(i + 1)
+              ) {
+                const reportIndex = svc.svc_report_formula.position.indexOf(i + 1);
+                const reportServiceId = svc.svc_report_formula.service_id[reportIndex];
+                
+                // First try to find the report service in the current tenant
+                let reportService = await this.service.getServiceById({
+                  service_id: reportServiceId,
+                  tenant_id: data.tenant_id,
+                  is_report: 1,
+                });
+
+                // If not found in current tenant, try to find by service_code in current tenant
+                if (!reportService || !reportService.rec || !reportService.rec[0]) {
+                  // Get the service details to find its service_code
+                  const originalService = await this.service.getServiceById({
+                    service_id: reportServiceId,
+                    tenant_id: svc.tenant_id,
+                    is_report: 1,
+                  });
+
+                  if (originalService && originalService.rec && originalService.rec[0]) {
+                    const serviceCode = originalService.rec[0].service_code;
+                    // Look for service with same code in current tenant
+                    reportService = await this.service.getServiceById({
+                      service_code: serviceCode,
+                      tenant_id: tenantId[0].tenant_generated_id,
+                      is_report: 1,
+                    });
+                  }
+                }
+
+                if (reportService && reportService.rec && reportService.rec[0]) {
+                  // Create a report session object
+                  const reportSessionAmounts = this.calculateSessionAmounts(Number(reportService.rec[0].total_invoice), ref_fees[0], Number(reportService.rec[0].gst));
+                  const reportSession = {
+                    thrpy_req_id: postThrpyReq.req_id,
+                    service_id: reportService.rec[0].service_id,
+                    intake_date: intakeDate,
+                    scheduled_time: req_time,
+                    session_format: sessionFormatId,
+                    session_code: `${svc.service_code}_${reportService.rec[0].service_code}`,
+                    session_description: `${svc.service_code} ${reportService.rec[0].service_name}`,
+                    is_report: true,
+                    tenant_id: data.tenant_id,
+                    video_link: data.video_link || null, // Add video link for online sessions
+                    ...reportSessionAmounts
+                  };
+                  
+                  // Add the report session to the array
+                  tmpSessionObj.push(reportSession);
+                } else {
+                  logger.warn(`Report service not found for service_id: ${reportServiceId}, tenant_id: ${tenantId[0].tenant_generated_id}`);
+                }
+              }
+
+              // Add the regular session to the array
+              tmpSessionObj.push(tmpSession);
+            }
+
+            // Add the discharge report session after the last interval (if drSvc exists)
+            if (drSvc) {
+              currentDate.setUTCDate(currentDate.getUTCDate() + svcFormula[0]);
+              
+              // Skip weekends for the discharge report
+              while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
+                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+              }
+
+              const dischargeDate = currentDate.toISOString().split('T')[0];
+              const dischargeSessionAmounts = this.calculateSessionAmounts(Number(drSvc.total_invoice), ref_fees[0], Number(drSvc.gst));
+              const dischargeSession = {
+                thrpy_req_id: postThrpyReq.req_id,
+                service_id: drSvc.service_id,
+                intake_date: dischargeDate,
+                scheduled_time: req_time,
+                session_format: sessionFormatId,
+                session_code: `${svc.service_code}_${drSvc.service_code}`,
+                session_description: `${svc.service_code} ${drSvc.service_name}`,
+                is_report: true,
+                tenant_id: data.tenant_id,
+                video_link: data.video_link || null, // Add video link for online sessions
+                ...dischargeSessionAmounts
+              };
+
+              // Add the discharge session to the array
+              tmpSessionObj.push(dischargeSession);
+            }
+
+            // Insert all sessions for this participant
+            if (tmpSessionObj.length > 0) {
+              await prisma.session.createMany({
+                data: tmpSessionObj,
+              });
+            }
+
+            // Load forms for this participant (if applicable)
+            if (treatmentTarget) {
+              await this.loadSessionFormsWithMode({
+                req_id: postThrpyReq.req_id,
+                client_id: client_id,
+                counselor_id: data.counselor_id,
+                tenant_id: data.tenant_id,
+                mode: "treatment_target",
+                number_of_sessions: data.number_of_sessions,
+                treatment_target: treatmentTarget,
+              });
+            }
+
+            // Generate reports for report sessions
+            const generateReports = await this.generateReportsForReportSessions({
+              req_id: postThrpyReq.req_id,
+              client_id: client_id,
+              counselor_id: data.counselor_id,
+              tenant_id: data.tenant_id,
+            });
+
+            if (generateReports.error) {
+              logger.error(`Error generating reports for report sessions (client ${client_id}):`, generateReports.message);
+              // Don't fail the entire operation if reports fail
+            } else {
+              logger.info(`Reports generated successfully for report sessions (client ${client_id})`);
+            }
+
+            // Get the created therapy request with sessions
+            const ThrpyReq = await this.getThrpyReqById({
+              req_id: postThrpyReq.req_id,
+            });
+
+            if (ThrpyReq && ThrpyReq[0]) {
+              groupTherapyRequests.push(ThrpyReq[0]);
+              
+              // Send an email to this client with the therapy request details
+              try {
+                await this.emailTmplt.sendThrpyReqDetailsEmail({
+                  email: recClient.rec[0].email,
+                  big_thrpy_req_obj: ThrpyReq[0],
+                  cancel_hash: postThrpyReq.cancel_hash,
+                });
+              } catch (emailError) {
+                logger.warn(`Failed to send email to client ${client_id}:`, emailError);
+                // Don't fail the entire operation if email fails
+              }
+            }
+          } else {
+            logger.error(`Unsupported formula type: ${svc.svc_formula_typ} for group sessions`);
+            errors.push({ client_id, error: 'Unsupported formula type for group sessions' });
+          }
+        } catch (error) {
+          logger.error(`Error processing participant ${client_id}:`, error);
+          errors.push({ client_id, error: error.message });
+        }
+      }
+
+      // Return results - primary client's therapy request first, then others
+      const primaryClientIndex = groupTherapyRequests.findIndex(
+        req => req.client_id === data.client_id
+      );
+      
+      if (primaryClientIndex > 0) {
+        const primaryReq = groupTherapyRequests.splice(primaryClientIndex, 1)[0];
+        groupTherapyRequests.unshift(primaryReq);
+      }
+
+      return {
+        message: 'Group therapy requests created successfully',
+        rec: groupTherapyRequests,
+        errors: errors.length > 0 ? errors : undefined,
+        group_metadata: groupMetadata,
+      };
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return {
+        message: `Error creating group therapy requests: ${error.message}`,
         error: -1,
       };
     }
@@ -1165,13 +1664,6 @@ export default class ThrpyReq {
         .where('thrpy_req_id', req_id)
         .del();
 
-      if (!deletedSessions) {
-        logger.error('Error deleting therapy sessions');
-        return {
-          message: 'Error deleting therapy sessions',
-          error: -1,
-        };
-      }
 
       const delThrpyReq = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -1346,6 +1838,25 @@ export default class ThrpyReq {
                 // If no treatment target forms exist, use empty array
                 session.forms_array = [];
                 session.form_mode = 'treatment_target';
+              }
+
+              // If this is a report session, get the report_id
+              if (session.is_report === 1 || session.is_report === true) {
+                try {
+                  const reportQuery = await db
+                    .withSchema(`${process.env.MYSQL_DATABASE}`)
+                    .from('reports')
+                    .where('session_id', session.session_id)
+                    .select('report_id', 'is_locked')
+                    .first();
+
+                  if (reportQuery) {
+                    session.report_id = reportQuery.report_id;
+                    session.is_locked = reportQuery.is_locked || false;
+                  }
+                } catch (error) {
+                  logger.error('Error fetching report_id for session:', error);
+                }
               }
             }
           }
@@ -2537,6 +3048,235 @@ export default class ThrpyReq {
       logger.error(error);
       return [];
     }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Generate reports for report sessions when therapy request is created
+   * @param {Object} data - Data containing req_id, client_id, counselor_id, tenant_id
+   * @returns {Promise<Object>} Result of report generation
+   */
+  async generateReportsForReportSessions(data) {
+    try {
+      const { req_id, client_id, counselor_id, tenant_id } = data;
+
+      if (!req_id) {
+        return { message: 'req_id is required', error: -1 };
+      }
+
+      // Get all sessions for this therapy request
+      const therapyRequest = await this.getThrpyReqById({ req_id });
+
+      if (!therapyRequest || !therapyRequest[0] || !therapyRequest[0].session_obj) {
+        logger.warn('No sessions found for therapy request');
+        return { message: 'No sessions found', error: -1 };
+      }
+
+      const sessions = therapyRequest[0].session_obj;
+      
+      // Filter only report sessions (is_report = 1)
+      const reportSessions = sessions.filter(session => session.is_report === 1);
+
+      if (reportSessions.length === 0) {
+        logger.info('No report sessions found, skipping report generation');
+        return { message: 'No report sessions found', error: 0 };
+      }
+
+      logger.info(`Found ${reportSessions.length} report session(s) to generate reports for`);
+
+      const generatedReports = [];
+
+      // Process each report session
+      for (const session of reportSessions) {
+        try {
+          // Determine report type based on service code or session description
+          let reportType = this.determineReportType(session);
+
+          if (!reportType) {
+            logger.warn(`Could not determine report type for session ${session.session_id}, skipping`);
+            continue;
+          }
+
+          // Create report in reports table
+          const reportData = {
+            session_id: session.session_id,
+            client_id: client_id || session.client_id,
+            counselor_id: counselor_id || session.counselor_id,
+            report_type: reportType,
+            report_json: {
+              session_id: session.session_id,
+              session_code: session.session_code,
+              session_description: session.session_description,
+              service_id: session.service_id,
+              created_at: new Date().toISOString(),
+            },
+            tenant_id: tenant_id || session.tenant_id,
+          };
+
+          const createReportResult = await this.reportData.postReport(reportData);
+
+          if (createReportResult.error) {
+            logger.error(`Error creating report for session ${session.session_id}:`, createReportResult.message);
+            continue;
+          }
+
+          const reportId = createReportResult.report_id;
+          logger.info(`✅ Created report ${reportId} (type: ${reportType}) for session ${session.session_id}`);
+
+          // Create type-specific report data based on report type
+          const typeSpecificData = {
+            report_id: reportId,
+            tenant_id: tenant_id || session.tenant_id,
+          };
+
+          let typeSpecificResult = null;
+
+          switch (reportType) {
+            case 'INTAKE':
+              typeSpecificResult = await this.reportData.postIntakeReport({
+                ...typeSpecificData,
+                intake_data: {
+                  session_id: session.session_id,
+                  session_code: session.session_code,
+                },
+              });
+              break;
+
+            case 'TREATMENT_PLAN':
+              typeSpecificResult = await this.reportData.postTreatmentPlanReport({
+                ...typeSpecificData,
+                treatment_data: {
+                  session_id: session.session_id,
+                  session_code: session.session_code,
+                },
+              });
+              break;
+
+            case 'PROGRESS':
+              typeSpecificResult = await this.reportData.postProgressReport({
+                ...typeSpecificData,
+              });
+              break;
+
+            case 'DISCHARGE':
+              typeSpecificResult = await this.reportData.postDischargeReport({
+                ...typeSpecificData,
+                discharge_data: {
+                  session_id: session.session_id,
+                  session_code: session.session_code,
+                },
+                discharge_date: session.intake_date ? new Date(session.intake_date) : new Date(),
+              });
+              break;
+
+            default:
+              logger.warn(`Unknown report type: ${reportType}, skipping type-specific data creation`);
+          }
+
+          if (typeSpecificResult && !typeSpecificResult.error) {
+            logger.info(`✅ Created type-specific data for report ${reportId} (type: ${reportType})`);
+          } else if (typeSpecificResult && typeSpecificResult.error) {
+            logger.warn(`⚠️ Error creating type-specific data for report ${reportId}:`, typeSpecificResult.message);
+          }
+
+          generatedReports.push({
+            report_id: reportId,
+            session_id: session.session_id,
+            report_type: reportType,
+          });
+        } catch (error) {
+          logger.error(`Error processing report session ${session.session_id}:`, error);
+          // Continue with next session
+        }
+      }
+
+      return {
+        message: `Successfully generated ${generatedReports.length} report(s) for report sessions`,
+        generated_reports: generatedReports,
+      };
+    } catch (error) {
+      logger.error('Error generating reports for report sessions:', error);
+      return {
+        message: 'Error generating reports for report sessions',
+        error: -1,
+      };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  /**
+   * Determine report type based on session service code or description
+   * @param {Object} session - Session object
+   * @returns {string|null} Report type (INTAKE, TREATMENT_PLAN, PROGRESS, DISCHARGE) or null
+   */
+  determineReportType(session) {
+    if (!session) {
+      return null;
+    }
+
+    const sessionCode = (session.session_code || '').toUpperCase();
+    const sessionDescription = (session.session_description || '').toUpperCase();
+    const serviceCode = (session.service_code || '').toUpperCase();
+    const serviceName = (session.service_name || '').toUpperCase();
+
+    // Check for discharge report (highest priority - usually last session)
+    const dischargeCodes = ['DISCHARGE', 'DR', 'OTR_SUM_REP', 'OTR_TRNS_REP', 'DISCHARGE_REPORT', 'DISCHARGE REPORT'];
+    if (
+      dischargeCodes.some(code => 
+        sessionCode.includes(code) || 
+        sessionDescription.includes(code) || 
+        serviceCode.includes(code) ||
+        serviceName.includes(code)
+      )
+    ) {
+      return 'DISCHARGE';
+    }
+
+    // Check for intake report (usually first session)
+    const intakeCodes = ['INTAKE', 'INTAKE_REPORT', 'INTAKE_FORM', 'INTAKE REPORT', 'INTAKE FORM'];
+    if (
+      intakeCodes.some(code => 
+        sessionCode.includes(code) || 
+        sessionDescription.includes(code) || 
+        serviceCode.includes(code) ||
+        serviceName.includes(code)
+      )
+    ) {
+      return 'INTAKE';
+    }
+
+    // Check for treatment plan
+    const treatmentPlanCodes = ['TREATMENT_PLAN', 'TREATMENT PLAN', 'TP', 'TREATMENT', 'TREATMENT PLAN REPORT'];
+    if (
+      treatmentPlanCodes.some(code => 
+        sessionCode.includes(code) || 
+        sessionDescription.includes(code) || 
+        serviceCode.includes(code) ||
+        serviceName.includes(code)
+      )
+    ) {
+      return 'TREATMENT_PLAN';
+    }
+
+    // Check for progress report
+    const progressCodes = ['PROGRESS', 'PROGRESS_REPORT', 'PR', 'PROGRESS REPORT', 'PROGRESS REPORT'];
+    if (
+      progressCodes.some(code => 
+        sessionCode.includes(code) || 
+        sessionDescription.includes(code) || 
+        serviceCode.includes(code) ||
+        serviceName.includes(code)
+      )
+    ) {
+      return 'PROGRESS';
+    }
+
+    // Default: If it's a report session but type is unclear, default to PROGRESS
+    // This can be customized based on your business logic
+    logger.warn(`Could not determine report type for session ${session.session_id} (code: ${sessionCode}, desc: ${sessionDescription}), defaulting to PROGRESS`);
+    return 'PROGRESS';
   }
 
   //////////////////////////////////////////

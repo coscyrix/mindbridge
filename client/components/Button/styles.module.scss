@@ -1,0 +1,237 @@
+/* Button Base Styles */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  position: relative;
+  white-space: nowrap;
+  user-select: none;
+  outline: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-button-color, #1b6bc0);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+/* Size Variants */
+.small {
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 18px;
+  min-height: 32px;
+
+  .content {
+    font-size: 13px;
+  }
+}
+
+.medium {
+  padding: 10.5px 16px;
+  font-size: 14px;
+  line-height: 20px;
+  min-height: 40px;
+
+  .content {
+    font-size: 14px;
+  }
+}
+
+.large {
+  padding: 12px 24px;
+  font-size: 16px;
+  line-height: 24px;
+  min-height: 48px;
+
+  .content {
+    font-size: 16px;
+  }
+}
+
+/* Variant Styles */
+.primary {
+  background-color: var(--primary-button-color, #1b6bc0);
+  color: #ffffff;
+  box-shadow: 0px 1px 2px 0px rgba(164, 172, 185, 0.2);
+
+  &:hover:not(:disabled) {
+    background-color: var(--primary-button-hover-color, #1557b0);
+  }
+
+  &:active:not(:disabled) {
+    background-color: var(--primary-button-active-color, #0f4a8a);
+  }
+}
+
+.secondary {
+  background-color: var(--secondary-button-color, #ffffff);
+  color: #333333;
+  border: 1px solid #e7e7e9;
+  box-shadow: 0px 1px 2px 0px rgba(164, 172, 185, 0.2);
+
+  &:hover:not(:disabled) {
+    background-color: #f5f5f5;
+    border-color: #d0d0d0;
+  }
+
+  &:active:not(:disabled) {
+    background-color: #e8e8e8;
+  }
+}
+
+.outline {
+  background-color: transparent;
+  color: var(--primary-button-color, #1b6bc0);
+  border: 1px solid var(--primary-button-color, #1b6bc0);
+
+  &:hover:not(:disabled) {
+    background-color: rgba(27, 107, 192, 0.08);
+  }
+
+  &:active:not(:disabled) {
+    background-color: rgba(27, 107, 192, 0.12);
+  }
+}
+
+.text {
+  background-color: transparent;
+  color: var(--primary-button-color, #1b6bc0);
+  box-shadow: none;
+  padding: 8px 12px;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(27, 107, 192, 0.08);
+  }
+
+  &:active:not(:disabled) {
+    background-color: rgba(27, 107, 192, 0.12);
+  }
+}
+
+.danger {
+  background-color: var(--error-color, #f04438);
+  color: #ffffff;
+
+  &:hover:not(:disabled) {
+    background-color: var(--error-hover-color, #d32f2f);
+  }
+
+  &:active:not(:disabled) {
+    background-color: #b71c1c;
+  }
+}
+
+.success {
+  background-color: #00c317;
+  color: #ffffff;
+
+  &:hover:not(:disabled) {
+    background-color: #009914;
+  }
+
+  &:active:not(:disabled) {
+    background-color: #007a0f;
+  }
+}
+
+/* Full Width */
+.fullWidth {
+  width: 100%;
+}
+
+/* Disabled State */
+.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Icon Styles */
+.startIcon,
+.endIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.startIcon {
+  margin-right: -4px;
+}
+
+.endIcon {
+  margin-left: -4px;
+}
+
+.content {
+  display: inline-block;
+}
+
+/* Loading Spinner */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+.text .spinner,
+.outline .spinner {
+  border: 2px solid rgba(27, 107, 192, 0.3);
+  border-top-color: var(--primary-button-color, #1b6bc0);
+}
+
+.secondary .spinner {
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #333333;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .large {
+    padding: 12px 20px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+
+  .medium {
+    padding: 10px 14px;
+    font-size: 14px;
+    min-height: 38px;
+  }
+
+  .small {
+    padding: 7px 10px;
+    font-size: 12px;
+    min-height: 30px;
+  }
+}
+

@@ -7,7 +7,10 @@ import { api } from "../../../utils/auth";
 import CustomSelect from "../../CustomSelect";
 import { ArrowIcon } from "../../../public/assets/icons";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ClientValidationSchema } from "../../../utils/validationSchema/validationSchema";
+import {
+  createClientValidationSchema,
+  EditClientValidationSchema,
+} from "../../../utils/validationSchema/validationSchema";
 import { useReferenceContext } from "../../../context/ReferenceContext";
 import Spinner from "../../common/Spinner";
 import CustomMultiSelect from "../../CustomMultiSelect";
@@ -43,6 +46,7 @@ interface CreateClientFormProps {
   setTableData?: (updater: (prev: User[]) => User[]) => void;
   fetchClients?: () => void;
   setActiveTab?: (tab: number) => void;
+  intakeId?: number | string; // Intake form ID - when provided, hides serial number and forces Create mode
 }
 
 interface FormData {
@@ -75,6 +79,7 @@ interface ProcessedClientData {
   admin_fee?: string;
   tax_percent?: string;
   timezone?: string;
+  intake_form_id?: number;
 }
 
 function CreateClientForm({
@@ -85,6 +90,7 @@ function CreateClientForm({
   setTableData,
   fetchClients,
   setActiveTab,
+  intakeId,
 }: CreateClientFormProps) {
   const [formButton, setFormButton] = useState<"Create" | "Update">("Create");
   const { targetOutcomes, roles, servicesData } = useReferenceContext();
@@ -150,7 +156,11 @@ function CreateClientForm({
 
   const methods = useForm<FormData>({
     mode: "onSubmit",
-    resolver: zodResolver(ClientValidationSchema),
+    resolver: zodResolver(
+      initialData && !intakeId
+        ? EditClientValidationSchema
+        : createClientValidationSchema(intakeId)
+    ),
     defaultValues: defaultValues,
   });
 
@@ -295,7 +305,7 @@ function CreateClientForm({
     if (role === 1) {
       processedData = {
         user_profile_id: user?.user_profile_id,
-        clam_num: parseInt(data?.clam_num || "0"),
+        ...(intakeId ? {} : { clam_num: parseInt(data?.clam_num || "0") }),
         user_first_name: data?.user_first_name,
         user_last_name: data?.user_last_name,
         email: data?.email,
@@ -305,7 +315,15 @@ function CreateClientForm({
         country_code: country_code,
         user_phone_nbr: user_phone_nbr,
         tenant_name: data?.tenant_name,
+        ...(intakeId && {
+          intake_form_id:
+            typeof intakeId === "number" ? intakeId : parseInt(intakeId),
+        }),
       };
+
+      // Debug logging
+      console.log("Creating client with intakeId:", intakeId);
+      console.log("Processed data:", processedData);
     } else if (role === 2) {
       processedData = {
         user_profile_id: user?.user_profile_id,
@@ -393,7 +411,8 @@ function CreateClientForm({
     if (!isOpen) {
       setInitialData(null);
       methods.reset(defaultValues);
-    } else if (initialData) {
+    } else if (initialData && !intakeId) {
+      // Only set to Update mode if intakeId is not provided
       setFormButton("Update");
       const phoneValue = formatPhoneForInput(
         initialData?.country_code,
@@ -417,10 +436,37 @@ function CreateClientForm({
         defaultValues?.target_outcome_id || ""
       );
     } else {
+      // Always Create mode when intakeId is provided, or when no initialData
       setFormButton("Create");
-      methods.reset(defaultValues);
+      if (initialData && intakeId) {
+        // Use initialData to populate form but stay in Create mode
+        const phoneValue = formatPhoneForInput(
+          initialData?.country_code,
+          initialData?.user_phone_nbr
+        );
+        methods.reset({
+          ...initialData,
+          user_phone_nbr: phoneValue,
+          clam_num: "", // Clear serial number when hiding it
+        } as FormData);
+        methods.setValue("tenant_name", initialData?.tenant?.tenant_name || "");
+        methods.setValue(
+          "admin_fee",
+          initialData?.tenant?.admin_fee?.toString() || ""
+        );
+        methods.setValue(
+          "tax",
+          initialData?.tenant?.tax_percent?.toString() || ""
+        );
+        methods.setValue(
+          "target_outcome_id",
+          defaultValues?.target_outcome_id || ""
+        );
+      } else {
+        methods.reset(defaultValues);
+      }
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, intakeId]);
 
   const handleDiscard = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -476,7 +522,7 @@ function CreateClientForm({
       <FormProvider {...methods}>
         <form
           onSubmit={methods.handleSubmit(
-            initialData ? handleUpdateClient : handleCreateClient,
+            intakeId || !initialData ? handleCreateClient : handleUpdateClient,
             (errors) => {
               console.log("Form validation errors:", errors);
               console.log("Form values:", methods.getValues());
@@ -485,7 +531,7 @@ function CreateClientForm({
         >
           <div>
             <p className="labelText">
-              {initialData ? "Update Client" : "Create Client"}
+              {intakeId || !initialData ? "Create Client" : "Update Client"}
             </p>
 
             <div className="select-field-wrapper">
@@ -514,7 +560,7 @@ function CreateClientForm({
                 </p>
               )}
             </div>
-            {role === 1 && (
+            {role === 1 && !intakeId && (
               <div className="fields">
                 <CustomInputField
                   name="clam_num"
@@ -658,17 +704,26 @@ function CreateClientForm({
             )}
           </div>
           <div className="submit-button">
-            {formButton === "Update" && (
+            {formButton === "Update" && !intakeId && (
               <button className="discard_button" onClick={handleDiscard}>
                 Discard
               </button>
             )}
             <button
-              className={formButton === "Create" ? "create-button" : ""}
+              className={
+                formButton === "Create" || intakeId ? "create-button" : ""
+              }
               type="submit"
+              disabled={loading}
               style={{ padding: loading ? "5.75px 12px" : "10.5px 12px" }}
             >
-              {loading ? <Spinner width="25px" height="25px" /> : formButton}
+              {loading ? (
+                <Spinner width="25px" height="25px" />
+              ) : intakeId ? (
+                "Create"
+              ) : (
+                formButton
+              )}
             </button>
           </div>
         </form>

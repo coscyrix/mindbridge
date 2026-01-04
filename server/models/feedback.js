@@ -114,6 +114,14 @@ export default class Feedback {
 
       return { message: 'Feedback created successfully', rec: postFeedback };
     } catch (error) {
+      // Handle duplicate entry error specifically
+      if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
+        logger.warn('Duplicate feedback entry detected:', error.message);
+        return { 
+          message: 'Feedback already exists for this session and form', 
+          error: -1 
+        };
+      }
       console.log(error);
       logger.error(error);
       return { message: 'Error creating feedback', error: -1 };
@@ -173,10 +181,13 @@ export default class Feedback {
               });
           })
           .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+          .leftJoin('thrpy_req as tr', 'tt.req_id', 'tr.req_id')
           .select(
             'f.feedback_id',
             'f.session_id',
             'vs.intake_date as session_dte',
+            'vs.service_name',
+            'vs.service_code',
             'f.form_id',
             'fm.form_cde',
             'f.client_id',
@@ -187,14 +198,19 @@ export default class Feedback {
             db.raw(`(select json_arrayagg(json_object('id',fp.id,'total_score',fp.total_score,'difficulty_score',fp.difficulty_score,'feedback_id',fp.feedback_id,'created_at',fp.created_at,'updated_at',fp.updated_at)) from feedback_phq9 fp where (fp.feedback_id = f.feedback_id)) as feedback_phq9`),
             db.raw(`(select json_arrayagg(json_object('id',fw.id,'understanding_and_communicating',fw.understandingAndCommunicating,'getting_around',fw.gettingAround,'self_care',fw.selfCare,'getting_along_with_people',fw.gettingAlongWithPeople,'life_activities',fw.lifeActivities,'participation_in_society',fw.participationInSociety,'overall_score',fw.overallScore,'difficulty_days',fw.difficultyDays,'unable_days',fw.unableDays,'health_condition_days',fw.healthConditionDays,'feedback_id',fw.feedback_id,'created_at',fw.created_at,'updated_at',fw.updated_at)) from feedback_whodas fw where (fw.feedback_id = f.feedback_id)) as feedback_whodas`),
             db.raw(`(select json_arrayagg(json_object('id',pcl.id,'total_score',pcl.total_score,'feedback_id',pcl.feedback_id,'created_at',pcl.created_at,'updated_at',pcl.updated_at)) from feedback_pcl5 pcl where (pcl.feedback_id = f.feedback_id)) as feedback_pcl5`),
-            db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'specific_1st_phase',sg.specific_1st_phase,'specific_2nd_phase',sg.specific_2nd_phase,'specific_3rd_phase',sg.specific_3rd_phase,'measurable_1st_phase',sg.measurable_1st_phase,'measurable_2nd_phase',sg.measurable_2nd_phase,'measurable_3rd_phase',sg.measurable_3rd_phase,'achievable_1st_phase',sg.achievable_1st_phase,'achievable_2nd_phase',sg.achievable_2nd_phase,'achievable_3rd_phase',sg.achievable_3rd_phase,'relevant_1st_phase',sg.relevant_1st_phase,'relevant_2nd_phase',sg.relevant_2nd_phase,'relevant_3rd_phase',sg.relevant_3rd_phase,'time_bound_1st_phase',sg.time_bound_1st_phase,'time_bound_2nd_phase',sg.time_bound_2nd_phase,'time_bound_3rd_phase',sg.time_bound_3rd_phase,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+            db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'goal_source',sg.goal_source,'library_goal_id',sg.library_goal_id,'library_goal',sg.library_goal,'goal_wording',sg.goal_wording,'measurement_method',sg.measurement_method,'clinician_action',sg.clinician_action,'program_alignment',sg.program_alignment,'is_locked',sg.is_locked,'expectation_met',sg.expectation_met,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+            db.raw(`(select json_arrayagg(json_object('id',scg.id,'feedback_id',scg.feedback_id,'client_goal_theme',scg.client_goal_theme,'goal_theme_other',scg.goal_theme_other,'timeframe',scg.timeframe,'created_at',scg.created_at,'updated_at',scg.updated_at)) from feedback_smart_client_goal scg where (scg.feedback_id = f.feedback_id)) as feedback_smart_client_goal`),
             db.raw(`(select json_arrayagg(json_object('id',fc.id,'feedback_id',fc.feedback_id,'imgBase64',fc.imgBase64,'status_yn',fc.status_yn,'created_at',fc.created_at,'updated_at',fc.updated_at)) from feedback_consent fc where (fc.feedback_id = f.feedback_id)) as feedback_consent`),
             db.raw(`(select json_arrayagg(json_object('id',fa.id,'total_sessions',fa.total_sessions,'total_attended_sessions',fa.total_attended_sessions,'total_cancelled_sessions',fa.total_cancelled_sessions,'status_yn',fa.status_yn,'created_at',fa.created_at,'updated_at',fa.updated_at)) from feedback_attendance fa where (fa.feedback_id = f.feedback_id)) as feedback_attendance`),
             'f.created_at',
             'f.updated_at',
             'tt.tenant_id'
           )
-          .where('tt.is_sent', 1);
+          .where('tt.is_sent', 1)
+          .andWhere(function() {
+            // Only include feedback from ongoing therapy requests, or if no therapy request is linked
+            this.where('tr.thrpy_status', 'ONGOING').orWhereNull('tr.thrpy_status');
+          });
 
         // Apply filters for treatment target mode
         if (data.feedback_id) {
@@ -209,6 +225,10 @@ export default class Feedback {
         if (data.client_id) {
           query = query.where('f.client_id', data.client_id);
         }
+        if (data.thrpy_req_id) {
+          // Filter by therapy request ID through session join
+          query = query.where('vs.thrpy_req_id', data.thrpy_req_id);
+        }
         if (data.tenant_id) {
           query = query.where('tt.tenant_id', data.tenant_id);
         }
@@ -222,10 +242,13 @@ export default class Feedback {
           .from('feedback_consent as fc')
           .join('feedback as f', 'fc.feedback_id', 'f.feedback_id')
           .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+          .leftJoin('thrpy_req as tr', 'vs.thrpy_req_id', 'tr.req_id')
           .select(
             'f.feedback_id',
             'f.session_id',
             'vs.intake_date as session_dte',
+            'vs.service_name',
+            'vs.service_code',
             'f.form_id',
             db.raw("'CONSENT' as form_cde"),
             'f.client_id',
@@ -236,14 +259,19 @@ export default class Feedback {
             db.raw(`(select json_arrayagg(json_object('id',fp.id,'total_score',fp.total_score,'difficulty_score',fp.difficulty_score,'feedback_id',fp.feedback_id,'created_at',fp.created_at,'updated_at',fp.updated_at)) from feedback_phq9 fp where (fp.feedback_id = f.feedback_id)) as feedback_phq9`),
             db.raw(`(select json_arrayagg(json_object('id',fw.id,'understanding_and_communicating',fw.understandingAndCommunicating,'getting_around',fw.gettingAround,'self_care',fw.selfCare,'getting_along_with_people',fw.gettingAlongWithPeople,'life_activities',fw.lifeActivities,'participation_in_society',fw.participationInSociety,'overall_score',fw.overallScore,'difficulty_days',fw.difficultyDays,'unable_days',fw.unableDays,'health_condition_days',fw.healthConditionDays,'feedback_id',fw.feedback_id,'created_at',fw.created_at,'updated_at',fw.updated_at)) from feedback_whodas fw where (fw.feedback_id = f.feedback_id)) as feedback_whodas`),
             db.raw(`(select json_arrayagg(json_object('id',pcl.id,'total_score',pcl.total_score,'feedback_id',pcl.feedback_id,'created_at',pcl.created_at,'updated_at',pcl.updated_at)) from feedback_pcl5 pcl where (pcl.feedback_id = f.feedback_id)) as feedback_pcl5`),
-            db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'specific_1st_phase',sg.specific_1st_phase,'specific_2nd_phase',sg.specific_2nd_phase,'specific_3rd_phase',sg.specific_3rd_phase,'measurable_1st_phase',sg.measurable_1st_phase,'measurable_2nd_phase',sg.measurable_2nd_phase,'measurable_3rd_phase',sg.measurable_3rd_phase,'achievable_1st_phase',sg.achievable_1st_phase,'achievable_2nd_phase',sg.achievable_2nd_phase,'achievable_3rd_phase',sg.achievable_3rd_phase,'relevant_1st_phase',sg.relevant_1st_phase,'relevant_2nd_phase',sg.relevant_2nd_phase,'relevant_3rd_phase',sg.relevant_3rd_phase,'time_bound_1st_phase',sg.time_bound_1st_phase,'time_bound_2nd_phase',sg.time_bound_2nd_phase,'time_bound_3rd_phase',sg.time_bound_3rd_phase,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+            db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'goal_source',sg.goal_source,'library_goal_id',sg.library_goal_id,'library_goal',sg.library_goal,'goal_wording',sg.goal_wording,'measurement_method',sg.measurement_method,'clinician_action',sg.clinician_action,'program_alignment',sg.program_alignment,'is_locked',sg.is_locked,'expectation_met',sg.expectation_met,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+            db.raw(`(select json_arrayagg(json_object('id',scg.id,'feedback_id',scg.feedback_id,'client_goal_theme',scg.client_goal_theme,'goal_theme_other',scg.goal_theme_other,'timeframe',scg.timeframe,'created_at',scg.created_at,'updated_at',scg.updated_at)) from feedback_smart_client_goal scg where (scg.feedback_id = f.feedback_id)) as feedback_smart_client_goal`),
             db.raw(`(select json_arrayagg(json_object('id',fc.id,'feedback_id',fc.feedback_id,'imgBase64',fc.imgBase64,'status_yn',fc.status_yn,'created_at',fc.created_at,'updated_at',fc.updated_at)) from feedback_consent fc2 where (fc2.feedback_id = f.feedback_id)) as feedback_consent`),
             db.raw(`(select json_arrayagg(json_object('id',fa.id,'total_sessions',fa.total_sessions,'total_attended_sessions',fa.total_attended_sessions,'total_cancelled_sessions',fa.total_cancelled_sessions,'status_yn',fa.status_yn,'created_at',fa.created_at,'updated_at',fa.updated_at)) from feedback_attendance fa where (fa.feedback_id = f.feedback_id)) as feedback_attendance`),
             'f.created_at',
             'f.updated_at',
             db.raw('NULL as tenant_id')
           )
-          .where('fc.status_yn', 'y');
+          .where('fc.status_yn', 'y')
+          .andWhere(function() {
+            // Only include feedback from ongoing therapy requests, or if no therapy request is linked
+            this.where('tr.thrpy_status', 'ONGOING').orWhereNull('tr.thrpy_status');
+          });
 
         // Apply filters for consent query
         if (data.feedback_id) {
@@ -257,6 +285,10 @@ export default class Feedback {
         }
         if (data.form_id) {
           consentQuery = consentQuery.where('f.form_id', data.form_id);
+        }
+        if (data.thrpy_req_id) {
+          // Filter by therapy request ID through session join
+          consentQuery = consentQuery.where('vs.thrpy_req_id', data.thrpy_req_id);
         }
 
         // Add GROUP BY clause to handle MySQL sql_mode=only_full_group_by
@@ -292,6 +324,7 @@ export default class Feedback {
             .from('feedback as f')
             .leftJoin('forms as fm', 'f.form_id', 'fm.form_id')
             .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+            .leftJoin('thrpy_req as tr', 'vs.thrpy_req_id', 'tr.req_id')
             .select(
               'f.feedback_id',
               'f.session_id',
@@ -306,7 +339,8 @@ export default class Feedback {
               db.raw(`(select json_arrayagg(json_object('id',fp.id,'total_score',fp.total_score,'difficulty_score',fp.difficulty_score,'feedback_id',fp.feedback_id,'created_at',fp.created_at,'updated_at',fp.updated_at)) from feedback_phq9 fp where (fp.feedback_id = f.feedback_id)) as feedback_phq9`),
               db.raw(`(select json_arrayagg(json_object('id',fw.id,'understanding_and_communicating',fw.understandingAndCommunicating,'getting_around',fw.gettingAround,'self_care',fw.selfCare,'getting_along_with_people',fw.gettingAlongWithPeople,'life_activities',fw.lifeActivities,'participation_in_society',fw.participationInSociety,'overall_score',fw.overallScore,'difficulty_days',fw.difficultyDays,'unable_days',fw.unableDays,'health_condition_days',fw.healthConditionDays,'feedback_id',fw.feedback_id,'created_at',fw.created_at,'updated_at',fw.updated_at)) from feedback_whodas fw where (fw.feedback_id = f.feedback_id)) as feedback_whodas`),
               db.raw(`(select json_arrayagg(json_object('id',pcl.id,'total_score',pcl.total_score,'feedback_id',pcl.feedback_id,'created_at',pcl.created_at,'updated_at',pcl.updated_at)) from feedback_pcl5 pcl where (pcl.feedback_id = f.feedback_id)) as feedback_pcl5`),
-              db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'specific_1st_phase',sg.specific_1st_phase,'specific_2nd_phase',sg.specific_2nd_phase,'specific_3rd_phase',sg.specific_3rd_phase,'measurable_1st_phase',sg.measurable_1st_phase,'measurable_2nd_phase',sg.measurable_2nd_phase,'measurable_3rd_phase',sg.measurable_3rd_phase,'achievable_1st_phase',sg.achievable_1st_phase,'achievable_2nd_phase',sg.achievable_2nd_phase,'achievable_3rd_phase',sg.achievable_3rd_phase,'relevant_1st_phase',sg.relevant_1st_phase,'relevant_2nd_phase',sg.relevant_2nd_phase,'relevant_3rd_phase',sg.relevant_3rd_phase,'time_bound_1st_phase',sg.time_bound_1st_phase,'time_bound_2nd_phase',sg.time_bound_2nd_phase,'time_bound_3rd_phase',sg.time_bound_3rd_phase,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+              db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'goal_source',sg.goal_source,'library_goal_id',sg.library_goal_id,'library_goal',sg.library_goal,'goal_wording',sg.goal_wording,'measurement_method',sg.measurement_method,'clinician_action',sg.clinician_action,'program_alignment',sg.program_alignment,'is_locked',sg.is_locked,'expectation_met',sg.expectation_met,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+              db.raw(`(select json_arrayagg(json_object('id',scg.id,'feedback_id',scg.feedback_id,'client_goal_theme',scg.client_goal_theme,'goal_theme_other',scg.goal_theme_other,'timeframe',scg.timeframe,'created_at',scg.created_at,'updated_at',scg.updated_at)) from feedback_smart_client_goal scg where (scg.feedback_id = f.feedback_id)) as feedback_smart_client_goal`),
               db.raw(`(select json_arrayagg(json_object('id',fc.id,'feedback_id',fc.feedback_id,'imgBase64',fc.imgBase64,'status_yn',fc.status_yn,'created_at',fc.created_at,'updated_at',fc.updated_at)) from feedback_consent fc where (fc.feedback_id = f.feedback_id)) as feedback_consent`),
               db.raw(`(select json_arrayagg(json_object('id',fa.id,'total_sessions',fa.total_sessions,'total_attended_sessions',fa.total_attended_sessions,'total_cancelled_sessions',fa.total_cancelled_sessions,'status_yn',fa.status_yn,'created_at',fa.created_at,'updated_at',fa.updated_at)) from feedback_attendance fa where (fa.feedback_id = f.feedback_id)) as feedback_attendance`),
               'f.created_at',
@@ -314,7 +348,11 @@ export default class Feedback {
               'f.tenant_id'
             )
             .where('f.feedback_id', data.feedback_id)
-            .andWhere('f.status_yn', 'y');
+            .andWhere('f.status_yn', 'y')
+            .andWhere(function() {
+              // Only include feedback from ongoing therapy requests, or if no therapy request is linked
+              this.where('tr.thrpy_status', 'ONGOING').orWhereNull('tr.thrpy_status');
+            });
 
           standaloneFeedbackResults = await standaloneQuery;
         }
@@ -354,10 +392,13 @@ export default class Feedback {
           .from('feedback as f')
           .leftJoin('forms as fm', 'f.form_id', 'fm.form_id')
           .leftJoin('v_session as vs', 'f.session_id', 'vs.session_id')
+          .leftJoin('thrpy_req as tr', 'vs.thrpy_req_id', 'tr.req_id')
           .select(
             'f.feedback_id',
             'f.session_id',
             'vs.intake_date as session_dte',
+            'vs.service_name',
+            'vs.service_code',
             'f.form_id',
             'fm.form_cde',
             'f.client_id',
@@ -368,14 +409,19 @@ export default class Feedback {
             db.raw(`(select json_arrayagg(json_object('id',fp.id,'total_score',fp.total_score,'difficulty_score',fp.difficulty_score,'feedback_id',fp.feedback_id,'created_at',fp.created_at,'updated_at',fp.updated_at)) from feedback_phq9 fp where (fp.feedback_id = f.feedback_id)) as feedback_phq9`),
             db.raw(`(select json_arrayagg(json_object('id',fw.id,'understanding_and_communicating',fw.understandingAndCommunicating,'getting_around',fw.gettingAround,'self_care',fw.selfCare,'getting_along_with_people',fw.gettingAlongWithPeople,'life_activities',fw.lifeActivities,'participation_in_society',fw.participationInSociety,'overall_score',fw.overallScore,'difficulty_days',fw.difficultyDays,'unable_days',fw.unableDays,'health_condition_days',fw.healthConditionDays,'feedback_id',fw.feedback_id,'created_at',fw.created_at,'updated_at',fw.updated_at)) from feedback_whodas fw where (fw.feedback_id = f.feedback_id)) as feedback_whodas`),
             db.raw(`(select json_arrayagg(json_object('id',pcl.id,'total_score',pcl.total_score,'feedback_id',pcl.feedback_id,'created_at',pcl.created_at,'updated_at',pcl.updated_at)) from feedback_pcl5 pcl where (pcl.feedback_id = f.feedback_id)) as feedback_pcl5`),
-            db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'specific_1st_phase',sg.specific_1st_phase,'specific_2nd_phase',sg.specific_2nd_phase,'specific_3rd_phase',sg.specific_3rd_phase,'measurable_1st_phase',sg.measurable_1st_phase,'measurable_2nd_phase',sg.measurable_2nd_phase,'measurable_3rd_phase',sg.measurable_3rd_phase,'achievable_1st_phase',sg.achievable_1st_phase,'achievable_2nd_phase',sg.achievable_2nd_phase,'achievable_3rd_phase',sg.achievable_3rd_phase,'relevant_1st_phase',sg.relevant_1st_phase,'relevant_2nd_phase',sg.relevant_2nd_phase,'relevant_3rd_phase',sg.relevant_3rd_phase,'time_bound_1st_phase',sg.time_bound_1st_phase,'time_bound_2nd_phase',sg.time_bound_2nd_phase,'time_bound_3rd_phase',sg.time_bound_3rd_phase,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+            db.raw(`(select json_arrayagg(json_object('id',sg.id,'feedback_id',sg.feedback_id,'goal_source',sg.goal_source,'library_goal_id',sg.library_goal_id,'library_goal',sg.library_goal,'goal_wording',sg.goal_wording,'measurement_method',sg.measurement_method,'clinician_action',sg.clinician_action,'program_alignment',sg.program_alignment,'is_locked',sg.is_locked,'expectation_met',sg.expectation_met,'created_at',sg.created_at,'updated_at',sg.updated_at)) from feedback_smart_goal sg where (sg.feedback_id = f.feedback_id)) as feedback_smart_goal`),
+            db.raw(`(select json_arrayagg(json_object('id',scg.id,'feedback_id',scg.feedback_id,'client_goal_theme',scg.client_goal_theme,'goal_theme_other',scg.goal_theme_other,'timeframe',scg.timeframe,'created_at',scg.created_at,'updated_at',scg.updated_at)) from feedback_smart_client_goal scg where (scg.feedback_id = f.feedback_id)) as feedback_smart_client_goal`),
             db.raw(`(select json_arrayagg(json_object('id',fc.id,'feedback_id',fc.feedback_id,'imgBase64',fc.imgBase64,'status_yn',fc.status_yn,'created_at',fc.created_at,'updated_at',fc.updated_at)) from feedback_consent fc where (fc.feedback_id = f.feedback_id)) as feedback_consent`),
             db.raw(`(select json_arrayagg(json_object('id',fa.id,'total_sessions',fa.total_sessions,'total_attended_sessions',fa.total_attended_sessions,'total_cancelled_sessions',fa.total_cancelled_sessions,'status_yn',fa.status_yn,'created_at',fa.created_at,'updated_at',fa.updated_at)) from feedback_attendance fa where (fa.feedback_id = f.feedback_id)) as feedback_attendance`),
             'f.created_at',
             'f.updated_at',
             'f.tenant_id'
           )
-          .where('f.status_yn', 'y');
+          .where('f.status_yn', 'y')
+          .andWhere(function() {
+            // Only include feedback from ongoing therapy requests, or if no therapy request is linked
+            this.where('tr.thrpy_status', 'ONGOING').orWhereNull('tr.thrpy_status');
+          });
 
         // Check if feedback already exists for this session
         if (data.is_submitted) {
@@ -394,7 +440,7 @@ export default class Feedback {
           }
         }
 
-        // Apply filters
+        // Apply filters  
         if (data.feedback_id) {
           query = query.where('f.feedback_id', data.feedback_id);
         }
@@ -406,6 +452,10 @@ export default class Feedback {
         }
         if (data.client_id) {
           query = query.where('f.client_id', data.client_id);
+        }
+        if (data.thrpy_req_id) {
+          // Filter by therapy request ID through session join
+          query = query.where('vs.thrpy_req_id', data.thrpy_req_id);
         }
         if (data.tenant_id) {
           query = query.where('f.tenant_id', data.tenant_id);
@@ -472,8 +522,6 @@ export default class Feedback {
         tenant_id: data.tenant_id,
       });
 
-      console.log('recFeedback');
-      console.log(recFeedback);
 
       if (recFeedback.error) {
         return recFeedback;
@@ -681,8 +729,8 @@ export default class Feedback {
         items['item' + i] = Number(data['item' + i]);
       }
 
-      let total = 0;
-      //avg of 6 items (Understanding and communicating)
+      // Calculate domain averages (using 1-5 scale)
+      // Domain 1: Cognition (6 items)
       let d1_avg =
         (items.item1 +
           items.item2 +
@@ -691,7 +739,7 @@ export default class Feedback {
           items.item5 +
           items.item6) /
         6;
-      //avg of 5 items (Getting around)
+      // Domain 2: Mobility (5 items)
       let d2_avg =
         (items.item7 +
           items.item8 +
@@ -699,10 +747,10 @@ export default class Feedback {
           items.item10 +
           items.item11) /
         5;
-      //avg of 4 items (Self-care)
+      // Domain 3: Self-care (4 items)
       let d3_avg =
         (items.item12 + items.item13 + items.item14 + items.item15) / 4;
-      //avg of 5 items (Getting along with people)
+      // Domain 4: Getting along (5 items)
       let d4_avg =
         (items.item16 +
           items.item17 +
@@ -710,7 +758,7 @@ export default class Feedback {
           items.item19 +
           items.item20) /
         5;
-      //avg of 8 items (Life activities)
+      // Domain 5: Life activities (8 items: 4 household + 4 work/school)
       let d5_avg =
         (items.item21 +
           items.item22 +
@@ -721,7 +769,7 @@ export default class Feedback {
           items.item27 +
           items.item28) /
         8;
-      //avg of 8 items (Participation in society)
+      // Domain 6: Participation (8 items)
       let d6_avg =
         (items.item29 +
           items.item30 +
@@ -733,7 +781,8 @@ export default class Feedback {
           items.item36) /
         8;
 
-      total +=
+      // Calculate total sum for overall score
+      let total =
         items.item1 +
         items.item2 +
         items.item3 +
@@ -771,7 +820,9 @@ export default class Feedback {
         items.item35 +
         items.item36;
 
-      let overall_score = (total / 144) * 100;
+      // Overall score: (total / max_possible) * 100
+      // Max possible with 1-5 scale: 36 items * 5 = 180
+      let overall_score = (total / 180) * 100;
 
       const checkSession = await this.session.getSessionById({
         session_id: data.session_id,
@@ -1091,18 +1142,22 @@ export default class Feedback {
         return { message: 'Session not found', error: -1 };
       }
 
-      const checkFeedBackSessionId = await this.getFeedbackById({
-        session_id: data.session_id,
-        form_id: 16,
-      });
+      // Check for existing feedback using direct database query (more reliable)
+      const existingFeedback = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('feedback')
+        .where('session_id', data.session_id)
+        .andWhere('form_id', 16)
+        .first();
 
-      if (checkFeedBackSessionId.length > 0) {
+      if (existingFeedback) {
         return {
           message: 'Feedback already exists for this session',
           error: -1,
         };
       }
 
+      // Create the main feedback record
       const recFeedback = await this.postFeedback({
         session_id: data.session_id,
         client_id: data.client_id,
@@ -1115,53 +1170,42 @@ export default class Feedback {
         return recFeedback;
       }
 
+      const feedbackId = recFeedback.rec[0];
+
+      // Step 1: Create feedback_smart_client_goal (client submission data)
+      if (data.client_goal_theme && data.timeframe) {
+        const tmpSMARTClientGoalFeedback = {
+          feedback_id: feedbackId,
+          client_goal_theme: data.client_goal_theme,
+          goal_theme_other: data.goal_theme_other || null,
+          timeframe: data.timeframe,
+          ...(data.tenant_id && { tenant_id: data.tenant_id }),
+        };
+
+        const postSMARTClientGoalFeedback = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('feedback_smart_client_goal')
+          .insert(tmpSMARTClientGoalFeedback);
+
+        if (!postSMARTClientGoalFeedback) {
+          logger.error('Error creating client goal feedback');
+          return { message: 'Error creating client goal feedback', error: -1 };
+        }
+      }
+
+      // Step 2: Create feedback_smart_goal (for counselor to fill in later)
+      // This can be empty initially, or populated if counselor data is provided
       const tmpSMARTGOALFeedback = {
-        feedback_id: recFeedback.rec[0],
-        ...(data.specific_1st_phase && {
-          specific_1st_phase: data.specific_1st_phase,
-        }),
-        ...(data.specific_2nd_phase && {
-          specific_2nd_phase: data.specific_2nd_phase,
-        }),
-        ...(data.specific_3rd_phase && {
-          specific_3rd_phase: data.specific_3rd_phase,
-        }),
-        ...(data.measurable_1st_phase && {
-          measurable_1st_phase: data.measurable_1st_phase,
-        }),
-        ...(data.measurable_2nd_phase && {
-          measurable_2nd_phase: data.measurable_2nd_phase,
-        }),
-        ...(data.measurable_3rd_phase && {
-          measurable_3rd_phase: data.measurable_3rd_phase,
-        }),
-        ...(data.achievable_1st_phase && {
-          achievable_1st_phase: data.achievable_1st_phase,
-        }),
-        ...(data.achievable_2nd_phase && {
-          achievable_2nd_phase: data.achievable_2nd_phase,
-        }),
-        ...(data.achievable_3rd_phase && {
-          achievable_3rd_phase: data.achievable_3rd_phase,
-        }),
-        ...(data.relevant_1st_phase && {
-          relevant_1st_phase: data.relevant_1st_phase,
-        }),
-        ...(data.relevant_2nd_phase && {
-          relevant_2nd_phase: data.relevant_2nd_phase,
-        }),
-        ...(data.relevant_3rd_phase && {
-          relevant_3rd_phase: data.relevant_3rd_phase,
-        }),
-        ...(data.time_bound_1st_phase && {
-          time_bound_1st_phase: data.time_bound_1st_phase,
-        }),
-        ...(data.time_bound_2nd_phase && {
-          time_bound_2nd_phase: data.time_bound_2nd_phase,
-        }),
-        ...(data.time_bound_3rd_phase && {
-          time_bound_3rd_phase: data.time_bound_3rd_phase,
-        }),
+        feedback_id: feedbackId,
+        ...(data.goal_source !== undefined && { goal_source: data.goal_source || null }),
+        ...(data.library_goal_id !== undefined && { library_goal_id: data.library_goal_id || null }),
+        ...(data.library_goal !== undefined && { library_goal: data.library_goal || null }),
+        ...(data.goal_wording !== undefined && { goal_wording: data.goal_wording || null }),
+        ...(data.measurement_method !== undefined && { measurement_method: data.measurement_method || null }),
+        ...(data.clinician_action !== undefined && { clinician_action: data.clinician_action || null }),
+        ...(data.program_alignment !== undefined && { program_alignment: data.program_alignment || null }),
+        ...(data.is_locked !== undefined && { is_locked: data.is_locked || false }),
+        ...(data.expectation_met !== undefined && { expectation_met: data.expectation_met !== null ? data.expectation_met : null }),
         ...(data.tenant_id && { tenant_id: data.tenant_id }),
       };
 
@@ -1171,8 +1215,30 @@ export default class Feedback {
         .insert(tmpSMARTGOALFeedback);
 
       if (!postSMARTGOALFeedback) {
-        logger.error('Error creating feedback');
-        return { message: 'Error creating feedback', error: -1 };
+        logger.error('Error creating counselor goal feedback');
+        return { message: 'Error creating counselor goal feedback', error: -1 };
+      }
+
+      // Ensure form_submit is set to true in treatment_target_session_forms
+      if (data.session_id) {
+        try {
+          const TreatmentTargetSessionForms = (await import('./treatmentTargetSessionForms.js')).default;
+          const treatmentTargetSessionForms = new TreatmentTargetSessionForms();
+
+          const updateTreatmentTargetForm = await treatmentTargetSessionForms.updateTreatmentTargetSessionFormBySessionIdAndFormId({
+            session_id: data.session_id,
+            form_id: 16,
+            form_submit: true,
+          });
+
+          if (updateTreatmentTargetForm?.error) {
+            logger.error('Error updating treatment target session form:', updateTreatmentTargetForm.message);
+            // Don't return error, just log it - feedback was already created successfully
+          }
+        } catch (updateError) {
+          logger.error('Exception updating treatment target session form:', updateError);
+          // Don't return error, just log it - feedback was already created successfully
+        }
       }
 
       return { message: 'Feedback created successfully' };
@@ -1180,6 +1246,102 @@ export default class Feedback {
       console.log(error);
       logger.error(error);
       return { message: 'Error creating feedback', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async putSMARTGOALFeedback(data) {
+    try {
+      if (!data.feedback_id) {
+        return { message: 'feedback_id is required for update', error: -1 };
+      }
+
+      const feedbackId = data.feedback_id;
+
+      // Step 1: Update feedback_smart_client_goal (only if client submission data is provided and not empty)
+      // Only update/create client goal data if we have actual client data to store
+      if (data.client_goal_theme && data.timeframe) {
+        const existingClientGoal = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('feedback_smart_client_goal')
+          .where('feedback_id', feedbackId)
+          .first();
+
+        if (existingClientGoal) {
+          // Update existing client goal - only update fields that are provided and not empty
+          const updateClientGoalData = {};
+          if (data.client_goal_theme) updateClientGoalData.client_goal_theme = data.client_goal_theme;
+          if (data.goal_theme_other !== undefined) updateClientGoalData.goal_theme_other = data.goal_theme_other || null;
+          if (data.timeframe) updateClientGoalData.timeframe = data.timeframe;
+
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('feedback_smart_client_goal')
+            .where('feedback_id', feedbackId)
+            .update(updateClientGoalData);
+        } else {
+          // Create new client goal if it doesn't exist (only if we have required data)
+          const tmpSMARTClientGoalFeedback = {
+            feedback_id: feedbackId,
+            client_goal_theme: data.client_goal_theme,
+            goal_theme_other: data.goal_theme_other || null,
+            timeframe: data.timeframe,
+            ...(data.tenant_id && { tenant_id: data.tenant_id }),
+          };
+
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('feedback_smart_client_goal')
+            .insert(tmpSMARTClientGoalFeedback);
+        }
+      }
+      // Note: If client_goal_theme or timeframe are empty/missing, we skip updating feedback_smart_client_goal
+      // This is intentional - client goal data should only be updated when actual client data is provided
+
+      // Step 2: Update feedback_smart_goal
+      const existingSmartGoal = await db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from('feedback_smart_goal')
+        .where('feedback_id', feedbackId)
+        .first();
+
+      const updateSmartGoalData = {};
+      if (data.goal_source !== undefined) updateSmartGoalData.goal_source = data.goal_source || null;
+      if (data.library_goal_id !== undefined) updateSmartGoalData.library_goal_id = data.library_goal_id || null;
+      if (data.library_goal !== undefined) updateSmartGoalData.library_goal = data.library_goal || null;
+      if (data.goal_wording !== undefined) updateSmartGoalData.goal_wording = data.goal_wording || null;
+      if (data.measurement_method !== undefined) updateSmartGoalData.measurement_method = data.measurement_method || null;
+      if (data.clinician_action !== undefined) updateSmartGoalData.clinician_action = data.clinician_action || null;
+      if (data.program_alignment !== undefined) updateSmartGoalData.program_alignment = data.program_alignment || null;
+      if (data.is_locked !== undefined) updateSmartGoalData.is_locked = data.is_locked;
+      if (data.expectation_met !== undefined) updateSmartGoalData.expectation_met = data.expectation_met !== null ? data.expectation_met : null;
+
+      if (existingSmartGoal) {
+        // Update existing smart goal
+        await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('feedback_smart_goal')
+          .where('feedback_id', feedbackId)
+          .update(updateSmartGoalData);
+      } else {
+        // Create new smart goal if it doesn't exist
+        const insertSmartGoalData = {
+          feedback_id: feedbackId,
+          ...updateSmartGoalData,
+          ...(data.tenant_id && { tenant_id: data.tenant_id }),
+        };
+        await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('feedback_smart_goal')
+          .insert(insertSmartGoalData);
+      }
+
+      return { message: 'Smart goal feedback updated successfully' };
+    } catch (error) {
+      console.log(error);
+      logger.error(error);
+      return { message: 'Error updating smart goal feedback', error: -1 };
     }
   }
 
@@ -1365,6 +1527,107 @@ export default class Feedback {
       console.log(error);
       logger.error(error);
       return false;
+    }
+  }
+
+  //////////////////////////////////////////
+
+  async getUserInfoAndFormStatus(data) {
+    try {
+      const { client_id, session_id, form_id = 16 } = data;
+
+      if (!client_id || !session_id) {
+        return {
+          message: 'client_id and session_id are required',
+          error: -1,
+        };
+      }
+
+      // Get user profile information
+      const UserProfile = (await import('./userProfile.js')).default;
+      const userProfileModel = new UserProfile();
+      const userInfo = await userProfileModel.getUserProfileById({
+        user_profile_id: client_id,
+      });
+
+      if (userInfo.error || !userInfo.rec || userInfo.rec.length === 0) {
+        return {
+          message: 'User profile not found',
+          error: -1,
+        };
+      }
+
+      // Get session information to get service_name and service_id
+      const sessionInfo = await this.session.getSessionById({
+        session_id: session_id,
+      });
+
+      let serviceName = '';
+      let serviceId = null;
+      if (sessionInfo && sessionInfo.length > 0) {
+        serviceName = sessionInfo[0].service_name || '';
+        serviceId = sessionInfo[0].service_id || null;
+      }
+
+      // Get form details based on form_id
+      const Form = (await import('./form.js')).default;
+      const formModel = new Form();
+      const formDetails = await formModel.getFormById({
+        form_id: form_id,
+      });
+
+      // Extract only relevant form fields
+      let formInfo = null;
+      if (formDetails && !formDetails.error && Array.isArray(formDetails) && formDetails.length > 0) {
+        const fullFormDetails = formDetails[0];
+        formInfo = {
+          form_id: fullFormDetails.form_id,
+          form_name: fullFormDetails.form_name,
+          form_cde: fullFormDetails.form_cde,
+          form_description: fullFormDetails.form_description || null,
+        };
+      } else if (formDetails && formDetails.error) {
+        // Log error but don't fail the entire request if form details can't be fetched
+        logger.warn('Could not fetch form details:', formDetails.message);
+      }
+
+      // Check if form is submitted
+      const formSubmission = await this.getFeedbackById({
+        client_id: client_id,
+        session_id: session_id,
+        form_id: form_id,
+      });
+
+      const isFormSubmitted = formSubmission.rec && formSubmission.rec.length > 0;
+
+      // Extract only relevant user info fields
+      const userProfile = userInfo.rec[0];
+      const relevantUserInfo = {
+        user_first_name: userProfile.user_first_name,
+        user_last_name: userProfile.user_last_name,
+        intake_date: userProfile.intake_date,
+        service_name: serviceName,
+        service_id: serviceId,
+      };
+
+      return {
+        rec: [
+          {
+            user_info: relevantUserInfo,
+            form_submitted: isFormSubmitted,
+            form_id: form_id,
+            session_id: session_id,
+            form_details: formInfo,
+          },
+        ],
+        error: 0,
+      };
+    } catch (error) {
+      logger.error('Error in getUserInfoAndFormStatus:', error);
+      return {
+        message: 'Error fetching user info and form status',
+        error: -1,
+      };
     }
   }
 }

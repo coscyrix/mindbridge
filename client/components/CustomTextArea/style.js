@@ -12,6 +12,7 @@ export const CustomTextAreaWrapper = styled.div`
       font-family: Alegreya Sans;
       font-size: 16px;
       resize: none;
+      padding: 12px;
 
       &.error {
         border-radius: 6px;
@@ -30,6 +31,19 @@ export const CustomTextAreaWrapper = styled.div`
         box-shadow: 0px 0px 0px 4px #1b6bc030;
       }
     }
+  }
+
+  .error-text {
+    color: var(--error-color);
+  }
+
+  .helper-text {
+    color: rgba(0, 0, 0, 0.4);
+    margin-left: 16px;
+  }
+
+  p {
+    margin-top: 0.5rem;
   }
 
   .disabled {

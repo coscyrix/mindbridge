@@ -8,6 +8,9 @@ import logger from '../config/winston.js';
 import CounselorDocumentsService from './counselorDocuments.js';
 import CounselorTargetOutcome from '../models/counselorTargetOutcome.js';
 import AppointmentEmailTracking from '../models/appointmentEmailTracking.js';
+import { newAppointmentEmail, intakeFormEmail } from '../utils/emailTmplt.js';
+import { parsePhoneNumber } from '../utils/phoneUtils.js';
+import prisma from '../utils/prisma.js';
 
 export default class CounselorProfileService {
   constructor() {
@@ -285,8 +288,8 @@ export default class CounselorProfileService {
   async sendAppointmentEmail(data) {
     const schema = joi.object({
       counselor_profile_id: joi.number().required(),
-      customer_name: joi.string().required(),
-      customer_email: joi.string().email().required(),
+      client_name: joi.string().required(),
+      client_email: joi.string().email().required(),
       contact_number: joi.string().required(),
       service: joi.string().required(),
       appointment_date: joi.date().iso().required(),
@@ -297,15 +300,15 @@ export default class CounselorProfileService {
       return { message: error.details[0].message, error: -1 };
     }
     try {
-      // Check if email has already been sent to this customer for this counselor
+      // Check if email has already been sent to this client for this counselor
       const emailAlreadySent = await this.appointmentEmailTracking.checkEmailAlreadySent(
         data.counselor_profile_id,
-        data.customer_email
+        data.client_email
       );
       
       if (emailAlreadySent) {
         return { 
-          message: 'Appointment email has already been sent to this customer for this counselor', 
+          message: 'Appointment email has already been sent to this client for this counselor', 
           error: -1,
           alreadySent: true
         };
@@ -320,26 +323,21 @@ export default class CounselorProfileService {
       const counselor = counselorProfile.rec[0];
       const counselorEmail = counselor.email;
       const counselorName = `${counselor.user_first_name} ${counselor.user_last_name}`;
-      const emailMsg = {
-        to: counselorEmail,
-        subject: `New Appointment with ${data.customer_name}`,
-        html: `
-          <h1>New Appointment Confirmation</h1>
-          <p>Hello ${counselorName},</p>
-          <p>You have a new appointment scheduled with the following details:</p>
-          <ul>
-            <li><strong>Customer Name:</strong> ${data.customer_name}</li>
-            <li><strong>Customer Email:</strong> ${data.customer_email}</li>
-            <li><strong>Customer Phone:</strong> ${data.contact_number}</li>
-            <li><strong>Service:</strong> ${data.service}</li>
-            <li><strong>Appointment Date:</strong> ${new Date(data.appointment_date).toDateString()}</li>
-            ${data.description ? `<li><strong>Description:</strong> ${data.description}</li>` : ''}
-          </ul>
-          <p>Please reach out to the customer to confirm the details.</p>
-          <p>Thank you,</p>
-          <p>The MindBridge Team</p>
-        `,
-      };
+      
+      // Parse phone number to extract country code and contact number
+      const { country_code, contact_number } = parsePhoneNumber(data.contact_number);
+      
+      const emailMsg = newAppointmentEmail(
+        counselorEmail,
+        counselorName,
+        data.client_name,
+        data.client_email,
+        country_code,
+        contact_number,
+        data.service,
+        data.appointment_date,
+        data.description,
+      );
       const emailResult = await this.sendEmail.sendMail(emailMsg);
       if (!emailResult || emailResult.error) {
         const errorMessage = emailResult?.message || 'Failed to send appointment email';
@@ -347,8 +345,12 @@ export default class CounselorProfileService {
         return { message: 'Failed to send appointment email', error: -1 };
       }
 
-      // Record that the email was sent successfully
-      await this.appointmentEmailTracking.recordEmailSent(data);
+      // Record that the email was sent successfully with parsed phone data
+      await this.appointmentEmailTracking.recordEmailSent({
+        ...data,
+        country_code,
+        contact_number,
+      });
       
       return { message: 'Appointment email sent successfully' };
     } catch (err) {
@@ -376,6 +378,161 @@ export default class CounselorProfileService {
       };
     } catch (err) {
       logger.error('Error in getAppointmentEmailHistory service:', err);
+      return { message: 'Internal server error', error: -1 };
+    }
+  }
+
+  async getMyAppointments(user_profile_id) {
+    try {
+      const schema = joi.object({
+        user_profile_id: joi.number().required(),
+      });
+      
+      const { error } = schema.validate({ user_profile_id });
+      if (error) {
+        return { message: error.details[0].message, error: -1 };
+      }
+
+      // Get counselor_profile_id from user_profile_id
+      const counselorProfile = await this.counselorProfile.getCounselorProfile({
+        user_profile_id: user_profile_id,
+      });
+
+      if (!counselorProfile.rec || counselorProfile.rec.length === 0) {
+        return { 
+          message: 'Counselor profile not found', 
+          error: -1 
+        };
+      }
+
+      const counselor_profile_id = counselorProfile.rec[0].counselor_profile_id;
+
+      // Get all appointments for this counselor
+      const appointments = await this.appointmentEmailTracking.getAppointmentsByCounselor(
+        counselor_profile_id
+      );
+
+      return { 
+        message: 'Appointments retrieved successfully',
+        data: appointments
+      };
+    } catch (err) {
+      logger.error('Error in getMyAppointments service:', err);
+      return { message: 'Internal server error', error: -1 };
+    }
+  }
+
+  async sendIntakeForm(data) {
+    const schema = joi.object({
+      appointment_id: joi.number().required(),
+      counselor_profile_id: joi.number().required(),
+    });
+    
+    const { error } = schema.validate(data);
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    try {
+      // Get appointment details
+      const appointment = await this.appointmentEmailTracking.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('*')
+        .from('appointment_email_tracking')
+        .where('id', data.appointment_id)
+        .where('counselor_profile_id', data.counselor_profile_id)
+        .first();
+
+      if (!appointment) {
+        return { message: 'Appointment not found', error: -1 };
+      }
+
+      // Check if intake form already sent
+      if (appointment.send_intake_form) {
+        return { message: 'Intake form has already been sent for this appointment', error: -1 };
+      }
+
+      // Get counselor profile details
+      const counselorProfile = await this.counselorProfile.getCounselorProfile({
+        counselor_profile_id: data.counselor_profile_id,
+      });
+
+      if (!counselorProfile.rec || counselorProfile.rec.length === 0) {
+        return { message: 'Counselor not found', error: -1 };
+      }
+
+      const counselor = counselorProfile.rec[0];
+      const counselorEmail = counselor.email;
+      const counselorName = `${counselor.user_first_name} ${counselor.user_last_name}`;
+      const counselorPhone = counselor.public_phone || null;
+
+      // Create intake form in database
+      const intakeForm = await prisma.client_intake_form.create({
+        data: {
+          full_name: appointment.customer_name,
+          email: appointment.customer_email || null,
+          phone: appointment.contact_number || null,
+          counselor_profile_id: data.counselor_profile_id,
+        },
+      });
+
+      const intakeFormId = intakeForm.id;
+
+      // Encode client name for URL parameter
+      const encodedClientName = encodeURIComponent(appointment.customer_name);
+
+      // Build intake form link with counselor_id, appointment_id, and intake_form_id
+      const intakeFormLink = `${process.env.BASE_URL}${process.env.FORMS || '/forms/'}intake?counselor_id=${data.counselor_profile_id}&appointment_id=${data.appointment_id}&intake_form_id=${intakeFormId}&client_name=${encodedClientName}`;
+
+      // Create and send email
+      const emailMsg = intakeFormEmail(
+        appointment.customer_email,
+        appointment.customer_name,
+        intakeFormLink,
+        data.counselor_profile_id,
+        data.appointment_id,
+        intakeFormId,
+        counselorEmail,
+        counselorName,
+        counselorPhone,
+      );
+
+      const emailResult = await this.sendEmail.sendMail(emailMsg);
+      
+      if (!emailResult || emailResult.error) {
+        const errorMessage = emailResult?.message || 'Failed to send intake form email';
+        logger.error('Error sending intake form email to client:', errorMessage);
+        return { message: 'Failed to send intake form email', error: -1 };
+      }
+
+      // Update appointment to mark send_intake_form as true
+      await this.appointmentEmailTracking.updateSendIntakeForm(data.appointment_id);
+
+      logger.info('Intake form email sent successfully to:', appointment.customer_email);
+      return { message: 'Intake form email sent successfully' };
+    } catch (err) {
+      logger.error('Error in sendIntakeForm service:', err);
+      return { message: 'Internal server error', error: -1 };
+    }
+  }
+
+  async getAppointmentById(appointment_id) {
+    try {
+      if (!appointment_id) {
+        return { message: 'Appointment ID is required', error: -1 };
+      }
+
+      const appointment = await this.appointmentEmailTracking.getAppointmentById(
+        parseInt(appointment_id)
+      );
+
+      if (!appointment) {
+        return { message: 'Appointment not found', error: -1 };
+      }
+
+      return { message: 'Appointment retrieved successfully', rec: appointment };
+    } catch (err) {
+      logger.error('Error in getAppointmentById service:', err);
       return { message: 'Internal server error', error: -1 };
     }
   }

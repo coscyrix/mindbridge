@@ -106,7 +106,7 @@ const PCL5Form = () => {
       }
     } catch (error) {
       console.error("Error:", error);
-      toast.error(error?.message || "Error while submitting the form");
+      toast.error(error?.response?.data?.message || "Error while submitting the form");
     } finally {
       setTimeout(() => setLoading(false), 3000);
     }

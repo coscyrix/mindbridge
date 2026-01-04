@@ -296,7 +296,8 @@ const WHODASForm = () => {
         reset();
       }
     } catch (error) {
-      console.log(":: Error in WHODAS Form", error);
+      console.error("Error submitting WHODAS form:", error);
+      toast.error(error?.response?.data?.message || "Error submitting the form");
     }
   };
   return (
@@ -311,17 +312,7 @@ const WHODASForm = () => {
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(onSubmit)}>
           <table className="questions-table">
-            <thead>
-              <tr>
-                <th></th>
-                <th>Difficulties due to health conditions</th>
-                <th>None</th>
-                <th>Mild</th>
-                <th>Moderate</th>
-                <th>Severe</th>
-                <th>Extreme or cannot do</th>
-              </tr>
-            </thead>
+
             <tbody>
               {allQuestions.map((questionCategory, index) => (
                 <React.Fragment key={index}>
@@ -330,13 +321,26 @@ const WHODASForm = () => {
                       {questionCategory?.category}
                     </td>
                   </tr>
+                  {/* if last then dont show the table */}
+                  {index !== allQuestions.length - 1 && (
+                    <tr style={{ backgroundColor: "#f5f5f5", fontWeight: "bold" }}>
+                      <th></th>
+                      <th>Difficulties due to health conditions</th>
+                      <th>None</th>
+                      <th>Mild</th>
+                      <th>Moderate</th>
+                      <th>Severe</th>
+                      <th>Extreme or cannot do</th>
+                    </tr>
+                  )}
+                  
                   {questionCategory.questions.map((question) => (
                     <React.Fragment key={question.id}>
                       <tr>
                         <td>{question.questionNumber}</td>
                         <td className="alignLeft">{question.questionText}</td>
                         {questionCategory?.questionType === "radio" ? (
-                          [0, 1, 2, 3, 4].map((value) => (
+                          [1, 2, 3, 4, 5].map((value) => (
                             <td key={value}>
                               <Controller
                                 name={question.questionId}

@@ -11,7 +11,7 @@ import Session from './session.js';
 import Service from './service.js';
 import Common from './common.js';
 import EmailTmplt from './emailTmplt.js';
-import { absenceNotificationEmail } from '../utils/emailTmplt.js';
+import { absenceNotificationEmail, clientAbsenceRescheduleEmail } from '../utils/emailTmplt.js';
 
 dotenv.config();
 
@@ -82,10 +82,8 @@ export default class TherapistAbsence {
           updated_at: new Date(),
         });
 
-      // Step 4: Send notifications if requested
-      if (notify_admin) {
-        await this.sendAbsenceNotifications(counselor_id, start_date, end_date, tenant_id, totalRescheduledSessions);
-      }
+      // Step 4: Send notifications (function handles notify_admin logic internally)
+      await this.sendAbsenceNotifications(counselor_id, start_date, end_date, tenant_id, totalRescheduledSessions, activeBlocks, notify_admin);
 
       return {
         message: 'Absence handled successfully',
@@ -104,11 +102,11 @@ export default class TherapistAbsence {
    */
   async recalculateSessionDates(req_id, absenceStartDate, absenceEndDate) {
     try {
-      // Normalize dates to start of day for accurate comparison
+      // Normalize dates to start of day for accurate comparison (use UTC for consistency)
       const absenceStart = new Date(absenceStartDate);
-      absenceStart.setHours(0, 0, 0, 0);
+      absenceStart.setUTCHours(0, 0, 0, 0);
       const absenceEnd = new Date(absenceEndDate);
-      absenceEnd.setHours(23, 59, 59, 999);
+      absenceEnd.setUTCHours(23, 59, 59, 999);
 
       // Get the therapy request and its sessions
       const thrpyReq = await this.thrpyReq.getThrpyReqById({ req_id });
@@ -160,39 +158,59 @@ export default class TherapistAbsence {
         sessionFrequency = Array.isArray(svcFormula) ? svcFormula[0] : 7;
       }
 
-      // Identify sessions that fall within the absence period
-      const sessionsInAbsencePeriod = allSessions.filter(session => {
-        const sessionDate = new Date(session.intake_date);
-        sessionDate.setHours(0, 0, 0, 0);
+      // Separate regular sessions from report sessions
+      // Progress/Intake reports should share the same date as their regular session (like in postThrpyReq)
+      // But discharge reports are scheduled one interval AFTER the last regular session
+      const regularSessions = allSessions.filter(session => !session.is_report);
+      
+      // Identify discharge reports by their session_code
+      const dischargeCodes = ['DISCHARGE', 'DR', 'OTR_SUM_REP', 'OTR_TRNS_REP', 'DISCHARGE_REPORT'];
+      const dischargeReports = allSessions.filter(session => {
+        if (!session.is_report) return false;
+        const sessionCode = (session.session_code || '').toUpperCase();
+        return dischargeCodes.some(code => sessionCode.includes(code));
+      });
+      
+      // Other reports (progress/intake) that share dates with regular sessions
+      const regularReports = allSessions.filter(session => {
+        if (!session.is_report) return false;
+        const sessionCode = (session.session_code || '').toUpperCase();
+        return !dischargeCodes.some(code => sessionCode.includes(code));
+      });
+
+      // Identify REGULAR sessions that fall within the absence period
+      const regularSessionsInAbsencePeriod = regularSessions.filter(session => {
+        const sessionDate = new Date(`${session.intake_date}T00:00:00Z`);
+        sessionDate.setUTCHours(0, 0, 0, 0);
         return sessionDate >= absenceStart && sessionDate <= absenceEnd;
       });
 
-      // Count missed sessions
-      const missedSessionsCount = sessionsInAbsencePeriod.length;
+      // Count missed REGULAR sessions (reports don't count separately)
+      const missedSessionsCount = regularSessionsInAbsencePeriod.length;
       
       if (missedSessionsCount === 0) {
-        logger.info(`No sessions in absence period for req_id ${req_id}`);
+        logger.info(`No regular sessions in absence period for req_id ${req_id}`);
         return 0;
       }
 
-      logger.info(`Found ${missedSessionsCount} sessions in absence period for req_id ${req_id}`);
+      logger.info(`Found ${missedSessionsCount} regular sessions in absence period for req_id ${req_id}`);
 
       // Calculate extension period in days (missed sessions * session frequency)
       const extensionDays = missedSessionsCount * sessionFrequency;
 
-      // Find sessions that occur after the absence period (that weren't in the absence period)
-      const sessionsAfterAbsence = allSessions.filter(session => {
-        const sessionDate = new Date(session.intake_date);
-        sessionDate.setHours(0, 0, 0, 0);
-        const sessionIdsInAbsence = sessionsInAbsencePeriod.map(s => s.session_id);
+      // Find REGULAR sessions that occur after the absence period
+      const regularSessionsAfterAbsence = regularSessions.filter(session => {
+        const sessionDate = new Date(`${session.intake_date}T00:00:00Z`);
+        sessionDate.setUTCHours(0, 0, 0, 0);
+        const sessionIdsInAbsence = regularSessionsInAbsencePeriod.map(s => s.session_id);
         return sessionDate > absenceEnd && !sessionIdsInAbsence.includes(session.session_id);
       });
 
-      // Combine all sessions that need rescheduling (both in absence and after)
+      // Combine all REGULAR sessions that need rescheduling (both in absence and after)
       // Sort them by their original session_number to maintain order
-      const sessionsToReschedule = [
-        ...sessionsInAbsencePeriod,
-        ...sessionsAfterAbsence
+      const regularSessionsToReschedule = [
+        ...regularSessionsInAbsencePeriod,
+        ...regularSessionsAfterAbsence
       ].sort((a, b) => {
         // Sort by session_number first, then by intake_date as fallback
         if (a.session_number !== null && b.session_number !== null) {
@@ -204,45 +222,54 @@ export default class TherapistAbsence {
       });
 
       // Find the first session date after the absence period ends
+      // Use UTC to avoid timezone issues (same logic as postThrpyReq)
       const firstRescheduleDate = new Date(absenceEnd);
-      firstRescheduleDate.setDate(firstRescheduleDate.getDate() + 1); // Day after absence ends
-      firstRescheduleDate.setHours(0, 0, 0, 0);
+      firstRescheduleDate.setUTCDate(firstRescheduleDate.getUTCDate() + 1); // Day after absence ends
+      firstRescheduleDate.setUTCHours(0, 0, 0, 0);
 
-      // Skip weekends for the first rescheduled date
-      while (firstRescheduleDate.getDay() === 0 || firstRescheduleDate.getDay() === 6) {
-        firstRescheduleDate.setDate(firstRescheduleDate.getDate() + 1);
+      // Skip weekends for the first rescheduled date (use UTC methods)
+      while (firstRescheduleDate.getUTCDay() === 0 || firstRescheduleDate.getUTCDay() === 6) {
+        firstRescheduleDate.setUTCDate(firstRescheduleDate.getUTCDate() + 1);
       }
 
-      // Track which sessions were originally in the absence period
-      const sessionIdsInAbsence = sessionsInAbsencePeriod.map(s => s.session_id);
+      // Track which REGULAR sessions were originally in the absence period
+      const regularSessionIdsInAbsence = regularSessionsInAbsencePeriod.map(s => s.session_id);
 
-      // Reschedule all sessions sequentially, maintaining proper order
+      // Map to track old date -> new date for updating reports later
+      const dateMapping = {}; // { 'old_date_time': 'new_date' }
+
+      // Reschedule all REGULAR sessions sequentially, maintaining proper order
       let rescheduledCount = 0;
       let lastScheduledDate = null; // Track the last scheduled date to ensure order
 
-      for (const session of sessionsToReschedule) {
+      for (const session of regularSessionsToReschedule) {
+        // Store old date for mapping (to update associated reports later)
+        const oldDateTimeKey = `${session.intake_date}_${session.scheduled_time || ''}`;
+
         let calculatedDate;
 
-        if (sessionIdsInAbsence.includes(session.session_id)) {
+        if (regularSessionIdsInAbsence.includes(session.session_id)) {
           // Session was in absence period - schedule it starting from firstRescheduleDate
           // Find the position of this session in the absence period list (sorted by original date)
-          const sortedAbsenceSessions = [...sessionsInAbsencePeriod].sort((a, b) => {
+          const sortedAbsenceSessions = [...regularSessionsInAbsencePeriod].sort((a, b) => {
             const dateA = new Date(a.intake_date);
             const dateB = new Date(b.intake_date);
             return dateA - dateB;
           });
           const indexInAbsence = sortedAbsenceSessions.findIndex(s => s.session_id === session.session_id);
-          calculatedDate = new Date(firstRescheduleDate);
+          // Initialize using UTC format to avoid timezone issues (same logic as postThrpyReq)
+          calculatedDate = new Date(`${firstRescheduleDate.toISOString().split('T')[0]}T00:00:00Z`);
           
           // Space out sessions by session frequency (e.g., weekly = 7 days)
           if (indexInAbsence > 0) {
-            calculatedDate.setDate(calculatedDate.getDate() + (indexInAbsence * sessionFrequency));
+            calculatedDate.setUTCDate(calculatedDate.getUTCDate() + (indexInAbsence * sessionFrequency));
           }
         } else {
           // Session was after absence period - move it forward by extension period
-          const originalDate = new Date(session.intake_date);
+          // Initialize using UTC format to avoid timezone issues (same logic as postThrpyReq)
+          const originalDate = new Date(`${session.intake_date}T00:00:00Z`);
           calculatedDate = new Date(originalDate);
-          calculatedDate.setDate(calculatedDate.getDate() + extensionDays);
+          calculatedDate.setUTCDate(calculatedDate.getUTCDate() + extensionDays);
         }
 
         // Determine the actual new date - must be after the last scheduled session
@@ -254,18 +281,19 @@ export default class TherapistAbsence {
           // Ensure this session comes after the previous rescheduled session
           // Use the later of: calculated date or last scheduled date + session frequency
           const minDate = new Date(lastScheduledDate);
-          minDate.setDate(minDate.getDate() + sessionFrequency);
+          minDate.setUTCDate(minDate.getUTCDate() + sessionFrequency);
           
           newDate = calculatedDate > minDate ? new Date(calculatedDate) : new Date(minDate);
         }
 
-        // Skip weekends if needed
-        while (newDate.getDay() === 0 || newDate.getDay() === 6) {
-          newDate.setDate(newDate.getDate() + 1);
+        // Skip weekends if needed (use UTC methods for consistency with postThrpyReq)
+        while (newDate.getUTCDay() === 0 || newDate.getUTCDay() === 6) {
+          newDate.setUTCDate(newDate.getUTCDate() + 1);
         }
 
         const newIntakeDate = newDate.toISOString().split('T')[0];
 
+        // Update the regular session
         await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('session')
@@ -275,9 +303,69 @@ export default class TherapistAbsence {
             updated_at: new Date(),
           });
 
+        // Track the date mapping for updating reports later
+        dateMapping[oldDateTimeKey] = newIntakeDate;
+
         // Update lastScheduledDate to the date we just scheduled
         lastScheduledDate = new Date(newDate);
         rescheduledCount++;
+      }
+
+      // Now update regular reports (progress/intake) to match their corresponding regular session dates
+      // These reports should have the same date as their regular session (like in postThrpyReq)
+      for (const reportSession of regularReports) {
+        const oldDateTimeKey = `${reportSession.intake_date}_${reportSession.scheduled_time || ''}`;
+        const newReportDate = dateMapping[oldDateTimeKey];
+
+        if (newReportDate) {
+          // Update the report session to match its regular session's new date
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('session')
+            .where('session_id', reportSession.session_id)
+            .update({
+              intake_date: newReportDate,
+              updated_at: new Date(),
+            });
+
+          rescheduledCount++;
+          logger.info(`Updated regular report session ${reportSession.session_id} to match regular session date: ${newReportDate}`);
+        } else {
+          // If no mapping found, this report wasn't affected by rescheduling
+          logger.info(`Regular report session ${reportSession.session_id} not affected by absence rescheduling`);
+        }
+      }
+
+      // Now handle discharge reports separately - they should be one interval AFTER the last regular session
+      // (same logic as postThrpyReq)
+      for (const dischargeReport of dischargeReports) {
+        if (lastScheduledDate && regularSessionsToReschedule.length > 0) {
+          // Calculate discharge date: last regular session date + session frequency
+          const dischargeDate = new Date(lastScheduledDate);
+          dischargeDate.setUTCDate(dischargeDate.getUTCDate() + sessionFrequency);
+          
+          // Skip weekends for the discharge report (use UTC methods)
+          while (dischargeDate.getUTCDay() === 0 || dischargeDate.getUTCDay() === 6) {
+            dischargeDate.setUTCDate(dischargeDate.getUTCDate() + 1);
+          }
+          
+          const newDischargeDate = dischargeDate.toISOString().split('T')[0];
+          
+          // Update the discharge report session
+          await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('session')
+            .where('session_id', dischargeReport.session_id)
+            .update({
+              intake_date: newDischargeDate,
+              updated_at: new Date(),
+            });
+
+          rescheduledCount++;
+          logger.info(`Updated discharge report session ${dischargeReport.session_id} to be one interval after last regular session: ${newDischargeDate}`);
+        } else {
+          logger.info(`Discharge report session ${dischargeReport.session_id} not affected by absence rescheduling (no regular sessions rescheduled)`);
+        }
       }
 
       logger.info(`Rescheduled ${rescheduledCount} total session dates for req_id ${req_id}. Extended by ${extensionDays} days (${missedSessionsCount} missed sessions × ${sessionFrequency} days)`);
@@ -290,17 +378,19 @@ export default class TherapistAbsence {
   }
 
   /**
-   * Send absence notifications to admin/supplier
+   * Send absence notifications to admin and affected clients
    */
-  async sendAbsenceNotifications(counselor_id, start_date, end_date, tenant_id, cancelledSessionsCount) {
+  async sendAbsenceNotifications(counselor_id, start_date, end_date, tenant_id, cancelledSessionsCount, activeBlocks, notify_admin = false) {
     try {
+      logger.info(`Starting absence notification process for counselor ${counselor_id} (notify_admin: ${notify_admin})`);
+      
       // Get counselor profile information
       const counselorProfile = await db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .from('user_profile as up')
         .join('counselor_profile as cp', 'up.user_profile_id', 'cp.user_profile_id')
         .where('up.user_profile_id', counselor_id)
-        .select('up.user_first_name', 'up.user_last_name', 'up.user_phone_nbr')
+        .select('up.user_first_name', 'up.user_last_name', 'up.user_phone_nbr', 'up.timezone')
         .first();
 
       if (!counselorProfile) {
@@ -308,42 +398,223 @@ export default class TherapistAbsence {
         return;
       }
 
-      // Get admin/tenant manager emails
-      const adminUsers = await db
-        .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('users as u')
-        .join('user_profile as up', 'u.user_id', 'up.user_id')
-        .where('u.role_id', 3) // Tenant manager role
-        .where('up.tenant_id', tenant_id)
-        .where('u.status_yn', 'y')
-        .select('u.email', 'up.user_first_name', 'up.user_last_name');
+      logger.info(`Counselor profile found: ${counselorProfile.user_first_name} ${counselorProfile.user_last_name}`);
 
-      // Prepare notification data
+      // Prepare shared notification data (used by both admin and client notifications)
       const counselorName = `${counselorProfile.user_first_name} ${counselorProfile.user_last_name}`;
       const absencePeriod = `${new Date(start_date).toLocaleDateString()} - ${new Date(end_date).toLocaleDateString()}`;
 
-      // Send emails to all tenant managers
-      for (const admin of adminUsers) {
-        try {
-          const emailTemplate = absenceNotificationEmail(
-            admin.email,
-            counselorName,
-            absencePeriod,
-            cancelledSessionsCount,
-            admin.user_first_name
-          );
+      // Only send admin notifications if notify_admin is true
+      if (notify_admin) {
+        // Get admin/tenant manager emails
+        const adminUsers = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('users as u')
+          .join('user_profile as up', 'u.user_id', 'up.user_id')
+          .where('u.role_id', 3) // Tenant manager role
+          .where('up.tenant_id', tenant_id)
+          .where('u.status_yn', 'y')
+          .select('u.email', 'up.user_first_name', 'up.user_last_name');
 
-          await this.emailTmplt.sendEmail.sendMail(emailTemplate);
-          logger.info(`Absence notification email sent to ${admin.email}`);
-        } catch (emailError) {
-          logger.error(`Error sending absence notification email to ${admin.email}:`, emailError);
+        if (!adminUsers || adminUsers.length === 0) {
+          logger.warn(`No admin users found for tenant ${tenant_id}`);
+        } else {
+          logger.info(`Found ${adminUsers.length} admin user(s) to notify`);
+
+          // Fetch rescheduled session details for this counselor
+          let formattedSessions = [];
+          
+          try {
+            const rescheduledSessions = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('session as s')
+              .join('thrpy_req as tr', 's.thrpy_req_id', 'tr.req_id')
+              .join('service as srv', 'tr.service_id', 'srv.service_id')
+              .join('user_profile as client_up', 'tr.client_id', 'client_up.user_profile_id')
+              .where('tr.counselor_id', counselor_id)
+              .where('tr.tenant_id', tenant_id)
+              .where('s.status_yn', 'y')
+              .whereRaw('DATE(s.intake_date) >= ?', [new Date(end_date).toISOString().split('T')[0]])
+              .whereNotIn('s.session_status', ['DISCHARGED', 'SHOW', 'NO-SHOW'])
+              .select(
+                's.session_id',
+                's.intake_date',
+                's.scheduled_time',
+                's.session_number',
+                's.session_format as session_format',
+                'srv.service_name',
+                'client_up.user_first_name as client_first_name',
+                'client_up.user_last_name as client_last_name',
+                'client_up.timezone as client_timezone'
+              )
+              .orderBy('s.intake_date', 'asc')
+              .limit(50); // Limit to first 50 sessions to avoid email overload
+
+            logger.info(`Found ${rescheduledSessions.length} rescheduled session(s) to include in email`);
+
+            // Format sessions for email with original dates (stored in session history or estimated)
+            formattedSessions = rescheduledSessions.map((session) => {
+              // Calculate estimated original date (before rescheduling)
+              // This is an approximation - ideally you'd store original dates in a history table
+              const newDate = new Date(session.intake_date);
+              const estimatedOriginalDate = new Date(newDate);
+              estimatedOriginalDate.setDate(estimatedOriginalDate.getDate() - 7); // Rough estimate
+
+              return {
+                client_name: `${session.client_first_name || ''} ${session.client_last_name || ''}`.trim(),
+                service_name: session.service_name || 'N/A',
+                original_date: estimatedOriginalDate.toLocaleDateString(),
+                intake_date: session.intake_date,
+                scheduled_time: session.scheduled_time || '09:00:00',
+                session_format: session.session_format || 'N/A',
+                timezone: session.client_timezone || counselorProfile.timezone || process.env.TIMEZONE || 'UTC',
+              };
+            });
+          } catch (sessionQueryError) {
+            logger.error('Error fetching rescheduled sessions:', sessionQueryError);
+            // Continue with empty sessions array - email can still be sent without session details
+            formattedSessions = [];
+          }
+
+          logger.info(`Preparing to send emails to ${adminUsers.length} admin(s)`);
+
+          // Send emails to all tenant managers
+          for (const admin of adminUsers) {
+            try {
+              logger.info(`Generating email template for ${admin.email}`);
+              
+              const emailTemplate = absenceNotificationEmail(
+                admin.email,
+                counselorName,
+                absencePeriod,
+                cancelledSessionsCount,
+                admin.user_first_name,
+                formattedSessions
+              );
+
+              logger.info(`Sending absence notification email to ${admin.email}`);
+              await this.emailTmplt.sendEmail.sendMail(emailTemplate);
+              logger.info(`✅ Absence notification email sent successfully to ${admin.email} with ${formattedSessions.length} rescheduled session details`);
+            } catch (emailError) {
+              logger.error(`❌ Error sending absence notification email to ${admin.email}:`, emailError);
+              logger.error('Email error stack:', emailError.stack);
+            }
+          }
         }
+      } else {
+        logger.info('Admin notification skipped (notify_admin is false)');
+      }
+
+      // Step 5: Send notifications to affected clients
+      logger.info('Starting client notification process...');
+      
+      try {
+
+        // Fetch all affected sessions with client contact information
+        const clientSessions = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('session as s')
+          .join('thrpy_req as tr', 's.thrpy_req_id', 'tr.req_id')
+          .join('service as srv', 'tr.service_id', 'srv.service_id')
+          .join('user_profile as client_up', 'tr.client_id', 'client_up.user_profile_id')
+          .join('users as client_user', 'client_up.user_id', 'client_user.user_id')
+          .where('tr.counselor_id', counselor_id)
+          .where('tr.tenant_id', tenant_id)
+          .where('s.status_yn', 'y')
+          .where('s.is_report', false) // Only regular sessions, not reports
+          .whereRaw('DATE(s.intake_date) >= ?', [new Date(end_date).toISOString().split('T')[0]])
+          .whereNotIn('s.session_status', ['DISCHARGED', 'SHOW', 'NO-SHOW'])
+          .select(
+            's.session_id',
+            's.intake_date',
+            's.scheduled_time',
+            's.session_number',
+            's.session_format as session_format',
+            'srv.service_name',
+            'client_up.user_profile_id as client_id',
+            'client_up.user_first_name as client_first_name',
+            'client_up.user_last_name as client_last_name',
+            'client_up.timezone as client_timezone',
+            'client_user.email as client_email'
+          )
+          .orderBy('client_up.user_profile_id', 'asc')
+          .orderBy('s.intake_date', 'asc');
+
+        if (!clientSessions || clientSessions.length === 0) {
+          logger.info('No client sessions found to notify');
+        } else {
+          logger.info(`Found ${clientSessions.length} client session(s) to notify about`);
+
+          // Group sessions by client
+          const sessionsByClient = {};
+          
+          for (const session of clientSessions) {
+            const clientId = session.client_id;
+            
+            if (!sessionsByClient[clientId]) {
+              sessionsByClient[clientId] = {
+                client_email: session.client_email,
+                client_name: `${session.client_first_name || ''} ${session.client_last_name || ''}`.trim(),
+                sessions: [],
+              };
+            }
+
+            // Calculate estimated original date (before rescheduling)
+            const newDate = new Date(session.intake_date);
+            const estimatedOriginalDate = new Date(newDate);
+            estimatedOriginalDate.setDate(estimatedOriginalDate.getDate() - 7); // Rough estimate
+
+            sessionsByClient[clientId].sessions.push({
+              service_name: session.service_name || 'N/A',
+              original_date: estimatedOriginalDate.toLocaleDateString(),
+              intake_date: session.intake_date,
+              scheduled_time: session.scheduled_time || '09:00:00',
+              session_format: session.session_format || 'N/A',
+              timezone: session.client_timezone || counselorProfile.timezone || process.env.TIMEZONE || 'UTC',
+            });
+          }
+
+          // Send email to each affected client
+          const clientCount = Object.keys(sessionsByClient).length;
+          logger.info(`Sending reschedule notifications to ${clientCount} client(s)`);
+
+
+          for (const [clientId, clientData] of Object.entries(sessionsByClient)) {
+            try {
+              if (!clientData.client_email) {
+                logger.warn(`No email found for client ${clientId}, skipping notification`);
+                continue;
+              }
+
+              logger.info(`Sending reschedule notification to client: ${clientData.client_email}`);
+              
+              const clientEmailTemplate = clientAbsenceRescheduleEmail(
+                clientData.client_email,
+                clientData.client_name,
+                counselorName,
+                clientData.sessions
+              );
+
+              await this.emailTmplt.sendEmail.sendMail(clientEmailTemplate);
+              logger.info(`✅ Client notification email sent successfully to ${clientData.client_email} (${clientData.sessions.length} session(s))`);
+            } catch (clientEmailError) {
+              logger.error(`❌ Error sending client notification email to ${clientData.client_email}:`, clientEmailError);
+            }
+          }
+
+          logger.info(`✅ Client notification process completed. Notified ${clientCount} client(s) about rescheduled sessions`);
+        }
+      } catch (clientNotificationError) {
+        logger.error('❌ Error in client notification process:', clientNotificationError);
+        logger.error('Error stack:', clientNotificationError.stack);
+        // Continue - client notification failure shouldn't fail the overall process
       }
 
       // Log audit trail (you can extend this to write to an audit log table)
-      logger.info(`Absence notification sent for counselor ${counselor_id} (${counselorName}) from ${start_date} to ${end_date}`);
+      logger.info(`✅ Absence notification process completed for counselor ${counselor_id} (${counselorName}) from ${start_date} to ${end_date}`);
     } catch (error) {
-      logger.error('Error sending absence notifications:', error);
+      logger.error('❌ Error in sendAbsenceNotifications:', error);
+      logger.error('Error stack:', error.stack);
       // Don't throw - notification failure shouldn't fail the absence handling
     }
   }

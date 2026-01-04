@@ -86,4 +86,61 @@ export default class ReportService {
       return { message: 'Error fetching session homework statistics', error: -1 };
     }
   }
+
+  //////////////////////////////////////////
+  async getProgressReportData(data) {
+    try {
+      const schema = joi.object({
+        thrpy_req_id: joi.number().required(),
+        session_id: joi.number().optional(),
+      });
+
+      const { error } = schema.validate(data);
+
+      if (error) {
+        return { message: error.details[0].message, error: -1 };
+      }
+
+      const ReportData = (await import('./reportData.js')).default;
+      const reportData = new ReportData();
+      const progressReportData = await reportData.getProgressReportData(data);
+
+      if (progressReportData.error) {
+        return progressReportData;
+      }
+
+      return progressReportData;
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error fetching progress report data', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+  async getDischargeReportData(data) {
+    try {
+      const schema = joi.object({
+        thrpy_req_id: joi.number().required(),
+        session_id: joi.number().optional(),
+      });
+
+      const { error } = schema.validate(data);
+
+      if (error) {
+        return { message: error.details[0].message, error: -1 };
+      }
+
+      const report = new Report();
+      const dischargeReportData = await report.getDischargeReportData(data);
+
+      if (dischargeReportData.error) {
+        return dischargeReportData;
+      }
+
+      return dischargeReportData;
+    } catch (error) {
+      console.error(error);
+      return { message: 'Error fetching discharge report data', error: -1 };
+    }
+  }
 }

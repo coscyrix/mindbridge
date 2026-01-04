@@ -17,7 +17,7 @@ dotenv.config();
 const EMAIL_DISCLAIMER = `
 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; line-height: 1.4;">
   <p><strong>DISCLAIMER:</strong></p>
-  <p>Assessment tools are used with proper author permissions for clinical purposes.<br/>
+  <p>Assessment tools are used with proper author permissions for clinical purposes.<br/> 
   Emails and attachments may contain confidential and legally protected information.<br/>
   Email transmission is not guaranteed to be secure or error-free. The sender assumes no liability for issues arising from electronic delivery.<br/>
   Unauthorized access, use, or distribution is prohibited.<br/>
@@ -97,30 +97,230 @@ export const accountRestoredEmail = (email, newPassword) => {
   };
 };
 
-export const absenceNotificationEmail = (email, counselorName, absencePeriod, cancelledSessionsCount, adminName) => {
+export const absenceNotificationEmail = (email, counselorName, absencePeriod, cancelledSessionsCount, adminName, rescheduledSessions) => {
+  // Ensure rescheduledSessions is an array
+
+  const sessions = Array.isArray(rescheduledSessions) ? rescheduledSessions : [];
+  
+  // Format rescheduled sessions table with error handling
+  let sessionDetails = '';
+  
+  try {
+    if (sessions.length > 0) {
+      sessionDetails = sessions.map((session, index) => {
+        let localDate = 'N/A';
+        let localTime = 'N/A';
+        
+        try {
+          if (session && session.intake_date) {
+            const formatted = formatDateTimeInTimezone(
+              session.intake_date,
+              session.scheduled_time || '09:00:00',
+              session.timezone || process.env.TIMEZONE || 'UTC',
+            );
+            localDate = formatted.localDate || 'N/A';
+            localTime = formatted.localTime || 'N/A';
+          }
+        } catch (formatError) {
+          console.error('Error formatting session date/time:', formatError);
+          // Use fallback formatting
+          if (session && session.intake_date) {
+            localDate = new Date(session.intake_date).toLocaleDateString();
+            localTime = session.scheduled_time || 'N/A';
+          }
+        }
+
+        return `
+          <tr style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px; background-color: ${
+            index % 2 === 0 ? '#f9f9f9' : '#ffffff'
+          };">
+            <td style="padding: 8px;">${session.client_name || 'N/A'}</td>
+            <td style="padding: 8px;">${session.service_name || 'N/A'}</td>
+            <td style="padding: 8px;">${session.original_date || 'N/A'}</td>
+            <td style="padding: 8px;">${localDate}</td>
+            <td style="padding: 8px;">${localTime}</td>
+            <td style="padding: 8px;">${session.session_format || 'N/A'}</td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      sessionDetails = '<tr><td colspan="6" style="padding: 8px; text-align: center; color: #666;">No rescheduled sessions available</td></tr>';
+    }
+  } catch (error) {
+    console.error('Error generating session details table:', error);
+    sessionDetails = '<tr><td colspan="6" style="padding: 8px; text-align: center; color: #666;">Error loading session details</td></tr>';
+  }
+
+  const sessionTableSection = sessions.length > 0 
+    ? `
+      <h3 style="color: #007bff; text-align: left; margin-top: 30px; margin-bottom: 10px; font-size: 16px;">Rescheduled Session Details</h3>
+      <p style="text-align: left; font-size: 14px; color: #666; margin-bottom: 15px;">
+        The following sessions have been automatically rescheduled:
+      </p>
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd; border-radius: 8px;">
+        <thead>
+          <tr style="background-color: #007bff; color: #fff; text-align: left;">
+            <th style="padding: 12px 8px;">Client Name</th>
+            <th style="padding: 12px 8px;">Service</th>
+            <th style="padding: 12px 8px;">Original Date</th>
+            <th style="padding: 12px 8px;">New Date</th>
+            <th style="padding: 12px 8px;">New Time</th>
+            <th style="padding: 12px 8px;">Format</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sessionDetails}
+        </tbody>
+      </table>
+    ` 
+    : '';
+
   return {
     to: email,
     subject: 'Therapist Absence Notification - MindBridge',
     html: `
-      <h1>Therapist Absence Notification</h1>
-      <p>Hello ${adminName || 'Administrator'},</p>
-      <p>This is to notify you that a therapist has marked themselves as unavailable:</p>
-      <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-        <p><strong>Therapist:</strong> ${counselorName}</p>
-        <p><strong>Absence Period:</strong> ${absencePeriod}</p>
-        <p><strong>Rescheduled Sessions:</strong> ${cancelledSessionsCount}</p>
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h1 style="color: #007bff;">Therapist Absence Notification</h1>
+        <p>Hello ${adminName || 'Administrator'},</p>
+        <p>This is to notify you that a therapist has marked themselves as unavailable:</p>
+        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Therapist:</strong> ${counselorName || 'N/A'}</p>
+          <p><strong>Absence Period:</strong> ${absencePeriod || 'N/A'}</p>
+          <p><strong>Total Rescheduled Sessions:</strong> ${cancelledSessionsCount || 0}</p>
+        </div>
+        <p><strong>Actions Taken:</strong></p>
+        <ul>
+          <li>All active treatment blocks have been automatically paused</li>
+          <li>All sessions within the absence period have been rescheduled to after the absence ends</li>
+          <li>Session dates have been automatically recalculated based on service frequency rules</li>
+          <li>Treatment blocks will automatically resume after the absence period ends</li>
+        </ul>
+        ${sessionTableSection}
+        <p style="margin-top: 30px;">Please review the affected schedules and inform any impacted clients as necessary.</p>
+        <p>Thank you,</p>
+        <p>The MindBridge System</p>
+        ${EMAIL_DISCLAIMER}
       </div>
-      <p><strong>Actions Taken:</strong></p>
-      <ul>
-        <li>All active treatment blocks have been automatically paused</li>
-        <li>All sessions within the absence period have been rescheduled to after the absence ends</li>
-        <li>Session dates have been automatically recalculated based on service frequency rules</li>
-        <li>Treatment blocks will automatically resume after the absence period ends</li>
-      </ul>
-      <p>Please review the affected schedules and inform any impacted clients as necessary.</p>
-      <p>Thank you,</p>
-      <p>The MindBridge System</p>
-      ${EMAIL_DISCLAIMER}
+    `,
+  };
+};
+
+export const clientAbsenceRescheduleEmail = (email, clientName, counselorName, rescheduledSessions = []) => {
+  // Ensure rescheduledSessions is an array
+  const sessions = Array.isArray(rescheduledSessions) ? rescheduledSessions : [];
+  
+  // Format rescheduled sessions table with error handling
+  let sessionDetails = '';
+  
+  try {
+    if (sessions.length > 0) {
+      sessionDetails = sessions.map((session, index) => {
+        let localDate = 'N/A';
+        let localTime = 'N/A';
+        let originalDate = 'N/A';
+        
+        try {
+          if (session && session.intake_date) {
+            const formatted = formatDateTimeInTimezone(
+              session.intake_date,
+              session.scheduled_time || '09:00:00',
+              session.timezone || process.env.TIMEZONE || 'UTC',
+            );
+            localDate = formatted.localDate || 'N/A';
+            localTime = formatted.localTime || 'N/A';
+          }
+          
+          if (session && session.original_date) {
+            originalDate = session.original_date;
+          }
+        } catch (formatError) {
+          console.error('Error formatting session date/time:', formatError);
+          // Use fallback formatting
+          if (session && session.intake_date) {
+            localDate = new Date(session.intake_date).toLocaleDateString();
+            localTime = session.scheduled_time || 'N/A';
+          }
+        }
+
+        return `
+          <tr style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px; background-color: ${
+            index % 2 === 0 ? '#f9f9f9' : '#ffffff'
+          };">
+            <td style="padding: 8px;">${session.service_name || 'N/A'}</td>
+            <td style="padding: 8px;">${originalDate}</td>
+            <td style="padding: 8px;"><strong style="color: #007bff;">${localDate}</strong></td>
+            <td style="padding: 8px;"><strong style="color: #007bff;">${localTime}</strong></td>
+            <td style="padding: 8px;">${session.session_format || 'N/A'}</td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      sessionDetails = '<tr><td colspan="5" style="padding: 8px; text-align: center; color: #666;">No rescheduled sessions</td></tr>';
+    }
+  } catch (error) {
+    console.error('Error generating session details table:', error);
+    sessionDetails = '<tr><td colspan="5" style="padding: 8px; text-align: center; color: #666;">Error loading session details</td></tr>';
+  }
+
+  const sessionCount = sessions.length;
+  const sessionWord = sessionCount === 1 ? 'session has' : 'sessions have';
+
+  return {
+    to: email,
+    subject: 'Important: Your Therapy Sessions Have Been Rescheduled - MindBridge',
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h1 style="color: #007bff;">Session Reschedule Notification</h1>
+        <p>Hello ${clientName || 'Valued Client'},</p>
+        
+        <p>We hope this message finds you well. We're writing to inform you that your upcoming therapy ${sessionWord} been rescheduled due to your therapist's temporary unavailability.</p>
+        
+        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0;"><strong>⚠️ Important Notice:</strong></p>
+          <p style="margin: 5px 0 0 0;">Your therapist, <strong>${counselorName || 'your therapist'}</strong>, will be temporarily unavailable. Your ${sessionCount} ${sessionWord} been automatically rescheduled to new dates.</p>
+        </div>
+
+        <h3 style="color: #007bff; text-align: left; margin-top: 30px; margin-bottom: 10px; font-size: 16px;">Your Rescheduled Sessions</h3>
+        <p style="text-align: left; font-size: 14px; color: #666; margin-bottom: 15px;">
+          Below are the details of your rescheduled ${sessionCount === 1 ? 'session' : 'sessions'}:
+        </p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd; border-radius: 8px;">
+          <thead>
+            <tr style="background-color: #007bff; color: #fff; text-align: left;">
+              <th style="padding: 12px 8px;">Service</th>
+              <th style="padding: 12px 8px;">Original Date</th>
+              <th style="padding: 12px 8px;">New Date</th>
+              <th style="padding: 12px 8px;">New Time</th>
+              <th style="padding: 12px 8px;">Format</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sessionDetails}
+          </tbody>
+        </table>
+
+        <div style="background-color: #d1ecf1; border-left: 4px solid #17a2b8; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0;"><strong>What You Need to Do:</strong></p>
+          <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+            <li>Please mark these new dates in your calendar</li>
+            <li>If you have any concerns or the new schedule doesn't work for you, please contact us as soon as possible</li>
+            <li>Your treatment goals and progress remain unchanged</li>
+            <li>All session details (format, duration, etc.) remain the same</li>
+          </ul>
+        </div>
+
+        <p style="margin-top: 30px;">We apologize for any inconvenience this may cause and appreciate your understanding. If you have any questions or need to discuss alternative arrangements, please don't hesitate to reach out to your care team.</p>
+        
+        <p style="margin-top: 20px;">Thank you for your continued trust in our services.</p>
+        
+        <p style="margin-top: 20px;">
+          <strong>Best regards,</strong><br/>
+          The MindBridge Team
+        </p>
+        
+        ${EMAIL_DISCLAIMER}
+      </div>
     `,
   };
 };
@@ -229,6 +429,101 @@ export const treatmentToolsEmail = (
       <p>If you have any questions or concerns, feel free to reach out. We're here to support you.</p>
       <p>Thank you,</p>
       <p>The Counselling Team Member</p>
+      ${EMAIL_DISCLAIMER}
+    `,
+  };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
+};
+
+// This function sends an email to the client with the intake form link
+export const intakeFormEmail = (email, clientName, intakeFormLink, counselor_id, appointment_id, intake_form_id, counselorEmail = null, counselorName = null, counselorPhone = null) => {
+  const emailObj = {
+    to: email,
+    subject: 'Intake Form Required for Your Appointment',
+    html: `
+    <style>
+      .intake-container {
+        font-family: Arial, sans-serif;
+        color: #333;
+        line-height: 1.6;
+      }
+      .intake-button {
+        display: inline-block;
+        padding: 15px 30px;
+        margin: 20px 0;
+        background: linear-gradient(90deg, #1a73e8, #1557b0);
+        color: white !important;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        text-align: center;
+      }
+      .intake-button:hover {
+        background: linear-gradient(90deg, #1557b0, #0f4a8a);
+      }
+      .info-box {
+        background-color: #f0f4f8;
+        border-left: 4px solid #1a73e8;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .contact-info {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+    </style>
+    <div class="intake-container">
+      <p>Dear ${capitalizeFirstLetter(clientName)},</p>
+      
+      <p>I hope this message finds you well.</p>
+      
+      <div class="info-box">
+        <p><strong>Action Required:</strong></p>
+        <p>Before your upcoming appointment, we need you to complete an Intake Form. This form helps us understand your background, concerns, and goals so we can provide you with the best possible care.</p>
+        <p><strong>Intake Form ID:</strong> ${intake_form_id}</p>
+      </div>
+      
+      <p>The intake form will help us:</p>
+      <ul>
+        <li>Understand your current situation and concerns</li>
+        <li>Learn about your goals for therapy</li>
+        <li>Gather important background information</li>
+        <li>Prepare for our first session together</li>
+      </ul>
+      
+      <p><strong>Please click the button below to access and complete your intake form:</strong></p>
+      
+      <div style="text-align: center;">
+        <a href="${intakeFormLink}" class="intake-button">Complete Intake Form</a>
+      </div>
+      
+      <p>The form will take approximately 10-15 minutes to complete. Please complete it at your earliest convenience so we can prepare for your appointment.</p>
+      
+      ${counselorName ? `
+      <div class="contact-info">
+        <p><strong>Your Counselor:</strong> ${capitalizeFirstLetter(counselorName)}</p>
+        ${counselorEmail ? `<p><strong>Email:</strong> ${counselorEmail}</p>` : ''}
+        ${counselorPhone ? `<p><strong>Phone:</strong> ${counselorPhone}</p>` : ''}
+        <p>If you have any questions or need assistance, feel free to reach out.</p>
+      </div>
+      ` : `
+      <p>If you have any questions or need assistance, please don't hesitate to reach out to your counselor.</p>
+      `}
+      
+      <p>We look forward to working with you.</p>
+      
+      <p>Warm regards,<br/>
+      ${counselorName ? capitalizeFirstLetter(counselorName) + '<br/>' : ''}
+      <strong>MindBridge Therapy Team</strong></p>
+    </div>
       ${EMAIL_DISCLAIMER}
     `,
   };
@@ -858,6 +1153,176 @@ export const homeworkEmailAttachment = (
       ${EMAIL_DISCLAIMER}
     `,
     attachments: [{ filename: fileName, content: fileBuffer }],
+  };
+
+  // Add Reply-To if counselor email is provided
+  if (counselorEmail) {
+    emailObj.replyTo = counselorEmail;
+  }
+
+  return emailObj;
+};
+
+export const newAppointmentEmail = (
+  counselorEmail,
+  counselorName,
+  clientName,
+  clientEmail,
+  countryCode,
+  contactNumber,
+  service,
+  appointmentDate,
+  description = null,
+) => {
+  // Format phone number for display
+  const formatPhoneForDisplay = (code, number) => {
+    if (!number) return '';
+    const codeStr = code || '+1';
+    const numStr = number.replace(/\D/g, '');
+    
+    // Format based on length
+    if (numStr.length === 10) {
+      // US/Canada format: (XXX) XXX-XXXX
+      return `${codeStr} (${numStr.slice(0, 3)}) ${numStr.slice(3, 6)}-${numStr.slice(6)}`;
+    } else if (numStr.length > 10) {
+      // International format: +XX XXX XXX XXXX
+      const chunks = [];
+      let remaining = numStr;
+      while (remaining.length > 0) {
+        if (remaining.length > 4) {
+          chunks.push(remaining.slice(0, 3));
+          remaining = remaining.slice(3);
+        } else {
+          chunks.push(remaining);
+          remaining = '';
+        }
+      }
+      return `${codeStr} ${chunks.join(' ')}`;
+    }
+    return `${codeStr} ${numStr}`;
+  };
+
+  const formattedPhone = formatPhoneForDisplay(countryCode, contactNumber);
+  const fullPhoneNumber = formattedPhone || `${countryCode || ''} ${contactNumber || ''}`.trim();
+
+  return {
+    to: counselorEmail,
+    subject: `New Appointment with ${clientName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1a73e8; margin-bottom: 20px;">New Appointment Confirmation</h1>
+        <p style="font-size: 16px; line-height: 1.6;">Hello ${capitalizeFirstLetter(counselorName)},</p>
+        <p style="font-size: 16px; line-height: 1.6;">You have a new appointment request with the following details:</p>
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+              <strong style="color: #333; display: inline-block; min-width: 150px;">Client Name:</strong>
+              <span style="color: #666;">${capitalizeFirstLetter(clientName)}</span>
+            </li>
+            <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+              <strong style="color: #333; display: inline-block; min-width: 150px;">Client Email:</strong>
+              <a href="mailto:${clientEmail}" style="color: #1a73e8; text-decoration: none;">${clientEmail}</a>
+            </li>
+            <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+              <strong style="color: #333; display: inline-block; min-width: 150px;">Client Phone:</strong>
+              <a href="tel:${countryCode || ''}${contactNumber || ''}" style="color: #1a73e8; text-decoration: none; font-weight: 500;">
+                ${fullPhoneNumber}
+              </a>
+            </li>
+            <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+              <strong style="color: #333; display: inline-block; min-width: 150px;">Service:</strong>
+              <span style="color: #666;">${service}</span>
+            </li>
+            <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+              <strong style="color: #333; display: inline-block; min-width: 150px;">Appointment Date:</strong>
+              <span style="color: #666;">${new Date(appointmentDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </li>
+            ${description ? `
+            <li style="margin-bottom: 12px;">
+              <strong style="color: #333; display: block; margin-bottom: 8px;">Description:</strong>
+              <span style="color: #666; line-height: 1.6;">${description}</span>
+            </li>
+            ` : ''}
+          </ul>
+        </div>
+        <p style="font-size: 16px; line-height: 1.6;">Please reach out to the client to confirm the details.</p>
+        <p style="font-size: 16px; line-height: 1.6; margin-top: 20px;">Thank you,</p>
+        <p style="font-size: 16px; line-height: 1.6; color: #1a73e8; font-weight: 500;">The MindBridge Team</p>
+        ${EMAIL_DISCLAIMER}
+      </div>
+    `,
+  };
+};
+
+export const sessionReminderEmail = (
+  clientEmail,
+  clientName,
+  therapistName,
+  sessionDate,
+  sessionTime,
+  timezone,
+  sessionFormat,
+  locationOrLink,
+  secureLink,
+  counselorEmail = null
+) => {
+  const formatDisplay = sessionFormat === 'ONLINE' ? 'Video' : 
+                        (sessionFormat === 'IN-PERSON' || sessionFormat === 'IN_PERSON') ? 'In-Person' : 'Phone';
+  
+  const locationSection = sessionFormat === 'ONLINE' 
+    ? `
+      <tr style="background-color: #ffffff; color: #333; text-align: left;">
+        <th style="padding: 12px 8px;">Video Link</th>
+        <td style="padding: 8px;">
+          ${locationOrLink ? `<a href="${locationOrLink}" style="color: #007bff; text-decoration: underline;">${locationOrLink}</a>` : 'Will be provided before the session'}
+        </td>
+      </tr>
+    `
+    : `
+      <tr style="background-color: #ffffff; color: #333; text-align: left;">
+        <th style="padding: 12px 8px;">Location</th>
+        <td style="padding: 8px;">${locationOrLink || 'Please contact your therapist for location details'}</td>
+      </tr>
+    `;
+
+  const emailObj = {
+    to: clientEmail,
+    subject: 'Session Reminder - Your appointment is tomorrow',
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+        <p>Hello ${capitalizeFirstLetter(clientName)},</p>
+        <p>This is a friendly reminder that you have a therapy session scheduled for tomorrow.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #dddddd; border-radius: 8px; background-color: #ffffff;">
+          <tbody>
+            <tr style="background-color: #f9f9f9; color: #333; text-align: left;">
+              <th style="padding: 12px 8px;">Therapist</th>
+              <td style="padding: 8px;">${therapistName}</td>
+            </tr>
+            <tr style="background-color: #ffffff; color: #333; text-align: left;">
+              <th style="padding: 12px 8px;">Date & Time</th>
+              <td style="padding: 8px;">${sessionDate} at ${sessionTime} (${timezone})</td>
+            </tr>
+            <tr style="background-color: #f9f9f9; color: #333; text-align: left;">
+              <th style="padding: 12px 8px;">Session Type</th>
+              <td style="padding: 8px;">${formatDisplay}</td>
+            </tr>
+            ${locationSection}
+          </tbody>
+        </table>
+        <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin: 20px 0;">
+          <p style="margin: 0; font-weight: bold; color: #856404;">Need to cancel or reschedule?</p>
+          <p style="margin: 10px 0 0 0;">
+            ${secureLink 
+              ? `<a href="${secureLink}" style="color: #007bff; text-decoration: underline;">Click here to manage your session</a>`
+              : 'Please contact your therapist directly to cancel or reschedule your appointment.'}
+          </p>
+        </div>
+        <p>We look forward to seeing you!</p>
+        <p style="margin-top: 30px;">Thank you,</p>
+        <p><strong>The MindBridge Team</strong></p>
+        ${EMAIL_DISCLAIMER}
+      </div>
+    `,
   };
 
   // Add Reply-To if counselor email is provided

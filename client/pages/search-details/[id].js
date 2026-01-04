@@ -39,12 +39,24 @@ import {
   SliderSection,
   SliderTitle,
   SliderContainer,
+  AppointmentForm,
+  FormField,
+  FormFieldRow,
+  FormLabel,
+  FormInput,
+  FormSelect,
+  FormTextarea,
+  FormError,
+  FormFooter,
+  FormButtonCancel,
+  FormButtonSubmit,
+  PhoneInputWrapper,
 } from "../../styles/search-details";
 import CounselorCard from "../../components/SearchListingComponents/CounselorCard";
 import { useRouter } from "next/router";
 import CommonServices from "../../services/CommonServices";
 import CustomModal from "../../components/CustomModal";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, Controller } from "react-hook-form";
 import { api } from "../../utils/auth";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -53,6 +65,8 @@ import CustomButton from "../../components/CustomButton";
 import { bookAppointmentSchema } from "../../utils/validationSchema/validationSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TREATMENT_TARGET, IMAGE_BASE_URL } from "../../utils/constants";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 const SearchDetails = () => {
   const imageBaseUrl = IMAGE_BASE_URL;
 
@@ -63,8 +77,9 @@ const SearchDetails = () => {
     resolver: zodResolver(bookAppointmentSchema),
     mode: "onTouched",
     defaultValues: {
-      customer_name: "",
-      customer_email: "",
+      client_first_name: "",
+      client_last_name: "",
+      client_email: "",
       contact_number: "",
       service: "",
       appointment_date: null,
@@ -233,6 +248,7 @@ const SearchDetails = () => {
     methods.reset();
     setSelectedService("");
     setAppointmentDate("");
+    setSelectedDate(null);
   };
 
   const onSubmit = async (values) => {
@@ -241,8 +257,8 @@ const SearchDetails = () => {
       setIsSendingAppointment(true);
       const payload = {
         counselor_profile_id: id,
-        customer_name: values?.customer_name,
-        customer_email: values?.customer_email,
+        client_name: `${values?.client_first_name} ${values?.client_last_name}`,
+        client_email: values?.client_email,
         service: values.service,
         appointment_date: values.appointment_date,
         contact_number: values.contact_number,
@@ -490,126 +506,94 @@ const SearchDetails = () => {
         title="Book Appointment"
       >
         <FormProvider {...methods}>
-          <form
-            onSubmit={methods.handleSubmit(onSubmit)}
-            style={{ padding: "0 20px", minWidth: 320 }}
-          >
-            <div style={{ marginBottom: 18 }}>
-              <label
-                htmlFor="customer_name"
-                style={{ display: "block", fontWeight: 500 }}
-              >
-                Customer Name
-              </label>
-              <input
-                id="customer_name"
-                {...methods.register("customer_name")}
-                type="text"
-                placeholder="Enter your name"
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  borderRadius: 6,
-                  border: "1px solid #e7e7e9",
-                  fontSize: 15,
-                }}
-              />
-              {methods.formState.errors.customer_name && (
-                <p
-                  style={{
-                    color: "#f04438",
-                    margin: "6px 0 0 2px",
-                    fontSize: 13,
-                  }}
-                >
-                  {methods.formState.errors.customer_name.message}
-                </p>
-              )}
-            </div>
+          <AppointmentForm onSubmit={methods.handleSubmit(onSubmit)}>
+            <FormFieldRow>
+              <FormField>
+                <FormLabel htmlFor="client_first_name">
+                  First Name
+                </FormLabel>
+                <FormInput
+                  id="client_first_name"
+                  {...methods.register("client_first_name")}
+                  type="text"
+                  placeholder="Enter your first name"
+                />
+                {methods.formState.errors.client_first_name && (
+                  <FormError>
+                    {methods.formState.errors.client_first_name.message}
+                  </FormError>
+                )}
+              </FormField>
 
-            <div style={{ marginBottom: 18 }}>
-              <label
-                htmlFor="customer_email"
-                style={{ display: "block", fontWeight: 500 }}
-              >
-                Customer Email
-              </label>
-              <input
-                id="customer_email"
-                {...methods.register("customer_email")}
+              <FormField>
+                <FormLabel htmlFor="client_last_name">
+                  Last Name
+                </FormLabel>
+                <FormInput
+                  id="client_last_name"
+                  {...methods.register("client_last_name")}
+                type="text"
+                  placeholder="Enter your last name"
+              />
+                {methods.formState.errors.client_last_name && (
+                  <FormError>
+                    {methods.formState.errors.client_last_name.message}
+                  </FormError>
+              )}
+              </FormField>
+            </FormFieldRow>
+
+            <FormField>
+              <FormLabel htmlFor="client_email">
+                Client Email
+              </FormLabel>
+              <FormInput
+                id="client_email"
+                {...methods.register("client_email")}
                 type="email"
                 placeholder="Enter your email"
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  borderRadius: 6,
-                  border: "1px solid #e7e7e9",
-                  fontSize: 15,
-                }}
               />
-              {methods.formState.errors.customer_email && (
-                <p
-                  style={{
-                    color: "#f04438",
-                    margin: "6px 0 0 2px",
-                    fontSize: 13,
-                  }}
-                >
-                  {methods.formState.errors.customer_email.message}
-                </p>
+              {methods.formState.errors.client_email && (
+                <FormError>
+                  {methods.formState.errors.client_email.message}
+                </FormError>
               )}
-            </div>
+            </FormField>
 
-            <div style={{ marginBottom: 18 }}>
-              <label
-                htmlFor="contact_number"
-                style={{ display: "block", fontWeight: 500 }}
-              >
-                Customer Contact No.
-              </label>
-              <input
-                id="contact_number"
-                {...methods.register("contact_number")}
-                type="text"
-                placeholder="Enter your number"
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  borderRadius: 6,
-                  border: "1px solid #e7e7e9",
-                  fontSize: 15,
-                }}
+            <FormField>
+              <FormLabel htmlFor="contact_number">
+                Client Contact No.
+              </FormLabel>
+              <Controller
+                name="contact_number"
+                control={methods.control}
+                render={({ field, fieldState }) => (
+                  <PhoneInputWrapper className="phone-input-wrapper">
+                    <PhoneInput
+                      international
+                      defaultCountry="US"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      className={fieldState.error ? "phone-input-error" : ""}
               />
-              {methods.formState.errors.contact_number && (
-                <p
-                  style={{
-                    color: "#f04438",
-                    margin: "6px 0 0 2px",
-                    fontSize: 13,
-                  }}
-                >
-                  {methods.formState.errors.contact_number.message}
-                </p>
+                    {fieldState.error && (
+                      <FormError>
+                        {fieldState.error.message}
+                      </FormError>
               )}
-            </div>
+                  </PhoneInputWrapper>
+                )}
+              />
+            </FormField>
 
-            <div style={{ marginBottom: 18 }}>
-              <label
-                htmlFor="service"
-                style={{ display: "block", fontWeight: 500 }}
-              >
+            <FormField>
+              <FormLabel htmlFor="service">
                 Select Service
-              </label>
-              <select
+              </FormLabel>
+              <FormSelect
                 id="service"
                 {...methods.register("service")}
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  borderRadius: 6,
-                  border: "1px solid #e7e7e9",
-                  fontSize: 15,
-                }}
               >
                 <option value="">Select a service</option>
                 {TREATMENT_TARGET?.map((opt, idx) => (
@@ -617,126 +601,61 @@ const SearchDetails = () => {
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
               {methods.formState.errors.service && (
-                <p
-                  style={{
-                    color: "#f04438",
-                    margin: "6px 0 0 2px",
-                    fontSize: 13,
-                  }}
-                >
+                <FormError>
                   {methods.formState.errors.service.message}
-                </p>
+                </FormError>
               )}
-            </div>
+            </FormField>
 
-            <div style={{ marginBottom: 18 }}>
-              <label
-                htmlFor="appointment_date"
-                style={{ display: "block", fontWeight: 500 }}
-              >
+            <FormField>
+              <FormLabel htmlFor="appointment_date">
                 Appointment Date
-              </label>
-              <input
+              </FormLabel>
+              <FormInput
                 id="appointment_date"
                 type="date"
                 min={new Date().toISOString().split("T")[0]}
                 {...methods.register("appointment_date")}
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  borderRadius: 6,
-                  border: "1px solid #e7e7e9",
-                  fontSize: 15,
-                }}
               />
               {methods.formState.errors.appointment_date && (
-                <p
-                  style={{
-                    color: "#f04438",
-                    margin: "6px 0 0 2px",
-                    fontSize: 13,
-                  }}
-                >
+                <FormError>
                   {methods.formState.errors.appointment_date.message}
-                </p>
+                </FormError>
               )}
-            </div>
-            <div style={{ marginBottom: 18 }}>
-              <label
-                htmlFor="description"
-                style={{ display: "block", fontWeight: 500 }}
-              >
+            </FormField>
+            <FormField>
+              <FormLabel htmlFor="description">
                 Description
-              </label>
-              <textarea
+              </FormLabel>
+              <FormTextarea
                 id="description"
                 rows={4}
                 {...methods.register("description")}
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  borderRadius: 6,
-                  border: "1px solid #e7e7e9",
-                  fontSize: 15,
-                }}
               />
               {methods.formState.errors.description && (
-                <p
-                  style={{
-                    color: "#f04438",
-                    margin: "6px 0 0 2px",
-                    fontSize: 13,
-                  }}
-                >
+                <FormError>
                   {methods.formState.errors.description.message}
-                </p>
+                </FormError>
               )}
-            </div>
+            </FormField>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "16px 20px",
-                borderTop: "1px solid #eee",
-                background: "#fff",
-                position: "sticky",
-                bottom: 0,
-              }}
-            >
-              <button
+            <FormFooter>
+              <FormButtonCancel
                 type="button"
                 onClick={handleBookAppointmentClose}
-                style={{
-                  padding: "10px 24px",
-                  borderRadius: 6,
-                  border: "1px solid #e1e1e1",
-                  background: "#fff",
-                  cursor: "pointer",
-                  minWidth: 107,
-                }}
               >
                 Cancel
-              </button>
-              <button
+              </FormButtonCancel>
+              <FormButtonSubmit
                 type="submit"
                 disabled={isSendingAppointment}
-                style={{
-                  padding: "10px 24px",
-                  borderRadius: 6,
-                  border: "none",
-                  background: "var(--primary-button-color)",
-                  color: "#fff",
-                  cursor: "pointer",
-                  minWidth: 107,
-                }}
               >
                 {isSendingAppointment ? "Sending..." : "Send"}
-              </button>
-            </div>
-          </form>
+              </FormButtonSubmit>
+            </FormFooter>
+          </AppointmentForm>
         </FormProvider>
       </CustomModal>
     </>

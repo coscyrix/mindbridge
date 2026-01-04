@@ -15,6 +15,7 @@ export default class Report {
       let query;
       let consentFormsQuery;
       let tenantConsentFormsQuery; // Separate query for tenant consent forms
+      let intakeFormsQuery; // Query for client intake forms
 
       // Treatment target mode: query treatment target session forms
       query = db
@@ -323,12 +324,82 @@ export default class Report {
           .orderBy('date_sent', 'desc');
       }
 
+      // Query for client intake forms where client_enrollment_id is null
+      // Note: data.counselor_id is actually user_profile_id, so we need to join through counselor_profile
+      if (data.counselor_id) {
+        intakeFormsQuery = db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('client_intake_form as cif')
+          .join('counselor_profile as cp', 'cif.counselor_profile_id', 'cp.counselor_profile_id')
+          .join('user_profile as counselor_up', 'cp.user_profile_id', 'counselor_up.user_profile_id')
+          .select(
+            db.raw("SUBSTRING_INDEX(cif.full_name, ' ', 1) as client_first_name"),
+            db.raw("SUBSTRING_INDEX(cif.full_name, ' ', -1) as client_last_name"),
+            db.raw('NULL as client_clam_num'), // Intake forms don't have clam_num
+            db.raw('NULL as client_id'), // client_intake_form doesn't have client_id directly
+            'counselor_up.user_profile_id as counselor_id', // Return user_profile_id as counselor_id to match expected format
+            'cp.counselor_profile_id as counselor_profile_id', // Include counselor_profile_id for fetching intake form details
+            db.raw('NULL as form_id'), // Intake form doesn't have a form_id
+            db.raw("'INTAKE' as form_cde"), // Use a constant form code for intake forms
+            db.raw('NULL as thrpy_req_id'), // Intake forms don't have thrpy_req_id
+            'counselor_up.tenant_id as tenant_id',
+            db.raw('NULL as feedback_id'), // Intake forms don't have feedback
+            'cif.id as intake_form_id', // Include intake form ID
+            'cif.created_at as date_sent',
+            db.raw(`
+                COALESCE(
+                  DATE_ADD(cif.created_at, INTERVAL 7 DAY),
+                  DATE_ADD(cif.updated_at, INTERVAL 7 DAY)
+                ) as due_date
+              `),
+          )
+          .whereNull('cif.client_enrollment_id')
+          .where('counselor_up.user_profile_id', Number(data.counselor_id)); // Filter by user_profile_id
+
+        // Apply tenant filtering if needed (similar to other queries)
+        if (data.role_id === 2) {
+          // Get tenant_id for the counselor and filter by it
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            intakeFormsQuery.where('counselor_up.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        } else if (data.role_id === 3) {
+          // For managers, filter by tenant_id if provided
+          if (data.tenant_id) {
+            intakeFormsQuery.where('counselor_up.tenant_id', Number(data.tenant_id));
+          }
+        } else if (data.role_id === 4 && data.counselor_id) {
+          // For admins with counselor_id, get tenant_id
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            intakeFormsQuery.where('counselor_up.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        } else if (data.role_id !== 2 && data.role_id !== 3 && data.counselor_id) {
+          // For other roles with counselor_id
+          const tenantId = await this.common.getUserTenantId({
+            user_profile_id: data.counselor_id,
+          });
+          if (tenantId && !tenantId.error && tenantId.length > 0) {
+            intakeFormsQuery.where('counselor_up.tenant_id', Number(tenantId[0].tenant_id));
+          }
+        }
+
+        intakeFormsQuery.orderBy('date_sent', 'desc');
+      }
+
       // Execute queries
-      const [rec, consentForms, tenantConsentForms] = await Promise.all([
+      
+      const [rec, consentForms, tenantConsentForms, intakeForms] = await Promise.all([
         query,
         consentFormsQuery ? consentFormsQuery : Promise.resolve([]),
         tenantConsentFormsQuery ? tenantConsentFormsQuery : Promise.resolve([]),
+        intakeFormsQuery ? intakeFormsQuery : Promise.resolve([]),
       ]);
+
 
       // Combine results if we have treatment target forms and consent forms
       let combinedResults = [...rec];
@@ -339,14 +410,26 @@ export default class Report {
       if (tenantConsentForms && tenantConsentForms.length > 0) {
         combinedResults = [...combinedResults, ...tenantConsentForms];
       }
+      // Add intake forms
+      if (intakeForms && intakeForms.length > 0) {
+        combinedResults = [...combinedResults, ...intakeForms];
+      }
 
       // Remove duplicates across all form types
       // A form is considered duplicate if it has the same: client_id, counselor_id, form_id, thrpy_req_id
       // For consent forms, also check user_form_id to keep them unique
+      // INTAKE forms are excluded from duplicate checking since they don't have client_id yet
       const formMap = new Map();
+      const excludedIntakeForms = []; // Store INTAKE forms separately (excluded from duplicate check)
       
       // First pass: collect all forms and handle duplicates by keeping the most recent one
       combinedResults.forEach(form => {
+        // Skip duplicate checking for INTAKE forms - they should all be included
+        if (form.form_cde === 'INTAKE') {
+          excludedIntakeForms.push(form);
+          return;
+        }
+        
         // Create a unique key for each form
         // For consent forms, include user_form_id to keep them unique
         const uniqueKey = form.user_form_id 
@@ -370,8 +453,8 @@ export default class Report {
         }
       });
       
-      // Convert map values back to array
-      combinedResults = Array.from(formMap.values());
+      // Convert map values back to array and add INTAKE forms back (without duplicate checking)
+      combinedResults = [...Array.from(formMap.values()), ...excludedIntakeForms];
 
       // Filter out tenant consent forms for non-admin users
       // Tenant consent forms (where client has role_id = 3) should only be visible to admins (role_id = 4)
@@ -406,57 +489,63 @@ export default class Report {
     try {
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
-        .from('v_session')
+        .from('v_session as vs')
+        .leftJoin('reports as r', 'vs.session_id', 'r.session_id')
         .select(
-          'client_id',
-          'client_first_name',
-          'client_last_name',
-          'counselor_id',
-          'tenant_id',
-          'thrpy_req_id',
-          'session_id',
-          db.raw('intake_date as due_date'),
-          db.raw('service_name as report_name'),
+          'vs.client_id',
+          'vs.client_first_name',
+          'vs.client_last_name',
+          'vs.counselor_id',
+          'vs.tenant_id',
+          'vs.thrpy_req_id',
+          'vs.session_id',
+          'r.report_id',
+          db.raw('vs.intake_date as due_date'),
+          db.raw('vs.service_name as report_name'),
           db.raw(`
             CASE 
-              WHEN intake_date < CURRENT_DATE() THEN 'Past Due Date'
-              WHEN intake_date > CURRENT_DATE() THEN 'Future Due Date'
+              WHEN vs.intake_date < CURRENT_DATE() THEN 'Past Due Date'
+              WHEN vs.intake_date > CURRENT_DATE() THEN 'Future Due Date'
               ELSE 'Current Due Date'
             END as report_status
           `),
         )
-        .where('is_report', 1)
-        .where('status_yn', 'y')
-        .andWhere('thrpy_status', '!=', 2) // Exclude DISCHARGED
-        .whereNot('session_status', 'SHOW');
+        .where('vs.is_report', 1)
+        .where('vs.status_yn', 'y')
+        .andWhere('vs.thrpy_status', '!=', 2) // Exclude DISCHARGED
+        .whereNot('vs.session_status', 'SHOW');
 
       if (data.role_id === 2) {
         if (data.counselor_id) {
-          query.andWhere('counselor_id', data.counselor_id);
+          query.andWhere('vs.counselor_id', data.counselor_id);
           
           // Get tenant_id for the counselor and filter by it
           const tenantId = await this.common.getUserTenantId({
             user_profile_id: data.counselor_id,
           });
           if (tenantId && !tenantId.error && tenantId.length > 0) {
-            query.where('tenant_id', Number(tenantId[0].tenant_id));
+            query.where('vs.tenant_id', Number(tenantId[0].tenant_id));
           }
         }
 
         if (data.client_id) {
-          query.andWhere('client_id', data.client_id);
+          query.andWhere('vs.client_id', data.client_id);
         }
 
         if (data.session_id) {
-          query.andWhere('session_id', data.session_id);
+          query.andWhere('vs.session_id', data.session_id);
+        }
+
+        if (data.report_id) {
+          query.andWhere('r.report_id', data.report_id);
         }
 
         if (data.start_date) {
-          query.andWhere('intake_date', '>=', data.start_date);
+          query.andWhere('vs.intake_date', '>=', data.start_date);
         }
 
         if (data.end_date) {
-          query.andWhere('intake_date', '<=', data.end_date);
+          query.andWhere('vs.intake_date', '<=', data.end_date);
         }
       }
 
@@ -464,28 +553,32 @@ export default class Report {
         // If the user is a manager, filter by tenant_id
         if (data.tenant_id) {
           // Use the provided tenant_id directly
-          query.where('tenant_id', Number(data.tenant_id));
+          query.where('vs.tenant_id', Number(data.tenant_id));
         } else if (data.counselor_id) {
           // If no tenant_id provided but counselor_id is, get tenant_id from counselor
           const tenantId = await this.common.getUserTenantId({
             user_profile_id: data.counselor_id,
           });
           if (tenantId && !tenantId.error && tenantId.length > 0) {
-            query.where('tenant_id', Number(tenantId[0].tenant_id));
+            query.where('vs.tenant_id', Number(tenantId[0].tenant_id));
           }
         }
         
         // If counselor_id is provided, also filter by specific counselor
         if (data.counselor_id) {
-          query.where('counselor_id', data.counselor_id);
+          query.where('vs.counselor_id', data.counselor_id);
+        }
+        
+        if (data.report_id) {
+          query.andWhere('r.report_id', data.report_id);
         }
         
         if (data.start_date) {
-          query.andWhere('intake_date', '>=', data.start_date);
+          query.andWhere('vs.intake_date', '>=', data.start_date);
         }
 
         if (data.end_date) {
-          query.andWhere('intake_date', '<=', data.end_date);
+          query.andWhere('vs.intake_date', '<=', data.end_date);
         }
       }
 
@@ -495,31 +588,35 @@ export default class Report {
           user_profile_id: data.counselor_id,
         });
         if (tenantId && !tenantId.error && tenantId.length > 0) {
-          query.where('tenant_id', Number(tenantId[0].tenant_id));
+          query.where('vs.tenant_id', Number(tenantId[0].tenant_id));
         } else {
           // If we can't get tenant_id for the counselor, return an error
           return { message: 'Invalid counselor_id or counselor not found', error: -1 };
         }
-        query.where('counselor_id', data.counselor_id);
+        query.where('vs.counselor_id', data.counselor_id);
+        
+        if (data.report_id) {
+          query.andWhere('r.report_id', data.report_id);
+        }
         
         if (data.start_date) {
-          query.andWhere('intake_date', '>=', data.start_date);
+          query.andWhere('vs.intake_date', '>=', data.start_date);
         }
 
         if (data.end_date) {
-          query.andWhere('intake_date', '<=', data.end_date);
+          query.andWhere('vs.intake_date', '<=', data.end_date);
         }
       }
 
       // Order results: Past Due Date, then Current Due Date, then Future Due Date
       query.orderByRaw(`
         CASE 
-          WHEN intake_date < CURRENT_DATE() THEN 1
-          WHEN intake_date = CURRENT_DATE() THEN 2
+          WHEN vs.intake_date < CURRENT_DATE() THEN 1
+          WHEN vs.intake_date = CURRENT_DATE() THEN 2
           ELSE 3
         END
       `);
-      query.orderBy('intake_date');
+      query.orderBy('vs.intake_date');
 
       const rec = await query;
       return rec;
@@ -680,7 +777,6 @@ export default class Report {
   //////////////////////////////////////////
   async getSessionsWithHomeworkStats(data) {
 
-    console.log('data ❤️ ❤️❤️❤️❤️❤️❤️',{data});
     try {
       let query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -699,6 +795,8 @@ export default class Report {
           db.raw('MAX(s.intake_date) as last_session_date')
         )
         .where('s.status_yn', 'y')
+        .where('s.is_report', 0)
+        .whereNot('s.session_status', 'INACTIVE')
         .whereIn('s.thrpy_status', ['ONGOING', 'PAUSED', 1, 3]) // Include ONGOING and PAUSED (string and numeric)
         .groupBy(
           's.thrpy_req_id',
@@ -805,11 +903,258 @@ export default class Report {
         return { message: 'Error getting sessions with homework stats', error: -1 };
       }
 
+
       return rec;
     } catch (error) {
       console.log(error);
       logger.error(error);
       return { message: 'Error getting sessions with homework stats', error: -1 };
+    }
+  }
+
+  //////////////////////////////////////////
+
+
+  //////////////////////////////////////////
+
+  async getDischargeReportData(data) {
+    try {
+      const { thrpy_req_id, session_id } = data;
+
+      if (!thrpy_req_id) {
+        return { message: 'thrpy_req_id is required', error: -1 };
+      }
+
+      // Get therapy request data (similar to progress report logic)
+      const ThrpyReq = (await import('./thrpyReq.js')).default;
+      const thrpyReqModel = new ThrpyReq();
+      const recThrpy = await thrpyReqModel.getThrpyReqById({ req_id: thrpy_req_id });
+
+      if (!recThrpy || recThrpy.length === 0 || recThrpy.error) {
+        return { message: 'Therapy request not found', error: -1 };
+      }
+
+      const therapyRequest = recThrpy[0];
+
+      // Get client information
+      const recUser = await this.common.getUserProfileByUserProfileId(
+        therapyRequest.client_id
+      );
+
+      if (!recUser || recUser.length === 0) {
+        return { message: 'Client not found', error: -1 };
+      }
+
+      // Get tenant information
+      const tenantId = therapyRequest.tenant_id;
+      let tenantName = 'N/A';
+      if (tenantId) {
+        const tenantQuery = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('tenant')
+          .where('tenant_id', tenantId)
+          .select('tenant_name')
+          .first();
+        
+        if (tenantQuery) {
+          tenantName = tenantQuery.tenant_name;
+        }
+      }
+
+      // Get counselor information
+      const counselorInfo = await this.common.getUserProfileByUserProfileId(
+        therapyRequest.counselor_id
+      );
+
+      if (!counselorInfo || counselorInfo.length === 0) {
+        return { message: 'Counselor not found', error: -1 };
+      }
+
+      // Get counselor designation
+      let counselorDesignation = 'Therapist';
+      try {
+        const counselorProfileQuery = await db
+          .withSchema(`${process.env.MYSQL_DATABASE}`)
+          .from('counselor_profile')
+          .where('user_profile_id', therapyRequest.counselor_id)
+          .select('profile_notes')
+          .first();
+      } catch (error) {
+        logger.error('Error fetching counselor designation:', error);
+      }
+
+      // Find the discharge report session
+      let dischargeReportSession = null;
+      if (session_id) {
+        if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+          dischargeReportSession = therapyRequest.session_obj.find(
+            (s) => s.session_id === session_id && (s.is_report === 1 || s.service_code === 'DR')
+          );
+        }
+      } else {
+        if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+          dischargeReportSession = therapyRequest.session_obj.find(
+            (s) => s.is_report === 1 && (s.service_code === 'DR' || s.service_code?.includes('DR'))
+          );
+        }
+      }
+
+      if (!dischargeReportSession) {
+        return { message: 'Discharge report session not found', error: -1 };
+      }
+
+      // Calculate total sessions and completed sessions
+      let totalSessions = 0;
+      let totalSessionsCompleted = 0;
+      
+      if (therapyRequest.session_obj && Array.isArray(therapyRequest.session_obj)) {
+        const sortedSessions = [...therapyRequest.session_obj].sort(
+          (a, b) => a.session_id - b.session_id
+        );
+
+        const removeReportsSessions = sortedSessions.filter(
+          (session) => session.is_report !== 1 && session.session_status !== 'INACTIVE'
+        );
+
+        let filteredSessions = removeReportsSessions;
+        if (session_id && dischargeReportSession.session_id) {
+          filteredSessions = removeReportsSessions.filter(
+            (session) => session.session_id <= dischargeReportSession.session_id
+          );
+        }
+
+        totalSessions = filteredSessions.length;
+        totalSessionsCompleted = filteredSessions.filter(
+          (session) => session.session_status === 'SHOW'
+        ).length;
+      }
+
+      // Get frequency from service
+      const serviceName = therapyRequest.service_name || '';
+      const frequency = serviceName.toLowerCase().includes('weekly')
+        ? 'Weekly'
+        : serviceName.toLowerCase().includes('biweekly')
+        ? 'Biweekly'
+        : 'Other';
+
+      // Get assessments/feedback from all sessions in the therapy request
+      let assessments = [];
+      try {
+        const sessionIds = therapyRequest.session_obj
+          ? therapyRequest.session_obj
+              .filter(
+                (s) =>
+                  s.is_report !== 1 &&
+                  s.session_status !== 'INACTIVE' &&
+                  (!session_id || s.session_id <= dischargeReportSession.session_id)
+              )
+              .map((s) => s.session_id)
+          : [];
+
+        if (sessionIds.length > 0) {
+          const feedbackQuery = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .from('feedback as fb')
+            .leftJoin('forms as f', 'fb.form_id', 'f.form_id')
+            .leftJoin('session as s', 'fb.session_id', 's.session_id')
+            .leftJoin('feedback_phq9 as phq9', 'fb.feedback_id', 'phq9.feedback_id')
+            .leftJoin('feedback_gad as gad', 'fb.feedback_id', 'gad.feedback_id')
+            .leftJoin('feedback_pcl5 as pcl5', 'fb.feedback_id', 'pcl5.feedback_id')
+            .leftJoin('feedback_whodas as whodas', 'fb.feedback_id', 'whodas.feedback_id')
+            .whereIn('fb.session_id', sessionIds)
+            .andWhere('fb.status_yn', 'y')
+            .andWhere('s.is_report', 0)
+            .andWhere('f.form_cde', '!=', 'SESSION SUM REPORT')
+            .select(
+              'fb.feedback_id',
+              'fb.session_id',
+              'fb.form_id',
+              'f.form_cde',
+              'phq9.total_score as phq9_score',
+              'gad.total_points as gad_score',
+              'pcl5.total_score as pcl5_score',
+              'whodas.overallScore as whodas_score',
+              'fb.created_at'
+            )
+            .orderBy('fb.created_at', 'desc')
+            .limit(5);
+
+          assessments = feedbackQuery.map((fb) => {
+            let score = 'N/A';
+            if (fb.phq9_score !== null && fb.phq9_score !== undefined) {
+              score = fb.phq9_score.toString();
+            } else if (fb.gad_score !== null && fb.gad_score !== undefined) {
+              score = fb.gad_score.toString();
+            } else if (fb.pcl5_score !== null && fb.pcl5_score !== undefined) {
+              score = fb.pcl5_score.toString();
+            } else if (fb.whodas_score !== null && fb.whodas_score !== undefined) {
+              score = fb.whodas_score.toString();
+            }
+
+            return {
+              feedback_id: fb.feedback_id,
+              form_id: fb.form_id,
+              form_cde: fb.form_cde,
+              score: score,
+            };
+          });
+        }
+      } catch (error) {
+        logger.error('Error fetching assessments:', error);
+        assessments = [];
+      }
+
+      // Build response object with all data except therapist-filled fields
+      const response = {
+        // Practice information
+        tenant_name: tenantName,
+        tenant_id: tenantId,
+
+        // Therapist information
+        counselor_first_name: counselorInfo[0].user_first_name,
+        counselor_last_name: counselorInfo[0].user_last_name,
+        counselor_designation: counselorDesignation,
+        counselor_id: therapyRequest.counselor_id,
+
+        // Client information
+        client_first_name: recUser[0].user_first_name,
+        client_last_name: recUser[0].user_last_name,
+        client_clam_num: recUser[0].clam_num,
+        client_id: therapyRequest.client_id,
+
+        // Session information
+        session_id: dischargeReportSession.session_id,
+        session_number: dischargeReportSession.session_number,
+        session_date: dischargeReportSession.intake_date,
+        scheduled_time: dischargeReportSession.scheduled_time,
+
+        // Therapy request information
+        thrpy_req_id: thrpy_req_id,
+        treatment_target: therapyRequest.treatment_target,
+        service_name: therapyRequest.service_name,
+        service_code: dischargeReportSession.service_code,
+
+        // Calculated fields
+        total_sessions: totalSessions,
+        total_sessions_completed: totalSessionsCompleted,
+        frequency: frequency,
+
+        // Assessments
+        assessments: assessments,
+
+        // Note: The following fields are NOT included as they will be filled by therapist:
+        // - treatment_summary
+        // - treatment_outcomes
+        // - discharge_reason
+        // - recommendations
+        // - therapist_notes (for each assessment)
+      };
+
+      return response;
+    } catch (error) {
+      console.error(error);
+      logger.error(error);
+      return { message: 'Error getting discharge report data', error: -1 };
     }
   }
 }

@@ -5,21 +5,25 @@ import styled from "styled-components";
 export const CreateClientWrapper = styled.div`
   height: 100%;
   padding: 20px 30px 0 30px;
+  text-align: left;
   label {
     display: block;
     margin: 0rem 0 0.5rem;
     font-weight: bold;
+    text-align: left;
   }
   .labelText {
     font-size: 1.8rem;
     margin-bottom: 2.5rem;
     margin-top: 0px;
+    text-align: left;
   }
   form {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
+    text-align: left;
   }
   .submit-button {
     display: flex;

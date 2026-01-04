@@ -23,6 +23,7 @@ import {
   userFormRouter,
   homeWorkRouter,
   reportRouter,
+  reportDataRouter,
   counselorProfileRouter,
   counselorDocumentsRouter,
   onboardingRouter,
@@ -36,6 +37,7 @@ import {
   treatmentTargetSessionFormsTemplateRouter,
   therapistAbsenceRouter,
   counselorActivationRouter,
+  intakeFormRouter,
 } from './routes/index.js';
 
 async function main() {
@@ -63,6 +65,7 @@ async function main() {
         userFormRouter,
         homeWorkRouter,
         reportRouter,
+        reportDataRouter,
         counselorProfileRouter,
         counselorDocumentsRouter,
         onboardingRouter,
@@ -76,6 +79,7 @@ async function main() {
         treatmentTargetSessionFormsTemplateRouter,
         therapistAbsenceRouter,
         counselorActivationRouter,
+        intakeFormRouter,
       ],
     });
 
@@ -91,6 +95,12 @@ async function main() {
       logger.info('Running expired absence resume cronjob...');
       await therapistAbsence.resumeExpiredAbsences();
     }, { timezone: 'America/Los_Angeles' });
+
+    // Schedule cron job to send 24-hour session reminders (runs every hour)
+    cron.schedule('0 * * * *', async () => {
+      logger.info('Running 24-hour session reminder cronjob...');
+      await session.send24HourSessionReminders();
+    });
 
     await server.listen();
   } catch (error) {

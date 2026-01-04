@@ -65,6 +65,7 @@ export default class FeedbackService {
       session_id: joi.number().optional(),
       form_id: joi.number().optional(),
       client_id: joi.number().optional(),
+      thrpy_req_id: joi.number().optional(),
       is_submitted: joi.string().valid('y', 'n').optional(),
       tenant_id: joi.number().optional(),
     });
@@ -197,42 +198,42 @@ export default class FeedbackService {
     });
     data.tenant_id = Number(tenantId[0].tenant_id);
     const schema = joi.object({
-      item1: joi.number().min(0).max(4).required(),
-      item2: joi.number().min(0).max(4).required(),
-      item3: joi.number().min(0).max(4).required(),
-      item4: joi.number().min(0).max(4).required(),
-      item5: joi.number().min(0).max(4).required(),
-      item6: joi.number().min(0).max(4).required(),
-      item7: joi.number().min(0).max(4).required(),
-      item8: joi.number().min(0).max(4).required(),
-      item9: joi.number().min(0).max(4).required(),
-      item10: joi.number().min(0).max(4).required(),
-      item11: joi.number().min(0).max(4).required(),
-      item12: joi.number().min(0).max(4).required(),
-      item13: joi.number().min(0).max(4).required(),
-      item14: joi.number().min(0).max(4).required(),
-      item15: joi.number().min(0).max(4).required(),
-      item16: joi.number().min(0).max(4).required(),
-      item17: joi.number().min(0).max(4).required(),
-      item18: joi.number().min(0).max(4).required(),
-      item19: joi.number().min(0).max(4).required(),
-      item20: joi.number().min(0).max(4).required(),
-      item21: joi.number().min(0).max(4).required(),
-      item22: joi.number().min(0).max(4).required(),
-      item23: joi.number().min(0).max(4).required(),
-      item24: joi.number().min(0).max(4).required(),
-      item25: joi.number().min(0).max(4).required(),
-      item26: joi.number().min(0).max(4).required(),
-      item27: joi.number().min(0).max(4).required(),
-      item28: joi.number().min(0).max(4).required(),
-      item29: joi.number().min(0).max(4).required(),
-      item30: joi.number().min(0).max(4).required(),
-      item31: joi.number().min(0).max(4).required(),
-      item32: joi.number().min(0).max(4).required(),
-      item33: joi.number().min(0).max(4).required(),
-      item34: joi.number().min(0).max(4).required(),
-      item35: joi.number().min(0).max(4).required(),
-      item36: joi.number().min(0).max(4).required(),
+      item1: joi.number().min(1).max(5).required(),
+      item2: joi.number().min(1).max(5).required(),
+      item3: joi.number().min(1).max(5).required(),
+      item4: joi.number().min(1).max(5).required(),
+      item5: joi.number().min(1).max(5).required(),
+      item6: joi.number().min(1).max(5).required(),
+      item7: joi.number().min(1).max(5).required(),
+      item8: joi.number().min(1).max(5).required(),
+      item9: joi.number().min(1).max(5).required(),
+      item10: joi.number().min(1).max(5).required(),
+      item11: joi.number().min(1).max(5).required(),
+      item12: joi.number().min(1).max(5).required(),
+      item13: joi.number().min(1).max(5).required(),
+      item14: joi.number().min(1).max(5).required(),
+      item15: joi.number().min(1).max(5).required(),
+      item16: joi.number().min(1).max(5).required(),
+      item17: joi.number().min(1).max(5).required(),
+      item18: joi.number().min(1).max(5).required(),
+      item19: joi.number().min(1).max(5).required(),
+      item20: joi.number().min(1).max(5).required(),
+      item21: joi.number().min(1).max(5).required(),
+      item22: joi.number().min(1).max(5).required(),
+      item23: joi.number().min(1).max(5).required(),
+      item24: joi.number().min(1).max(5).required(),
+      item25: joi.number().min(1).max(5).required(),
+      item26: joi.number().min(1).max(5).required(),
+      item27: joi.number().min(1).max(5).required(),
+      item28: joi.number().min(1).max(5).required(),
+      item29: joi.number().min(1).max(5).required(),
+      item30: joi.number().min(1).max(5).required(),
+      item31: joi.number().min(1).max(5).required(),
+      item32: joi.number().min(1).max(5).required(),
+      item33: joi.number().min(1).max(5).required(),
+      item34: joi.number().min(1).max(5).required(),
+      item35: joi.number().min(1).max(5).required(),
+      item36: joi.number().min(1).max(5).required(),
       difficultyDays: joi.number().min(0).max(30).required(),
       unableDays: joi.number().min(0).max(30).required(),
       healthConditionDays: joi.number().min(0).max(30).required(),
@@ -366,21 +367,20 @@ export default class FeedbackService {
     const schema = joi.object({
       session_id: joi.number().required(),
       client_id: joi.number().required(),
-      specific_1st_phase: joi.string().optional(),
-      specific_2nd_phase: joi.string().optional(),
-      specific_3rd_phase: joi.string().optional(),
-      measurable_1st_phase: joi.string().optional(),
-      measurable_2nd_phase: joi.string().optional(),
-      measurable_3rd_phase: joi.string().optional(),
-      achievable_1st_phase: joi.string().optional(),
-      achievable_2nd_phase: joi.string().optional(),
-      achievable_3rd_phase: joi.string().optional(),
-      relevant_1st_phase: joi.string().optional(),
-      relevant_2nd_phase: joi.string().optional(),
-      relevant_3rd_phase: joi.string().optional(),
-      time_bound_1st_phase: joi.string().optional(),
-      time_bound_2nd_phase: joi.string().optional(),
-      time_bound_3rd_phase: joi.string().optional(),
+      // Client submission fields (optional - only needed for client submissions)
+      client_goal_theme: joi.string().allow('').optional(),
+      goal_theme_other: joi.string().allow('').optional(),
+      timeframe: joi.string().allow('').optional(),
+      // Counselor fields (optional, can be filled in later)
+      goal_source: joi.string().valid('library', 'client_defined').allow('').optional(),
+      library_goal_id: joi.string().allow('').optional(),
+      library_goal: joi.string().allow('').optional(),
+      goal_wording: joi.string().allow('').optional(),
+      measurement_method: joi.string().valid('selfReport', 'symptomScale', 'functionalTolerance', 'sessionObservation').allow('').optional(),
+      clinician_action: joi.string().valid('editWording', 'approveAndLock').allow('').optional(),
+      program_alignment: joi.string().allow('').optional(),
+      is_locked: joi.boolean().optional(),
+      expectation_met: joi.boolean().allow(null).optional(),
       tenant_id: joi.number().required(),
     });
 
@@ -392,6 +392,40 @@ export default class FeedbackService {
 
     const feedback = new Feedback();
     return feedback.postSMARTGOALFeedback(data);
+  }
+
+  //////////////////////////////////////////
+
+  async putSMARTGOALFeedback(data) {
+    const schema = joi.object({
+      feedback_id: joi.number().required(),
+      session_id: joi.number().optional(),
+      client_id: joi.number().optional(),
+      // Client submission fields (optional)
+      client_goal_theme: joi.string().allow('').optional(),
+      goal_theme_other: joi.string().allow('').optional(),
+      timeframe: joi.string().allow('').optional(),
+      // Counselor fields (optional)
+      goal_source: joi.string().valid('library', 'client_defined').allow('').optional(),
+      library_goal_id: joi.string().allow('').optional(),
+      library_goal: joi.string().allow('').optional(),
+      goal_wording: joi.string().allow('').optional(),
+      measurement_method: joi.string().valid('selfReport', 'symptomScale', 'functionalTolerance', 'sessionObservation').allow('').optional(),
+      clinician_action: joi.string().valid('editWording', 'approveAndLock').allow('').optional(),
+      program_alignment: joi.string().allow('').optional(),
+      is_locked: joi.boolean().optional(),
+      expectation_met: joi.boolean().allow(null).optional(),
+      tenant_id: joi.number().optional(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const feedback = new Feedback();
+    return feedback.putSMARTGOALFeedback(data);
   }
 
   //////////////////////////////////////////
@@ -491,5 +525,24 @@ export default class FeedbackService {
 
     const feedback = new Feedback();
     return feedback.checkAttendanceFeedbackExists(thrpy_req_id, session_count);
+  }
+
+  //////////////////////////////////////////
+
+  async getUserInfoAndFormStatus(data) {
+    const schema = joi.object({
+      client_id: joi.number().required(),
+      session_id: joi.number().required(),
+      form_id: joi.number().optional(),
+    });
+
+    const { error } = schema.validate(data);
+
+    if (error) {
+      return { message: error.details[0].message, error: -1 };
+    }
+
+    const feedback = new Feedback();
+    return feedback.getUserInfoAndFormStatus(data);
   }
 }

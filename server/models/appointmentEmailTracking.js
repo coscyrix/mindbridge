@@ -9,7 +9,7 @@ export default class AppointmentEmailTracking {
     this.tableName = 'appointment_email_tracking';
   }
 
-  async checkEmailAlreadySent(counselor_profile_id, customer_email) {
+  async checkEmailAlreadySent(counselor_profile_id, client_email) {
     try {
       const result = await this.db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -17,7 +17,7 @@ export default class AppointmentEmailTracking {
         .from(this.tableName)
         .where({
           counselor_profile_id: counselor_profile_id,
-          customer_email: customer_email
+          customer_email: client_email // Database column is still customer_email
         })
         .first();
       
@@ -35,10 +35,12 @@ export default class AppointmentEmailTracking {
         .from(this.tableName)
         .insert({
           counselor_profile_id: data.counselor_profile_id,
-          customer_email: data.customer_email,
-          customer_name: data.customer_name,
+          customer_email: data.client_email || '',
+          customer_name: data.client_name,
           service: data.service,
-          appointment_date: data.appointment_date
+          appointment_date: data.appointment_date,
+          contact_number: data.contact_number || null,
+          country_code: data.country_code || null,
         });
       
       return result[0];
@@ -50,17 +52,75 @@ export default class AppointmentEmailTracking {
 
   async getEmailHistory(counselor_profile_id, limit = 10) {
     try {
+      let query = this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('*')
+        .from(this.tableName)
+        .where('counselor_profile_id', counselor_profile_id)
+        .orderBy('sent_at', 'desc');
+      
+      if (limit && limit > 0) {
+        query = query.limit(limit);
+      }
+      
+      const result = await query;
+      
+      return result;
+    } catch (error) {
+      logger.error('Error getting email history:', error);
+      throw error;
+    }
+  }
+
+  async getAppointmentsByCounselor(counselor_profile_id) {
+    try {
       const result = await this.db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
         .select('*')
         .from(this.tableName)
         .where('counselor_profile_id', counselor_profile_id)
-        .orderBy('sent_at', 'desc')
-        .limit(limit);
+        .where(function() {
+          this.where('send_intake_form', false).orWhereNull('send_intake_form');
+        })
+        .orderBy('sent_at', 'desc');
       
       return result;
     } catch (error) {
-      logger.error('Error getting email history:', error);
+      logger.error('Error getting appointments by counselor:', error);
+      throw error;
+    }
+  }
+
+  async updateSendIntakeForm(appointment_id) {
+    try {
+      const result = await this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .from(this.tableName)
+        .where('id', appointment_id)
+        .update({
+          send_intake_form: true,
+          updated_at: this.db.fn.now(),
+        });
+      
+      return result;
+    } catch (error) {
+      logger.error('Error updating send_intake_form:', error);
+      throw error;
+    }
+  }
+
+  async getAppointmentById(appointment_id) {
+    try {
+      const result = await this.db
+        .withSchema(`${process.env.MYSQL_DATABASE}`)
+        .select('*')
+        .from(this.tableName)
+        .where('id', appointment_id)
+        .first();
+      
+      return result;
+    } catch (error) {
+      logger.error('Error getting appointment by id:', error);
       throw error;
     }
   }

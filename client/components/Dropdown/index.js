@@ -54,7 +54,6 @@ const Dropdown = forwardRef(
     const shouldShowActivationActions = isCounselorOrTenant && 
       (!isCurrentUserTenant || (isCurrentUserTenant && row?.role_id === 2 && !isCurrentUser));
 
-    console.log('isActivated', isActivated, row.user_first_name, row.isActivated);
     return (
       <div style={{ position: "relative", overflow: "visible" }}>
         <div

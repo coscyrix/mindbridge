@@ -28,4 +28,14 @@ router.get(
   authenticate,
   AsyncWrapper(reportController.getSessionsWithHomeworkStats),
 );
+router.get(
+  '/progress-report',
+  authenticate,
+  AsyncWrapper(reportController.getProgressReportData),
+);
+router.get(
+  '/discharge-report',
+  authenticate,
+  AsyncWrapper(reportController.getDischargeReportData),
+);
 export const reportRouter = { baseUrl: '/api/reports', router };

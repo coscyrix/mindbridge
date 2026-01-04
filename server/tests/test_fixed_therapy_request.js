@@ -31,7 +31,6 @@ async function testFixedTherapyRequest() {
 
     console.log('📤 Test Payload:');
     console.log(JSON.stringify(testPayload, null, 2));
-    console.log('');
 
     console.log('🔄 Creating therapy request...');
     const result = await thrpyReq.postThrpyReq(testPayload);

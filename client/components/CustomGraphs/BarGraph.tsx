@@ -2,22 +2,35 @@ import React, { useRef, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import Spinner from "../common/Spinner";
 import { DIFFICULT_DAYS_OBJ, DIFFICULY_SCORE_ARR } from "../../utils/constants";
+import { EChartsOption } from "echarts";
 
-const BarGraph = ({
+interface BarGraphProps {
+  xAxisTitle: string;
+  yAxisTitle: string;
+  xAxisLabels: string[];
+  seriesData: any[];
+  loading: boolean;
+  formName?: string;
+  customOptions?: Partial<EChartsOption>;
+}
+
+const BarGraph: React.FC<BarGraphProps> = ({
   xAxisTitle,
   yAxisTitle,
   xAxisLabels,
   seriesData,
   loading,
   formName,
+  customOptions = {},
 }) => {
-  const chartRef = useRef(null);
-  const getTooltipConfig = (formName) => {
-    if (formName == "PHQ-9") {
+  const chartRef = useRef<ReactECharts>(null);
+  
+  const getTooltipConfig = (formName?: string) => {
+    if (formName === "PHQ-9") {
       return {
-        trigger: "item",
-        axisPointer: { type: "shadow" },
-        formatter: (params) => {
+        trigger: "item" as const,
+        axisPointer: { type: "shadow" as const },
+        formatter: (params: any) => {
           const { data } = params;
           const difficultyValue = DIFFICULY_SCORE_ARR?.find(
             (diff) => diff.value == data?.additionalInfo?.difficultyScore
@@ -33,11 +46,11 @@ const BarGraph = ({
           `;
         },
       };
-    } else if (formName == "WHODAS") {
+    } else if (formName === "WHODAS") {
       return {
-        trigger: "item",
-        axisPointer: { type: "shadow" },
-        formatter: (params) => {
+        trigger: "item" as const,
+        axisPointer: { type: "shadow" as const },
+        formatter: (params: any) => {
           const { data } = params;
           const daysObj = DIFFICULT_DAYS_OBJ;
           return `
@@ -75,8 +88,8 @@ const BarGraph = ({
     }
   }, [loading]);
 
-  const options = {
-    tooltip: getTooltipConfig(formName),
+  const baseOptions: EChartsOption = {
+    tooltip: getTooltipConfig(formName) as any,
     legend: {
       show: true,
     },
@@ -111,6 +124,7 @@ const BarGraph = ({
         interval: 0,
         rotate: xAxisLabels.length > 5 ? 30 : 0,
       },
+      
       nameGap: 0,
     },
     yAxis: {
@@ -125,12 +139,37 @@ const BarGraph = ({
         ...data,
         barGap: "0%",
         barCategoryGap: "40%",
-        data: data.data.map((item, index) => ({
+        data: data.data.map((item: any, index: number) => ({
           ...item,
         })),
       };
     }),
   };
+
+  // Deep merge customOptions with baseOptions
+  const deepMerge = (target: any, source: any): any => {
+    const output = { ...target };
+    if (isObject(target) && isObject(source)) {
+      Object.keys(source).forEach((key) => {
+        if (isObject(source[key])) {
+          if (!(key in target)) {
+            Object.assign(output, { [key]: source[key] });
+          } else {
+            output[key] = deepMerge(target[key], source[key]);
+          }
+        } else {
+          Object.assign(output, { [key]: source[key] });
+        }
+      });
+    }
+    return output;
+  };
+
+  const isObject = (item: any): boolean => {
+    return item && typeof item === "object" && !Array.isArray(item);
+  };
+
+  const options = deepMerge(baseOptions, customOptions);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "400px" }}>
@@ -173,3 +212,4 @@ const BarGraph = ({
 };
 
 export default BarGraph;
+

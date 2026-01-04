@@ -2,15 +2,16 @@ import styled from "styled-components";
 
 export const CustomTabContainer = styled.div`
   width: 100%;
-  padding: 18px 19px;
+  padding: 11px;
   border: 1px solid #e1e1e1;
   border-radius: 6px;
   background: white;
   flex: 1;
   min-width: 0;
 
-  &.detail-breakdown-tab {
-    min-width: 300px;
+
+  &.no-shrink-tab {
+    min-width: 310px;
     flex-shrink: 0;
   }
 

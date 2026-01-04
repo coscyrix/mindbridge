@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import CustomCard from "../../CustomCard";
 import ReactECharts from "echarts-for-react";
 import { useReferenceContext } from "../../../context/ReferenceContext";
@@ -8,6 +8,11 @@ import CommonServices from "../../../services/CommonServices";
 function OverallScore({ filterCounselorId }) {
   const { userObj, tokenExpired } = useReferenceContext();
   const { role_id, user_profile_id, tenant_id } = userObj || {};
+  const [selectedClient, setSelectedClient] = useState({
+    label: "All Clients",
+    value: "allClients",
+  });
+  const [filteredData, setFilteredData] = useState([]);
 
   // Build query parameters
   const queryParams = useMemo(() => {
@@ -39,9 +44,46 @@ function OverallScore({ filterCounselorId }) {
     !tokenExpired && !!role_id
   );
 
+  // Update filtered data when homeworkStatsData changes
+  useEffect(() => {
+    if (homeworkStatsData && homeworkStatsData.length > 0) {
+      setFilteredData(homeworkStatsData);
+      setSelectedClient({ label: "All Clients", value: "allClients" });
+    }
+  }, [homeworkStatsData]);
+
+  // Create options for dropdown
+  const options = useMemo(() => {
+    if (!homeworkStatsData || homeworkStatsData.length === 0) {
+      return [{ label: "All Clients", value: "allClients" }];
+    }
+    
+    const clientOptions = homeworkStatsData.map((client) => ({
+      label: `${client.client_first_name} ${client.client_last_name}`,
+      value: client.client_id,
+    }));
+    
+    return [{ label: "All Clients", value: "allClients" }, ...clientOptions];
+  }, [homeworkStatsData]);
+
+  // Handle client selection change
+  const handleClientChange = (client) => {
+    setSelectedClient(client);
+    if (client.value !== "allClients") {
+      const clientData = homeworkStatsData.find(
+        (item) => item.client_id === client.value
+      );
+      if (clientData) {
+        setFilteredData([clientData]);
+      }
+    } else {
+      setFilteredData(homeworkStatsData);
+    }
+  };
+
   // Prepare chart data
   const chartOption = useMemo(() => {
-    if (!homeworkStatsData || homeworkStatsData.length === 0) {
+    if (!filteredData || filteredData.length === 0) {
       return {
         title: {
           text: "No data available",
@@ -52,16 +94,16 @@ function OverallScore({ filterCounselorId }) {
     }
 
     // Extract client names and homework counts
-    const clientNames = homeworkStatsData.map((client) => {
+    const clientNames = filteredData.map((client) => {
       const firstName = client.client_first_name || "";
       const lastName = client.client_last_name || "";
-      // Format as "FirstName L." (e.g., "Sam R")
-      // Truncate if too long to prevent overlap
-      const name = `${firstName} ${lastName.charAt(0)}.`;
-      return name.length > 15 ? `${name.substring(0, 12)}...` : name;
+      // Format as "FIRSTNAME L." (e.g., "SAM R.")
+      return lastName 
+        ? `${firstName.toUpperCase()} ${lastName.charAt(0).toUpperCase()}.`
+        : firstName.toUpperCase();
     });
 
-    const homeworkCounts = homeworkStatsData.map(
+    const homeworkCounts = filteredData.map(
       (client) => client.total_homework_sent
     );
 
@@ -89,7 +131,7 @@ function OverallScore({ filterCounselorId }) {
         },
         formatter: function (params) {
           const dataIndex = params[0].dataIndex;
-          const client = homeworkStatsData[dataIndex];
+          const client = filteredData[dataIndex];
           return `
             <strong>${client.client_first_name} ${client.client_last_name}</strong><br/>
             Total Sessions: ${client.total_sessions}<br/>
@@ -112,27 +154,22 @@ function OverallScore({ filterCounselorId }) {
         left: "10%",
         right: "5%",
         bottom: "15%",
-        top: "80px",
         containLabel: true,
       },
       xAxis: {
+        name: "Client Name",
+        nameLocation: "middle",
+        nameTextStyle: {
+          padding: clientNames.length > 5 ? 70 : 35,
+        },
         type: "category",
         data: clientNames,
+        axisPointer: { type: "shadow" },
         axisLabel: {
           interval: 0,
           rotate: clientNames.length > 5 ? 30 : 0,
-          fontSize: 11,
-          margin: 12,
-          showMinLabel: true,
-          showMaxLabel: true,
         },
-        name: "Client Name",
-        nameLocation: "middle",
-        nameGap: clientNames.length > 5 ? 70 : 35,
-        nameTextStyle: {
-          padding: clientNames.length > 5 ? [0, 0, 70, 0] : [0, 0, 35, 0],
-        },
-        axisPointer: { type: "shadow" },
+        nameGap: 0,
       },
       yAxis: {
         type: "value",
@@ -176,7 +213,7 @@ function OverallScore({ filterCounselorId }) {
         },
       ],
     };
-  }, [homeworkStatsData]);
+  }, [filteredData]);
 
   if (isLoading) {
     return (
@@ -199,14 +236,22 @@ function OverallScore({ filterCounselorId }) {
   }
 
   return (
-    <CustomCard title="Homework Statistics">
-      <ReactECharts
-        notMerge={true}
-        lazyUpdate={true}
-        theme={"theme_name"}
-        option={chartOption}
-        style={{ height: "400px", width: "100%", marginTop: "24px" }}
-      />
+    <CustomCard 
+      title="Homework Statistics"
+      dropdown
+      options={options}
+      onChange={handleClientChange}
+      placeholder="Select a client"
+    >
+      <div style={{ position: "relative", width: "100%", height: "400px" }}>
+        <ReactECharts
+          notMerge={true}
+          lazyUpdate={true}
+          theme={"theme_name"}
+          option={chartOption}
+          style={{ width: "100%", height: "355px" }}
+        />
+      </div>
     </CustomCard>
   );
 }

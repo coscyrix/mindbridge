@@ -25,6 +25,7 @@ export default class FeedbackController {
     this.postCONSENTFeedback = this.postCONSENTFeedback.bind(this);
     this.postGASFeedback = this.postGASFeedback.bind(this);
     this.postATTENDANCEFeedback = this.postATTENDANCEFeedback.bind(this);
+    this.getUserInfoAndFormStatus = this.getUserInfoAndFormStatus.bind(this);
   }
 
   //////////////////////////////////////////
@@ -199,6 +200,22 @@ export default class FeedbackController {
 
   //////////////////////////////////////////
 
+  async putSMARTGOALFeedback(req, res) {
+    const data = req.body;
+
+    const feedback = new FeedbackService();
+    const rec = await feedback.putSMARTGOALFeedback(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
   async postCONSENTFeedback(req, res) {
     const data = req.body;
     data.tenant_id = req.body.tenant_id;
@@ -237,6 +254,34 @@ export default class FeedbackController {
 
     const feedback = new FeedbackService();
     const rec = await feedback.postATTENDANCEFeedback(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json(rec);
+  }
+
+  //////////////////////////////////////////
+
+  async getUserInfoAndFormStatus(req, res) {
+    const data = req.query;
+
+    if (!data.client_id || !data.session_id) {
+      res.status(400).json({ message: 'client_id and session_id are required' });
+      return;
+    }
+
+    // Convert query params to numbers
+    data.client_id = Number(data.client_id);
+    data.session_id = Number(data.session_id);
+    if (data.form_id) {
+      data.form_id = Number(data.form_id);
+    }
+
+    const feedback = new FeedbackService();
+    const rec = await feedback.getUserInfoAndFormStatus(data);
 
     if (rec.error) {
       res.status(400).json(rec);

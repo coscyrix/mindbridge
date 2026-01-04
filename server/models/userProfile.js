@@ -90,7 +90,6 @@ export default class UserProfile {
       if (checkEmail.length > 0) {
         logger.error('Email already exists');
 
-        console.log('checkEmail', checkEmail);
         // Check if account is deactivated and restore account
         if (checkEmail[0].status_yn == 'n') {
           logger.warn('Account is deactivated, restoring account');
@@ -231,7 +230,7 @@ export default class UserProfile {
         }
       }
 
-      const postClientEnrollment = this.common.postClientEnrollment({
+      const postClientEnrollment = await this.common.postClientEnrollment({
         user_id: data.user_profile_id, // This is the ID of the Counselor who is enrolling the client
         client_id: postUsrProfile[0], // i dont want this to be passed as an array but as a single value
         tenant_id: tenantId ? tenantId[0].tenant_id : data.tenant_id,
@@ -239,6 +238,51 @@ export default class UserProfile {
 
       if (postClientEnrollment.error) {
         return postClientEnrollment;
+      }
+
+
+      // If intake_form_id is provided, update the intake form to link it to the client enrollment
+      if (data.intake_form_id && data.role_id === 1) {
+        let enrollmentId = postClientEnrollment.enrollment_id;
+        
+        // If enrollment_id is not available, query it from the database
+        if (!enrollmentId) {
+          try {
+            const enrollment = await db
+              .withSchema(`${process.env.MYSQL_DATABASE}`)
+              .from('client_enrollments')
+              .where('user_id', data.user_profile_id)
+              .where('client_id', postUsrProfile[0])
+              .orderBy('id', 'desc')
+              .first();
+            
+            if (enrollment) {
+              enrollmentId = enrollment.id;
+              logger.info(`Retrieved enrollment_id ${enrollmentId} from database for intake form ${data.intake_form_id}`);
+            }
+          } catch (error) {
+            logger.error(`Error retrieving enrollment_id:`, error);
+          }
+        }
+        
+        if (enrollmentId) {
+          try {
+            await prisma.client_intake_form.update({
+              where: {
+                id: data.intake_form_id,
+              },
+              data: {
+                client_enrollment_id: enrollmentId,
+              },
+            });
+            logger.info(`Linked intake form ${data.intake_form_id} to client enrollment ${enrollmentId}`);
+          } catch (error) {
+            logger.error(`Error linking intake form ${data.intake_form_id} to client enrollment ${enrollmentId}:`, error);
+            // Continue with client creation even if intake form update fails
+          }
+        } else {
+          logger.warn(`Could not determine enrollment_id for intake form ${data.intake_form_id}`);
+        }
       }
 
       const recConselor = await this.getUserProfileById({
@@ -480,8 +524,6 @@ export default class UserProfile {
           user_profile_id: user_profile_id,
         });
 
-        // console.log('getUsr', getUsr);
-
         const putUsr = await db
           .withSchema(`${process.env.MYSQL_DATABASE}`)
           .from('users')
@@ -514,6 +556,7 @@ export default class UserProfile {
   //////////////////////////////////////////
 
   async getUserProfileById(data) {
+
     try {
       const query = db
         .withSchema(`${process.env.MYSQL_DATABASE}`)
@@ -557,26 +600,26 @@ export default class UserProfile {
         }
 
         if (data.counselor_id && data.role_id == 2) {
-          // Convert counselor_id to integer for Prisma
+          // Convert counselor_id to integer
           const counselorId = parseInt(data.counselor_id, 10);
           
-          // Get client IDs from enrollments using Prisma
-          const enrollments = await prisma.client_enrollments.findMany({
-            where: { user_id: counselorId },
-            select: { client_id: true },
-            distinct: ['client_id'],
-          });
+          // Get client IDs from enrollments using Knex
+          const enrollments = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .select('client_id')
+            .distinct('client_id')
+            .from('client_enrollments')
+            .where('user_id', counselorId);
 
-          // Get client IDs from therapy requests using Prisma
-          const therapyRequests = await prisma.thrpy_req.findMany({
-            where: {
-              counselor_id: counselorId,
-              thrpy_status: { in: ['ONGOING', 'PAUSED'] },
-              status_yn: 'y',
-            },
-            select: { client_id: true },
-            distinct: ['client_id'],
-          });
+          // Get client IDs from therapy requests using Knex
+          const therapyRequests = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .select('client_id')
+            .distinct('client_id')
+            .from('thrpy_req')
+            .where('counselor_id', counselorId)
+            .whereIn('thrpy_status', ['ONGOING', 'PAUSED'])
+            .where('status_yn', 'y');
 
           // Merge and get unique client IDs
           const clientIds = [
@@ -594,7 +637,6 @@ export default class UserProfile {
           }
         }
       }
-      console.log('query', query.toQuery());
       
 
       const rec = await query;
@@ -640,15 +682,16 @@ export default class UserProfile {
         let isPaused = false;
         
         if (!hasSchedule || !hasSchedule.req_id) {
-          // Check for active therapy requests using Prisma
-          const activeThrpyReq = await prisma.thrpy_req.findFirst({
-            where: {
-              client_id: userProfileData.user_profile_id,
-              thrpy_status: { in: ['ONGOING', 'PAUSED'] },
-              status_yn: 'y',
-            },
-            orderBy: { created_at: 'desc' },
-          });
+          // Check for active therapy requests using Knex
+          const activeThrpyReq = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .select('req_id', 'thrpy_status')
+            .from('thrpy_req')
+            .where('client_id', userProfileData.user_profile_id)
+            .whereIn('thrpy_status', ['ONGOING', 'PAUSED'])
+            .where('status_yn', 'y')
+            .orderBy('created_at', 'desc')
+            .first();
 
           if (activeThrpyReq) {
             hasSchedule = {
@@ -657,13 +700,14 @@ export default class UserProfile {
             isPaused = activeThrpyReq.thrpy_status === 'PAUSED';
           }
         } else {
-          // If has_schedule exists, check the actual status using Prisma
-          const thrpyReq = await prisma.thrpy_req.findFirst({
-            where: {
-              req_id: hasSchedule.req_id,
-              status_yn: 'y',
-            },
-          });
+          // If has_schedule exists, check the actual status using Knex
+          const thrpyReq = await db
+            .withSchema(`${process.env.MYSQL_DATABASE}`)
+            .select('*')
+            .from('thrpy_req')
+            .where('req_id', hasSchedule.req_id)
+            .where('status_yn', 'y')
+            .first();
 
           if (thrpyReq) {
             isPaused = thrpyReq.thrpy_status === 'PAUSED';

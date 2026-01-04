@@ -50,6 +50,12 @@ router.post(
   AsyncWrapper(feedbackController.postSMARTGOALFeedback),
 );
 
+router.put(
+  '/smart-goal',
+
+  AsyncWrapper(feedbackController.putSMARTGOALFeedback),
+);
+
 router.post(
   '/consent',
 
@@ -60,6 +66,11 @@ router.post(
   '/gas',
 
   AsyncWrapper(feedbackController.postGASFeedback),
+);
+
+router.get(
+  '/user-info-form-status',
+  AsyncWrapper(feedbackController.getUserInfoAndFormStatus),
 );
 
 export const feedbackRouter = { baseUrl: '/api/feedback', router };

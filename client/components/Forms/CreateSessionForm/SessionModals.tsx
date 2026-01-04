@@ -194,7 +194,7 @@ const SessionModals = ({
           id={initialData}
           isOpen={isWorkModalOpen}
           onClose={() => setIsWorkModalOpen(false)}
-        />
+        /> 
       )}
 
       <NotesModalContent

@@ -77,7 +77,7 @@ const PHQ9Form = ({ client_name = "N/A" }) => {
       }
     } catch (error) {
       console.error("Error:", error);
-      toast.error(error?.message || "Error submitting the form");
+      toast.error(error?.response?.data?.message || "Error submitting the form");
     } finally {
       setTimeout(() => setLoading(false), 3000);
     }

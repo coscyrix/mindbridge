@@ -4,12 +4,8 @@ import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { useReferenceContext } from "../../../context/ReferenceContext";
 import { AddIcon, SettingsIcon } from "../../../public/assets/icons";
-import {
-  CONDITIONAL_ROW_STYLES,
-} from "../../../utils/constants";
-import {
-  convertUTCToLocalTime
-} from "../../../utils/helper";
+import { CONDITIONAL_ROW_STYLES } from "../../../utils/constants";
+import { convertUTCToLocalTime } from "../../../utils/helper";
 import Spinner from "../../common/Spinner";
 import CustomButton from "../../CustomButton";
 import CustomTable from "../../CustomTable";
@@ -33,6 +29,11 @@ import SessionFormFields from "./SessionFormFields";
 import SessionModals from "./SessionModals";
 import SessionScheduleHeader from "./SessionScheduleHeader";
 import { getSessionTableColumns } from "./SessionTableColumns";
+import ProgressReportModal from "./ReportModals/ProgressReportModal";
+import DischargeReportModal from "./ReportModals/DischargeReportModal";
+import IntakeReportModal from "./ReportModals/IntakeReportModal";
+import TreatmentPlanReportModal from "./ReportModals/TreatmentPlanReportModal";
+import GroupSessionFields from "./GroupSessionFields";
 import CommonServices from "../../../services/CommonServices";
 import { useQueryData } from "../../../utils/hooks/useQueryData";
 import { useMutationData } from "../../../utils/hooks/useMutationData";
@@ -60,7 +61,7 @@ function CreateSessionForm({
   const methods = useForm();
   const { userObj, forms } = useReferenceContext();
   const router = useRouter();
-  
+
   // State
   const [formButton, setFormButton] = useState("Submit");
   const [editSessionModal, setEditSessionModal] = useState(false);
@@ -73,8 +74,10 @@ function CreateSessionForm({
   const [isDiscard, setIsDiscard] = useState(false);
   const [isValueChanged, setIsValueChanged] = useState("yes");
   const [pendingValueChange, setPendingValueChange] = useState(null);
-  const [showStatusConfirmationModal, setShowStatusConfirmationModal] = useState(false);
-  const [showResetConfirmationModal, setShowResetConfirmationModal] = useState(false);
+  const [showStatusConfirmationModal, setShowStatusConfirmationModal] =
+    useState(false);
+  const [showResetConfirmationModal, setShowResetConfirmationModal] =
+    useState(false);
   const [clientSerialNum, setClientSerialNum] = useState(null);
   const [user, setUser] = useState(null);
   const [sessionRange, setSessionRange] = useState({
@@ -85,6 +88,25 @@ function CreateSessionForm({
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
   const [assessmentOptions, setAssessmentOptions] = useState([]);
   const [selectedAssessment, setSelectedAssessment] = useState(null);
+  const [isProgressReportModalOpen, setIsProgressReportModalOpen] =
+    useState(false);
+  const [selectedReportRow, setSelectedReportRow] = useState(null);
+  const [isDischargeReportModalOpen, setIsDischargeReportModalOpen] =
+    useState(false);
+  const [selectedDischargeReportRow, setSelectedDischargeReportRow] =
+    useState(null);
+  const [isIntakeReportModalOpen, setIsIntakeReportModalOpen] = useState(false);
+  const [selectedIntakeReportRow, setSelectedIntakeReportRow] = useState(null);
+  const [isTreatmentPlanReportModalOpen, setIsTreatmentPlanReportModalOpen] =
+    useState(false);
+  const [selectedTreatmentPlanReportRow, setSelectedTreatmentPlanReportRow] =
+    useState(null);
+
+  // Group Session State
+  const [selectedGroupClients, setSelectedGroupClients] = useState<any[]>([]);
+  const [groupName, setGroupName] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
+  const [maxParticipants, setMaxParticipants] = useState(10);
 
   // Custom Hooks
   const {
@@ -163,12 +185,34 @@ function CreateSessionForm({
       user_target_outcome: client.user_target_outcome,
     }));
 
+  // All clients dropdown for group sessions (excludes clients with existing schedules)
+  const allClientsDropdown = clients
+    ?.filter((client) => !client?.has_schedule)
+    .map((client) => ({
+      label: `${client.user_first_name} ${client.user_last_name}`,
+      value: client.user_profile_id,
+      serialNumber: client.clam_num || "N/A",
+      has_schedule: client.has_schedule,
+      user_target_outcome: client.user_target_outcome,
+    }));
+
   const servicesDropdown = servicesData
     ?.filter((service) => service.is_report == 0)
     .map((service) => ({
       label: service.service_name,
       value: service.service_id,
     }));
+
+  // Check if selected service is a group service (auto-enable group session)
+  const selectedServiceId = methods.watch("service_id")?.value;
+  const selectedService = servicesData?.find(
+    (service) => service.service_id === selectedServiceId
+  );
+  const isGroupSession =
+    selectedService?.is_group === 1 || selectedService?.is_group === true;
+
+  // Get the selected client from "Client Name" dropdown
+  const selectedClientFromDropdown = methods.watch("client_first_name");
 
   const sessionFormatDropdown = [
     { label: "Online", value: "1" },
@@ -220,7 +264,7 @@ function CreateSessionForm({
   // Reorder sessions: Remove INACTIVE from main list, then append them at the end
   const reorderSessions = (sessions) => {
     if (!sessions || !Array.isArray(sessions)) return sessions;
-    
+
     // Separate INACTIVE sessions from others
     const inactiveSessions = sessions.filter(
       (session) => session?.session_status?.toLowerCase() === "inactive"
@@ -228,7 +272,7 @@ function CreateSessionForm({
     const activeSessions = sessions.filter(
       (session) => session?.session_status?.toLowerCase() !== "inactive"
     );
-    
+
     // Return active sessions first, then INACTIVE sessions at the end
     return [...activeSessions, ...inactiveSessions];
   };
@@ -262,20 +306,21 @@ function CreateSessionForm({
         const list = initialData?.session_obj || [];
         setScheduledSession(list?.filter((s) => s?.is_additional === 0));
         setAddittionalSessions(list?.filter((s) => s?.is_additional === 1));
-        
+
         // Initialize countNotes from session_notes
-        const notes = list?.map((session) => {
-          let count = 0;
-          if (session?.session_notes) {
-            if (Array.isArray(session.session_notes)) {
-              count = session.session_notes.length;
+        const notes =
+          list?.map((session) => {
+            let count = 0;
+            if (session?.session_notes) {
+              if (Array.isArray(session.session_notes)) {
+                count = session.session_notes.length;
+              }
             }
-          }
-          return {
-            session_id: session?.session_id,
-            count: count,
-          };
-        }) || [];
+            return {
+              session_id: session?.session_id,
+              count: count,
+            };
+          }) || [];
         setCountNotes(notes);
       }
     } catch (error) {
@@ -327,6 +372,60 @@ function CreateSessionForm({
     }
   }, [assessmentFormNames]);
 
+  // Auto-populate group name when a group service is selected
+  useEffect(() => {
+    if (isGroupSession && selectedService?.service_name) {
+      // Set group name to service name if empty or not yet set
+      if (!groupName) {
+        setGroupName(selectedService.service_name);
+      }
+    }
+    // Clear group session data when switching to non-group service
+    if (!isGroupSession) {
+      setSelectedGroupClients([]);
+      setGroupName("");
+      setGroupDescription("");
+      setMaxParticipants(10);
+    }
+  }, [isGroupSession, selectedService?.service_name]);
+
+  // Auto-add/update selected client from "Client Name" dropdown as primary client in group participants
+  // This ensures the client from "Client Name" is always first and replaces the previous primary client when changed
+  useEffect(() => {
+    if (!isGroupSession) return;
+
+    if (selectedClientFromDropdown?.value && allClientsDropdown) {
+      // Find the full client object from allClientsDropdown
+      const primaryClient = allClientsDropdown.find(
+        (client) => client.value === selectedClientFromDropdown.value
+      );
+
+      if (primaryClient) {
+        setSelectedGroupClients((prevClients) => {
+          // Check if primary client is already the only client (no change needed)
+          if (
+            prevClients.length === 1 &&
+            prevClients[0].value === primaryClient.value
+          ) {
+            return prevClients; // No update needed
+          }
+
+          // When "Client Name" changes, replace all participants with only the new primary client
+          return [primaryClient];
+        });
+      }
+    } else if (!selectedClientFromDropdown?.value) {
+      // If no client is selected from "Client Name", clear all participants
+      setSelectedGroupClients((prevClients) => {
+        if (prevClients.length === 0) {
+          return prevClients; // Already empty, no update needed
+        }
+        return [];
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGroupSession, selectedClientFromDropdown?.value]);
+
   const handleOpenAssessmentModal = () => {
     setSelectedAssessment(null);
     setIsAssessmentModalOpen(true);
@@ -338,12 +437,16 @@ function CreateSessionForm({
       async (payload) => {
         return await CommonServices.sendManualAssessment(payload);
       },
-      undefined,
-      () => {
-        // On success: close modal and reset selection
+      ["sessions", "overall-sessions"],
+      async () => {
+        // On success: close modal, reset selection, and refetch session data
         toast.success("Assessment sent successfully");
         setIsAssessmentModalOpen(false);
         setSelectedAssessment(null);
+        // Refetch therapy session data
+        if (initialData) {
+          await getAllSessionOfClients();
+        }
       }
     );
 
@@ -368,6 +471,23 @@ function CreateSessionForm({
     sessionTableData,
     setSessionRange,
     formatDate,
+    router,
+    onOpenProgressReport: (row) => {
+      setSelectedReportRow(row);
+      setIsProgressReportModalOpen(true);
+    },
+    onOpenDischargeReport: (row) => {
+      setSelectedDischargeReportRow(row);
+      setIsDischargeReportModalOpen(true);
+    },
+    onOpenIntakeReport: (row) => {
+      setSelectedIntakeReportRow(row);
+      setIsIntakeReportModalOpen(true);
+    },
+    onOpenTreatmentPlanReport: (row) => {
+      setSelectedTreatmentPlanReportRow(row);
+      setIsTreatmentPlanReportModalOpen(true);
+    },
   });
 
   // Effects
@@ -378,6 +498,11 @@ function CreateSessionForm({
       setScheduledSession([]);
       setAddittionalSessions([]);
       methods.reset();
+      // Reset group session state
+      setSelectedGroupClients([]);
+      setGroupName("");
+      setGroupDescription("");
+      setMaxParticipants(10);
       return;
     }
 
@@ -416,6 +541,7 @@ function CreateSessionForm({
           value: initialData?.client_id,
           serialNumber: initialData?.client_clam_num || "N/A",
         },
+        video_link: initialData?.video_link || "",
       };
       setClientId(initialData?.client_id);
       methods.reset(formattedData);
@@ -429,6 +555,7 @@ function CreateSessionForm({
         session_desc: "",
         req_time: "",
         req_dte: "",
+        video_link: "",
       });
       setFormButton("Submit");
       setShowGeneratedSession(false);
@@ -462,7 +589,7 @@ function CreateSessionForm({
     <CreateSessionFormWrapper>
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(onSubmit)}>
-          <div className="form_fields_wrapper"> 
+          <div className="form_fields_wrapper">
             <div className="user-info-selects">
               <SessionScheduleHeader
                 initialData={initialData}
@@ -492,6 +619,23 @@ function CreateSessionForm({
                 infoTooltipContent={infoTooltipContent}
               />
 
+              {/* Group Session Fields - Auto-enabled when service has is_group=true */}
+              {!initialData && isGroupSession && (
+                <GroupSessionFields
+                  selectedClients={selectedGroupClients}
+                  setSelectedClients={setSelectedGroupClients}
+                  groupName={groupName}
+                  setGroupName={setGroupName}
+                  groupDescription={groupDescription}
+                  setGroupDescription={setGroupDescription}
+                  maxParticipants={maxParticipants}
+                  setMaxParticipants={setMaxParticipants}
+                  availableClients={allClientsDropdown || []}
+                  serviceName={selectedService?.service_name}
+                  disabled={!!initialData}
+                />
+              )}
+
               {![3, 4].includes(userObj?.role_id) &&
                 allSessionsStatusScheduled &&
                 !showGeneratedSession && (
@@ -502,7 +646,13 @@ function CreateSessionForm({
                         allSessionsStatusScheduled,
                         setSessionTableData,
                         setScheduledSession,
-                        fetchAllSplit
+                        fetchAllSplit,
+                        isGroupSession,
+                        selectedGroupClients,
+                        groupName,
+                        groupDescription,
+                        maxParticipants,
+                        servicesData
                       )
                     }
                     className={`generate-session-button ${
@@ -515,30 +665,28 @@ function CreateSessionForm({
                       : "Generate Session Schedule"}
                   </button>
                 )}
-<div className="button-group">
-
-
-              {isHomeworkUpload && initialData && counselor && (
-                <AssessmentButtonWrapper>
-                  <CustomButton
-                    onClick={handleOpenAssessmentModal}
-                    icon={<SettingsIcon />}
-                    title="Add Assessment"
-                    type="button"
+              <div className="button-group">
+                {isHomeworkUpload && initialData && counselor && (
+                  <AssessmentButtonWrapper>
+                    <CustomButton
+                      onClick={handleOpenAssessmentModal}
+                      icon={<SettingsIcon />}
+                      title="Add Assessment"
+                      type="button"
                     />
-                </AssessmentButtonWrapper>
-              )}
+                  </AssessmentButtonWrapper>
+                )}
 
-              {isHomeworkUpload && initialData && counselor && (
-                <HomeworkButtonWrapper>
-                  <CustomButton
-                    onClick={() => setIsWorkModalOpen(true)}
-                    icon={<SettingsIcon />}
-                    title="Upload and Send Homework"
-                    type="button"
+                {isHomeworkUpload && initialData && counselor && (
+                  <HomeworkButtonWrapper>
+                    <CustomButton
+                      onClick={() => setIsWorkModalOpen(true)}
+                      icon={<SettingsIcon />}
+                      title="Upload and Send Homework"
+                      type="button"
                     />
-                </HomeworkButtonWrapper>
-              )}
+                  </HomeworkButtonWrapper>
+                )}
               </div>
 
               {(initialData || sessionTableData) && (
@@ -649,7 +797,9 @@ function CreateSessionForm({
           title="Add Assessment"
         >
           <AssessmentModalWrapper>
-            <p style={{ marginBottom: '16px', color: '#666', fontSize: '14px' }}>
+            <p
+              style={{ marginBottom: "16px", color: "#666", fontSize: "14px" }}
+            >
               Select an assessment to add it to the latest scheduled session.
             </p>
             <div className="select-wrapper">
@@ -657,9 +807,11 @@ function CreateSessionForm({
               <Select
                 options={assessmentOptions}
                 placeholder="Select Assessment"
-                value={assessmentOptions.find(
-                  (opt) => opt.value === selectedAssessment
-                ) || null}
+                value={
+                  assessmentOptions.find(
+                    (opt) => opt.value === selectedAssessment
+                  ) || null
+                }
                 onChange={(option) =>
                   setSelectedAssessment(option ? option.value : null)
                 }
@@ -774,9 +926,45 @@ function CreateSessionForm({
         setIsWorkModalOpen={setIsWorkModalOpen}
         session={session}
       />
+
+      <ProgressReportModal
+        isOpen={isProgressReportModalOpen}
+        onClose={() => {
+          setIsProgressReportModalOpen(false);
+          setSelectedReportRow(null);
+        }}
+        sessionRow={selectedReportRow}
+        initialData={initialData}
+      />
+      <DischargeReportModal
+        isOpen={isDischargeReportModalOpen}
+        onClose={() => {
+          setIsDischargeReportModalOpen(false);
+          setSelectedDischargeReportRow(null);
+        }}
+        sessionRow={selectedDischargeReportRow}
+        initialData={initialData}
+      />
+      <IntakeReportModal
+        isOpen={isIntakeReportModalOpen}
+        onClose={() => {
+          setIsIntakeReportModalOpen(false);
+          setSelectedIntakeReportRow(null);
+        }}
+        sessionRow={selectedIntakeReportRow}
+        initialData={initialData}
+      />
+      <TreatmentPlanReportModal
+        isOpen={isTreatmentPlanReportModalOpen}
+        onClose={() => {
+          setIsTreatmentPlanReportModalOpen(false);
+          setSelectedTreatmentPlanReportRow(null);
+        }}
+        sessionRow={selectedTreatmentPlanReportRow}
+        initialData={initialData}
+      />
     </CreateSessionFormWrapper>
   );
 }
 
 export default CreateSessionForm;
-

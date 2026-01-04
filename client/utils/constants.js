@@ -111,7 +111,7 @@ function exportToCSV(columns, data, tableCaption) {
   link.click();
 }
 
-function capitalizeName(name) {
+export function capitalizeName(name) {
   return name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : "";
 }
 
@@ -209,6 +209,12 @@ export const SIDEBAR_HEADINGS = [
     title: "Dashboard",
   },
   {
+    id: 10,
+    icon: <SessionIcon />,
+    url: "/appointments",
+    title: "Appointments",
+  },
+  {
     id: 2,
     icon: <ClientsManagementIcon />,
     url: "/client-management",
@@ -269,6 +275,12 @@ export const SIDEBAR_HEADINGS = [
   //   title: "Logo Managment",
   // },
 ];
+
+// React Query Keys
+export const QUERY_KEYS = {
+  APPOINTMENTS: (userProfileId) => ["appointments", userProfileId],
+  APPOINTMENT_BY_ID: (appointmentId) => ["appointment", appointmentId],
+};
 
 export const TABLE_DATA = (handleCellClick, handleEdit, handleDelete) => {
   return {
@@ -1334,6 +1346,77 @@ export const REPORTS_TABLE_DATA_COLUMNS = (handleClientClick) => [
     sortable: true,
     selectorId: "due_date",
   },
+  {
+    name: "Download",
+    cell: (row) => {
+      if (!row.report_id) return null;
+      
+      const handleDownload = () => {
+        const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://mindapp.mindbridge.solutions:4000/api";
+        const pdfUrl = `${baseURL}/report-data/pdf/${row.report_id}`;
+        
+        // Create a temporary link element and trigger download
+        const link = document.createElement("a");
+        link.href = pdfUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        
+        // Add authorization token if available
+        const token = document.cookie
+          .split('; ')
+          .find(cookie => cookie.startsWith('token='))
+          ?.split('=')[1];
+        
+        if (token) {
+          // Use fetch with authorization header
+          fetch(pdfUrl, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          .then(response => response.blob())
+          .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `report-${row.report_id}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+          })
+          .catch(error => {
+            console.error('Error downloading PDF:', error);
+            // Fallback to opening in new tab
+            window.open(pdfUrl, '_blank');
+          });
+        } else {
+          // Fallback if no token
+          window.open(pdfUrl, '_blank');
+        }
+      };
+      
+      return (
+        <div
+          style={{
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDownload();
+          }}
+        >
+          <PdfIcon />
+        </div>
+      );
+    },
+    width: "100px",
+    center: true,
+    button: true,
+    allowOverflow: true,
+  },
 ];
 
 export const ASSESSMENT_DATA_COLUMNS = (handleTreatmentTools, handleClientClick) => [
@@ -1360,7 +1443,7 @@ export const ASSESSMENT_DATA_COLUMNS = (handleTreatmentTools, handleClientClick)
   },
   {
     name: "Serial Number",
-    selector: (row) => row.client_clam_num || "NA",
+    selector: (row) => row.client_clam_num || "TBD",
     sortable: true,
     selectorId: "client_first_name",
   },

@@ -36,10 +36,27 @@ const SessionFormFields = ({
     defaultValue: false,
   });
 
+  // Watch the session_format_id to check if format is Online
+  const sessionFormatId = useWatch({
+    control: methods.control,
+    name: "session_format_id",
+    defaultValue: "",
+  });
+
+  // Check if session format is Online (value "1")
+  const isOnlineFormat = useMemo(() => {
+    if (!sessionFormatId) return false;
+    const formatValue =
+      typeof sessionFormatId === "object" && sessionFormatId.value !== undefined
+        ? sessionFormatId.value
+        : sessionFormatId;
+    return formatValue === "1" || formatValue === 1;
+  }, [sessionFormatId]);
+
   // Get the actual service ID value (handle both object and primitive)
   const actualServiceId = useMemo(() => {
     if (!serviceId) return null;
-    if (typeof serviceId === 'object' && serviceId.value !== undefined) {
+    if (typeof serviceId === "object" && serviceId.value !== undefined) {
       return serviceId.value;
     }
     return serviceId;
@@ -47,7 +64,11 @@ const SessionFormFields = ({
 
   // Check if service is selected
   const isServiceSelected = useMemo(() => {
-    return actualServiceId !== null && actualServiceId !== "" && actualServiceId !== undefined;
+    return (
+      actualServiceId !== null &&
+      actualServiceId !== "" &&
+      actualServiceId !== undefined
+    );
   }, [actualServiceId]);
 
   // Get the selected service object to access nbr_of_sessions
@@ -55,7 +76,10 @@ const SessionFormFields = ({
     if (!isServiceSelected || !servicesData || !Array.isArray(servicesData)) {
       return null;
     }
-    return servicesData.find(service => service.service_id === actualServiceId) || null;
+    return (
+      servicesData.find((service) => service.service_id === actualServiceId) ||
+      null
+    );
   }, [isServiceSelected, servicesData, actualServiceId]);
 
   // Get max number of sessions from selected service
@@ -200,6 +224,22 @@ const SessionFormFields = ({
         </div>
       </div>
 
+      {/* Video Link field - shown only when Session Format is Online */}
+      {isOnlineFormat && (
+        <div className="select-wrapper">
+          <CustomInputField
+            name="video_link"
+            label="Video Link*"
+            type="url"
+            placeholder="Enter video link (e.g., https://meet.google.com/...)"
+            customClass="video-link-input"
+            validationRules={{
+              required: "Video link is required for online sessions",
+            }}
+          />
+        </div>
+      )}
+
       {allSessionsStatusScheduled && ![3, 4].includes(userObj?.role_id) && (
         <div className="date-time-wrapper">
           <CustomInputField
@@ -223,7 +263,9 @@ const SessionFormFields = ({
 
       <div className="limit-sessions-wrapper">
         <div className="toggle-section">
-          <label className={`toggle-label ${!isServiceSelected ? 'disabled' : ''}`}>
+          <label
+            className={`toggle-label ${!isServiceSelected ? "disabled" : ""}`}
+          >
             Limit Sessions
           </label>
           <Controller
@@ -258,7 +300,9 @@ const SessionFormFields = ({
               control={methods.control}
               defaultValue={null}
               rules={{
-                required: limitSessionsEnabled ? "This field is required" : false,
+                required: limitSessionsEnabled
+                  ? "This field is required"
+                  : false,
               }}
               render={({ field }) => (
                 <CustomMultiSelect
@@ -272,7 +316,9 @@ const SessionFormFields = ({
                   }}
                   value={
                     field.value
-                      ? sessionNumberOptions.find((opt) => opt.value === field.value)
+                      ? sessionNumberOptions.find(
+                          (opt) => opt.value === field.value
+                        )
                       : null
                   }
                 />
@@ -291,4 +337,3 @@ const SessionFormFields = ({
 };
 
 export default SessionFormFields;
-

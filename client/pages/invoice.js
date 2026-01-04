@@ -207,7 +207,10 @@ const Invoice = () => {
                 alignItems: "center",
                 background: "transparent",
               }}
-              onClick={() => handleAddInvoiceNumber(row)}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent row click event from firing
+                handleAddInvoiceNumber(row);
+              }}
             >
               <AddIcon />
               Add invoice
@@ -617,14 +620,14 @@ const Invoice = () => {
                   ).toFixed(4)}`
                 ) : userObj?.role_id === 3 ? (
                   <>
-                    Total Amount :{" $"}
+                    {" $"}
                     {Number(
                       invoices?.summary?.sum_session_total_amount
                     ).toFixed(4)}
                   </>
                 ) : userObj?.role_id === 4 ? (
                   <>
-                    Total Amount :{" $"}
+                    {" $"}
                     {Number(
                       invoices?.summary?.sum_session_total_amount
                     ).toFixed(4)}
@@ -655,7 +658,7 @@ const Invoice = () => {
               />
             )}
             <CustomTab
-              heading="Detail breakdown"
+              heading={userObj?.role_id === 3 ? "Monthly Tenant Total:" : "Detail breakdown"}
               value={
                 loading ? (
                   <Skeleton width={200} height={40} />
@@ -690,7 +693,7 @@ const Invoice = () => {
                     {/* Counsellor Share:{" "}
                     {Number(invoices?.summary?.sum_session_counselor_amt).toFixed(4)}
                     <br /> */}
-                    Your Share:{" $"}
+                    {" $"}
                     {Number(invoices?.summary?.sum_session_tenant_amt).toFixed(
                       4
                     )}
@@ -871,7 +874,32 @@ const Invoice = () => {
       <CustomTable
         columns={columns}
         data={paginatedData || []}
-        onRowclick={(row) => handleEdit(row)}
+        onRowclick={(row) => {
+          // Only allow row click for rows that already have an invoice number
+          if (row?.invoice_nbr) {
+            handleEdit(row);
+          }
+        }}
+        conditionalRowStyles={[
+          {
+            when: (row) => !row?.invoice_nbr,
+            style: {
+              cursor: "default !important",
+              "&:hover": {
+                cursor: "default !important",
+              },
+            },
+          },
+          {
+            when: (row) => !!row?.invoice_nbr,
+            style: {
+              cursor: "pointer",
+              "&:hover": {
+                cursor: "pointer",
+              },
+            },
+          },
+        ]}
         loading={loading === "tableData"}
         selectableRows={false}
         fixedHeaderScrollHeight="500px"

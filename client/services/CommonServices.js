@@ -46,6 +46,31 @@ const CommonServices = {
   getReportsTableData(params) {
     return api.get(ApiConfig.dashboard.reportsData, { params });
   },
+  getProgressReportData(params) {
+    return api.get("/report-data/progress-report", { params });
+  },
+  getIntakeReportData(params) {
+    return api.get("/report-data/intake-report", { params });
+  },
+  getDischargeReportData(params) {
+    return api.get("/report-data/discharge-report", { params });
+  },
+  saveProgressReport: async (payload) => {
+    try {
+      const response = await api.post("/report-data/progress", payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  saveDischargeReport: async (payload) => {
+    try {
+      const response = await api.post("/report-data/discharge", payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
   getAssessmentResults(params) {
     return api.get(ApiConfig.dashboard.assessmentResultsData, { params });
   },
@@ -71,6 +96,26 @@ const CommonServices = {
         counselor_profile_id: counselorId,
       },
     });
+  },
+  getMyAppointments(limit = 100) {
+    return api.get(`${ApiConfig.counselorProfile.getCounselorProfile}/appointments`, {
+      params: {
+        limit,
+      },
+    });
+  },
+  getAppointmentById(appointment_id) {
+    return api.get(ApiConfig.counselorProfile.getAppointmentById, {
+      params: {
+        appointment_id,
+      },
+    });
+  },
+  getIntakeFormDetails(params) {
+    return api.get('/intake-form/details', { params });
+  },
+  sendIntakeForm(payload) {
+    return api.post(`${ApiConfig.counselorProfile.getCounselorProfile}/send-intake-form`, payload);
   },
   getSearchedCounselors(payload) {
     return api.get(`${ApiConfig.counselorProfile.searchCounselors}/`, {
@@ -208,6 +253,24 @@ const CommonServices = {
   submitSMARTGoalForm: async (payload) => {
     try {
       const response = await api.post(ApiConfig.feedback.submitSMARTGoalForm, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  updateSMARTGoalForm: async (payload) => {
+    try {
+      const response = await api.put(ApiConfig.feedback.updateSMARTGoalForm, payload);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  getUserInfoAndFormStatus: async (params) => {
+    try {
+      const response = await api.get(ApiConfig.feedback.getUserInfoAndFormStatus, {
+        params,
+      });
       return response;
     } catch (error) {
       throw error;

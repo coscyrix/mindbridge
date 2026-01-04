@@ -131,4 +131,61 @@ export default class ReportController {
 
     res.status(200).json(rec);
   }
+
+  //////////////////////////////////////////
+  async getProgressReportData(req, res) {
+    const reportService = new ReportService();
+    const data = req.query;
+
+    if (!data.thrpy_req_id) {
+      res.status(400).json({ message: 'Missing mandatory field: thrpy_req_id' });
+      return;
+    }
+
+    // Convert to number if provided
+    if (data.thrpy_req_id) {
+      data.thrpy_req_id = Number(data.thrpy_req_id);
+    }
+
+    if (data.session_id) {
+      data.session_id = Number(data.session_id);
+    }
+
+    const rec = await reportService.getProgressReportData(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json({ rec: rec });
+  }
+
+  //////////////////////////////////////////
+  async getDischargeReportData(req, res) {
+    const reportService = new ReportService();
+    const data = req.query;
+
+    if (!data.thrpy_req_id) {
+      res.status(400).json({ message: 'Missing mandatory field: thrpy_req_id' });
+      return;
+    }
+
+    if (data.thrpy_req_id) {
+      data.thrpy_req_id = Number(data.thrpy_req_id);
+    }
+
+    if (data.session_id) {
+      data.session_id = Number(data.session_id);
+    }
+
+    const rec = await reportService.getDischargeReportData(data);
+
+    if (rec.error) {
+      res.status(400).json(rec);
+      return;
+    }
+
+    res.status(200).json({ rec: rec });
+  }
 }

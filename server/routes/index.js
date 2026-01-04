@@ -16,6 +16,7 @@ export { notesRouter } from './notes.js';
 export { userFormRouter } from './userForm.js';
 export { homeWorkRouter } from './homework.js';
 export { reportRouter } from './report.js';
+export { reportDataRouter } from './reportData.js';
 export { counselorProfileRouter } from './counselorProfile.js';
 export { counselorDocumentsRouter } from './counselorDocuments.js';
 export { onboardingRouter } from './onboarding.js';
@@ -29,3 +30,4 @@ export { treatmentTargetSessionFormsRouter } from './treatmentTargetSessionForms
 export { treatmentTargetSessionFormsTemplateRouter } from './treatmentTargetSessionFormsTemplate.js';
 export { default as therapistAbsenceRouter } from './therapistAbsence.js';
 export { counselorActivationRouter } from './counselorActivation.js';
+export { intakeFormRouter } from './intakeForm.js';

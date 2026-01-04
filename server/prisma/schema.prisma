@@ -8,30 +8,36 @@ datasource db {
 }
 
 model appointment_email_tracking {
-    id                   Int       @id @default(autoincrement())
-    counselor_profile_id Int
-    customer_email       String    @db.VarChar(255)
-    customer_name        String    @db.VarChar(255)
-    service              String    @db.VarChar(255)
-    appointment_date     DateTime  @db.DateTime(0)
-    sent_at              DateTime? @default(now()) @db.Timestamp(0)
-    created_at           DateTime? @default(now()) @db.Timestamp(0)
-    updated_at           DateTime? @default(now()) @db.Timestamp(0)
+    id                    Int               @id @default(autoincrement())
+    counselor_profile_id  Int
+    customer_email        String            @db.VarChar(255)
+    customer_name         String            @db.VarChar(255)
+    service               String            @db.VarChar(255)
+    appointment_date      DateTime          @db.DateTime(0)
+    contact_number        String?           @db.VarChar(20)
+    country_code          String?           @db.VarChar(10)
+    sent_at               DateTime?         @default(now()) @db.Timestamp(0)
+    send_intake_form      Boolean?          @default(false)
+    intake_form_submitted Boolean?          @default(false)
+    created_at            DateTime?         @default(now()) @db.Timestamp(0)
+    updated_at            DateTime?         @default(now()) @db.Timestamp(0)
+    counselor_profile     counselor_profile @relation(fields: [counselor_profile_id], references: [counselor_profile_id], onDelete: Cascade, onUpdate: NoAction, map: "appointment_email_tracking_ibfk_1")
 
     @@index([counselor_profile_id, customer_email], map: "idx_counselor_customer")
     @@index([sent_at], map: "idx_sent_at")
 }
 
 model client_enrollments {
-    id                                                      Int          @id @default(autoincrement())
+    id                                                      Int                 @id @default(autoincrement())
     user_id                                                 Int
     client_id                                               Int
-    enrollment_dte                                          DateTime?    @default(now()) @db.DateTime(0)
-    created_at                                              DateTime?    @default(now()) @db.DateTime(0)
-    updated_at                                              DateTime?    @default(now()) @db.DateTime(0)
+    enrollment_dte                                          DateTime?           @default(now()) @db.DateTime(0)
+    created_at                                              DateTime?           @default(now()) @db.DateTime(0)
+    updated_at                                              DateTime?           @default(now()) @db.DateTime(0)
     tenant_id                                               Int?
-    user_profile_client_enrollments_user_idTouser_profile   user_profile @relation("client_enrollments_user_idTouser_profile", fields: [user_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_enrollments_ibfk_1")
-    user_profile_client_enrollments_client_idTouser_profile user_profile @relation("client_enrollments_client_idTouser_profile", fields: [client_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_enrollments_ibfk_2")
+    user_profile_client_enrollments_user_idTouser_profile   user_profile        @relation("client_enrollments_user_idTouser_profile", fields: [user_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_enrollments_ibfk_1")
+    user_profile_client_enrollments_client_idTouser_profile user_profile        @relation("client_enrollments_client_idTouser_profile", fields: [client_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_enrollments_ibfk_2")
+    client_intake_form                                      client_intake_form?
 
     @@index([client_id], map: "client_id")
     @@index([user_id], map: "user_id")
@@ -69,31 +75,33 @@ model counselor_documents {
 }
 
 model counselor_profile {
-    counselor_profile_id     Int                        @id @default(autoincrement())
-    user_profile_id          Int                        @unique(map: "unique_counselor_profile")
-    profile_picture_url      String?                    @db.VarChar(255)
-    license_number           String?                    @db.VarChar(100)
-    license_provider         String?                    @db.VarChar(255)
-    license_file_url         String?                    @db.VarChar(255)
-    profile_notes            String?                    @db.Text
-    location                 String?                    @db.VarChar(255)
-    services_offered         Json?
-    specialties              Json?
-    service_modalities       Json?
-    availability             Json?
-    is_verified              Boolean?                   @default(false)
-    patients_seen            Int?                       @default(0)
-    gender                   String?                    @db.VarChar(50)
-    race                     String?                    @db.VarChar(100)
-    public_phone             String?                    @db.VarChar(20)
-    created_at               DateTime?                  @default(now()) @db.Timestamp(0)
-    updated_at               DateTime?                  @default(now()) @db.Timestamp(0)
-    consent_descriptions     consent_descriptions[]
-    counselor_documents      counselor_documents[]
-    user_profile             user_profile               @relation(fields: [user_profile_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "counselor_profile_ibfk_1")
-    counselor_reviews        counselor_reviews[]
-    counselor_services       counselor_services[]
-    counselor_target_outcome counselor_target_outcome[]
+    counselor_profile_id       Int                          @id @default(autoincrement())
+    user_profile_id            Int                          @unique(map: "unique_counselor_profile")
+    profile_picture_url        String?                      @db.VarChar(255)
+    license_number             String?                      @db.VarChar(100)
+    license_provider           String?                      @db.VarChar(255)
+    license_file_url           String?                      @db.VarChar(255)
+    profile_notes              String?                      @db.Text
+    location                   String?                      @db.VarChar(255)
+    services_offered           Json?
+    specialties                Json?
+    service_modalities         Json?
+    availability               Json?
+    is_verified                Boolean?                     @default(false)
+    patients_seen              Int?                         @default(0)
+    gender                     String?                      @db.VarChar(50)
+    race                       String?                      @db.VarChar(100)
+    public_phone               String?                      @db.VarChar(20)
+    created_at                 DateTime?                    @default(now()) @db.Timestamp(0)
+    updated_at                 DateTime?                    @default(now()) @db.Timestamp(0)
+    consent_descriptions       consent_descriptions[]
+    counselor_documents        counselor_documents[]
+    user_profile               user_profile                 @relation(fields: [user_profile_id], references: [user_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "counselor_profile_ibfk_1")
+    counselor_reviews          counselor_reviews[]
+    counselor_services         counselor_services[]
+    counselor_target_outcome   counselor_target_outcome[]
+    appointment_email_tracking appointment_email_tracking[]
+    client_intake_form         client_intake_form[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -160,25 +168,26 @@ model fee_split_management {
 }
 
 model feedback {
-    feedback_id         BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
-    session_id          Int?
-    form_id             Int?
-    client_id           Int?
-    feedback_json       Json?
-    is_discharged       feedback_is_discharged
-    status_yn           feedback_status_yn     @default(y)
-    created_at          DateTime?              @default(now()) @db.Timestamp(0)
-    updated_at          DateTime?              @default(now()) @db.Timestamp(0)
-    tenant_id           Int?
-    forms               forms?                 @relation(fields: [form_id], references: [form_id], onDelete: Cascade, map: "feedback_forms_FK")
-    session             session?               @relation(fields: [session_id], references: [session_id], onDelete: Cascade, map: "feedback_session_FK")
-    feedback_consent    feedback_consent[]
-    feedback_gad        feedback_gad[]
-    feedback_ipf        feedback_ipf[]
-    feedback_pcl5       feedback_pcl5[]
-    feedback_phq9       feedback_phq9[]
-    feedback_smart_goal feedback_smart_goal[]
-    feedback_whodas     feedback_whodas[]
+    feedback_id                BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+    session_id                 Int?
+    form_id                    Int?
+    client_id                  Int?
+    feedback_json              Json?
+    is_discharged              feedback_is_discharged
+    status_yn                  feedback_status_yn           @default(y)
+    created_at                 DateTime?                    @default(now()) @db.Timestamp(0)
+    updated_at                 DateTime?                    @default(now()) @db.Timestamp(0)
+    tenant_id                  Int?
+    forms                      forms?                       @relation(fields: [form_id], references: [form_id], onDelete: Cascade, map: "feedback_forms_FK")
+    session                    session?                     @relation(fields: [session_id], references: [session_id], onDelete: Cascade, map: "feedback_session_FK")
+    feedback_consent           feedback_consent[]
+    feedback_gad               feedback_gad[]
+    feedback_ipf               feedback_ipf[]
+    feedback_pcl5              feedback_pcl5[]
+    feedback_phq9              feedback_phq9[]
+    feedback_smart_goal        feedback_smart_goal[]
+    feedback_smart_client_goal feedback_smart_client_goal[]
+    feedback_whodas            feedback_whodas[]
 
     @@unique([session_id, form_id], map: "feedback_unique")
     @@index([form_id], map: "feedback_forms_FK")
@@ -279,40 +288,49 @@ model feedback_phq9 {
     @@index([feedback_id], map: "feedback_phq9_feedback_id_foreign")
 }
 
+model feedback_smart_client_goal {
+    id                BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    feedback_id       BigInt    @db.UnsignedBigInt
+    client_goal_theme String    @db.VarChar(255)
+    goal_theme_other  String?   @db.Text
+    timeframe         String    @db.VarChar(100)
+    created_at        DateTime? @default(now()) @db.Timestamp(0)
+    updated_at        DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id         Int?
+    feedback          feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_smart_client_goal_feedback_FK")
+
+    @@index([feedback_id], map: "feedback_smart_client_goal_feedback_FK")
+}
+
 model feedback_smart_goal {
-    id                   Int       @id @default(autoincrement())
-    feedback_id          BigInt    @db.UnsignedBigInt
-    specific_1st_phase   String?   @db.VarChar(250)
-    specific_2nd_phase   String?   @db.VarChar(250)
-    specific_3rd_phase   String?   @db.VarChar(250)
-    measurable_1st_phase String?   @db.VarChar(250)
-    measurable_2nd_phase String?   @db.VarChar(250)
-    measurable_3rd_phase String?   @db.VarChar(250)
-    achievable_1st_phase String?   @db.VarChar(250)
-    achievable_2nd_phase String?   @db.VarChar(250)
-    achievable_3rd_phase String?   @db.VarChar(250)
-    relevant_1st_phase   String?   @db.VarChar(250)
-    relevant_2nd_phase   String?   @db.VarChar(250)
-    relevant_3rd_phase   String?   @db.VarChar(250)
-    time_bound_1st_phase String?   @db.VarChar(250)
-    time_bound_2nd_phase String?   @db.VarChar(250)
-    time_bound_3rd_phase String?   @db.VarChar(250)
-    created_at           DateTime? @default(now()) @db.Timestamp(0)
-    updated_at           DateTime? @default(now()) @db.Timestamp(0)
-    tenant_id            Int?
-    feedback             feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_smart_goal_feedback_FK")
+    id                 BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    feedback_id        BigInt    @db.UnsignedBigInt
+    goal_source        String?   @db.VarChar(50)
+    library_goal_id    String?   @db.VarChar(255)
+    library_goal       String?   @db.Text
+    timeframe          String?   @db.VarChar(100)
+    goal_wording       String?   @db.Text
+    measurement_method String?   @db.VarChar(50)
+    clinician_action   String?   @db.VarChar(50)
+    program_alignment  String?   @default("locked") @db.VarChar(50)
+    is_locked          Boolean?  @default(false)
+    expectation_met    Boolean?
+    created_at         DateTime? @default(now()) @db.Timestamp(0)
+    updated_at         DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id          Int?
+    feedback           feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_smart_goal_feedback_FK")
 
     @@index([feedback_id], map: "feedback_smart_goal_feedback_FK")
 }
 
 model feedback_whodas {
     id                            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-    understandingAndCommunicating Int
-    gettingAround                 Int
-    selfCare                      Int
-    gettingAlongWithPeople        Int
-    lifeActivities                Int
-    participationInSociety        Int
+    understandingAndCommunicating Decimal   @db.Decimal(4, 2)
+    gettingAround                 Decimal   @db.Decimal(4, 2)
+    selfCare                      Decimal   @db.Decimal(4, 2)
+    gettingAlongWithPeople        Decimal   @db.Decimal(4, 2)
+    lifeActivities                Decimal   @db.Decimal(4, 2)
+    participationInSociety        Decimal   @db.Decimal(4, 2)
     overallScore                  Decimal   @db.Decimal(4, 2)
     difficultyDays                Int
     unableDays                    Int
@@ -324,6 +342,77 @@ model feedback_whodas {
     feedback                      feedback  @relation(fields: [feedback_id], references: [feedback_id], onDelete: Cascade, map: "feedback_whodas_feedback_FK")
 
     @@index([feedback_id], map: "feedback_whodas_feedback_id_foreign")
+}
+
+model reports {
+    report_id             BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+    session_id            Int?
+    client_id             Int?
+    counselor_id          Int?
+    report_type           report_type_enum
+    report_json           Json?
+    is_locked             Boolean?                @default(false)
+    created_at            DateTime?               @default(now()) @db.Timestamp(0)
+    updated_at            DateTime?               @default(now()) @db.Timestamp(0)
+    tenant_id             Int?
+    report_intake         report_intake[]
+    report_treatment_plan report_treatment_plan[]
+    report_progress       report_progress[]
+    report_discharge      report_discharge[]
+    session               session?                @relation(fields: [session_id], references: [session_id], onDelete: Cascade, map: "reports_session_FK")
+
+    @@unique([session_id, report_type], map: "reports_unique")
+    @@index([client_id], map: "reports_client_id_index")
+    @@index([counselor_id], map: "reports_counselor_id_index")
+    @@index([session_id], map: "reports_session_FK")
+}
+
+model report_intake {
+    id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id  BigInt    @db.UnsignedBigInt
+    metadata   Json?
+    created_at DateTime? @default(now()) @db.Timestamp(0)
+    updated_at DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id  Int?
+    reports    reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_intake_reports_FK")
+
+    @@index([report_id], map: "report_intake_reports_FK")
+}
+
+model report_treatment_plan {
+    id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id  BigInt    @db.UnsignedBigInt
+    metadata   Json?
+    created_at DateTime? @default(now()) @db.Timestamp(0)
+    updated_at DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id  Int?
+    reports    reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_treatment_plan_reports_FK")
+
+    @@index([report_id], map: "report_treatment_plan_reports_FK")
+}
+
+model report_progress {
+    id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id  BigInt    @db.UnsignedBigInt
+    metadata   Json?
+    created_at DateTime? @default(now()) @db.Timestamp(0)
+    updated_at DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id  Int?
+    reports    reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_progress_reports_FK")
+
+    @@index([report_id], map: "report_progress_reports_FK")
+}
+
+model report_discharge {
+    id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+    report_id  BigInt    @db.UnsignedBigInt
+    metadata   Json?
+    created_at DateTime? @default(now()) @db.Timestamp(0)
+    updated_at DateTime? @default(now()) @db.Timestamp(0)
+    tenant_id  Int?
+    reports    reports   @relation(fields: [report_id], references: [report_id], onDelete: Cascade, map: "report_discharge_reports_FK")
+
+    @@index([report_id], map: "report_discharge_reports_FK")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -519,6 +608,7 @@ model service {
     service_code       String                   @db.VarChar(255)
     is_report          Boolean                  @default(false)
     is_additional      Boolean                  @default(false)
+    is_group           Boolean                  @default(false)
     total_invoice      Decimal                  @db.Decimal(10, 4)
     discount_pcnt      Int                      @default(0)
     nbr_of_sessions    Int
@@ -545,6 +635,7 @@ model service_templates {
     service_code        String                             @unique(map: "service_templates_service_code_IDX") @db.VarChar(255)
     is_report           Boolean                            @default(false)
     is_additional       Boolean                            @default(false)
+    is_group            Boolean                            @default(false)
     total_invoice       Decimal                            @db.Decimal(10, 4)
     discount_pcnt       Int                                @default(0)
     nbr_of_sessions     Int
@@ -575,6 +666,7 @@ model session {
     scheduled_time                 String?                          @db.Text
     session_code                   String?                          @db.VarChar(100)
     session_description            String?                          @db.VarChar(255)
+    video_link                     String?                          @db.VarChar(500)
     forms_array                    Json?
     session_status                 session_session_status           @default(SCHEDULED)
     status_yn                      session_status_yn                @default(y)
@@ -588,6 +680,7 @@ model session {
     feedback                       feedback[]
     homework                       homework[]
     invoice                        invoice[]
+    reports                        reports[]
     service                        service?                         @relation(fields: [service_id], references: [service_id], onDelete: Cascade, map: "session_service_FK")
     thrpy_req                      thrpy_req?                       @relation(fields: [thrpy_req_id], references: [req_id], onDelete: Cascade, map: "session_thrpy_req_FK")
     treatment_target_session_forms treatment_target_session_forms[]
@@ -646,6 +739,7 @@ model thrpy_req {
     tenant_id                                         Int?
     treatment_target                                  String?                          @db.VarChar(255)
     cancel_hash                                       String?                          @db.VarChar(255)
+    video_link                                        String?                          @db.VarChar(500)
     session                                           session[]
     service                                           service                          @relation(fields: [service_id], references: [service_id], onDelete: Cascade, map: "thrpy_req_service_FK")
     user_profile_thrpy_req_counselor_idTouser_profile user_profile                     @relation("thrpy_req_counselor_idTouser_profile", fields: [counselor_id], references: [user_profile_id], onDelete: Cascade, map: "thrpy_req_user_profile_FK")
@@ -911,6 +1005,50 @@ model therapist_absences {
     @@index([tenant_id], map: "idx_therapist_absences_tenant")
 }
 
+model client_intake_form {
+    id                             Int                             @id @default(autoincrement())
+    client_enrollment_id           Int?
+    // Basic Information
+    full_name                      String                          @db.VarChar(255)
+    phone                          String?                         @db.VarChar(20)
+    email                          String?                         @db.VarChar(255)
+    // Emergency Contact
+    emergency_contact_name         String?                         @db.VarChar(255)
+    emergency_contact_relationship String?                         @db.VarChar(100)
+    emergency_contact_phone        String?                         @db.VarChar(20)
+    // Insurance Coverage
+    using_insurance                client_intake_using_insurance?
+    insurance_provider             String?                         @db.VarChar(255)
+    policyholder_name              String?                         @db.VarChar(255)
+    policyholder_date_of_birth     DateTime?                       @db.Date
+    member_id                      String?                         @db.VarChar(100)
+    group_number                   String?                         @db.VarChar(100)
+    // Reason for Seeking Therapy
+    reason_for_therapy             String?                         @db.Text
+    concern_duration               client_intake_concern_duration?
+    // Current Symptoms (stored as JSON array)
+    current_symptoms               Json?
+    // Safety Check
+    self_harm_thoughts             client_intake_self_harm?
+    harming_others_thoughts        client_intake_harming_others?
+    // Goals for Therapy
+    therapy_goals                  String?                         @db.Text
+    // Consent
+    client_name                    String?                         @db.VarChar(255)
+    signature                      String?                         @db.LongText
+    consent_date                   DateTime?                       @db.Date
+    // Metadata
+    counselor_profile_id           Int
+    created_at                     DateTime?                       @default(now()) @db.Timestamp(0)
+    updated_at                     DateTime?                       @default(now()) @db.Timestamp(0)
+    client_enrollment              client_enrollments?             @relation(fields: [client_enrollment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "client_intake_form_enrollment_fk")
+    counselor_profile              counselor_profile               @relation(fields: [counselor_profile_id], references: [counselor_profile_id], onDelete: NoAction, onUpdate: NoAction, map: "client_intake_form_counselor_profile_fk")
+
+    @@unique([client_enrollment_id], map: "unique_client_intake_enrollment")
+    @@index([counselor_profile_id], map: "idx_client_intake_counselor_profile_id")
+    @@index([created_at], map: "idx_client_intake_created_at")
+}
+
 enum counselor_documents_document_type {
     license
     certification
@@ -1036,6 +1174,41 @@ enum session_session_status {
 }
 
 enum session_status_yn {
+    y
+    n
+}
+
+enum client_intake_using_insurance {
+    yes
+    no
+}
+
+enum client_intake_concern_duration {
+    less_than_1_month
+    one_to_six_months
+    six_to_twelve_months
+    over_1_year
+}
+
+enum client_intake_self_harm {
+    no
+    past
+    current
+}
+
+enum client_intake_harming_others {
+    no
+    yes
+}
+
+enum report_type_enum {
+    INTAKE
+    TREATMENT_PLAN
+    PROGRESS
+    DISCHARGE
+}
+
+enum report_status_yn {
     y
     n
 }
